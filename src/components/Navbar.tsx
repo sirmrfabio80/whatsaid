@@ -1,7 +1,14 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Mic, User, LogOut, CreditCard, History, Menu, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Mic, LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
@@ -10,9 +17,19 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const initials = user
+    ? (user.user_metadata?.full_name || user.email || "U")
+        .split(" ")
+        .map((w: string) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "";
+
   return (
-    <nav className="sticky top-0 z-50 glass border-b">
+    <nav className="sticky top-0 z-50 glass-navbar">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
+        {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
             <Mic className="w-5 h-5 text-primary-foreground" />
@@ -21,66 +38,135 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-1">
+          {/* Nav links */}
+          <Link to="/convert">
+            <Button variant={location.pathname === "/convert" ? "secondary" : "ghost"} size="sm" className="rounded-xl">
+              Convert
+            </Button>
+          </Link>
+          <a href="/#pricing">
+            <Button variant="ghost" size="sm" className="rounded-xl">
+              Pricing
+            </Button>
+          </a>
+
+          <div className="w-px h-6 bg-border mx-2" />
+
           {user ? (
-            <>
-              <Link to="/history">
-                <Button variant={location.pathname === "/history" ? "secondary" : "ghost"} size="sm">
-                  <History className="w-4 h-4 mr-1.5" />
-                  History
-                </Button>
-              </Link>
-              <Link to="/credits">
-                <Button variant="outline" size="sm">
-                  <CreditCard className="w-4 h-4 mr-1.5" />
-                  {creditBalance} credits
-                </Button>
-              </Link>
-              <Button variant="ghost" size="sm" onClick={signOut}>
-                <LogOut className="w-4 h-4 mr-1.5" />
-                Sign out
-              </Button>
-            </>
+            <div className="flex items-center gap-2">
+              {/* Credit badge */}
+              <div className="glass-badge px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm">
+                <CreditCard className="w-3.5 h-3.5 text-primary" />
+                <span className="font-medium">{creditBalance}</span>
+              </div>
+
+              {/* Avatar dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="rounded-xl gap-1.5 pl-2 pr-2">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                      {initials}
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                  <DropdownMenuItem onClick={() => navigate("/profile")} className="rounded-lg">
+                    <User className="w-4 h-4 mr-2" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/history")} className="rounded-lg">
+                    <History className="w-4 h-4 mr-2" />
+                    History
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/credits")} className="rounded-lg">
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Credits
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")} className="rounded-lg">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="rounded-lg">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
-            <>
+            <div className="flex items-center gap-2">
               <Link to="/login">
-                <Button variant="ghost" size="sm">Sign in</Button>
+                <Button variant="ghost" size="sm" className="rounded-xl">Sign in</Button>
               </Link>
               <Link to="/signup">
-                <Button size="sm">Get started</Button>
+                <Button size="sm" className="rounded-xl">Get started</Button>
               </Link>
-            </>
+            </div>
           )}
         </div>
 
-        {/* Mobile hamburger */}
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </Button>
+        {/* Mobile: credit badge + hamburger */}
+        <div className="flex md:hidden items-center gap-2">
+          {user && (
+            <div className="glass-badge px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs">
+              <CreditCard className="w-3 h-3 text-primary" />
+              <span className="font-medium">{creditBalance}</span>
+            </div>
+          )}
+          <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t bg-card p-4 space-y-2">
+        <div className="md:hidden border-t border-border/50 bg-card p-4 space-y-1">
+          <Link to="/convert" onClick={() => setMobileOpen(false)}>
+            <Button variant="ghost" className="w-full justify-start rounded-xl">Convert</Button>
+          </Link>
+          <a href="/#pricing" onClick={() => setMobileOpen(false)}>
+            <Button variant="ghost" className="w-full justify-start rounded-xl">Pricing</Button>
+          </a>
+
+          <div className="h-px bg-border my-2" />
+
           {user ? (
             <>
+              <Link to="/profile" onClick={() => setMobileOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                  <User className="w-4 h-4 mr-2" />Profile
+                </Button>
+              </Link>
               <Link to="/history" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start"><History className="w-4 h-4 mr-2" />History</Button>
+                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                  <History className="w-4 h-4 mr-2" />History
+                </Button>
               </Link>
               <Link to="/credits" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start"><CreditCard className="w-4 h-4 mr-2" />{creditBalance} credits</Button>
+                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                  <CreditCard className="w-4 h-4 mr-2" />Credits
+                </Button>
               </Link>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => { signOut(); setMobileOpen(false); }}>
+              <Link to="/settings" onClick={() => setMobileOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                  <Settings className="w-4 h-4 mr-2" />Settings
+                </Button>
+              </Link>
+              <Button variant="ghost" className="w-full justify-start rounded-xl" onClick={() => { signOut(); setMobileOpen(false); }}>
                 <LogOut className="w-4 h-4 mr-2" />Sign out
               </Button>
             </>
           ) : (
             <>
               <Link to="/login" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full">Sign in</Button>
+                <Button variant="ghost" className="w-full rounded-xl">Sign in</Button>
               </Link>
               <Link to="/signup" onClick={() => setMobileOpen(false)}>
-                <Button className="w-full">Get started</Button>
+                <Button className="w-full rounded-xl">Get started</Button>
               </Link>
             </>
           )}

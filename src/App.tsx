@@ -8,6 +8,9 @@ import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Convert from "./pages/Convert";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import Credits from "./pages/Credits";
 import History from "./pages/History";
 import NotFound from "./pages/NotFound";
@@ -26,6 +29,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/convert" element={<Convert />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/credits" element={<Credits />} />
             <Route path="/history" element={<History />} />
             <Route path="*" element={<NotFound />} />
