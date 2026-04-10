@@ -1,273 +1,364 @@
 
 
-# WhatSaid -- Revised Plan
+# WhatSaid -- Product Structure and UI/UX Direction
 
-## A. What Is Weak or Unsafe in the Previous Pricing Logic
-
-The previous plan had several gaps:
-
-1. **Cost per job was underestimated.** The $1.60 figure for a 30-min job assumed ~$0.05/min total. Actual AssemblyAI cost for transcription + diarization is much lower (~$0.043 for 15 min), but the previous plan failed to itemize each cost line, making it impossible to verify.
-
-2. **LLM post-processing cost was handwaved.** "~$0.01-0.05" per summary/custom output is vague. For a 30-min transcript (~5,000-8,000 words), a summary call through Lovable AI (Gemini Flash) is realistically ~$0.01-0.03 per call. Three outputs (summary + key actions + custom) = ~$0.03-0.09. This was not explicitly added to the per-job cost.
-
-3. **Retry cost was ignored.** If a transcription fails and must be retried, you pay the STT provider again. The previous plan had no retry budget.
-
-4. **Guest abuse was under-addressed.** 3 free regenerations per guest with no rate limiting or CAPTCHA is exploitable. Each regeneration costs you an LLM call.
-
-5. **Storage egress was not considered.** Supabase free tier includes 2GB egress. Audio files temporarily stored + downloaded results could exceed this at moderate volume.
-
-6. **The 30-minute credit boundary was arbitrary.** A 29-min file and a 5-min file cost the same, which penalizes short-file users and subsidizes long-file users.
-
----
-
-## B. Revised Unit Economics Model
-
-### Verified external costs (per minute of audio)
-
-| Cost line | AssemblyAI (Universal-2) | Notes |
-|---|---|---|
-| Base transcription | $0.0025/min ($0.15/hr) | Includes language detection |
-| Speaker diarization | $0.00033/min ($0.02/hr) | Add-on |
-| **STT subtotal** | **$0.00283/min** | |
-
-| Cost line | Per call | Notes |
-|---|---|---|
-| Lovable AI -- summary | ~$0.01-0.02 | ~5K-8K word transcript input |
-| Lovable AI -- key actions | ~$0.01-0.02 | Same input, shorter output |
-| Lovable AI -- custom prompt | ~$0.01-0.02 | Same |
-| **LLM subtotal (3 outputs)** | **~$0.03-0.06** | Per job, independent of duration |
-
-| Cost line | Amount | Notes |
-|---|---|---|
-| Supabase Storage (temp) | ~$0.00 | Audio deleted after processing |
-| Stripe fee (one-off) | 2.9% + $0.30 | Per transaction |
-| Retry budget | +15% on STT cost | ~1 in 7 jobs may need retry |
-
-### Full cost per job (worst-case estimates)
-
-| Job duration | STT cost | LLM cost | Retry buffer | Total variable cost |
-|---|---|---|---|---|
-| 5 min | $0.014 | $0.06 | $0.002 | **$0.08** |
-| 15 min | $0.042 | $0.06 | $0.006 | **$0.11** |
-| 30 min | $0.085 | $0.06 | $0.013 | **$0.16** |
-| 60 min | $0.170 | $0.06 | $0.026 | **$0.26** |
-
-Key insight: **LLM post-processing cost dominates for short files.** STT cost only becomes significant above ~20 minutes. This means a flat "1 credit = 1 job" model is viable because the cost difference between a 5-min and 30-min file is only ~$0.08.
-
----
-
-## C. AssemblyAI vs Deepgram for WhatSaid
-
-| Criterion | AssemblyAI | Deepgram |
-|---|---|---|
-| **Base STT cost** | $0.0025/min (Universal-2) | $0.0077/min (Nova-3 Mono) |
-| **Diarization cost** | $0.00033/min | $0.002/min |
-| **Total STT+diarization/min** | **$0.00283** | **$0.0097** |
-| **Cost for 15-min job** | $0.043 | $0.146 |
-| **Cost for 30-min job** | $0.085 | $0.291 |
-| Language detection | Included (auto) | Included (auto) |
-| Language override | Yes (`language_code` param) | Yes (`language` param) |
-| .m4a support | Yes | Yes |
-| Async API (long files) | Yes (submit + poll) | Yes (pre-recorded REST) |
-| Language count | 99 (Universal-2) | 45+ (Nova-3) |
-| Free tier | 333 hours free | $200 credit (~430 hrs at Nova-3) |
-| Diarization quality | Strong, well-documented | Strong, well-documented |
-
-**Recommendation: AssemblyAI Universal-2.** It is 3.4x cheaper per minute, supports 99 languages (important for auto-detection), and has a generous free tier for development. The cost advantage compounds -- at 1,000 jobs/month averaging 15 min, you save ~$100/month vs Deepgram.
-
-If you later need the 6-language accuracy of Universal-3 Pro ($0.0035/min), you can upgrade per-request for those languages only.
-
----
-
-## D. Credit Model Comparison
-
-### Model A: 1 credit = 15 minutes of transcription
-- Pro: Fair to users -- short files cost less
-- Pro: Duration-proportional pricing aligns with your STT costs
-- Con: Users must calculate credits before uploading ("is my file 14 or 16 minutes?")
-- Con: Fractional credit display is confusing ("0.73 credits remaining")
-- Con: More complex billing logic in code
-
-### Model B: 1 credit = 1 job up to 15 min, 2 credits = 15-30 min, etc.
-- Pro: Simple mental model -- users see whole numbers
-- Pro: Easy to implement (integer math only)
-- Pro: Tier boundaries are clear and predictable
-- Con: A 16-min file costs 2x a 14-min file (feels unfair at boundaries)
-- Con: Slightly over-charges short files
-
-### Recommendation: Model B with these tiers
-
-| Duration | Credits |
-|---|---|
-| 0-15 min | 1 credit |
-| 15-30 min | 2 credits |
-| 30-45 min | 3 credits |
-| 45-60 min | 4 credits |
-
-Rationale: The actual cost difference between a 5-min and 15-min job is only ~$0.03 in STT (LLM cost is flat). The simplicity of whole-credit tiers far outweighs the minor unfairness at boundaries. Users understand "1 credit = 1 short job" instantly.
-
-The boundary issue is mitigated by showing the user "Your file is 16:23 -- this will use 2 credits" before they confirm.
-
----
-
-## E. Guest Payment Flow
-
-### Option 1: Pay first, then upload
-```text
-Landing -> Select tier ($4.99 / $8.99) -> Stripe Checkout -> 
-  Return with session_id -> Upload audio -> Process -> Results
-```
-- Pro: Zero abuse risk -- you only process paid jobs
-- Pro: No temp storage of unpaid files
-- Con: User pays before knowing if their file is compatible
-- Con: Refund needed if file is invalid/corrupt after payment
-- Con: User doesn't know which price tier to pick without uploading first
-
-### Option 2: Upload first, then pay
-```text
-Landing -> Upload audio -> Validate format + detect duration -> 
-  Show price ("16 min = $4.99") -> Stripe Checkout -> 
-  Return with session_id -> Process -> Results
-```
-- Pro: User sees the price based on their actual file duration
-- Pro: Invalid files rejected before payment (no refunds)
-- Pro: Better UX -- user understands what they're paying for
-- Con: Temp storage of unpaid files (must expire/delete after ~15 min)
-- Con: Abuse vector: repeated uploads without paying (mitigated by rate limiting)
-
-### Recommendation: Upload first, then pay (Option 2)
-
-The UX advantage is decisive. A user who pays $8.99 and then discovers their .m4a is corrupt will demand a refund and leave a bad review. Validating first eliminates this entirely.
-
-Anti-abuse for temp uploads:
-- Files stored with a 15-minute TTL, auto-deleted if unpaid
-- Rate limit: 3 uploads per IP per hour without payment
-- File validated server-side (format, duration, size) before storage
-- No processing until Stripe webhook confirms payment
-
----
-
-## F. Revised Architecture Changes
-
-### 1. Guest flow (upload-first)
+## A. Information Architecture
 
 ```text
-Browser                    Edge Function         Storage        Stripe         AssemblyAI
-  |                            |                    |              |               |
-  |-- upload audio ----------->|-- validate ------->|              |               |
-  |                            |   format/size/dur  |              |               |
-  |<-- duration + price -------|                    |              |               |
-  |                            |-- store temp ----->| (15min TTL)  |               |
-  |-- checkout (price tier) ---|------------------- |------------->|               |
-  |                            |                    |              |               |
-  |   (Stripe webhook) ------->|-- mark job paid ---|              |               |
-  |                            |-- submit STT ------|--------------|-------------->|
-  |                            |   (with lang_code) |              |               |
-  |                            |<-- transcript -----|--------------|---------------|
-  |                            |-- LLM calls -------|              |               |
-  |                            |-- delete audio --->| (immediate)  |               |
-  |<-- results via token ------|                    |              |               |
+WhatSaid
+├── / (Homepage)                    -- Guest & logged-in
+│   ├── Hero + Upload CTA
+│   ├── Capabilities
+│   ├── How it works
+│   ├── Pricing overview
+│   └── Footer
+├── /convert (Conversion page)      -- Guest & logged-in
+│   ├── Upload + validate
+│   ├── Language selector
+│   ├── Custom prompt input
+│   ├── Payment / credit deduction
+│   ├── Processing state
+│   └── Results + downloads
+├── /login                          -- Guest only
+├── /signup                         -- Guest only
+├── /profile                        -- Logged-in only
+│   ├── Display name, email
+│   ├── Credit balance + buy link
+│   └── Quick stats (jobs, last job)
+├── /settings                       -- Logged-in only
+│   ├── Change password
+│   ├── Default language preference
+│   └── Delete account
+├── /history                        -- Logged-in only
+└── /credits                        -- Logged-in only
 ```
 
-### 2. Language override as core feature
+Key change from current: the upload flow should live on a dedicated `/convert` page, not on the homepage hero. The homepage should sell; the convert page should do.
 
-- Edge Function accepts `language_code` parameter (default: `null` for auto-detect)
-- After transcription completes, detected language is returned and stored on the job
-- UI shows a language dropdown pre-filled with detected language
-- User can change language and click "Re-transcribe" -- this costs 1 additional credit (account) or is blocked for guests (they paid for one run)
-- For guests: language selection is available BEFORE payment, shown after duration detection. If auto-detect seems wrong, they pick manually before paying.
+## B. Navigation Structure
 
-### 3. Audio deletion lifecycle
+**Header (all pages):**
+- Logo (left)
+- Nav links: Convert, Pricing (anchor to homepage section)
+- Right side:
+  - Guest: "Sign in" (ghost) + "Get started" (primary)
+  - Logged in: Credit badge, avatar dropdown (Profile, Settings, History, Sign out)
 
+**Mobile:** Hamburger with same items. Credit badge always visible in header for logged-in users.
+
+**Footer:** Minimal -- links to Pricing, Privacy, Terms. No heavy footer for MVP.
+
+## C. Homepage Section Order
+
+1. **Hero** -- Headline + subheadline + primary CTA. No upload widget here.
+2. **Social proof strip** -- Optional placeholder: "Trusted by X teams" or "99 languages supported" stat bar. Even without real logos, a stat strip (e.g., "99 languages / Speaker labels / Audio deleted after use") adds weight.
+3. **How it works** -- 3-step visual: Upload → Process → Download. Anchors the product in simplicity.
+4. **Capabilities grid** -- 6 cards (existing content is good). Keep current icons/copy.
+5. **Pricing snapshot** -- Guest one-off prices + credit pack summary. CTA to /convert and /signup.
+6. **Trust/privacy strip** -- "Audio deleted immediately. No storage. No retention." Single-line reassurance.
+7. **Footer**
+
+**Reasoning:** Hero sells the outcome ("know what was said"). How-it-works reduces uncertainty. Capabilities build desire. Pricing removes the last objection. Trust closes.
+
+## D. CTA Labels
+
+| Location | Label | Reasoning |
+|---|---|---|
+| Hero primary | **"Convert your audio"** | Action-oriented, product-specific, avoids jargon like "transcribe" |
+| Hero secondary | "See pricing" | Scrolls to pricing section |
+| Nav (guest) | "Sign in" / **"Get started"** | Standard, clear |
+| Nav (logged-in) | **"Convert"** | Single word, always accessible |
+| Convert page button (guest) | "Pay $X.XX and convert" | Price transparency before action |
+| Convert page button (account) | "Use X credits and convert" | Credit transparency |
+| Pricing section | "Start converting" → /convert | Reinforces the action |
+| Credit pack | "Buy X credits" | Direct |
+
+Avoid: "Transcribe now" (jargon), "Get transcript" (too literal), "Upload" (describes a step, not the outcome).
+
+## E. Liquid Glass Design System for Corporate Use
+
+**Philosophy:** Liquid Glass is about depth through translucency, not decoration. For a corporate product, use it as a material system -- surfaces have consistent physical properties -- not as eye candy.
+
+**Where glass works well:**
+- Navbar (sticky, blurred backdrop over content)
+- Upload drop zone (frosted surface, invites interaction)
+- Stat/credit badges (subtle translucent chip)
+- Modal/dialog overlays
+
+**Where NOT to use glass:**
+- Body text areas (readability is paramount)
+- Form inputs (must look solid and editable)
+- Primary action buttons (must feel solid and clickable)
+- Data tables / history list items (clarity over style)
+- Pricing cards (need to feel stable and trustworthy)
+
+**Glass CSS recipe (refined from current `.glass`):**
 ```text
-Upload -> temp storage (15-min TTL) -> payment confirmed -> 
-  sent to AssemblyAI via signed URL -> transcription complete -> 
-  DELETE from Supabase Storage (immediate) -> 
-  only text outputs remain in DB
+Light mode:
+  background: white/70 (rgba with 0.7 opacity)
+  backdrop-filter: blur(20px) saturate(1.3)
+  border: 1px solid black/5
+  box-shadow: 0 1px 3px black/4, inset 0 1px 0 white/60
+
+Dark mode:
+  background: slate-900/60
+  backdrop-filter: blur(20px) saturate(1.2)
+  border: 1px solid white/8
+  box-shadow: 0 1px 3px black/20, inset 0 1px 0 white/5
 ```
 
-- No audio is ever retained after processing
-- Supabase Storage bucket policy: objects auto-expire after 1 hour (safety net)
-- Job record stores `audio_deleted_at` timestamp for audit
+## F. Colour Palette
 
-### 4. Database schema changes
+### Light Mode
+| Token | Value | Use |
+|---|---|---|
+| Background | `hsl(220 20% 97%)` | Page bg (keep current) |
+| Surface | `white` | Cards, panels |
+| Glass surface | `white/70` | Navbar, upload zone |
+| Primary | `hsl(245 58% 50%)` | Buttons, links, accents -- slightly deeper than current for better contrast |
+| Primary hover | `hsl(245 58% 44%)` | |
+| Accent | `hsl(170 55% 42%)` | Success states, secondary highlights |
+| Text primary | `hsl(220 25% 10%)` | Keep |
+| Text secondary | `hsl(220 10% 45%)` | Keep |
+| Border | `hsl(220 15% 90%)` | Keep |
+| Glass border | `black/5` | Subtle for glass surfaces |
 
-- `jobs.duration_seconds` -- detected from uploaded file, used for credit calculation
-- `jobs.language_detected` -- from STT provider
-- `jobs.language_selected` -- user override (nullable, defaults to detected)
-- `jobs.guest_email` -- optional, for receipt delivery
-- `jobs.temp_file_path` -- cleared after deletion
-- `jobs.audio_deleted_at` -- timestamp
-- `jobs.credits_charged` -- integer, based on duration tier
+### Dark Mode
+| Token | Value | Use |
+|---|---|---|
+| Background | `hsl(225 25% 6%)` | Keep |
+| Surface | `hsl(225 20% 9%)` | Keep |
+| Glass surface | `hsl(225 20% 9%)/60` | Navbar, upload zone |
+| Primary | `hsl(245 65% 62%)` | Slightly brighter for dark bg |
+| Text primary | `hsl(210 20% 95%)` | Keep |
+| Border | `hsl(225 15% 15%)` | Keep |
+| Glass border | `white/8` | |
+
+**Dark mode activation:** Use `prefers-color-scheme: dark` via a small script in `index.html` that adds `.dark` class to `<html>`. No toggle in MVP -- follow system preference.
+
+## G. Typography, Spacing, and Component Guidance
+
+**Typography:**
+- Headings: Space Grotesk, weights 600-700. Keep.
+- Body: Inter, weights 400-500. Keep.
+- Hero h1: 3rem mobile / 4rem desktop (current sizing is good)
+- Section headings: 1.75rem / font-semibold
+- Body: 1rem / 1.625 line-height
+- Small/captions: 0.875rem
+
+**Spacing system:**
+- Section padding: `py-16 sm:py-24` (keep current)
+- Card padding: `p-5 sm:p-6`
+- Content max-width: `max-w-5xl` for grids, `max-w-2xl` for forms/convert
+- Component gaps: `gap-6` for grids, `space-y-4` for form stacks
+
+**Cards:**
+- Solid white/surface background (NOT glass) for content cards
+- `rounded-xl` (increase from current `rounded-lg` for 2026 feel)
+- `border border-border/50` with `hover:border-primary/20` transition
+- Subtle shadow: `shadow-sm hover:shadow-md transition-shadow`
+
+**Buttons:**
+- Primary: solid bg-primary, `rounded-lg`, `h-11` for main CTAs, `h-10` default
+- Ghost/outline: for secondary actions
+- No glass effect on buttons -- they must feel tappable and solid
+
+**Inputs:**
+- Solid background (`bg-background`), clear border
+- `rounded-lg`, `h-11` for comfortable touch targets
+- Focus ring using primary colour
+
+**Glass treatment (limited to):**
+- `.glass-navbar` -- sticky header only
+- `.glass-dropzone` -- audio upload area
+- `.glass-badge` -- credit/stat chips
+- No other glass surfaces
+
+## H. Guest vs Logged-In Differences
+
+| Element | Guest | Logged-in |
+|---|---|---|
+| Nav right | "Sign in" + "Get started" | Credit badge + avatar dropdown |
+| Homepage hero CTA | "Convert your audio" | "Convert your audio" (same) |
+| /convert flow | Upload → price shown → Stripe checkout → results via token | Upload → credits shown → confirm → results in history |
+| /convert results | Accessible via guest token URL for 30 days | Accessible via /history permanently |
+| /history | Not accessible (redirect to login) | Full job list |
+| /profile | Not accessible | Name, email, credits, stats |
+| /settings | Not accessible | Password, preferences, delete |
+| /credits | Redirect to signup with "Sign up to buy credit packs" | Full credit pack purchase page |
+| Pricing section (homepage) | Shows guest prices + "Save up to 50% with an account" | Shows credit balance + "Buy more credits" |
+
+## I. Risks of Overusing Liquid Glass
+
+1. **Readability loss.** Translucent backgrounds over busy content make text hard to read. Mitigation: only apply glass to elements over controlled/gradient backgrounds, never over user content.
+2. **Performance.** `backdrop-filter: blur()` is GPU-intensive. Mitigation: limit to navbar + 1-2 elements per page. Never apply to list items or repeating elements.
+3. **Inconsistency.** Mixing glass and solid surfaces randomly looks unfinished. Mitigation: glass is a "material" -- define exactly which components use it and never deviate.
+4. **Dark mode contrast.** Glass on dark backgrounds can look muddy. Mitigation: use `saturate(1.2)` and a subtle inset highlight (`inset 0 1px 0 white/5`) to maintain edge definition.
+5. **Mobile touch perception.** Glass can feel "un-tappable." Mitigation: never use glass on buttons or interactive controls that need to feel solid.
+
+**Rule: if in doubt, use a solid surface.** Glass is a garnish, not the plate.
+
+## J. Page-by-Page UX Outline
+
+### Homepage (`/`)
+```text
+┌─────────────────────────────────────┐
+│ [Glass Navbar]                      │
+│  Logo   Convert  Pricing   [Auth]   │
+├─────────────────────────────────────┤
+│ HERO                                │
+│  Badge: "AI transcription + speaker │
+│          labels"                    │
+│  H1: "Know exactly what was said"   │
+│  Sub: Upload → transcribe → done    │
+│  [Convert your audio]  [See pricing]│
+├─────────────────────────────────────┤
+│ STATS STRIP (3 cols)                │
+│  99 languages | Speaker labels |    │
+│  Audio deleted after use            │
+├─────────────────────────────────────┤
+│ HOW IT WORKS (3 steps)              │
+│  1. Upload  2. We process  3. Done  │
+├─────────────────────────────────────┤
+│ CAPABILITIES (2x3 grid)             │
+│  [6 feature cards - solid, not      │
+│   glass]                            │
+├─────────────────────────────────────┤
+│ PRICING (3 cols)                    │
+│  Guest tiers | Credit packs | CTA   │
+├─────────────────────────────────────┤
+│ TRUST STRIP                         │
+│  "Your audio is deleted immediately │
+│   after processing."                │
+├─────────────────────────────────────┤
+│ FOOTER                              │
+└─────────────────────────────────────┘
+```
+
+### Login (`/login`)
+- Centered card, max-w-md
+- Solid card (no glass)
+- WhatSaid logo + "Sign in to WhatSaid"
+- Email + password fields
+- "Sign in" primary button
+- "Don't have an account? Sign up" link
+- Google OAuth button below (future)
+- Error inline below form
+
+### Signup (`/signup`)
+- Same layout as login
+- Fields: display name, email, password
+- "Create account" primary button
+- "Already have an account? Sign in" link
+- Note below: "Get credit packs and save up to 50%"
+
+### Profile (`/profile`) -- new page
+```text
+┌─────────────────────────────────────┐
+│ [Navbar]                            │
+├─────────────────────────────────────┤
+│ PROFILE HEADER                      │
+│  Avatar (initials) + Display name   │
+│  Email (read-only display)          │
+│  Member since date                  │
+├─────────────────────────────────────┤
+│ CREDIT BALANCE CARD                 │
+│  [Glass badge] X credits remaining  │
+│  [Buy more credits] → /credits      │
+├─────────────────────────────────────┤
+│ QUICK STATS (3 cols)                │
+│  Total jobs | Total minutes | Last  │
+│  job date                           │
+├─────────────────────────────────────┤
+│ RECENT JOBS (3 items preview)       │
+│  [View all] → /history              │
+└─────────────────────────────────────┘
+```
+
+### Settings (`/settings`) -- new page
+```text
+┌─────────────────────────────────────┐
+│ [Navbar]                            │
+├─────────────────────────────────────┤
+│ SETTINGS                            │
+│                                     │
+│ Section: Account                    │
+│  Display name [editable]            │
+│  Email [read-only]                  │
+│  [Save changes]                     │
+│                                     │
+│ Section: Preferences                │
+│  Default language [dropdown]        │
+│                                     │
+│ Section: Security                   │
+│  [Change password] (opens modal)    │
+│                                     │
+│ Section: Danger zone                │
+│  [Delete account] (destructive,     │
+│   confirmation dialog)              │
+└─────────────────────────────────────┘
+```
+
+### Convert (`/convert`) -- renamed from homepage upload
+```text
+┌─────────────────────────────────────┐
+│ [Navbar]                            │
+├─────────────────────────────────────┤
+│ H2: "Convert your audio"           │
+│                                     │
+│ STEP 1: Upload                      │
+│  [Glass dropzone]                   │
+│  Drag & drop or click to browse     │
+│  Supported: .m4a, .mp3, .wav        │
+│  Max: 60 min / 200 MB               │
+│                                     │
+│ STEP 2: Configure (appears after    │
+│  upload, animated in)               │
+│  File name + duration + size        │
+│  Language: [Auto-detect ▾] override │
+│  Custom prompt: [textarea]          │
+│  "What would you like to extract?"  │
+│                                     │
+│ STEP 3: Confirm + pay               │
+│  Cost summary card:                 │
+│    Duration: 16:23                  │
+│    Credits: 2 (or $4.99 for guest)  │
+│  [Use 2 credits and convert]        │
+│  or [Pay $4.99 and convert]         │
+│                                     │
+│ STEP 4: Processing                  │
+│  Progress bar + status messages     │
+│  "Transcribing..." → "Generating   │
+│   summary..." → "Complete"          │
+│                                     │
+│ STEP 5: Results                     │
+│  Tabs: Transcript | Summary | AI    │
+│  Each tab has content + download    │
+│  buttons (TXT, JSON)                │
+│  Language detected: [badge]         │
+│  "Wrong language?" → re-select +    │
+│  re-transcribe (account: 1 credit)  │
+└─────────────────────────────────────┘
+```
 
 ---
 
-## G. Caps and Anti-Abuse Guardrails
+## Implementation Order
 
-| Guardrail | Value | Rationale |
-|---|---|---|
-| Max file duration | 60 minutes | Caps max STT cost at ~$0.17 |
-| Max file size | 200 MB | Prevents storage abuse |
-| Guest upload rate limit | 3 per IP per hour (unpaid) | Prevents temp storage flooding |
-| Guest concurrent jobs | 1 | Prevents parallel abuse |
-| Account concurrent jobs | 3 | Reasonable for paying users |
-| Temp file TTL | 15 minutes | Auto-delete if unpaid |
-| Guest regeneration | 2 free, then blocked | Must create account + buy credits for more |
-| Account regeneration | 3 free per job, then 0.5 credits | Prevents LLM abuse |
-| Minimum charge | $2.99 (guest) | Below this, Stripe fees eat margin |
-| CAPTCHA on guest upload | Yes (Cloudflare Turnstile) | Prevents bot uploads |
+1. **Design system foundation** -- Update CSS variables, add glass utilities, `rounded-xl`, dark mode via system preference, add `/convert`, `/profile`, `/settings` routes
+2. **Homepage rebuild** -- New section order, stats strip, how-it-works, pricing section, trust strip, footer
+3. **Convert page** -- Move upload flow from homepage, add custom prompt input, step-by-step UI
+4. **Profile + Settings pages** -- New pages with outlined layouts
+5. **Navbar update** -- Avatar dropdown for logged-in, "Convert" nav link, glass refinement
 
----
-
-## H. Final Commercial Model for WhatSaid
-
-### Credit definition
-1 credit = 1 transcription job up to 15 minutes. 2 credits for 15-30 min. 3 for 30-45 min. 4 for 45-60 min.
-
-### Guest pricing (one-off, no account)
-
-| Duration | Price | Your cost | After Stripe | Margin |
-|---|---|---|---|---|
-| 0-15 min | $2.99 | ~$0.11 | ~$2.60 | ~96% |
-| 15-30 min | $4.99 | ~$0.16 | ~$4.55 | ~96% |
-| 30-60 min | $7.99 | ~$0.26 | ~$7.46 | ~97% |
-
-Note: margins are high because external API costs are very low. The value is in the product experience, not raw API cost. These prices are competitive with competitors like Otter.ai ($16.99/mo) and Descript ($24/mo).
-
-### Credit pack pricing (account required)
-
-| Pack | Price | Per credit | vs guest 15-min |
-|---|---|---|---|
-| 5 credits | $11.99 | $2.40 | 20% off |
-| 15 credits | $29.99 | $2.00 | 33% off |
-| 40 credits | $59.99 | $1.50 | 50% off |
-
-### Regeneration pricing
-- 2 free custom-output regenerations per job (guest and account)
-- Account users: 0.5 credits per additional regeneration
-- Guests: blocked after 2 -- must create account
-
-### What is included vs separate
-
-| Item | Included in credit/payment | Separate cost |
-|---|---|---|
-| Transcription + diarization | Yes | -- |
-| Language auto-detection | Yes | -- |
-| Summary output | Yes | -- |
-| Key actions output | Yes | -- |
-| First custom prompt output | Yes | -- |
-| Re-transcription (language change) | -- | 1 credit (account only) |
-| Additional custom regenerations | -- | 0.5 credits after 2 free |
-| DOCX/PDF export | Yes (v1.1) | -- |
-
-### Explicit cost breakdown transparency
-
-Every price above includes:
-- AssemblyAI transcription + diarization
-- Lovable AI for summary, key actions, custom output (3 calls)
-- Temporary storage + deletion
-- Stripe transaction fees
-- ~15% retry buffer
-
-Lovable AI cost is separate from transcription cost. Transcription is handled by AssemblyAI ($0.00283/min). LLM post-processing is handled by Lovable AI (~$0.02 per call, ~$0.06 per job for 3 outputs). Both are included in the prices above.
+### Files to create/modify
+- `src/index.css` -- Glass utilities, dark mode script, rounded-xl
+- `src/pages/Index.tsx` -- Full homepage rebuild
+- `src/pages/Convert.tsx` -- New dedicated conversion page
+- `src/pages/Profile.tsx` -- New
+- `src/pages/Settings.tsx` -- New
+- `src/components/Navbar.tsx` -- Avatar dropdown, route updates
+- `src/App.tsx` -- Add new routes
+- `index.html` -- Dark mode system-preference script
+- `tailwind.config.ts` -- Extended glass tokens if needed
 
