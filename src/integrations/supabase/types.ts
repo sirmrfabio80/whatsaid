@@ -14,16 +14,239 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      credit_balances: {
+        Row: {
+          balance: number
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          job_id: string | null
+          reason: string
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          reason: string
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          reason?: string
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      job_outputs: {
+        Row: {
+          content: string
+          created_at: string
+          custom_prompt: string | null
+          id: string
+          job_id: string
+          output_type: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          custom_prompt?: string | null
+          id?: string
+          job_id: string
+          output_type: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          custom_prompt?: string | null
+          id?: string
+          job_id?: string
+          output_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_outputs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          audio_deleted_at: string | null
+          created_at: string
+          credits_charged: number
+          duration_seconds: number | null
+          error_message: string | null
+          file_name: string
+          file_size_bytes: number | null
+          guest_email: string | null
+          guest_token: string | null
+          id: string
+          language_detected: string | null
+          language_selected: string | null
+          regeneration_count: number
+          status: Database["public"]["Enums"]["job_status"]
+          stripe_payment_id: string | null
+          temp_file_path: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          audio_deleted_at?: string | null
+          created_at?: string
+          credits_charged?: number
+          duration_seconds?: number | null
+          error_message?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          guest_email?: string | null
+          guest_token?: string | null
+          id?: string
+          language_detected?: string | null
+          language_selected?: string | null
+          regeneration_count?: number
+          status?: Database["public"]["Enums"]["job_status"]
+          stripe_payment_id?: string | null
+          temp_file_path?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          audio_deleted_at?: string | null
+          created_at?: string
+          credits_charged?: number
+          duration_seconds?: number | null
+          error_message?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          guest_email?: string | null
+          guest_token?: string | null
+          id?: string
+          language_detected?: string | null
+          language_selected?: string | null
+          regeneration_count?: number
+          status?: Database["public"]["Enums"]["job_status"]
+          stripe_payment_id?: string | null
+          temp_file_path?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_credits: {
+        Args: {
+          p_amount: number
+          p_reason: string
+          p_stripe_session_id?: string
+          p_user_id: string
+        }
+        Returns: number
+      }
+      deduct_credits: {
+        Args: {
+          p_amount: number
+          p_job_id?: string
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
+      job_status:
+        | "pending"
+        | "uploading"
+        | "processing"
+        | "completed"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +373,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+      job_status: ["pending", "uploading", "processing", "completed", "failed"],
+    },
   },
 } as const
