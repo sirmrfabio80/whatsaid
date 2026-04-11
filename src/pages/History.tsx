@@ -127,9 +127,9 @@ export default function History() {
             <div className="space-y-3">
               {jobs.map((job) => (
                 <Card key={job.id} className="rounded-xl border-border shadow-sm hover:border-primary/20 hover:shadow-md transition-all group">
-                  <CardContent className="p-4 sm:p-5 flex items-center gap-4">
+                  <CardContent className="p-4 sm:p-5">
                     <div
-                      className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+                      className="flex items-start sm:items-center gap-3 sm:gap-4 cursor-pointer"
                       onClick={() => navigate(`/job/${job.id}`)}
                       role="link"
                       tabIndex={0}
@@ -139,11 +139,19 @@ export default function History() {
                         <FileAudio className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline" className={`${statusColor(job.status)} text-[11px]`}>
+                              {job.status}
+                            </Badge>
+                            <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+                          </div>
+                        </div>
                         {job.title && (
                           <p className="text-xs text-muted-foreground/60 truncate">{job.file_name}</p>
                         )}
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                           {job.duration_seconds && (
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>
                           )}
@@ -153,27 +161,25 @@ export default function History() {
                           </span>
                           <span>{new Date(job.created_at).toLocaleDateString()}</span>
                           {job.speech_model && (
-                            <span className="flex items-center gap-1"><Cpu className="w-3 h-3" />{job.speech_model}</span>
+                            <span className="hidden sm:flex items-center gap-1"><Cpu className="w-3 h-3" />{job.speech_model}</span>
                           )}
                         </div>
                       </div>
-                      <Badge variant="outline" className={statusColor(job.status)}>
-                        {job.status}
-                      </Badge>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(job);
-                      }}
-                      aria-label={`Delete ${job.file_name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex justify-end mt-2 sm:mt-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(job);
+                        }}
+                        aria-label={`Delete ${job.file_name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
