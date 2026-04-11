@@ -31,11 +31,11 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-primary/10 [&:has([aria-selected])]:bg-primary/10 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary/10 hover:text-foreground transition-colors",
+          "h-9 w-9 p-0 font-normal rounded-full aria-selected:opacity-100 hover:bg-primary/10 hover:text-foreground transition-colors",
         ),
         day_range_end: "day-range-end",
         day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground ring-2 ring-primary/30 font-semibold",
+          "bg-primary text-primary-foreground rounded-full hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground ring-2 ring-primary/30 font-semibold",
         day_today: "text-primary font-bold relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:rounded-full after:bg-primary",
         day_outside:
           "day-outside text-muted-foreground opacity-40 aria-selected:bg-primary/10 aria-selected:text-muted-foreground aria-selected:opacity-40",
