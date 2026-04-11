@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
       .update({
         language_detected: detectedLanguage,
         duration_seconds: audioDuration,
+        speech_model: "universal-3-pro",
         status: "processing", // still processing (post-processing next)
       })
       .eq("id", job_id);
