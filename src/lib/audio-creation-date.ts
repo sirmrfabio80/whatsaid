@@ -80,6 +80,19 @@ function readString(view: DataView, offset: number, length: number): string {
   return new TextDecoder("utf-8").decode(new Uint8Array(bytes));
 }
 
+async function readBlobAsArrayBuffer(file: Blob): Promise<ArrayBuffer> {
+  if (typeof file.arrayBuffer === "function") {
+    return file.arrayBuffer();
+  }
+
+  return new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file buffer"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 /**
  * Extract com.apple.quicktime.creationdate from moov > udta > meta > keys/ilst.
  */

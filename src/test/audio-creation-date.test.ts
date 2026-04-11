@@ -35,12 +35,12 @@ function metadataItem(index: number, value: string) {
 }
 
 function buildSampleM4a(isoValue: string) {
-  const filler = new Array(1024 * 1024 + 64).fill(0);
+  const paddingBox = box("free", new Array(1024 * 1024 + 64).fill(0));
   const keysBox = box("keys", [...uint32(0), ...uint32(1), ...keyEntry("com.apple.quicktime.creationdate")]);
   const ilstBox = box("ilst", metadataItem(1, isoValue));
   const metaBox = box("meta", [...uint32(0), ...keysBox, ...ilstBox]);
   const udtaBox = box("udta", metaBox);
-  const moovBox = box("moov", [...filler, ...udtaBox]);
+  const moovBox = box("moov", [...paddingBox, ...udtaBox]);
   const ftypBox = box("ftyp", [...str4("M4A "), ...uint32(0), ...str4("isom")]);
 
   return new Uint8Array([...ftypBox, ...moovBox]);
@@ -50,7 +50,10 @@ describe("extractAudioCreationDate", () => {
   it("reads Apple creation metadata even when it lives beyond the first 1MB", async () => {
     const isoValue = "2026-03-13T10:49:00+01:00";
     const bytes = buildSampleM4a(isoValue);
-    const file = new File([bytes], "Villa Ida.m4a", { type: "audio/mp4", lastModified: Date.parse("2026-04-11T13:37:03Z") });
+    const file = new File([bytes], "Villa Ida.m4a", {
+      type: "audio/mp4",
+      lastModified: Date.parse("2026-04-11T13:37:03Z"),
+    });
 
     const result = await extractAudioCreationDate(file);
 
@@ -58,3 +61,4 @@ describe("extractAudioCreationDate", () => {
     expect(result?.toISOString()).toBe("2026-03-13T09:49:00.000Z");
   });
 });
+
