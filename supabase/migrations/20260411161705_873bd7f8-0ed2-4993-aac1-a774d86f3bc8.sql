@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN title TEXT DEFAULT NULL;

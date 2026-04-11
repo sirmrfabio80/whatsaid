@@ -32,6 +32,7 @@ export interface JobMeta {
   created_at: string;
   speech_model: string | null;
   speaker_names: Record<string, string>;
+  title: string | null;
 }
 
 interface JobResultsProps {
@@ -91,7 +92,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
         .order("created_at", { ascending: true }),
       supabase
         .from("jobs")
-        .select("language_detected, duration_seconds, file_name, created_at, speech_model, speaker_names")
+        .select("language_detected, duration_seconds, file_name, created_at, speech_model, speaker_names, title")
         .eq("id", jobId)
         .maybeSingle(),
     ]);
@@ -507,13 +508,13 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                 <p className="text-xs text-muted-foreground mb-3">
                   Ask about terms, decisions, medications, next steps, or anything discussed. Each answer is saved automatically.
                 </p>
-                <div className="flex gap-2">
+              <div className="relative">
                   <Textarea
                     id="question-input"
                     placeholder="e.g. What medication was mentioned? What did the doctor recommend?"
                     value={questionPrompt}
                     onChange={(e) => setQuestionPrompt(e.target.value)}
-                    className="rounded-xl text-sm min-h-[60px] resize-none flex-1"
+                    className="rounded-xl text-sm min-h-[80px] resize-none pr-16"
                     disabled={askingQuestion}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
@@ -526,14 +527,14 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                     onClick={handleAskQuestion}
                     disabled={askingQuestion || !questionPrompt.trim()}
                     size="sm"
-                    className="rounded-xl self-end gap-1.5 px-3"
+                    className="absolute bottom-2.5 right-2.5 rounded-xl gap-1.5 px-3 h-8"
                   >
                     {askingQuestion ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
                         <Send className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline text-xs">Ask</span>
+                        Ask
                       </>
                     )}
                   </Button>

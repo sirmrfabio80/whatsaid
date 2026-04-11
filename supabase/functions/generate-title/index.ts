@@ -1,0 +1,88 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const MODEL = "google/gemini-2.5-flash-lite";
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { job_id } = await req.json();
+    if (!job_id) {
+      return new Response(JSON.stringify({ error: "job_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Read transcript
+    const { data: txRow, error: txError } = await supabase
+      .from("job_outputs")
+      .select("content")
+      .eq("job_id", job_id)
+      .eq("output_type", "transcript")
+      .single();
+
+    if (txError || !txRow?.content) {
+      throw new Error(`Transcript not found for job ${job_id}`);
+    }
+
+    // Use first ~2000 chars for title generation
+    const excerpt = txRow.content.slice(0, 2000);
+
+    const res = await fetch(AI_GATEWAY, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Generate a short, descriptive title (max 6 words) for this audio recording based on its transcript. The title should be in the same language as the transcript. Return ONLY the title text, nothing else. No quotes, no explanation.",
+          },
+          { role: "user", content: excerpt },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`AI gateway error [${res.status}]: ${t}`);
+    }
+
+    const data = await res.json();
+    const title = (data.choices?.[0]?.message?.content ?? "").trim().replace(/^["']|["']$/g, "");
+
+    // Save title
+    await supabase.from("jobs").update({ title }).eq("id", job_id);
+
+    return new Response(JSON.stringify({ title }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("[generate-title] Error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
