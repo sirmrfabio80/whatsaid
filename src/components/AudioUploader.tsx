@@ -123,7 +123,7 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
           </div>
           <p className="text-xs text-muted-foreground mt-4">
             🔒 Your audio is processed securely and deleted immediately after. Please ensure all recorded parties are aware of the recording.
-          </div>
+          </p>
         </div>
       ) : (
         <div className="border rounded-xl p-6 bg-card">
