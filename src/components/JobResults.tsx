@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
 import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
-import { useToast } from "@/hooks/use-toast";
+
 import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
 import { resolveExportBaseName } from "@/lib/export-filename";
 import SpeakerChips from "@/components/SpeakerChips";
@@ -91,7 +91,7 @@ function escapeRegex(s: string) {
 }
 
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
-  const { toast } = useToast();
+  
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
   const [meta, setMeta] = useState<JobMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,18 +165,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       });
       if (error || data?.error) {
         setSummaryLang(prevLang);
-        toast({
-          title: "Failed to regenerate summary",
-          description: error?.message || data?.error,
-          variant: "destructive",
-        });
         return;
       }
-      toast({ title: `Summary regenerated in ${getLanguageLabel(langCode)}` });
       await fetchData();
     } catch {
       setSummaryLang(prevLang);
-      toast({ title: "Something went wrong", variant: "destructive" });
     } finally {
       setRegeneratingSummary(false);
     }
@@ -186,7 +179,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleCopy = async (content: string, id: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedId(id);
-    toast({ title: "Copied to clipboard" });
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -256,49 +248,43 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleExportDocx = async () => {
     try {
       await exportDocx(buildExportPayload());
-      toast({ title: "DOCX downloaded" });
     } catch {
-      toast({ title: "Export failed", variant: "destructive" });
+      return;
     }
   };
 
   const handleExportPdf = async () => {
     try {
       await exportPdf(buildExportPayload());
-      toast({ title: "PDF downloaded" });
     } catch {
-      toast({ title: "Export failed", variant: "destructive" });
+      return;
     }
   };
 
   // ---- Ask question ----
   const handleAskQuestion = async () => {
-    if (!questionPrompt.trim()) {
-      toast({ title: "Please enter a question", variant: "destructive" });
-      return;
-    }
+    const prompt = questionPrompt.trim();
+    if (!prompt) return;
 
     setAskingQuestion(true);
     try {
       const { data, error } = await supabase.functions.invoke("regenerate", {
-        body: { job_id: jobId, custom_prompt: questionPrompt.trim() },
+        body: { job_id: jobId, custom_prompt: prompt },
       });
 
-      if (error) {
-        toast({ title: "Failed to get answer", description: error.message, variant: "destructive" });
+      if (error || data?.error) {
         return;
       }
 
-      if (data?.error) {
-        toast({ title: "Failed to get answer", description: data.error, variant: "destructive" });
-        return;
+      if (data?.output) {
+        setOutputs((prev) => [...prev, data.output as JobOutput]);
+      } else {
+        await fetchData();
       }
 
-      toast({ title: "Answer saved" });
       setQuestionPrompt("");
-      await fetchData();
     } catch {
-      toast({ title: "Something went wrong", variant: "destructive" });
+      return;
     } finally {
       setAskingQuestion(false);
     }
