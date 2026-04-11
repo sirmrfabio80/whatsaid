@@ -202,7 +202,7 @@ function extractMp4CreationDate(buffer: ArrayBuffer): Date | null {
 
 /**
  * Extract the creation/recording date from an audio file.
- * Reads up to 1MB from start and end of the file.
+ * Reads the full file so embedded metadata is available even when atoms live past the first chunk.
  */
 export async function extractAudioCreationDate(file: File): Promise<Date | null> {
   try {
@@ -210,8 +210,7 @@ export async function extractAudioCreationDate(file: File): Promise<Date | null>
     const mp4Types = ["m4a", "mp4", "mov", "aac"];
 
     if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
-      const firstChunk = file.slice(0, 1024 * 1024);
-      const buffer = await firstChunk.arrayBuffer();
+      const buffer = await file.arrayBuffer();
 
       // Priority 1: Apple QuickTime metadata
       const appleDate = extractAppleCreationDate(buffer);
@@ -226,28 +225,11 @@ export async function extractAudioCreationDate(file: File): Promise<Date | null>
         console.log("[audio-creation-date] Source: mvhd");
         return mvhdDate;
       }
-
-      // Try last 1MB if moov wasn't in the first chunk
-      if (file.size > 1024 * 1024) {
-        const lastChunk = file.slice(Math.max(0, file.size - 1024 * 1024));
-        const lastBuffer = await lastChunk.arrayBuffer();
-
-        const appleDate2 = extractAppleCreationDate(lastBuffer);
-        if (appleDate2) {
-          console.log("[audio-creation-date] Source: com.apple.quicktime.creationdate (end of file)");
-          return appleDate2;
-        }
-
-        const mvhdDate2 = extractMp4CreationDate(lastBuffer);
-        if (mvhdDate2) {
-          console.log("[audio-creation-date] Source: mvhd (end of file)");
-          return mvhdDate2;
-        }
-      }
     }
 
     return null;
-  } catch {
+  } catch (error) {
+    console.warn("[audio-creation-date] Extraction failed:", error);
     return null;
   }
 }
