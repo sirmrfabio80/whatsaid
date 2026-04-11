@@ -82,6 +82,14 @@ export default function JobDetail() {
     toast({ title: "Title updated" });
   };
 
+  const handleDateChange = async (date: Date | undefined) => {
+    if (!date || !id) return;
+    setJobDate(date);
+    setDatePickerOpen(false);
+    await supabase.from("jobs").update({ created_at: date.toISOString() } as any).eq("id", id);
+    toast({ title: "Date updated" });
+  };
+
   if (!id) return null;
 
   return (
