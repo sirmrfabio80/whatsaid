@@ -4,9 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, Check, FileText, Sparkles, MessageSquareText, Globe } from "lucide-react";
+import { Copy, Download, Check, FileText, Sparkles, MessageSquareText, Globe, FileDown } from "lucide-react";
 import { getLanguageLabel } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
+import { exportDocx, exportPdf } from "@/lib/export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface JobOutput {
   id: string;
@@ -15,17 +22,19 @@ interface JobOutput {
   custom_prompt: string | null;
 }
 
-interface JobMeta {
+export interface JobMeta {
   language_detected: string | null;
   duration_seconds: number | null;
   file_name: string;
+  created_at: string;
 }
 
 interface JobResultsProps {
   jobId: string;
+  onMetaLoaded?: (meta: JobMeta) => void;
 }
 
-export default function JobResults({ jobId }: JobResultsProps) {
+export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const { toast } = useToast();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
   const [meta, setMeta] = useState<JobMeta | null>(null);
@@ -33,7 +42,7 @@ export default function JobResults({ jobId }: JobResultsProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       const [{ data: outputsData }, { data: jobData }] = await Promise.all([
         supabase
           .from("job_outputs")
@@ -42,17 +51,19 @@ export default function JobResults({ jobId }: JobResultsProps) {
           .order("created_at", { ascending: true }),
         supabase
           .from("jobs")
-          .select("language_detected, duration_seconds, file_name")
+          .select("language_detected, duration_seconds, file_name, created_at")
           .eq("id", jobId)
           .maybeSingle(),
       ]);
 
       setOutputs((outputsData as JobOutput[]) ?? []);
-      setMeta(jobData as JobMeta | null);
+      const m = jobData as JobMeta | null;
+      setMeta(m);
+      if (m) onMetaLoaded?.(m);
       setLoading(false);
     };
 
-    fetch();
+    fetchData();
   }, [jobId]);
 
   const handleCopy = async (content: string, id: string) => {
@@ -72,6 +83,20 @@ export default function JobResults({ jobId }: JobResultsProps) {
     URL.revokeObjectURL(url);
   };
 
+  if (loading) {
+    return (
+      <div className="text-center text-muted-foreground py-8 text-sm">
+        Loading results...
+      </div>
+    );
+  }
+
+  const transcript = outputs.find((o) => o.output_type === "transcript");
+  const summary = outputs.find((o) => o.output_type === "summary");
+  const custom = outputs.find((o) => o.output_type === "custom");
+
+  const baseName = meta?.file_name?.replace(/\.[^.]+$/, "") ?? "output";
+
   const handleDownloadAllJson = () => {
     const payload: Record<string, unknown> = {
       file_name: meta?.file_name ?? null,
@@ -87,19 +112,33 @@ export default function JobResults({ jobId }: JobResultsProps) {
     handleDownload(JSON.stringify(payload, null, 2), `${baseName}.json`, "application/json");
   };
 
-  if (loading) {
-    return (
-      <div className="text-center text-muted-foreground py-8 text-sm">
-        Loading results...
-      </div>
-    );
-  }
+  const buildExportPayload = () => ({
+    fileName: meta?.file_name ?? "output",
+    language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
+    durationSeconds: meta?.duration_seconds ?? null,
+    createdAt: meta?.created_at ?? null,
+    transcript: transcript?.content ?? null,
+    summary: summary?.content ?? null,
+    customPrompt: custom?.custom_prompt ?? null,
+    customOutput: custom?.content ?? null,
+  });
 
-  const transcript = outputs.find((o) => o.output_type === "transcript");
-  const summary = outputs.find((o) => o.output_type === "summary");
-  const custom = outputs.find((o) => o.output_type === "custom");
+  const handleExportDocx = async () => {
+    try {
+      await exportDocx(buildExportPayload());
+      toast({ title: "DOCX downloaded" });
+    } catch {
+      toast({ title: "Export failed", variant: "destructive" });
+    }
+  };
 
-  const baseName = meta?.file_name?.replace(/\.[^.]+$/, "") ?? "output";
+  const handleExportPdf = () => {
+    try {
+      exportPdf(buildExportPayload());
+    } catch {
+      toast({ title: "Export failed", variant: "destructive" });
+    }
+  };
 
   const tabs = [
     transcript && { key: "transcript", label: "Transcript", icon: FileText, output: transcript },
@@ -165,25 +204,34 @@ export default function JobResults({ jobId }: JobResultsProps) {
                     )}
                     {copiedId === output.id ? "Copied" : "Copy"}
                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="sm"
-                     className="rounded-lg gap-1.5 text-xs h-8"
-                     onClick={() => handleDownload(output.content, `${baseName}_${key}.txt`)}
-                   >
-                     <Download className="w-3.5 h-3.5" />
-                     TXT
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="sm"
-                     className="rounded-lg gap-1.5 text-xs h-8"
-                     onClick={handleDownloadAllJson}
-                   >
-                     <Download className="w-3.5 h-3.5" />
-                     JSON
-                   </Button>
-                 </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
+                        <FileDown className="w-3.5 h-3.5" />
+                        Export
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[140px]">
+                      <DropdownMenuItem onClick={() => handleDownload(output.content, `${baseName}_${key}.txt`)}>
+                        <Download className="w-3.5 h-3.5 mr-2" />
+                        Plain text (.txt)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDownloadAllJson}>
+                        <Download className="w-3.5 h-3.5 mr-2" />
+                        JSON (.json)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportDocx}>
+                        <Download className="w-3.5 h-3.5 mr-2" />
+                        Word (.docx)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportPdf}>
+                        <Download className="w-3.5 h-3.5 mr-2" />
+                        PDF (print)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
                 {/* Content */}
                 <div className="p-5 sm:p-6">
