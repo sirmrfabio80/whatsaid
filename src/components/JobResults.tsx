@@ -33,6 +33,8 @@ export interface JobMeta {
   duration_seconds: number | null;
   file_name: string;
   created_at: string;
+  recorded_at: string | null;
+  recorded_at_source: string | null;
   speech_model: string | null;
   speaker_names: Record<string, string>;
   title: string | null;
@@ -116,7 +118,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         .order("created_at", { ascending: true }),
       supabase
         .from("jobs")
-        .select("language_detected, summary_language, duration_seconds, file_name, created_at, speech_model, speaker_names, title")
+        .select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title")
         .eq("id", jobId)
         .maybeSingle(),
     ]);

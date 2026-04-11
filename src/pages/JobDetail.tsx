@@ -32,14 +32,15 @@ export default function JobDetail() {
     if (!authLoading && !user) navigate("/login");
   }, [user, authLoading, navigate]);
 
-  // When meta loads, set title and auto-generate if missing
+  const getEffectiveRecordedAt = (m: JobMeta) => new Date(m.recorded_at ?? m.created_at);
+
+  // When meta loads, set title and default to the recording/import time if available
   const handleMetaLoaded = (m: JobMeta) => {
     setMeta(m);
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
-    setJobDate(new Date(m.created_at));
+    setJobDate(getEffectiveRecordedAt(m));
 
-    // Auto-generate title if none exists
     if (!m.title && id) {
       generateTitle();
     }
@@ -81,22 +82,21 @@ export default function JobDetail() {
 
   const handleDateChange = async (date: Date | undefined) => {
     if (!date || !id) return;
-    // Preserve existing time when changing date
-    const existing = jobDate ?? new Date();
-    date.setHours(existing.getHours(), existing.getMinutes(), existing.getSeconds());
+    const existing = jobDate ?? (meta ? getEffectiveRecordedAt(meta) : new Date());
+    date.setHours(existing.getHours(), existing.getMinutes(), existing.getSeconds(), existing.getMilliseconds());
     setJobDate(date);
     setDatePickerOpen(false);
-    await supabase.from("jobs").update({ created_at: date.toISOString() } as any).eq("id", id);
+    await supabase.from("jobs").update({ recorded_at: date.toISOString(), recorded_at_source: "manual" } as any).eq("id", id);
   };
 
   const handleTimeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!id) return;
     const [hours, minutes] = e.target.value.split(":").map(Number);
     if (isNaN(hours) || isNaN(minutes)) return;
-    const updated = new Date(jobDate ?? new Date());
-    updated.setHours(hours, minutes);
+    const updated = new Date(jobDate ?? (meta ? getEffectiveRecordedAt(meta) : new Date()));
+    updated.setHours(hours, minutes, updated.getSeconds(), updated.getMilliseconds());
     setJobDate(updated);
-    await supabase.from("jobs").update({ created_at: updated.toISOString() } as any).eq("id", id);
+    await supabase.from("jobs").update({ recorded_at: updated.toISOString(), recorded_at_source: "manual" } as any).eq("id", id);
   };
 
   const timeValue = jobDate
@@ -196,14 +196,14 @@ export default function JobDetail() {
                   <PopoverTrigger asChild>
                     <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-0.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
                       <Calendar className="w-3 h-3" />
-                      {(jobDate ?? new Date(meta.created_at)).toLocaleDateString(undefined, {
+                      {(jobDate ?? getEffectiveRecordedAt(meta)).toLocaleDateString(undefined, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                       })}
                       <span className="text-muted-foreground">·</span>
                       <Clock className="w-3 h-3" />
-                      {timeValue || (new Date(meta.created_at)).toLocaleTimeString(undefined, {
+                      {timeValue || getEffectiveRecordedAt(meta).toLocaleTimeString(undefined, {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -212,7 +212,7 @@ export default function JobDetail() {
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarWidget
                       mode="single"
-                      selected={jobDate ?? new Date(meta.created_at)}
+                      selected={jobDate ?? getEffectiveRecordedAt(meta)}
                       onSelect={handleDateChange}
                       initialFocus
                     />
