@@ -94,8 +94,8 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
     <div className="w-full">
       {!selectedFile ? (
         <div
-          className={`relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
-            dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/50"
+          className={`relative glass-dropzone rounded-xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
+            dragOver ? "!border-primary !border-solid shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]" : "hover:border-primary/50"
           } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
