@@ -36,7 +36,7 @@ export default function History() {
     const fetchJobs = async () => {
       const { data } = await supabase
         .from("jobs")
-        .select("id, file_name, status, duration_seconds, language_detected, language_selected, credits_charged, created_at")
+        .select("id, file_name, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       
