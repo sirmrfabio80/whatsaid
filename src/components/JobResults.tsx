@@ -192,16 +192,24 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     handleDownload(JSON.stringify(payload, null, 2), `${baseName}.json`, "application/json");
   };
 
-  const buildExportPayload = () => ({
-    fileName: meta?.file_name ?? "output",
-    language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
-    durationSeconds: meta?.duration_seconds ?? null,
-    createdAt: meta?.created_at ?? null,
-    transcript: transcript ? applySpeakerNames(transcript.content, speakerNames) : null,
-    summary: summary ? applySpeakerNames(summary.content, speakerNames) : null,
-    customPrompt: null,
-    customOutput: null,
-  });
+  const buildExportPayload = () => {
+    const qEntries = getQuestionEntries();
+    const questions: QAEntry[] = qEntries.map((q) => ({
+      prompt: q.custom_prompt,
+      answer: applySpeakerNames(q.content, speakerNames),
+    }));
+    return {
+      fileName: meta?.file_name ?? "output",
+      language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
+      durationSeconds: meta?.duration_seconds ?? null,
+      createdAt: meta?.created_at ?? null,
+      transcript: transcript ? applySpeakerNames(transcript.content, speakerNames) : null,
+      summary: summary ? applySpeakerNames(summary.content, speakerNames) : null,
+      customPrompt: null,
+      customOutput: null,
+      questions: questions.length > 0 ? questions : undefined,
+    };
+  };
 
   const handleExportDocx = async () => {
     try {
