@@ -1,51 +1,49 @@
 
 
-# Add Time Editing to Job Date Picker
+# Fix: Extract Apple M4A creation date from `com.apple.quicktime.creationdate`
 
-## What changes
+## Problem confirmed
 
-**Single file**: `src/pages/JobDetail.tsx`
+The current `extractAudioCreationDate` only reads the `mvhd` atom, which for Apple recordings is often 0 or a UTC-shifted value. The actual "Date Created" visible in Finder comes from `com.apple.quicktime.creationdate` stored in `moov > udta > meta > keys/ilst`. Since extraction fails, the code falls back to `file.lastModified` — producing the wrong date entirely.
 
-### 1. Display date AND time in the trigger button
+Database proof: job `96f85f8e` has `recorded_at_source: "file_last_modified"` and `recorded_at: 2026-04-11 13:37:03+00` instead of `2026-03-13 10:49:xx`.
 
-Change the date badge from showing only "Apr 11, 2026" to "Apr 11, 2026 · 14:30". This uses the job's `created_at` timestamp which already stores the full date+time.
+## Changes
 
-### 2. Add time input inside the popover
+### 1. Rewrite `src/lib/audio-creation-date.ts`
 
-Below the calendar widget, add a styled `<input type="time">` with a subtle separator. The popover becomes:
+Add Apple QuickTime metadata extraction before the `mvhd` fallback:
 
-```text
-┌─────────────────────┐
-│    « April 2026 »   │
-│ Mo Tu We Th Fr Sa Su│
-│  .  .  .  1  2  3  4│
-│  5  6  7  8  9 10 11│
-│ ...                  │
-├─────────────────────┤
-│  🕐  14:30           │
-└─────────────────────┘
-```
+- **New function `extractAppleCreationDate(buffer)`**:
+  - Find `moov > udta > meta` box
+  - Skip the 4-byte version/flags header inside `meta` (the current `findBox` doesn't account for this — add a variant or offset parameter)
+  - Parse the `keys` atom: read the key count, iterate key entries to find the index of `com.apple.quicktime.creationdate`
+  - Parse the `ilst` atom: locate the entry at the matching 1-based index, read its `data` sub-box, extract the UTF-8 ISO 8601 string (e.g. `2026-03-13T10:49:00+0100`)
+  - Parse the ISO string with `new Date(isoString)` — this preserves timezone correctly since the string includes the offset
 
-### 3. Preserve time when changing date, preserve date when changing time
+- **Priority order**:
+  1. `com.apple.quicktime.creationdate` → most accurate, includes local timezone
+  2. `mvhd` creation_time → UTC fallback
+  3. Return `null` → caller uses `file.lastModified`
 
-- `handleDateChange`: merges the selected calendar day with the existing time from `jobDate`
-- New `handleTimeChange`: merges the new HH:MM with the existing date from `jobDate`
-- Both persist the combined `Date` to the `created_at` column (no schema change needed)
+- **`findBox` enhancement**: Add an optional `skipBytes` parameter so that when recursing into a `meta` box, we can skip the 4-byte version/flags header before searching for child boxes
 
-### 4. Semantic clarity
+### 2. Add console.log for verification
 
-The `created_at` column already stores when the job was created (which corresponds to when the recording was uploaded). The UI will not label this as "created" or "modified" — it simply shows as the recording's date and time, which the user can adjust if needed.
+Temporarily log the raw extracted ISO string and the resulting `Date` object so we can verify the exact values in the user's next test upload. These logs will be reported back per the user's request.
 
-### No other changes
+### 3. No other file changes needed
 
-- No database migration (timestamp column already supports date+time)
-- No edge function changes
-- No new components
-- Location feature excluded (not viable as previously discussed)
+- `AudioUploader.tsx` already calls `extractAudioCreationDate` and passes the result
+- `Convert.tsx` already stores `fileCreationDate` as `recorded_at` with source `"file_creation_date"`
+- `JobDetail.tsx` already reads `recorded_at` and displays it
 
-### Styling
+### Verification checklist (will be reported after implementation)
 
-- Time input styled to match the premium theme: `bg-transparent`, subtle border-top separator, consistent font size
-- Dark mode compatible via existing CSS variables
-- Keyboard accessible (native time input supports arrow keys, tab)
+1. Raw extracted metadata value for the test file
+2. Stored `recorded_at` value in the database
+3. Timezone correctness (ISO string includes offset, no unexpected shift)
+4. Calendar picker shows exact same local date and time as source metadata
+5. No fallback to `file.lastModified` when Apple metadata exists
+6. Consistency across upload step, convert page, job page, and editable date/time UI
 
