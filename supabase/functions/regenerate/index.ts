@@ -167,7 +167,7 @@ Rules:
       job_id,
       output_type: regenerateType,
       content,
-      custom_prompt: regenerateType === "custom" ? custom_prompt : null,
+      custom_prompt: regenerateType === "question" ? custom_prompt : null,
     });
 
     // Increment regeneration count and update summary language if applicable
