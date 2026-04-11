@@ -165,7 +165,7 @@ export default function Convert() {
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
-  const isTerminal = step === "completed" || step === "failed";
+  
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
