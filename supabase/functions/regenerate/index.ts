@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
     }
 
     // Determine what we're regenerating
-    const regenerateType = output_type === "summary" ? "summary" : "question";
+    const regenerateType = output_type === "summary" ? "summary" : "custom";
 
-    if (regenerateType === "question" && (!custom_prompt || !custom_prompt.trim())) {
+    if (regenerateType === "custom" && (!custom_prompt || !custom_prompt.trim())) {
       return new Response(JSON.stringify({ error: "custom_prompt is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -163,12 +163,20 @@ Rules:
     const content = data.choices?.[0]?.message?.content ?? "";
 
     // Insert the output
-    await supabase.from("job_outputs").insert({
-      job_id,
-      output_type: regenerateType,
-      content,
-      custom_prompt: regenerateType === "question" ? custom_prompt : null,
-    });
+    const { data: insertedOutput, error: insertError } = await supabase
+      .from("job_outputs")
+      .insert({
+        job_id,
+        output_type: regenerateType,
+        content,
+        custom_prompt: regenerateType === "custom" ? custom_prompt : null,
+      })
+      .select("id, output_type, content, custom_prompt")
+      .single();
+
+    if (insertError || !insertedOutput) {
+      throw new Error(insertError?.message || "Failed to save regenerated output");
+    }
 
     // Increment regeneration count and update summary language if applicable
     const updatePayload: Record<string, unknown> = {
@@ -186,7 +194,7 @@ Rules:
     console.log(`[regenerate] ${regenerateType} output regenerated for job ${job_id}`);
 
     return new Response(
-      JSON.stringify({ success: true, job_id }),
+      JSON.stringify({ success: true, job_id, output: insertedOutput }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
