@@ -25,11 +25,7 @@ export default function Convert() {
   }, []);
 
   const handleConvert = () => {
-    if (user) {
-      console.log("Account flow:", { file: file?.name, duration, language, customPrompt, credits });
-    } else {
-      console.log("Guest flow:", { file: file?.name, duration, language, customPrompt, price: guestPrice.price });
-    }
+    console.log("Convert:", { file: file?.name, duration, language, customPrompt, credits });
   };
 
   const handleReset = () => {
