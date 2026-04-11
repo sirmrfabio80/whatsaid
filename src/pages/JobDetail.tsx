@@ -12,13 +12,11 @@ import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [meta, setMeta] = useState<JobMeta | null>(null);
 
   // Title editing state
@@ -79,7 +77,6 @@ export default function JobDetail() {
     setTitle(trimmed);
     setEditing(false);
     await supabase.from("jobs").update({ title: trimmed } as any).eq("id", id);
-    toast({ title: "Title updated" });
   };
 
   const handleDateChange = async (date: Date | undefined) => {
@@ -87,7 +84,6 @@ export default function JobDetail() {
     setJobDate(date);
     setDatePickerOpen(false);
     await supabase.from("jobs").update({ created_at: date.toISOString() } as any).eq("id", id);
-    toast({ title: "Date updated" });
   };
 
   if (!id) return null;

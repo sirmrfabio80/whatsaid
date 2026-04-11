@@ -18,7 +18,6 @@ import { FileAudio, Clock, Globe, ArrowRight, Inbox, Cpu, Trash2 } from "lucide-
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 
 interface Job {
   id: string;
@@ -36,7 +35,6 @@ interface Job {
 export default function History() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Job | null>(null);
@@ -67,14 +65,12 @@ export default function History() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      // Delete outputs first (FK dependency), then the job
       await supabase.from("job_outputs").delete().eq("job_id", deleteTarget.id);
       const { error } = await supabase.from("jobs").delete().eq("id", deleteTarget.id);
       if (error) throw error;
       setJobs((prev) => prev.filter((j) => j.id !== deleteTarget.id));
-      toast({ title: "Transcription deleted" });
     } catch {
-      toast({ title: "Failed to delete", variant: "destructive" });
+      // Silently handle — the item stays in the list
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -188,7 +184,6 @@ export default function History() {
         </div>
       </div>
 
-      {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>

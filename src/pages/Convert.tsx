@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
-import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info
@@ -29,7 +28,6 @@ const STEP_LABELS: Record<ProcessingStep, string> = {
 export default function Convert() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [language, setLanguage] = useState("auto");
@@ -62,7 +60,6 @@ export default function Convert() {
       if (!job) return;
 
       if (job.status === "processing") {
-        // Check if transcript exists yet to differentiate transcribing vs summarising
         const { count } = await supabase
           .from("job_outputs")
           .select("id", { count: "exact", head: true })
@@ -83,7 +80,7 @@ export default function Convert() {
     };
 
     pollRef.current = setInterval(poll, 3000);
-    poll(); // run immediately
+    poll();
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -98,11 +95,9 @@ export default function Convert() {
     setErrorMessage(null);
 
     try {
-      // 1. Build file path
       const newJobId = crypto.randomUUID();
       const filePath = `${user.id}/${newJobId}/${file.name}`;
 
-      // 2. Upload audio to temp-audio bucket
       const { error: uploadError } = await supabase.storage
         .from("temp-audio")
         .upload(filePath, file, { upsert: false });
@@ -111,7 +106,6 @@ export default function Convert() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // 3. Create job row with temp_file_path already set
       const { error: jobError } = await supabase
         .from("jobs")
         .insert({
@@ -131,28 +125,20 @@ export default function Convert() {
       }
 
       setJobId(newJobId);
-
       setStep("transcribing");
 
-      // 4. Call process-job edge function (fire and forget — we poll for status)
       const { error: fnError } = await supabase.functions.invoke("process-job", {
         body: { job_id: newJobId, custom_prompt: customPrompt || null },
       });
 
       if (fnError) {
         console.error("process-job invoke error:", fnError);
-        // Don't throw — the edge function may still be running; polling will pick up status
       }
     } catch (error) {
       console.error("Convert error:", error);
       setStep("failed");
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
       setProcessing(false);
-      toast({
-        title: "Conversion failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -168,8 +154,6 @@ export default function Convert() {
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
-  
-
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-10 sm:py-14">
@@ -179,14 +163,12 @@ export default function Convert() {
             <p className="text-muted-foreground">Upload a file to get a transcript, summary, and custom AI analysis.</p>
           </div>
 
-          {/* Processing state */}
           {processing || step === "failed" ? (
             <Card className="rounded-xl border-border/50 bg-card shadow-sm mb-6">
               <CardContent className="p-8 sm:p-12">
                 <div className="flex flex-col items-center text-center space-y-6">
-                  {/* Progress steps */}
                   <div className="w-full max-w-sm space-y-4">
-                    {(["uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s, i) => {
+                    {(["uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         ["uploading", "transcribing", "summarising", "completed"].indexOf(step!) >
@@ -221,7 +203,6 @@ export default function Convert() {
                     })}
                   </div>
 
-                  {/* Error message */}
                   {step === "failed" && errorMessage && (
                     <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-sm max-w-sm">
                       <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -229,7 +210,6 @@ export default function Convert() {
                     </div>
                   )}
 
-                  {/* File info */}
                   {file && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <FileAudio className="w-4 h-4" />
@@ -247,14 +227,12 @@ export default function Convert() {
               </CardContent>
             </Card>
           ) : (
-            /* Upload + configure form */
             <Card className="rounded-xl border-border/50 bg-card shadow-sm mb-6">
               <CardContent className="p-6 sm:p-8">
                 <AudioUploader onFileSelected={handleFileSelected} />
 
                 {file && duration > 0 && (
                   <div className="mt-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    {/* File info */}
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                       <FileAudio className="w-5 h-5 text-primary shrink-0" />
                       <div className="min-w-0 flex-1">
@@ -266,7 +244,6 @@ export default function Convert() {
                       </Button>
                     </div>
 
-                    {/* Configure */}
                     <div className="space-y-4">
                       <LanguageSelector value={language} onChange={setLanguage} />
 
@@ -284,7 +261,6 @@ export default function Convert() {
                       </div>
                     </div>
 
-                    {/* Confirm */}
                     <div className="p-4 rounded-xl bg-muted/50 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -295,7 +271,6 @@ export default function Convert() {
                       </div>
                     </div>
 
-                    {/* Recording consent checkbox */}
                     <div className="flex items-start gap-2">
                       <Checkbox
                         id="recording-consent"
