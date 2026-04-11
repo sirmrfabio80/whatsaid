@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileAudio, Clock, Globe, ArrowRight, Inbox } from "lucide-react";
+import { FileAudio, Clock, Globe, ArrowRight, Inbox, Cpu } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
