@@ -228,12 +228,6 @@ export default function JobDetail() {
                     </div>
                   </PopoverContent>
                 </Popover>
-                {meta.duration_seconds != null && (
-                  <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
-                    <Clock className="w-3 h-3" />
-                    {formatDuration(meta.duration_seconds)}
-                  </Badge>
-                )}
                 {meta.language_detected && (
                   <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
                     <Globe className="w-3 h-3" />
