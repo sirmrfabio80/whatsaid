@@ -97,14 +97,9 @@ export default function Navbar() {
               </DropdownMenu>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link to="/login">
-                <Button variant="ghost" size="sm" className="rounded-xl">Sign in</Button>
-              </Link>
-              <Link to="/signup">
-                <Button size="sm" className="rounded-xl">Get started</Button>
-              </Link>
-            </div>
+            <Link to="/login">
+              <Button size="sm" className="rounded-xl">Sign in</Button>
+            </Link>
           )}
         </div>
 
@@ -161,14 +156,9 @@ export default function Navbar() {
               </Button>
             </>
           ) : (
-            <>
-              <Link to="/login" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full rounded-xl">Sign in</Button>
-              </Link>
-              <Link to="/signup" onClick={() => setMobileOpen(false)}>
-                <Button className="w-full rounded-xl">Get started</Button>
-              </Link>
-            </>
+            <Link to="/login" onClick={() => setMobileOpen(false)}>
+              <Button className="w-full rounded-xl">Sign in</Button>
+            </Link>
           )}
         </div>
       )}
