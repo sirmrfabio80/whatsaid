@@ -137,8 +137,8 @@ export default function Index() {
       </section>
 
       {/* Trust strip */}
-      <section className="border-t border-border/50 bg-muted/30">
-        <div className="container mx-auto px-4 py-8">
+      <section ref={trust.ref} className="border-t border-border/50 bg-muted/30">
+        <div className={`container mx-auto px-4 py-8 transition-all duration-700 ${trust.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
           <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
             <Shield className="w-4 h-4 text-primary" />
             <span>Your audio is deleted immediately after processing. No storage. No retention.</span>
