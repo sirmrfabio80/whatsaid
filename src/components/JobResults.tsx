@@ -127,6 +127,32 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId);
   };
 
+  // ---- Summary language change ----
+  const handleSummaryLanguageChange = async (langCode: string) => {
+    if (langCode === summaryLang) return;
+    setSummaryLang(langCode);
+    setRegeneratingSummary(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("regenerate", {
+        body: { job_id: jobId, output_type: "summary", target_language: langCode },
+      });
+      if (error || data?.error) {
+        toast({
+          title: "Failed to regenerate summary",
+          description: error?.message || data?.error,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: `Summary regenerated in ${getLanguageLabel(langCode)}` });
+      await fetchData();
+    } catch {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
+      setRegeneratingSummary(false);
+    }
+  };
+
   // ---- Copy ----
   const handleCopy = async (content: string, id: string) => {
     await navigator.clipboard.writeText(content);
