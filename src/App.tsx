@@ -7,7 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+
 import Convert from "./pages/Convert";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -28,7 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            
             <Route path="/convert" element={<Convert />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
