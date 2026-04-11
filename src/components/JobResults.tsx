@@ -28,6 +28,7 @@ export interface JobMeta {
   duration_seconds: number | null;
   file_name: string;
   created_at: string;
+  speech_model: string | null;
 }
 
 interface JobResultsProps {

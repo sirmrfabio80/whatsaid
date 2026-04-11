@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN speech_model text;

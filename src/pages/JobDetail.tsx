@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, Globe, Calendar, Plus } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Calendar, Plus, Cpu } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
@@ -72,6 +72,12 @@ export default function JobDetail() {
                   <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
                     <Globe className="w-3 h-3" />
                     {getLanguageLabel(meta.language_detected)}
+                  </Badge>
+                )}
+                {meta.speech_model && (
+                  <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
+                    <Cpu className="w-3 h-3" />
+                    {meta.speech_model}
                   </Badge>
                 )}
               </div>
