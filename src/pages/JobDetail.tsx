@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { ArrowLeft, Clock, Globe, Calendar, Plus, Cpu, Pencil, Check, Loader2, Sparkles } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
