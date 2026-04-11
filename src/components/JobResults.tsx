@@ -428,17 +428,17 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   content={transcript.content}
                   id={transcript.id}
                   tabKey="transcript"
-                  leftContent={
-                    speakers.length > 0 ? (
-                      <SpeakerChips
-                        speakers={speakers}
-                        speakerNames={speakerNames}
-                        onRename={handleRenameSpeaker}
-                        onReset={handleResetSpeakerNames}
-                      />
-                    ) : undefined
-                  }
                 />
+              )}
+              {speakers.length > 0 && (
+                <div className="px-4 py-3 border-b border-border/50">
+                  <SpeakerChips
+                    speakers={speakers}
+                    speakerNames={speakerNames}
+                    onRename={handleRenameSpeaker}
+                    onReset={handleResetSpeakerNames}
+                  />
+                </div>
               )}
               <div className="p-5 sm:p-6">
                 {transcript ? (

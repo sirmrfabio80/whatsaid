@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
     }
 
     // Determine what we're regenerating
-    const regenerateType = output_type === "summary" ? "summary" : "custom";
+    const regenerateType = output_type === "summary" ? "summary" : "question";
 
-    if (regenerateType === "custom" && (!custom_prompt || !custom_prompt.trim())) {
+    if (regenerateType === "question" && (!custom_prompt || !custom_prompt.trim())) {
       return new Response(JSON.stringify({ error: "custom_prompt is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -121,12 +121,8 @@ Rules:
 
       userPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
 
-      // Delete existing custom output
-      await supabase
-        .from("job_outputs")
-        .delete()
-        .eq("job_id", job_id)
-        .eq("output_type", "custom");
+
+
 
       console.log(`[regenerate] Processing job ${job_id}, prompt: "${custom_prompt.slice(0, 80)}..."`);
     }
@@ -171,7 +167,7 @@ Rules:
       job_id,
       output_type: regenerateType,
       content,
-      custom_prompt: regenerateType === "custom" ? custom_prompt : null,
+      custom_prompt: regenerateType === "question" ? custom_prompt : null,
     });
 
     // Increment regeneration count and update summary language if applicable
