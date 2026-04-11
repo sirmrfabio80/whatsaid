@@ -163,9 +163,23 @@ export async function exportPdf(payload: ExportPayload): Promise<void> {
   const html = buildPdfHtml(payload);
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
+  const title = baseName(payload.fileName);
+  printWindow.document.title = title;
   printWindow.document.write(html);
   printWindow.document.close();
-  setTimeout(() => printWindow.print(), 400);
+  const triggerPrint = () => {
+    printWindow.document.title = title;
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 150);
+  };
+
+  if (printWindow.document.readyState === "complete") {
+    triggerPrint();
+    return;
+  }
+
+  printWindow.addEventListener("load", triggerPrint, { once: true });
+  setTimeout(triggerPrint, 500);
 }
 
 function buildPdfHtml(p: ExportPayload): string {
