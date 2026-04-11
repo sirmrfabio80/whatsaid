@@ -113,6 +113,7 @@ export default function Convert() {
         ? fileCreationDate.toISOString()
         : new Date(file.lastModified).toISOString();
       const recordedAtSource = fileCreationDate ? "file_creation_date" : "file_last_modified";
+      console.log("[upload-metadata] recorded_at source:", recordedAtSource, "value:", recordedAt);
 
       const { error: jobError } = await supabase
         .from("jobs")

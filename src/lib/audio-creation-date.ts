@@ -24,9 +24,21 @@ function findBox(
   const target = path[0];
   let pos = start;
 
-  while (pos < end - 8) {
-    const size = view.getUint32(pos);
-    if (size < 8) break;
+  while (pos <= end - 8) {
+    let size = view.getUint32(pos);
+    let headerSize = 8;
+
+    if (size === 1) {
+      if (pos + 16 > end) break;
+      const high = view.getUint32(pos + 8);
+      const low = view.getUint32(pos + 12);
+      size = high * 0x100000000 + low;
+      headerSize = 16;
+    } else if (size === 0) {
+      size = end - pos;
+    }
+
+    if (size < headerSize || pos + size > end) break;
 
     const type = String.fromCharCode(
       view.getUint8(pos + 4),
@@ -36,13 +48,18 @@ function findBox(
     );
 
     if (type === target) {
-      if (path.length === 1) {
-        return { offset: pos + 8, size: size - 8 };
-      }
       const skip = skipBytesForContainer?.[0] ?? 0;
+      const contentOffset = pos + headerSize + skip;
+      const contentSize = size - headerSize - skip;
+      if (contentSize < 0) return null;
+
+      if (path.length === 1) {
+        return { offset: contentOffset, size: contentSize };
+      }
+
       return findBox(
         view,
-        pos + 8 + skip,
+        contentOffset,
         pos + size,
         path.slice(1),
         skipBytesForContainer?.slice(1)
@@ -61,6 +78,19 @@ function readString(view: DataView, offset: number, length: number): string {
     bytes.push(view.getUint8(offset + i));
   }
   return new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+}
+
+async function readBlobAsArrayBuffer(file: Blob): Promise<ArrayBuffer> {
+  if (typeof file.arrayBuffer === "function") {
+    return file.arrayBuffer();
+  }
+
+  return new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file buffer"));
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 /**
@@ -185,7 +215,7 @@ function extractMp4CreationDate(buffer: ArrayBuffer): Date | null {
 
 /**
  * Extract the creation/recording date from an audio file.
- * Reads up to 1MB from start and end of the file.
+ * Reads the full file so embedded metadata is available even when atoms live past the first chunk.
  */
 export async function extractAudioCreationDate(file: File): Promise<Date | null> {
   try {
@@ -193,8 +223,7 @@ export async function extractAudioCreationDate(file: File): Promise<Date | null>
     const mp4Types = ["m4a", "mp4", "mov", "aac"];
 
     if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
-      const firstChunk = file.slice(0, 1024 * 1024);
-      const buffer = await firstChunk.arrayBuffer();
+      const buffer = await readBlobAsArrayBuffer(file);
 
       // Priority 1: Apple QuickTime metadata
       const appleDate = extractAppleCreationDate(buffer);
@@ -209,28 +238,11 @@ export async function extractAudioCreationDate(file: File): Promise<Date | null>
         console.log("[audio-creation-date] Source: mvhd");
         return mvhdDate;
       }
-
-      // Try last 1MB if moov wasn't in the first chunk
-      if (file.size > 1024 * 1024) {
-        const lastChunk = file.slice(Math.max(0, file.size - 1024 * 1024));
-        const lastBuffer = await lastChunk.arrayBuffer();
-
-        const appleDate2 = extractAppleCreationDate(lastBuffer);
-        if (appleDate2) {
-          console.log("[audio-creation-date] Source: com.apple.quicktime.creationdate (end of file)");
-          return appleDate2;
-        }
-
-        const mvhdDate2 = extractMp4CreationDate(lastBuffer);
-        if (mvhdDate2) {
-          console.log("[audio-creation-date] Source: mvhd (end of file)");
-          return mvhdDate2;
-        }
-      }
     }
 
     return null;
-  } catch {
+  } catch (error) {
+    console.warn("[audio-creation-date] Extraction failed:", error);
     return null;
   }
 }
