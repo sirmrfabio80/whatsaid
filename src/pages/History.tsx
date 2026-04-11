@@ -166,19 +166,20 @@ export default function History() {
                         </div>
                       </div>
                     </div>
+                    <div className="flex justify-end mt-2 sm:mt-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(job);
+                        }}
+                        aria-label={`Delete ${job.file_name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(job);
-                      }}
-                      aria-label={`Delete ${job.file_name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </CardContent>
                 </Card>
               ))}
