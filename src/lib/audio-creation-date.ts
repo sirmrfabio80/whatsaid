@@ -223,7 +223,7 @@ export async function extractAudioCreationDate(file: File): Promise<Date | null>
     const mp4Types = ["m4a", "mp4", "mov", "aac"];
 
     if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
-      const buffer = await file.arrayBuffer();
+      const buffer = await readBlobAsArrayBuffer(file);
 
       // Priority 1: Apple QuickTime metadata
       const appleDate = extractAppleCreationDate(buffer);
