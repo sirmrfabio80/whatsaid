@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     // Increment regeneration count
     await supabase
       .from("jobs")
-      .update({ regeneration_count: job.regeneration_count ?? 0 + 1 })
+      .update({ regeneration_count: (job.regeneration_count ?? 0) + 1 })
       .eq("id", job_id);
 
     console.log(`[regenerate] Custom output regenerated for job ${job_id}`);
