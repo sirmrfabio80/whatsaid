@@ -155,6 +155,7 @@ export default function Convert() {
   const handleReset = () => {
     setFile(null);
     setDuration(0);
+    setFileCreationDate(null);
     setLanguage("auto");
     setCustomPrompt("");
     setProcessing(false);
