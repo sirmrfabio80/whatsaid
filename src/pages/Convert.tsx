@@ -185,22 +185,39 @@ export default function Convert() {
           </div>
 
           {/* Processing state */}
-          {processing || isTerminal ? (
+          {step === "completed" && jobId ? (
+            /* Results display */
+            <div className="space-y-6 mb-6">
+              <Card className="rounded-xl border-border/50 bg-card shadow-sm">
+                <CardContent className="p-6 sm:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                    <h2 className="font-heading font-semibold text-lg">Processing complete</h2>
+                  </div>
+                  <JobResults jobId={jobId} />
+                </CardContent>
+              </Card>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button className="flex-1 rounded-xl" variant="outline" onClick={() => navigate("/history")}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  View history
+                </Button>
+                <Button className="flex-1 rounded-xl" onClick={handleReset}>
+                  Convert another
+                </Button>
+              </div>
+            </div>
+          ) : processing || step === "failed" ? (
             <Card className="rounded-xl border-border/50 bg-card shadow-sm mb-6">
               <CardContent className="p-8 sm:p-12">
                 <div className="flex flex-col items-center text-center space-y-6">
                   {/* Progress steps */}
                   <div className="w-full max-w-sm space-y-4">
                     {(["uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s, i) => {
-                      const Icon = STEP_ICONS[s];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         ["uploading", "transcribing", "summarising", "completed"].indexOf(step!) >
                         ["uploading", "transcribing", "summarising", "completed"].indexOf(s)
-                      );
-                      const isFailed = step === "failed" && s === (
-                        // Show failure on the step that was active
-                        ["uploading", "transcribing", "summarising"].find((_, idx) => idx === i) || "transcribing"
                       );
 
                       return (
@@ -214,11 +231,11 @@ export default function Convert() {
                                 : "text-muted-foreground/40"
                           }`}
                         >
-                          {isCurrent && !isTerminal ? (
+                          {isCurrent && step !== "failed" ? (
                             <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
-                          ) : isPast || (isCurrent && step === "completed") ? (
+                          ) : isPast ? (
                             <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-                          ) : isFailed || (isCurrent && step === "failed") ? (
+                          ) : step === "failed" && isCurrent ? (
                             <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
                           ) : (
                             <div className="w-5 h-5 rounded-full border-2 border-current shrink-0" />
@@ -248,25 +265,10 @@ export default function Convert() {
                     </div>
                   )}
 
-                  {/* Actions */}
-                  {step === "completed" && jobId && (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
-                      <Button className="flex-1 rounded-xl" onClick={() => navigate(`/history`)}>
-                        <FileText className="w-4 h-4 mr-2" />
-                        View in history
-                      </Button>
-                      <Button variant="outline" className="flex-1 rounded-xl" onClick={handleReset}>
-                        Convert another
-                      </Button>
-                    </div>
-                  )}
-
                   {step === "failed" && (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
-                      <Button className="flex-1 rounded-xl" onClick={handleReset}>
-                        Try again
-                      </Button>
-                    </div>
+                    <Button className="rounded-xl" onClick={handleReset}>
+                      Try again
+                    </Button>
                   )}
                 </div>
               </CardContent>
