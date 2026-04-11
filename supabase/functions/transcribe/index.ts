@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
     // 3. Submit to AssemblyAI
     const transcriptPayload: Record<string, unknown> = {
       audio_url: signedUrlData.signedUrl,
+      speech_model: "universal-3-pro",
       speaker_labels: true,
     };
 
