@@ -221,7 +221,7 @@ export default function JobDetail() {
             </div>
           )}
 
-          <JobResults jobId={id} onMetaLoaded={handleMetaLoaded} />
+          <JobResults jobId={id} currentTitle={title} onMetaLoaded={handleMetaLoaded} />
         </div>
       </div>
     </div>

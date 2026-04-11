@@ -10,6 +10,7 @@ import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, 
 import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
+import { resolveExportBaseName } from "@/lib/export-filename";
 import SpeakerChips from "@/components/SpeakerChips";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import {
@@ -39,6 +40,7 @@ export interface JobMeta {
 
 interface JobResultsProps {
   jobId: string;
+  currentTitle?: string | null;
   onMetaLoaded?: (meta: JobMeta) => void;
 }
 
@@ -88,7 +90,7 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
+export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
   const { toast } = useToast();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
   const [meta, setMeta] = useState<JobMeta | null>(null);
@@ -199,8 +201,13 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     URL.revokeObjectURL(url);
   };
 
-  const displayName = meta?.title?.trim() || meta?.file_name?.replace(/\.[^.]+$/, "") || "output";
-  const baseName = displayName;
+  const persistedJobTitle = meta?.title?.trim() || null;
+  const generatedTitle = !persistedJobTitle ? currentTitle?.trim() || null : null;
+  const baseName = resolveExportBaseName({
+    jobTitle: persistedJobTitle,
+    generatedTitle,
+    originalFileName: meta?.file_name ?? null,
+  });
 
   const handleDownloadAllJson = () => {
     const payload: Record<string, unknown> = {
@@ -227,7 +234,10 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
       answer: applySpeakerNames(q.content, speakerNames),
     }));
     return {
-      fileName: displayName,
+      fileName: baseName,
+      jobTitle: persistedJobTitle,
+      generatedTitle,
+      originalFileName: meta?.file_name ?? null,
       language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
       durationSeconds: meta?.duration_seconds ?? null,
       createdAt: meta?.created_at ?? null,
@@ -248,9 +258,10 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     try {
-      exportPdf(buildExportPayload());
+      await exportPdf(buildExportPayload());
+      toast({ title: "PDF downloaded" });
     } catch {
       toast({ title: "Export failed", variant: "destructive" });
     }
@@ -366,7 +377,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleExportPdf}>
               <Download className="w-3.5 h-3.5 mr-2" />
-              PDF (print)
+              PDF (.pdf)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -510,7 +521,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleExportPdf}>
                           <Download className="w-3.5 h-3.5 mr-2" />
-                          PDF (print)
+                          PDF (.pdf)
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -634,7 +645,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleExportPdf}>
                           <Download className="w-3.5 h-3.5 mr-2" />
-                          PDF (print)
+                          PDF (.pdf)
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
