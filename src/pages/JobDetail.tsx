@@ -74,6 +74,12 @@ export default function JobDetail() {
                     {getLanguageLabel(meta.language_detected)}
                   </Badge>
                 )}
+                {meta.speech_model && (
+                  <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
+                    <Cpu className="w-3 h-3" />
+                    {meta.speech_model}
+                  </Badge>
+                )}
               </div>
             </div>
           )}
