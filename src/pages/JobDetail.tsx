@@ -27,15 +27,25 @@ export default function JobDetail() {
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-12 sm:py-16">
         <div className="max-w-3xl mx-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mb-6 -ml-2 gap-1.5 text-muted-foreground"
-            onClick={() => navigate("/history")}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to history
-          </Button>
+          <div className="flex items-center justify-between mb-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2 gap-1.5 text-muted-foreground"
+              onClick={() => navigate("/history")}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to history
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-xl gap-1.5"
+              onClick={() => navigate("/convert")}
+            >
+              <Plus className="w-4 h-4" />
+              New transcription
+            </Button>
+          </div>
 
           {/* Job heading with metadata */}
           {meta && (
