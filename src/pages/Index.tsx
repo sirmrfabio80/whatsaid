@@ -2,9 +2,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CREDIT_PACKS } from "@/lib/pricing";
+
 import {
-  Mic, Sparkles, FileText, Users, ArrowRight, Zap, Shield, Clock,
+  Mic, Sparkles, FileText, Users, ArrowRight, Shield, Clock,
   Upload, Cpu, Download, Globe, ListChecks, MessageSquareText
 } from "lucide-react";
 
