@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import {
   Mic, Sparkles, FileText, Users, ArrowRight, Shield, Clock,
-  Upload, Cpu, Download, Globe, ListChecks, MessageSquareText
+  Upload, Cpu, Download, Globe, MessageSquareText
 } from "lucide-react";
 
 export default function Index() {
