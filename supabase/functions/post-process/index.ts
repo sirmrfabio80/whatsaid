@@ -139,10 +139,10 @@ Rules:
       });
     }
 
-    // 5. Mark job as completed
+    // 5. Mark job as completed and record summary language
     await supabase
       .from("jobs")
-      .update({ status: "completed" })
+      .update({ status: "completed", summary_language: langLabel })
       .eq("id", job_id);
 
     console.log(`[post-process] Job ${job_id} completed`);

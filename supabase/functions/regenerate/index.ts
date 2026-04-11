@@ -174,10 +174,17 @@ Rules:
       custom_prompt: regenerateType === "custom" ? custom_prompt : null,
     });
 
-    // Increment regeneration count
+    // Increment regeneration count and update summary language if applicable
+    const updatePayload: Record<string, unknown> = {
+      regeneration_count: (job.regeneration_count ?? 0) + 1,
+    };
+    if (regenerateType === "summary") {
+      const lang = target_language || job.language_detected || "en";
+      updatePayload.summary_language = lang;
+    }
     await supabase
       .from("jobs")
-      .update({ regeneration_count: (job.regeneration_count ?? 0) + 1 })
+      .update(updatePayload)
       .eq("id", job_id);
 
     console.log(`[regenerate] ${regenerateType} output regenerated for job ${job_id}`);

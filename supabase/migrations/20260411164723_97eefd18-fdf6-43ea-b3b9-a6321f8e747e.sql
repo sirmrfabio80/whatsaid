@@ -1,0 +1,1 @@
+UPDATE public.jobs SET summary_language = COALESCE(language_detected, 'en') WHERE status = 'completed' AND summary_language IS NULL;

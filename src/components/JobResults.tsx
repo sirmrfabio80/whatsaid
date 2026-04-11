@@ -27,6 +27,7 @@ interface JobOutput {
 
 export interface JobMeta {
   language_detected: string | null;
+  summary_language: string | null;
   duration_seconds: number | null;
   file_name: string;
   created_at: string;
@@ -92,7 +93,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
         .order("created_at", { ascending: true }),
       supabase
         .from("jobs")
-        .select("language_detected, duration_seconds, file_name, created_at, speech_model, speaker_names, title")
+        .select("language_detected, summary_language, duration_seconds, file_name, created_at, speech_model, speaker_names, title")
         .eq("id", jobId)
         .maybeSingle(),
     ]);
@@ -107,7 +108,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     setMeta(m as JobMeta | null);
     if (m) {
       setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
-      setSummaryLang((prev) => prev || m.language_detected || "en");
+      setSummaryLang((prev) => prev || m.summary_language || m.language_detected || "en");
       onMetaLoaded?.(m as JobMeta);
     }
     setLoading(false);

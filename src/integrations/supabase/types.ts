@@ -119,6 +119,7 @@ export type Database = {
           speech_model: string | null
           status: Database["public"]["Enums"]["job_status"]
           stripe_payment_id: string | null
+          summary_language: string | null
           temp_file_path: string | null
           title: string | null
           updated_at: string
@@ -142,6 +143,7 @@ export type Database = {
           speech_model?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
+          summary_language?: string | null
           temp_file_path?: string | null
           title?: string | null
           updated_at?: string
@@ -165,6 +167,7 @@ export type Database = {
           speech_model?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
+          summary_language?: string | null
           temp_file_path?: string | null
           title?: string | null
           updated_at?: string
