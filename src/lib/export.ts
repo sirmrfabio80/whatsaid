@@ -230,7 +230,17 @@ function buildSections(p: ExportPayload): Paragraph[] {
       })
     );
     p.transcript.split("\n").forEach((line) => {
-      children.push(new Paragraph({ spacing: { after: 100 }, children: [new TextRun(line)] }));
+      const speakerMatch = line.match(/^(.+?):\s/);
+      if (speakerMatch) {
+        const label = speakerMatch[1] + ":";
+        const rest = line.slice(speakerMatch[0].length);
+        children.push(new Paragraph({ spacing: { after: 100 }, children: [
+          new TextRun({ text: label + " ", bold: true }),
+          new TextRun(rest),
+        ] }));
+      } else {
+        children.push(new Paragraph({ spacing: { after: 100 }, children: [new TextRun(line)] }));
+      }
     });
     children.push(new Paragraph({ spacing: { after: 200 }, children: [] }));
   }
@@ -394,7 +404,16 @@ function buildPdfHtml(p: ExportPayload): string {
   // Transcript — plain text
   if (p.transcript) {
     body += `<h2 style="font-size:16px;margin:24px 0 8px">Transcript</h2>`;
-    body += `<div style="white-space:pre-wrap;font-size:13px;line-height:1.6">${escape(p.transcript)}</div>`;
+    const transcriptHtml = p.transcript.split("\n").map((line) => {
+      const speakerMatch = line.match(/^(.+?):\s/);
+      if (speakerMatch) {
+        const label = escape(speakerMatch[1] + ":");
+        const rest = escape(line.slice(speakerMatch[0].length));
+        return `<p style="margin:0 0 6px"><strong>${label}</strong> ${rest}</p>`;
+      }
+      return `<p style="margin:0 0 6px">${escape(line)}</p>`;
+    }).join("");
+    body += `<div style="font-size:13px;line-height:1.6">${transcriptHtml}</div>`;
   }
 
   // Summary — rendered markdown
