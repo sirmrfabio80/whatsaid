@@ -215,6 +215,7 @@ export default function JobDetail() {
                       selected={jobDate ?? getEffectiveRecordedAt(meta)}
                       onSelect={handleDateChange}
                       initialFocus
+                      className="p-3 pointer-events-auto"
                     />
                     <div className="border-t border-border px-3 py-2.5 flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -226,6 +227,12 @@ export default function JobDetail() {
                         aria-label="Recording time"
                       />
                     </div>
+                    {meta.duration_seconds != null && (
+                      <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span>Duration: {formatDuration(meta.duration_seconds)}</span>
+                      </div>
+                    )}
                   </PopoverContent>
                 </Popover>
                 {meta.language_detected && (
