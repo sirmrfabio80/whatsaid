@@ -24,7 +24,7 @@ export default function Index() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent pointer-events-none" />
         <div className="container mx-auto px-4 py-20 sm:py-32 relative">
           <div className="max-w-3xl mx-auto text-center animate-stagger">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-page-enter">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium mb-6 animate-page-enter">
               <Sparkles className="w-3.5 h-3.5" />
               AI transcription + speaker labels
             </div>
@@ -36,11 +36,11 @@ export default function Index() {
               Upload any audio file and get a full transcript with speaker labels, a summary, key actions, and custom AI analysis — in minutes.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-page-enter">
-              <Button size="lg" className="h-12 px-8 text-base font-medium rounded-xl" onClick={() => navigate("/convert")}>
+              <Button size="lg" className="h-12 px-8 text-base font-medium rounded-lg" onClick={() => navigate("/convert")}>
                 Convert your audio
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-              <Button variant="outline" size="lg" className="h-12 px-8 text-base rounded-xl" asChild>
+              <Button variant="outline" size="lg" className="h-12 px-8 text-base rounded-lg" asChild>
                 <a href="#pricing">See pricing</a>
               </Button>
             </div>
@@ -49,7 +49,7 @@ export default function Index() {
       </section>
 
       {/* Stats strip */}
-      <section className="border-y border-border/50 bg-muted/30">
+      <section className="border-y border-border bg-muted/30">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-sm font-medium text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ export default function Index() {
       </section>
 
       {/* Capabilities */}
-      <section ref={capabilities.ref} className="bg-muted/30 border-y border-border/50">
+      <section ref={capabilities.ref} className="bg-muted/30 border-y border-border">
         <div className="container mx-auto px-4 py-16 sm:py-24">
           <div className={`text-center mb-12 transition-all duration-700 ${capabilities.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
             <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">Everything you need</h2>
@@ -108,12 +108,12 @@ export default function Index() {
               { icon: Clock, title: "Fast turnaround", desc: "Upload and get your results in minutes — no waiting, no queues." },
               { icon: MessageSquareText, title: "Custom AI prompts", desc: "Ask anything about your transcript — extract quotes, action items, decisions, or anything else." },
             ].map(({ icon: Icon, title, desc }) => (
-              <Card key={title} className="rounded-xl border-border/50 shadow-sm hover:shadow-md hover:border-primary/20 transition-all bg-card">
+              <Card key={title} className="rounded-xl border-border shadow-sm hover:shadow-md hover:border-primary/20 transition-all bg-card">
                 <CardContent className="p-5 sm:p-6">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                     <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="font-heading font-semibold text-lg mb-2">{title}</h3>
+                  <h3 className="font-heading font-semibold text-base mb-2">{title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
                 </CardContent>
               </Card>
@@ -129,7 +129,7 @@ export default function Index() {
           <p className="text-muted-foreground max-w-md mx-auto">WhatSaid is currently in private beta. Pricing details will be available when we launch publicly.</p>
         </div>
         <div className={`flex justify-center transition-all duration-700 delay-200 ${pricing.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-          <Button size="lg" className="h-12 px-8 text-base font-medium rounded-xl" onClick={() => navigate("/convert")}>
+          <Button size="lg" className="h-12 px-8 text-base font-medium rounded-lg" onClick={() => navigate("/convert")}>
             Convert your audio
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
@@ -137,7 +137,7 @@ export default function Index() {
       </section>
 
       {/* Trust strip */}
-      <section ref={trust.ref} className="border-t border-border/50 bg-muted/30">
+      <section ref={trust.ref} className="border-t border-border bg-muted/30">
         <div className={`container mx-auto px-4 py-8 transition-all duration-700 ${trust.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
           <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
             <Shield className="w-4 h-4 text-primary" />
@@ -147,22 +147,48 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-primary flex items-center justify-center">
-                <Mic className="w-4 h-4 text-primary-foreground" />
+      <footer className="border-t border-border">
+        <div className="container mx-auto px-4 py-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
+            {/* Brand */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+                  <Mic className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <span className="font-heading font-semibold text-sm">WhatSaid</span>
               </div>
-              <span className="font-heading font-semibold text-sm">WhatSaid</span>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
+                Premium AI transcription with speaker labels, summaries, and custom analysis. Privacy-first — audio deleted after processing.
+              </p>
             </div>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-              <Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link>
-              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+
+            {/* Product */}
+            <div>
+              <h4 className="font-heading font-semibold text-sm mb-3">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/convert" className="hover:text-foreground transition-colors">Convert audio</Link></li>
+                <li><a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
+                <li><Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link></li>
+              </ul>
             </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-heading font-semibold text-sm mb-3">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} WhatSaid. All rights reserved.</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="w-3 h-3" />
+              <span>Audio deleted after processing</span>
+            </div>
           </div>
         </div>
       </footer>

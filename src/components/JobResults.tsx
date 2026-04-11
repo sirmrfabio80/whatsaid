@@ -306,8 +306,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   if (loading) {
     return (
-      <div className="text-center text-muted-foreground py-8 text-sm">
-        Loading results...
+      <div className="space-y-4 py-8">
+        <div className="animate-pulse space-y-3">
+          <div className="h-10 bg-muted rounded-xl w-full" />
+          <div className="h-64 bg-muted rounded-xl w-full" />
+        </div>
       </div>
     );
   }
@@ -747,12 +750,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       {/* Strengthened AI disclaimer */}
       <div
         role="note"
-        className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/30 p-4"
+        className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4"
       >
-        <AlertTriangle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          <strong className="text-foreground/80">AI-generated content</strong> — This transcript, summary, and any AI outputs may contain errors including misidentified speakers, inaccurate medical or technical terms, and omitted or fabricated details. Do not rely on this as a verbatim record for medical, legal, or financial decisions. Always verify critical information with the original source.
-        </p>
+        <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-foreground mb-1">AI-generated content</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This transcript, summary, and any AI outputs may contain errors including misidentified speakers, inaccurate medical or technical terms, and omitted or fabricated details. Do not rely on this as a verbatim record for medical, legal, or financial decisions. Always verify critical information with the original source.
+          </p>
+        </div>
       </div>
     </div>
   );
