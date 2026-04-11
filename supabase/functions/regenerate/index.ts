@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     // Determine what we're regenerating
     const regenerateType = output_type === "summary" ? "summary" : "question";
 
-    if (regenerateType === "custom" && (!custom_prompt || !custom_prompt.trim())) {
+    if (regenerateType === "question" && (!custom_prompt || !custom_prompt.trim())) {
       return new Response(JSON.stringify({ error: "custom_prompt is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
