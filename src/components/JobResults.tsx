@@ -10,6 +10,7 @@ import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
 import SpeakerChips from "@/components/SpeakerChips";
+import StructuredSummary from "@/components/StructuredSummary";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -485,9 +486,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                     Regenerating summary…
                   </div>
                 ) : summary ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
-                    {applySpeakerNames(summary.content, speakerNames)}
-                  </div>
+                  <StructuredSummary content={applySpeakerNames(summary.content, speakerNames)} />
                 ) : (
                   <p className="text-sm text-muted-foreground">No summary available.</p>
                 )}
