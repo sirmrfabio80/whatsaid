@@ -295,55 +295,60 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const questionEntries = getQuestionEntries();
 
   // ---- Per-tab actions ----
-  const ActionsBar = ({ content, id, tabKey }: { content: string; id: string; tabKey: string }) => (
-    <div className="flex items-center justify-end gap-2 p-3 border-b border-border/50">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="rounded-lg gap-1.5 text-xs h-8"
-        onClick={() => handleCopy(applySpeakerNames(content, speakerNames), id)}
-      >
-        {copiedId === id ? (
-          <Check className="w-3.5 h-3.5 text-primary" />
-        ) : (
-          <Copy className="w-3.5 h-3.5" />
-        )}
-        {copiedId === id ? "Copied" : "Copy"}
-      </Button>
+  const ActionsBar = ({ content, id, tabKey, leftContent }: { content: string; id: string; tabKey: string; leftContent?: React.ReactNode }) => (
+    <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {leftContent}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-lg gap-1.5 text-xs h-8"
+          onClick={() => handleCopy(applySpeakerNames(content, speakerNames), id)}
+        >
+          {copiedId === id ? (
+            <Check className="w-3.5 h-3.5 text-primary" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
+          {copiedId === id ? "Copied" : "Copy"}
+        </Button>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
-            <FileDown className="w-3.5 h-3.5" />
-            Export
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[140px]">
-          <DropdownMenuItem
-            onClick={() =>
-              handleDownload(
-                applySpeakerNames(content, speakerNames),
-                `${baseName}_${tabKey}.txt`
-              )
-            }
-          >
-            <Download className="w-3.5 h-3.5 mr-2" />
-            Plain text (.txt)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleDownloadAllJson}>
-            <Download className="w-3.5 h-3.5 mr-2" />
-            JSON (.json)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportDocx}>
-            <Download className="w-3.5 h-3.5 mr-2" />
-            Word (.docx)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportPdf}>
-            <Download className="w-3.5 h-3.5 mr-2" />
-            PDF (print)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
+              <FileDown className="w-3.5 h-3.5" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[140px]">
+            <DropdownMenuItem
+              onClick={() =>
+                handleDownload(
+                  applySpeakerNames(content, speakerNames),
+                  `${baseName}_${tabKey}.txt`
+                )
+              }
+            >
+              <Download className="w-3.5 h-3.5 mr-2" />
+              Plain text (.txt)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDownloadAllJson}>
+              <Download className="w-3.5 h-3.5 mr-2" />
+              JSON (.json)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportDocx}>
+              <Download className="w-3.5 h-3.5 mr-2" />
+              Word (.docx)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPdf}>
+              <Download className="w-3.5 h-3.5 mr-2" />
+              PDF (print)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 
@@ -379,17 +384,22 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
               {transcript && (
-                <ActionsBar content={transcript.content} id={transcript.id} tabKey="transcript" />
+                <ActionsBar
+                  content={transcript.content}
+                  id={transcript.id}
+                  tabKey="transcript"
+                  leftContent={
+                    speakers.length > 0 ? (
+                      <SpeakerChips
+                        speakers={speakers}
+                        speakerNames={speakerNames}
+                        onRename={handleRenameSpeaker}
+                        onReset={handleResetSpeakerNames}
+                      />
+                    ) : undefined
+                  }
+                />
               )}
-              <div className="p-5 sm:p-6">
-                {speakers.length > 0 && (
-                  <SpeakerChips
-                    speakers={speakers}
-                    speakerNames={speakerNames}
-                    onRename={handleRenameSpeaker}
-                    onReset={handleResetSpeakerNames}
-                  />
-                )}
                 {transcript ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
                     {applySpeakerNames(transcript.content, speakerNames)}
