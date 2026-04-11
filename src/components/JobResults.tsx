@@ -10,6 +10,7 @@ import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
 import SpeakerChips from "@/components/SpeakerChips";
+import StructuredSummary from "@/components/StructuredSummary";
 import {
   DropdownMenu,
   DropdownMenuContent,
