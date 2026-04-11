@@ -101,6 +101,9 @@ export default function History() {
                           {getLanguageLabel(job.language_selected ?? job.language_detected)}
                         </span>
                         <span>{new Date(job.created_at).toLocaleDateString()}</span>
+                        {job.speech_model && (
+                          <span className="flex items-center gap-1"><Cpu className="w-3 h-3" />{job.speech_model}</span>
+                        )}
                       </div>
                     </div>
                     <Badge variant="outline" className={statusColor(job.status)}>
