@@ -113,12 +113,12 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const handleRenameSpeaker = async (original: string, newName: string) => {
     const updated = { ...speakerNames, [original]: newName };
     setSpeakerNames(updated);
+    await supabase.from("jobs").update({ speaker_names: updated }).eq("id", jobId);
+  };
 
-    // Persist to DB
-    await supabase
-      .from("jobs")
-      .update({ speaker_names: updated })
-      .eq("id", jobId);
+  const handleResetSpeakerNames = async () => {
+    setSpeakerNames({});
+    await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId);
   };
 
   // ---- Copy ----
