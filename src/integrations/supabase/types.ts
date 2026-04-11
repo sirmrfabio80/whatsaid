@@ -120,6 +120,7 @@ export type Database = {
           status: Database["public"]["Enums"]["job_status"]
           stripe_payment_id: string | null
           temp_file_path: string | null
+          title: string | null
           updated_at: string
           user_id: string | null
         }
@@ -142,6 +143,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
           temp_file_path?: string | null
+          title?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -164,6 +166,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
           temp_file_path?: string | null
+          title?: string | null
           updated_at?: string
           user_id?: string | null
         }
