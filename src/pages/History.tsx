@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileAudio, Clock, Globe, ArrowRight, Inbox } from "lucide-react";
+import { FileAudio, Clock, Globe, ArrowRight, Inbox, Cpu } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,7 @@ interface Job {
   language_selected: string | null;
   credits_charged: number;
   created_at: string;
+  speech_model: string | null;
 }
 
 export default function History() {
@@ -35,7 +36,7 @@ export default function History() {
     const fetchJobs = async () => {
       const { data } = await supabase
         .from("jobs")
-        .select("id, file_name, status, duration_seconds, language_detected, language_selected, credits_charged, created_at")
+        .select("id, file_name, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       
@@ -100,6 +101,9 @@ export default function History() {
                           {getLanguageLabel(job.language_selected ?? job.language_detected)}
                         </span>
                         <span>{new Date(job.created_at).toLocaleDateString()}</span>
+                        {job.speech_model && (
+                          <span className="flex items-center gap-1"><Cpu className="w-3 h-3" />{job.speech_model}</span>
+                        )}
                       </div>
                     </div>
                     <Badge variant="outline" className={statusColor(job.status)}>
