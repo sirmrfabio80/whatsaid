@@ -22,8 +22,10 @@ interface SpeakerChipsProps {
   onReset?: () => void;
 }
 
-export default function SpeakerChips({ speakers, speakerNames, onRename }: SpeakerChipsProps) {
+export default function SpeakerChips({ speakers, speakerNames, onRename, onReset }: SpeakerChipsProps) {
   if (speakers.length === 0) return null;
+
+  const hasRenames = Object.values(speakerNames).some((v) => !!v);
 
   return (
     <div className="flex items-center gap-2 flex-wrap mb-4" role="group" aria-label="Speaker labels">
@@ -37,6 +39,17 @@ export default function SpeakerChips({ speakers, speakerNames, onRename }: Speak
           onRename={(newName) => onRename(speaker, newName)}
         />
       ))}
+      {hasRenames && onReset && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-lg"
+          onClick={onReset}
+          aria-label="Reset all speaker names"
+        >
+          Reset names
+        </Button>
+      )}
     </div>
   );
 }
