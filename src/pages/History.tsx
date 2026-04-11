@@ -132,6 +132,9 @@ export default function History() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
+                        {job.title && (
+                          <p className="text-xs text-muted-foreground/60 truncate">{job.file_name}</p>
+                        )}
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           {job.duration_seconds && (
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>
