@@ -39,6 +39,7 @@ export default function JobDetail() {
     setMeta(m);
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
+    setJobDate(new Date(m.created_at));
 
     // Auto-generate title if none exists
     if (!m.title && id) {
