@@ -1,4 +1,9 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageBreak } from "docx";
+
+export interface QAEntry {
+  prompt: string | null;
+  answer: string;
+}
 
 interface ExportPayload {
   fileName: string;
@@ -9,6 +14,7 @@ interface ExportPayload {
   summary: string | null;
   customPrompt: string | null;
   customOutput: string | null;
+  questions?: QAEntry[];
 }
 
 function buildSections(p: ExportPayload): Paragraph[] {
@@ -70,7 +76,7 @@ function buildSections(p: ExportPayload): Paragraph[] {
     children.push(new Paragraph({ spacing: { after: 200 }, children: [] }));
   }
 
-  // Custom output
+  // Custom output (legacy)
   if (p.customOutput) {
     children.push(
       new Paragraph({
@@ -91,6 +97,38 @@ function buildSections(p: ExportPayload): Paragraph[] {
     }
     p.customOutput.split("\n").forEach((line) => {
       children.push(new Paragraph({ spacing: { after: 100 }, children: [new TextRun(line)] }));
+    });
+  }
+
+  // Questions & Answers appendix
+  if (p.questions && p.questions.length > 0) {
+    // Page break before Q&A section
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        children: [new TextRun({ text: "Questions & Answers", bold: true })],
+      })
+    );
+
+    p.questions.forEach((qa, i) => {
+      if (i > 0) {
+        children.push(new Paragraph({ spacing: { after: 100 }, children: [] }));
+      }
+      if (qa.prompt) {
+        children.push(
+          new Paragraph({
+            spacing: { after: 80 },
+            children: [
+              new TextRun({ text: "Q: ", bold: true }),
+              new TextRun({ text: qa.prompt, bold: true }),
+            ],
+          })
+        );
+      }
+      qa.answer.split("\n").forEach((line) => {
+        children.push(new Paragraph({ spacing: { after: 80 }, children: [new TextRun(line)] }));
+      });
     });
   }
 
@@ -122,13 +160,11 @@ export async function exportDocx(payload: ExportPayload): Promise<void> {
 }
 
 export async function exportPdf(payload: ExportPayload): Promise<void> {
-  // Build a print-friendly HTML document and use the browser's print-to-PDF
   const html = buildPdfHtml(payload);
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
   printWindow.document.write(html);
   printWindow.document.close();
-  // Give the browser a moment to render, then trigger print
   setTimeout(() => printWindow.print(), 400);
 }
 
@@ -161,6 +197,18 @@ function buildPdfHtml(p: ExportPayload): string {
       body += `<p style="color:#666;font-size:12px;font-style:italic;margin:0 0 8px">Prompt: ${escape(p.customPrompt)}</p>`;
     }
     body += `<div style="white-space:pre-wrap;font-size:13px;line-height:1.6">${escape(p.customOutput)}</div>`;
+  }
+
+  // Questions & Answers appendix
+  if (p.questions && p.questions.length > 0) {
+    body += `<div style="page-break-before:always"></div>`;
+    body += `<h2 style="font-size:16px;margin:24px 0 8px">Questions &amp; Answers</h2>`;
+    p.questions.forEach((qa) => {
+      if (qa.prompt) {
+        body += `<p style="font-weight:bold;font-size:13px;margin:16px 0 4px">Q: ${escape(qa.prompt)}</p>`;
+      }
+      body += `<div style="white-space:pre-wrap;font-size:13px;line-height:1.6;margin:0 0 12px">${escape(qa.answer)}</div>`;
+    });
   }
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escape(p.fileName)}</title>
