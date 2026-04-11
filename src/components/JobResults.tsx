@@ -341,6 +341,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                     speakers={speakers}
                     speakerNames={speakerNames}
                     onRename={handleRenameSpeaker}
+                    onReset={handleResetSpeakerNames}
                   />
                 )}
                 {transcript ? (
