@@ -81,10 +81,27 @@ export default function JobDetail() {
 
   const handleDateChange = async (date: Date | undefined) => {
     if (!date || !id) return;
+    // Preserve existing time when changing date
+    const existing = jobDate ?? new Date();
+    date.setHours(existing.getHours(), existing.getMinutes(), existing.getSeconds());
     setJobDate(date);
     setDatePickerOpen(false);
     await supabase.from("jobs").update({ created_at: date.toISOString() } as any).eq("id", id);
   };
+
+  const handleTimeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!id) return;
+    const [hours, minutes] = e.target.value.split(":").map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return;
+    const updated = new Date(jobDate ?? new Date());
+    updated.setHours(hours, minutes);
+    setJobDate(updated);
+    await supabase.from("jobs").update({ created_at: updated.toISOString() } as any).eq("id", id);
+  };
+
+  const timeValue = jobDate
+    ? `${String(jobDate.getHours()).padStart(2, "0")}:${String(jobDate.getMinutes()).padStart(2, "0")}`
+    : "";
 
   if (!id) return null;
 
