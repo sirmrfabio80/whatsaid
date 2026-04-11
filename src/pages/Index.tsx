@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 import {
   Mic, Sparkles, FileText, Users, ArrowRight, Shield, Clock,
