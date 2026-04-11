@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/credits" element={<Credits />} />
             <Route path="/history" element={<History />} />
+            <Route path="/job/:id" element={<JobDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
