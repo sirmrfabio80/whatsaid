@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     // Verify job exists and is completed
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .select("id, status, user_id")
+      .select("id, status, regeneration_count")
       .eq("id", job_id)
       .single();
 
