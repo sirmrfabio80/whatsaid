@@ -1,0 +1,1 @@
+UPDATE public.jobs SET summary_language = 'en' WHERE id = '3c4144a6-eff3-4fe0-9807-f545e8d979a1';
