@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Mic, AlertCircle } from "lucide-react";
+import { Mic, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -15,9 +14,9 @@ export default function Signup() {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,9 +38,24 @@ export default function Signup() {
       return;
     }
 
-    toast({ title: "Account created!", description: "Check your email to confirm your account." });
-    navigate("/");
+    setSuccess(true);
+    setLoading(false);
   };
+
+  if (success) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-md rounded-xl border-border/50">
+          <CardContent className="p-8 text-center space-y-4">
+            <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
+            <h2 className="font-heading text-xl font-bold">Account created!</h2>
+            <p className="text-sm text-muted-foreground">Check your email to confirm your account, then sign in.</p>
+            <Button className="rounded-xl" onClick={() => navigate("/login")}>Go to sign in</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
