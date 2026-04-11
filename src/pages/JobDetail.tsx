@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2, Timer } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
@@ -229,7 +229,7 @@ export default function JobDetail() {
                     </div>
                     {meta.duration_seconds != null && (
                       <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <Timer className="w-3.5 h-3.5 shrink-0" />
                         <span>Duration: {formatDuration(meta.duration_seconds)}</span>
                       </div>
                     )}
