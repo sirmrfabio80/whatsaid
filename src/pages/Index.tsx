@@ -14,6 +14,8 @@ export default function Index() {
   const navigate = useNavigate();
   const howItWorks = useScrollReveal();
   const capabilities = useScrollReveal();
+  const pricing = useScrollReveal();
+  const trust = useScrollReveal();
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
