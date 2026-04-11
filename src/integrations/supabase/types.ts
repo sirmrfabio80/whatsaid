@@ -115,6 +115,7 @@ export type Database = {
           language_detected: string | null
           language_selected: string | null
           regeneration_count: number
+          speaker_names: Json
           speech_model: string | null
           status: Database["public"]["Enums"]["job_status"]
           stripe_payment_id: string | null
@@ -136,6 +137,7 @@ export type Database = {
           language_detected?: string | null
           language_selected?: string | null
           regeneration_count?: number
+          speaker_names?: Json
           speech_model?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
@@ -157,6 +159,7 @@ export type Database = {
           language_detected?: string | null
           language_selected?: string | null
           regeneration_count?: number
+          speaker_names?: Json
           speech_model?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
