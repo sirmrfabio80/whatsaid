@@ -5,12 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
 import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
 import SpeakerChips from "@/components/SpeakerChips";
-import StructuredSummary from "@/components/StructuredSummary";
+import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +84,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   // Questions tab state
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [askingQuestion, setAskingQuestion] = useState(false);
+  const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -188,7 +190,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     };
     if (transcript) payload.transcript = applySpeakerNames(transcript.content, speakerNames);
     if (summary) payload.summary = applySpeakerNames(summary.content, speakerNames);
-    const questionEntries = getQuestionEntries();
+    const questionEntries = getQuestionEntries().filter((q) => !excludedQAIds.has(q.id));
     if (questionEntries.length > 0) {
       payload.questions = questionEntries.map((q) => ({
         prompt: q.custom_prompt,
@@ -199,7 +201,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   };
 
   const buildExportPayload = () => {
-    const qEntries = getQuestionEntries();
+    const qEntries = getQuestionEntries().filter((q) => !excludedQAIds.has(q.id));
     const questions: QAEntry[] = qEntries.map((q) => ({
       prompt: q.custom_prompt,
       answer: applySpeakerNames(q.content, speakerNames),
@@ -556,6 +558,70 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                 </div>
               </div>
 
+              {/* Q&A Export bar */}
+              {questionEntries.length > 0 && (
+                <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
+                  <p className="text-xs text-muted-foreground">
+                    {questionEntries.length - excludedQAIds.size} of {questionEntries.length} included in export
+                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg gap-1.5 text-xs h-8"
+                      onClick={() => {
+                        const included = questionEntries.filter((q) => !excludedQAIds.has(q.id));
+                        const text = included
+                          .map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`)
+                          .join("\n\n");
+                        handleCopy(text, "qa-all");
+                      }}
+                    >
+                      {copiedId === "qa-all" ? (
+                        <Check className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      {copiedId === "qa-all" ? "Copied" : "Copy All"}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
+                          <FileDown className="w-3.5 h-3.5" />
+                          Export
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-[140px]">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const included = questionEntries.filter((q) => !excludedQAIds.has(q.id));
+                            const text = included
+                              .map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`)
+                              .join("\n\n");
+                            handleDownload(text, `${baseName}_qa.txt`);
+                          }}
+                        >
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          Q&A only (.txt)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleDownloadAllJson}>
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          Full JSON (.json)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportDocx}>
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          Word (.docx)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportPdf}>
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          PDF (print)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              )}
+
               {/* Saved Q&A list */}
               <div role="log" aria-live="polite" aria-label="Saved questions and answers">
                 {questionEntries.length === 0 ? (
@@ -570,36 +636,71 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                   </div>
                 ) : (
                   <div className="divide-y divide-border/50">
-                    {[...questionEntries].reverse().map((entry) => (
-                      <div key={entry.id} className="p-4 sm:p-5">
-                        {entry.custom_prompt && (
-                          <div className="flex items-start gap-2 mb-2">
-                            <span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span>
-                            <p className="text-sm font-medium">
-                              {entry.custom_prompt}
-                            </p>
+                    {[...questionEntries].reverse().map((entry) => {
+                      const isExcluded = excludedQAIds.has(entry.id);
+                      const checkboxId = `qa-include-${entry.id}`;
+                      return (
+                        <div
+                          key={entry.id}
+                          className={`p-4 sm:p-5 transition-opacity ${isExcluded ? "opacity-50" : ""}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              {entry.custom_prompt && (
+                                <div className="flex items-start gap-2 mb-2">
+                                  <span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span>
+                                  <p className="text-sm font-medium">
+                                    {entry.custom_prompt}
+                                  </p>
+                                </div>
+                              )}
+                              <div className="pl-5">
+                                <SectionBody body={applySpeakerNames(entry.content, speakerNames)} />
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id={checkboxId}
+                                  checked={!isExcluded}
+                                  onCheckedChange={(checked) => {
+                                    setExcludedQAIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (checked) {
+                                        next.delete(entry.id);
+                                      } else {
+                                        next.add(entry.id);
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  aria-label={`Include "${entry.custom_prompt ?? "this answer"}" in export`}
+                                />
+                                <label
+                                  htmlFor={checkboxId}
+                                  className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap select-none"
+                                >
+                                  Include in export
+                                </label>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-lg gap-1.5 text-xs h-7"
+                                onClick={() => handleCopy(applySpeakerNames(entry.content, speakerNames), entry.id)}
+                              >
+                                {copiedId === entry.id ? (
+                                  <Check className="w-3 h-3 text-primary" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                                {copiedId === entry.id ? "Copied" : "Copy"}
+                              </Button>
+                            </div>
                           </div>
-                        )}
-                        <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed pl-5">
-                          {applySpeakerNames(entry.content, speakerNames)}
                         </div>
-                        <div className="mt-2 flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="rounded-lg gap-1.5 text-xs h-7"
-                            onClick={() => handleCopy(applySpeakerNames(entry.content, speakerNames), entry.id)}
-                          >
-                            {copiedId === entry.id ? (
-                              <Check className="w-3 h-3 text-primary" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                            {copiedId === entry.id ? "Copied" : "Copy"}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
