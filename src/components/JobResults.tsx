@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2 } from "lucide-react";
-import { getLanguageLabel } from "@/lib/languages";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
+import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf } from "@/lib/export";
 import SpeakerChips from "@/components/SpeakerChips";
@@ -72,6 +73,10 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
 
+  // Summary language state
+  const [summaryLang, setSummaryLang] = useState<string>("");
+  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
+
   // Questions tab state
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [askingQuestion, setAskingQuestion] = useState(false);
@@ -100,6 +105,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     setMeta(m as JobMeta | null);
     if (m) {
       setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
+      setSummaryLang((prev) => prev || m.language_detected || "en");
       onMetaLoaded?.(m as JobMeta);
     }
     setLoading(false);
@@ -119,6 +125,32 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const handleResetSpeakerNames = async () => {
     setSpeakerNames({});
     await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId);
+  };
+
+  // ---- Summary language change ----
+  const handleSummaryLanguageChange = async (langCode: string) => {
+    if (langCode === summaryLang) return;
+    setSummaryLang(langCode);
+    setRegeneratingSummary(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("regenerate", {
+        body: { job_id: jobId, output_type: "summary", target_language: langCode },
+      });
+      if (error || data?.error) {
+        toast({
+          title: "Failed to regenerate summary",
+          description: error?.message || data?.error,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: `Summary regenerated in ${getLanguageLabel(langCode)}` });
+      await fetchData();
+    } catch {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
+      setRegeneratingSummary(false);
+    }
   };
 
   // ---- Copy ----
@@ -360,11 +392,91 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
         <TabsContent value="summary" className="mt-4">
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
-              {summary && (
-                <ActionsBar content={summary.content} id={summary.id} tabKey="summary" />
-              )}
+              <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50 flex-wrap">
+                {/* Summary language selector */}
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                  <label htmlFor="summary-lang" className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                    Summary language
+                  </label>
+                  <Select value={summaryLang} onValueChange={handleSummaryLanguageChange} disabled={regeneratingSummary}>
+                    <SelectTrigger
+                      id="summary-lang"
+                      className="h-7 w-[140px] text-xs rounded-lg border-border/60"
+                      aria-label="Summary language"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.filter((l) => l.code !== "auto").map((l) => (
+                        <SelectItem key={l.code} value={l.code} className="text-xs">
+                          {l.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {regeneratingSummary && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+                </div>
+
+                {/* Copy / Export actions */}
+                {summary && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg gap-1.5 text-xs h-8"
+                      onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}
+                    >
+                      {copiedId === summary.id ? (
+                        <Check className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      {copiedId === summary.id ? "Copied" : "Copy"}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
+                          <FileDown className="w-3.5 h-3.5" />
+                          Export
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-[140px]">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleDownload(
+                              applySpeakerNames(summary.content, speakerNames),
+                              `${baseName}_summary.txt`
+                            )
+                          }
+                        >
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          Plain text (.txt)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleDownloadAllJson}>
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          JSON (.json)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportDocx}>
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          Word (.docx)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportPdf}>
+                          <Download className="w-3.5 h-3.5 mr-2" />
+                          PDF (print)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+              </div>
               <div className="p-5 sm:p-6">
-                {summary ? (
+                {regeneratingSummary ? (
+                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Regenerating summary…
+                  </div>
+                ) : summary ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
                     {applySpeakerNames(summary.content, speakerNames)}
                   </div>

@@ -75,6 +75,20 @@ Deno.serve(async (req) => {
     const transcript = transcriptRow.content;
     console.log(`[post-process] Processing job ${job_id}, transcript length: ${transcript.length}`);
 
+    // Read job to get detected language
+    const { data: jobRow } = await supabase
+      .from("jobs")
+      .select("language_detected")
+      .eq("id", job_id)
+      .single();
+
+    const detectedLang = jobRow?.language_detected || null;
+
+    // Build language instruction for summary
+    const languageInstruction = detectedLang && detectedLang !== "en"
+      ? `\n\nIMPORTANT: The transcript is in ${detectedLang}. You MUST produce the entire summary, key points, and key actions in the same language as the transcript. Do not translate to English.`
+      : "";
+
     // 2. Generate summary with key actions
     const summarySystemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries for business professionals.
 
@@ -83,7 +97,7 @@ Your output must include:
 2. A "Key Points" section as a bullet list of the most important information
 3. A "Key Actions" section as a bullet list of action items, decisions made, or next steps identified
 
-Use plain text with markdown formatting. Be factual and precise. Do not invent information not present in the transcript.`;
+Use plain text with markdown formatting. Be factual and precise. Do not invent information not present in the transcript.${languageInstruction}`;
 
     const summaryPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
 
