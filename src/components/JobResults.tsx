@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, Check, FileText, Sparkles, MessageSquareText, Globe, FileDown } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Copy, Download, Check, FileText, Sparkles, MessageSquareText, Globe, FileDown, RotateCw, Send } from "lucide-react";
 import { getLanguageLabel } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf } from "@/lib/export";
@@ -40,31 +41,33 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const [meta, setMeta] = useState<JobMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [regenerating, setRegenerating] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    const [{ data: outputsData }, { data: jobData }] = await Promise.all([
+      supabase
+        .from("job_outputs")
+        .select("id, output_type, content, custom_prompt")
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("jobs")
+        .select("language_detected, duration_seconds, file_name, created_at")
+        .eq("id", jobId)
+        .maybeSingle(),
+    ]);
+
+    setOutputs((outputsData as JobOutput[]) ?? []);
+    const m = jobData as JobMeta | null;
+    setMeta(m);
+    if (m) onMetaLoaded?.(m);
+    setLoading(false);
+  }, [jobId]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [{ data: outputsData }, { data: jobData }] = await Promise.all([
-        supabase
-          .from("job_outputs")
-          .select("id, output_type, content, custom_prompt")
-          .eq("job_id", jobId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("jobs")
-          .select("language_detected, duration_seconds, file_name, created_at")
-          .eq("id", jobId)
-          .maybeSingle(),
-      ]);
-
-      setOutputs((outputsData as JobOutput[]) ?? []);
-      const m = jobData as JobMeta | null;
-      setMeta(m);
-      if (m) onMetaLoaded?.(m);
-      setLoading(false);
-    };
-
     fetchData();
-  }, [jobId]);
+  }, [fetchData]);
 
   const handleCopy = async (content: string, id: string) => {
     await navigator.clipboard.writeText(content);
@@ -81,6 +84,38 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleRegenerate = async () => {
+    if (!customPrompt.trim()) {
+      toast({ title: "Please enter a prompt", variant: "destructive" });
+      return;
+    }
+
+    setRegenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("regenerate", {
+        body: { job_id: jobId, custom_prompt: customPrompt.trim() },
+      });
+
+      if (error) {
+        toast({ title: "Regeneration failed", description: error.message, variant: "destructive" });
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Regeneration failed", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "AI output regenerated" });
+      setCustomPrompt("");
+      await fetchData();
+    } catch (e) {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   if (loading) {
@@ -250,6 +285,46 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Regenerate custom output */}
+      <Card className="rounded-xl border-border/50 shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <RotateCw className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-medium">
+              {custom ? "Regenerate AI output" : "Generate AI output"}
+            </h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Enter a custom prompt to apply to the transcript. {custom ? "This will replace the current AI output." : ""}
+          </p>
+          <Textarea
+            placeholder="e.g. Extract all decisions made and list who is responsible for each..."
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            className="rounded-xl text-sm min-h-[80px] mb-3 resize-none"
+            disabled={regenerating}
+          />
+          <Button
+            onClick={handleRegenerate}
+            disabled={regenerating || !customPrompt.trim()}
+            className="rounded-xl gap-1.5"
+            size="sm"
+          >
+            {regenerating ? (
+              <>
+                <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5" />
+                {custom ? "Regenerate" : "Generate"}
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
