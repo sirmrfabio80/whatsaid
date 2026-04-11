@@ -32,7 +32,7 @@ export default function Navbar() {
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <img src={whatsaidLogo} alt="WhatSaid logo" className="w-9 h-9" />
+          <img src={whatsaidLogo} alt="WhatSaid logo" className="w-11 h-11" />
           <span className="font-heading font-bold text-xl tracking-tight">WhatSaid</span>
         </Link>
 
