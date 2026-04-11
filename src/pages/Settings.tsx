@@ -14,14 +14,12 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2 } from "lucide-react";
+import { Save, Lock, Trash2, Check, AlertCircle } from "lucide-react";
 
 export default function Settings() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [displayName, setDisplayName] = useState("");
@@ -29,6 +27,12 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
+
+  // Inline feedback states
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/login");
@@ -65,30 +69,39 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast({ title: "Profile updated", description: "Your display name has been saved." });
+      setProfileSaved(true);
+      setProfileError(null);
+      setTimeout(() => setProfileSaved(false), 3000);
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not update profile.", variant: "destructive" });
+      setProfileError("Could not update profile.");
+      setProfileSaved(false);
     },
   });
 
   const changePassword = async () => {
+    setPasswordError(null);
+    setPasswordSaved(false);
+
     if (newPassword.length < 6) {
-      toast({ title: "Password too short", description: "Must be at least 6 characters.", variant: "destructive" });
+      setPasswordError("Must be at least 6 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: "Passwords don't match", variant: "destructive" });
+      setPasswordError("Passwords don't match.");
       return;
     }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setPasswordError(error.message);
     } else {
-      toast({ title: "Password updated" });
+      setPasswordSaved(true);
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordOpen(false);
+      setTimeout(() => {
+        setPasswordOpen(false);
+        setPasswordSaved(false);
+      }, 1500);
     }
   };
 
@@ -106,16 +119,24 @@ export default function Settings() {
               <h2 className="font-heading font-semibold text-lg">Account</h2>
               <div className="space-y-2">
                 <Label htmlFor="display-name">Display name</Label>
-                <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-lg h-11" />
+                <Input id="display-name" value={displayName} onChange={(e) => { setDisplayName(e.target.value); setProfileSaved(false); setProfileError(null); }} className="rounded-lg h-11" />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input value={profile?.email || user.email || ""} disabled className="rounded-lg h-11 opacity-60" />
               </div>
-              <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
-                <Save className="w-4 h-4 mr-1.5" />
-                Save changes
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
+                  <Save className="w-4 h-4 mr-1.5" />
+                  Save changes
+                </Button>
+                {profileSaved && (
+                  <span className="text-xs text-primary flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>
+                )}
+                {profileError && (
+                  <span className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{profileError}</span>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -134,7 +155,7 @@ export default function Settings() {
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
               <h2 className="font-heading font-semibold text-lg">Security</h2>
-              <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+              <Dialog open={passwordOpen} onOpenChange={(open) => { setPasswordOpen(open); if (!open) { setPasswordError(null); setPasswordSaved(false); } }}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="rounded-lg" size="sm">
                     <Lock className="w-4 h-4 mr-1.5" />
@@ -149,12 +170,24 @@ export default function Settings() {
                   <div className="space-y-3 py-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="new-pw">New password</Label>
-                      <Input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="rounded-lg h-11" />
+                      <Input id="new-pw" type="password" value={newPassword} onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null); }} className="rounded-lg h-11" />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="confirm-pw">Confirm password</Label>
-                      <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="rounded-lg h-11" />
+                      <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null); }} className="rounded-lg h-11" />
                     </div>
+                    {passwordError && (
+                      <div className="flex items-center gap-2 text-destructive text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{passwordError}</span>
+                      </div>
+                    )}
+                    {passwordSaved && (
+                      <div className="flex items-center gap-2 text-primary text-sm">
+                        <Check className="w-4 h-4" />
+                        <span>Password updated</span>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button onClick={changePassword} className="rounded-lg">Update password</Button>
@@ -185,12 +218,7 @@ export default function Settings() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() => {
-                        toast({ title: "Account deletion", description: "Please contact support to complete account deletion." });
-                      }}
-                    >
+                    <AlertDialogAction className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90">
                       Delete my account
                     </AlertDialogAction>
                   </AlertDialogFooter>
