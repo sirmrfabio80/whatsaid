@@ -30,6 +30,7 @@ export default function Convert() {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
+  const [fileCreationDate, setFileCreationDate] = useState<Date | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -41,9 +42,10 @@ export default function Convert() {
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
 
-  const handleFileSelected = useCallback((f: File, dur: number) => {
+  const handleFileSelected = useCallback((f: File, dur: number, creationDate: Date | null) => {
     setFile(f);
     setDuration(dur);
+    setFileCreationDate(creationDate);
   }, []);
 
   // Poll job status
@@ -106,7 +108,11 @@ export default function Convert() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      const recordedAt = new Date(file.lastModified).toISOString();
+      // Determine the best recording timestamp: prefer file creation date, fall back to lastModified
+      const recordedAt = fileCreationDate
+        ? fileCreationDate.toISOString()
+        : new Date(file.lastModified).toISOString();
+      const recordedAtSource = fileCreationDate ? "file_creation_date" : "file_last_modified";
 
       const { error: jobError } = await supabase
         .from("jobs")
@@ -121,7 +127,7 @@ export default function Convert() {
           status: "uploading" as const,
           temp_file_path: filePath,
           recorded_at: recordedAt,
-          recorded_at_source: "file_last_modified",
+          recorded_at_source: recordedAtSource,
         });
 
       if (jobError) {
@@ -149,6 +155,7 @@ export default function Convert() {
   const handleReset = () => {
     setFile(null);
     setDuration(0);
+    setFileCreationDate(null);
     setLanguage("auto");
     setCustomPrompt("");
     setProcessing(false);

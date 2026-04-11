@@ -2,9 +2,10 @@ import { useCallback, useState, useRef } from "react";
 import { Upload, FileAudio, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isValidAudioFile, MAX_FILE_SIZE, ACCEPTED_EXTENSIONS, formatDuration } from "@/lib/pricing";
+import { extractAudioCreationDate } from "@/lib/audio-creation-date";
 
 interface AudioUploaderProps {
-  onFileSelected: (file: File, durationSeconds: number) => void;
+  onFileSelected: (file: File, durationSeconds: number, creationDate: Date | null) => void;
   disabled?: boolean;
 }
 
@@ -62,7 +63,11 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
 
       setDuration(dur);
       setDetecting(false);
-      onFileSelected(file, dur);
+
+      // Extract the real recording creation date from file metadata
+      const creationDate = await extractAudioCreationDate(file);
+
+      onFileSelected(file, dur, creationDate);
     } catch {
       setError("Could not read audio file. Please try a different format.");
       setSelectedFile(null);
