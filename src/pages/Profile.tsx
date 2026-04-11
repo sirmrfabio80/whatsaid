@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, Clock, FileText, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -47,6 +48,8 @@ export default function Profile() {
     },
     enabled: !!user,
   });
+
+  const isStatsLoading = !jobStats && !!user;
 
   if (loading || !user) return null;
 
@@ -103,7 +106,11 @@ export default function Profile() {
               <Card key={label} className="rounded-xl border-border bg-card shadow-sm hover:border-primary/20 hover:shadow-md transition-all">
                 <CardContent className="p-4 text-center">
                   <Icon className="w-4 h-4 text-muted-foreground mx-auto mb-2" />
-                  <p className="font-heading font-semibold text-lg">{value}</p>
+                  {isStatsLoading ? (
+                    <Skeleton className="h-6 w-12 mx-auto mb-1 rounded-lg" />
+                  ) : (
+                    <p className="font-heading font-semibold text-lg">{value}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">{label}</p>
                 </CardContent>
               </Card>
