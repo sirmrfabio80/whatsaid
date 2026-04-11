@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { ArrowLeft, Clock, Globe, Calendar, Plus, Cpu, Pencil, Check, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2 } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
@@ -81,10 +81,27 @@ export default function JobDetail() {
 
   const handleDateChange = async (date: Date | undefined) => {
     if (!date || !id) return;
+    // Preserve existing time when changing date
+    const existing = jobDate ?? new Date();
+    date.setHours(existing.getHours(), existing.getMinutes(), existing.getSeconds());
     setJobDate(date);
     setDatePickerOpen(false);
     await supabase.from("jobs").update({ created_at: date.toISOString() } as any).eq("id", id);
   };
+
+  const handleTimeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!id) return;
+    const [hours, minutes] = e.target.value.split(":").map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return;
+    const updated = new Date(jobDate ?? new Date());
+    updated.setHours(hours, minutes);
+    setJobDate(updated);
+    await supabase.from("jobs").update({ created_at: updated.toISOString() } as any).eq("id", id);
+  };
+
+  const timeValue = jobDate
+    ? `${String(jobDate.getHours()).padStart(2, "0")}:${String(jobDate.getMinutes()).padStart(2, "0")}`
+    : "";
 
   if (!id) return null;
 
@@ -184,6 +201,12 @@ export default function JobDetail() {
                         month: "short",
                         day: "numeric",
                       })}
+                      <span className="text-muted-foreground">·</span>
+                      <Clock className="w-3 h-3" />
+                      {timeValue || (new Date(meta.created_at)).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -193,6 +216,16 @@ export default function JobDetail() {
                       onSelect={handleDateChange}
                       initialFocus
                     />
+                    <div className="border-t border-border px-3 py-2.5 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <input
+                        type="time"
+                        value={timeValue}
+                        onChange={handleTimeChange}
+                        className="bg-transparent text-sm font-medium text-foreground outline-none w-full [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+                        aria-label="Recording time"
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
                 {meta.duration_seconds != null && (
