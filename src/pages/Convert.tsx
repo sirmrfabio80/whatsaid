@@ -18,8 +18,6 @@ export default function Convert() {
   const [customPrompt, setCustomPrompt] = useState("");
 
   const credits = creditsForDuration(duration);
-  const guestPrice = guestPriceForDuration(duration);
-  const hasEnoughCredits = user ? creditBalance >= credits : true;
 
   const handleFileSelected = useCallback((f: File, dur: number) => {
     setFile(f);
