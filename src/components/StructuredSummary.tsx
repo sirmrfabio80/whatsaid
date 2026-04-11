@@ -83,7 +83,7 @@ function renderLine(line: string): ReactNode {
   return parts.length > 0 ? parts : line;
 }
 
-function SectionBody({ body }: { body: string }) {
+export function SectionBody({ body }: { body: string }) {
   const lines = body.split("\n").filter((l) => l.trim().length > 0);
   const bulletLines = lines.filter((l) => /^\s*[-*]\s/.test(l));
   const isBulletList = bulletLines.length > 0 && bulletLines.length >= lines.length * 0.5;

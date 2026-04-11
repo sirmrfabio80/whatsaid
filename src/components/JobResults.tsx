@@ -5,12 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
 import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
 import SpeakerChips from "@/components/SpeakerChips";
-import StructuredSummary from "@/components/StructuredSummary";
+import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import {
   DropdownMenu,
   DropdownMenuContent,
