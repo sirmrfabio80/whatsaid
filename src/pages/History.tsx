@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Job {
   id: string;
   file_name: string;
+  title: string | null;
   status: string;
   duration_seconds: number | null;
   language_detected: string | null;
@@ -50,7 +51,7 @@ export default function History() {
     const fetchJobs = async () => {
       const { data } = await supabase
         .from("jobs")
-        .select("id, file_name, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model")
+        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       
@@ -130,7 +131,7 @@ export default function History() {
                         <FileAudio className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{job.file_name}</p>
+                        <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           {job.duration_seconds && (
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>
