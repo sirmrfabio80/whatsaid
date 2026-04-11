@@ -64,51 +64,55 @@ export default function History() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 sm:py-16 max-w-3xl">
-      <h1 className="font-heading text-3xl sm:text-4xl font-bold mb-8">Transcription History</h1>
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
+      <div className="container mx-auto px-4 py-12 sm:py-16">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold mb-8">Transcription History</h1>
 
-      {jobs.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Inbox className="w-12 h-12 text-muted-foreground/50 mb-4" />
-            <p className="font-medium text-lg mb-1">No transcriptions yet</p>
-            <p className="text-muted-foreground text-sm mb-6">Upload your first audio file to get started.</p>
-            <Button onClick={() => navigate("/")}>
-              <FileAudio className="w-4 h-4 mr-2" />
-              Start transcribing
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {jobs.map((job) => (
-            <Card key={job.id} className="hover:border-primary/30 transition-colors cursor-pointer group">
-              <CardContent className="p-4 sm:p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <FileAudio className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{job.file_name}</p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    {job.duration_seconds && (
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Globe className="w-3 h-3" />
-                      {getLanguageLabel(job.language_selected ?? job.language_detected)}
-                    </span>
-                    <span>{new Date(job.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <Badge variant="outline" className={statusColor(job.status)}>
-                  {job.status}
-                </Badge>
-                <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          {jobs.length === 0 ? (
+            <Card className="border-dashed rounded-xl shadow-sm">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <Inbox className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                <p className="font-medium text-lg mb-1">No transcriptions yet</p>
+                <p className="text-muted-foreground text-sm mb-6">Upload your first audio file to get started.</p>
+                <Button className="rounded-xl" onClick={() => navigate("/convert")}>
+                  <FileAudio className="w-4 h-4 mr-2" />
+                  Start transcribing
+                </Button>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            <div className="space-y-3">
+              {jobs.map((job) => (
+                <Card key={job.id} className="rounded-xl border-border/50 shadow-sm hover:border-primary/30 transition-colors cursor-pointer group">
+                  <CardContent className="p-4 sm:p-5 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <FileAudio className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{job.file_name}</p>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        {job.duration_seconds && (
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Globe className="w-3 h-3" />
+                          {getLanguageLabel(job.language_selected ?? job.language_detected)}
+                        </span>
+                        <span>{new Date(job.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={statusColor(job.status)}>
+                      {job.status}
+                    </Badge>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

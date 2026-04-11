@@ -31,7 +31,7 @@ export default function Navbar() {
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
             <Mic className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="font-heading font-bold text-xl tracking-tight">WhatSaid</span>
@@ -119,7 +119,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-border/50 bg-card p-4 space-y-1">
+        <div className="md:hidden border-t border-border/50 bg-card p-4 space-y-1 animate-page-enter">
           <Link to="/convert" onClick={() => setMobileOpen(false)}>
             <Button variant="ghost" className="w-full justify-start rounded-xl">Convert</Button>
           </Link>

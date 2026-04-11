@@ -13,24 +13,24 @@ export default function Index() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-primary/2 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent pointer-events-none" />
         <div className="container mx-auto px-4 py-20 sm:py-32 relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+          <div className="max-w-3xl mx-auto text-center animate-stagger">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-page-enter">
               <Sparkles className="w-3.5 h-3.5" />
               AI transcription + speaker labels
             </div>
-            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1]">
+            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1] animate-page-enter">
               Know exactly what was{" "}
               <span className="text-primary">said</span>
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed animate-page-enter">
               Upload any audio file and get a full transcript with speaker labels, a summary, key actions, and custom AI analysis — in minutes.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-page-enter">
               <Button size="lg" className="h-12 px-8 text-base font-medium rounded-xl" onClick={() => navigate("/convert")}>
                 Convert your audio
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -103,7 +103,7 @@ export default function Index() {
               { icon: Clock, title: "Fast turnaround", desc: "Upload and get your results in minutes — no waiting, no queues." },
               { icon: MessageSquareText, title: "Custom AI prompts", desc: "Ask anything about your transcript — extract quotes, action items, decisions, or anything else." },
             ].map(({ icon: Icon, title, desc }) => (
-              <Card key={title} className="rounded-xl border-border/50 hover:border-primary/20 transition-all hover:shadow-md bg-card">
+              <Card key={title} className="rounded-xl border-border/50 shadow-sm hover:shadow-md hover:border-primary/20 transition-all bg-card">
                 <CardContent className="p-5 sm:p-6">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                     <Icon className="w-5 h-5 text-primary" />
@@ -135,7 +135,7 @@ export default function Index() {
       <section className="border-t border-border/50 bg-muted/30">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
-            <Shield className="w-4 h-4 text-accent" />
+            <Shield className="w-4 h-4 text-primary" />
             <span>Your audio is deleted immediately after processing. No storage. No retention.</span>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function Index() {
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+              <div className="w-7 h-7 rounded-xl bg-primary flex items-center justify-center">
                 <Mic className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="font-heading font-semibold text-sm">WhatSaid</span>

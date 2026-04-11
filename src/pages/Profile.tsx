@@ -62,7 +62,7 @@ export default function Profile() {
     : "";
 
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-12 sm:py-16">
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Profile header */}
@@ -78,7 +78,7 @@ export default function Profile() {
           </div>
 
           {/* Credit balance */}
-          <Card className="rounded-xl border-border/50 bg-card">
+          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="glass-badge px-3 py-1.5 rounded-lg">
@@ -100,7 +100,7 @@ export default function Profile() {
               { label: "Minutes processed", value: jobStats?.totalMinutes ?? 0, icon: Clock },
               { label: "Last conversion", value: jobStats?.lastJob ?? "—", icon: Clock },
             ].map(({ label, value, icon: Icon }) => (
-              <Card key={label} className="rounded-xl border-border/50 bg-card">
+              <Card key={label} className="rounded-xl border-border/50 bg-card shadow-sm">
                 <CardContent className="p-4 text-center">
                   <Icon className="w-4 h-4 text-muted-foreground mx-auto mb-2" />
                   <p className="font-heading font-semibold text-lg">{value}</p>

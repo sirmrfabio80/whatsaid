@@ -8,24 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import LanguageSelector from "@/components/LanguageSelector";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -108,34 +95,24 @@ export default function Settings() {
   if (loading || !user) return null;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-12 sm:py-16">
-        <div className="max-w-xl mx-auto space-y-8">
-          <h1 className="font-heading text-2xl font-bold">Settings</h1>
+        <div className="max-w-2xl mx-auto space-y-8">
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold">Settings</h1>
 
           {/* Account */}
-          <Card className="rounded-xl border-border/50 bg-card">
+          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <h2 className="font-heading font-semibold text-base">Account</h2>
               <div className="space-y-2">
                 <Label htmlFor="display-name">Display name</Label>
-                <Input
-                  id="display-name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="rounded-xl h-11"
-                />
+                <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-xl h-11" />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input value={profile?.email || user.email || ""} disabled className="rounded-xl h-11 opacity-60" />
               </div>
-              <Button
-                className="rounded-xl"
-                size="sm"
-                onClick={() => updateProfile.mutate()}
-                disabled={updateProfile.isPending}
-              >
+              <Button className="rounded-xl" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
                 <Save className="w-4 h-4 mr-1.5" />
                 Save changes
               </Button>
@@ -143,7 +120,7 @@ export default function Settings() {
           </Card>
 
           {/* Preferences */}
-          <Card className="rounded-xl border-border/50 bg-card">
+          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <h2 className="font-heading font-semibold text-base">Preferences</h2>
               <div className="space-y-2">
@@ -154,7 +131,7 @@ export default function Settings() {
           </Card>
 
           {/* Security */}
-          <Card className="rounded-xl border-border/50 bg-card">
+          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <h2 className="font-heading font-semibold text-base">Security</h2>
               <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
@@ -188,7 +165,7 @@ export default function Settings() {
           </Card>
 
           {/* Danger zone */}
-          <Card className="rounded-xl border-destructive/30 bg-card">
+          <Card className="rounded-xl border-destructive/30 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <h2 className="font-heading font-semibold text-base text-destructive">Danger zone</h2>
               <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data. This action cannot be undone.</p>
