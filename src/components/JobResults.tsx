@@ -105,6 +105,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     setMeta(m as JobMeta | null);
     if (m) {
       setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
+      setSummaryLang((prev) => prev || m.language_detected || "en");
       onMetaLoaded?.(m as JobMeta);
     }
     setLoading(false);
