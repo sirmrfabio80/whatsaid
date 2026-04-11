@@ -67,12 +67,12 @@ export default function Index() {
       </section>
 
       {/* How it works */}
-      <section className="container mx-auto px-4 py-16 sm:py-24">
-        <div className="text-center mb-12">
+      <section ref={howItWorks.ref} className="container mx-auto px-4 py-16 sm:py-24">
+        <div className={`text-center mb-12 transition-all duration-700 ${howItWorks.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">How it works</h2>
           <p className="text-muted-foreground max-w-md mx-auto">Three simple steps to go from audio to insight.</p>
         </div>
-        <div className="grid sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
+        <div className={`grid sm:grid-cols-3 gap-8 max-w-3xl mx-auto transition-all duration-700 delay-200 ${howItWorks.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           {[
             { step: "1", icon: Upload, title: "Upload", desc: "Drag and drop your .m4a, .mp3, or .wav file. We detect the duration and language automatically." },
             { step: "2", icon: Cpu, title: "We process", desc: "AI transcribes with speaker labels, generates a summary, key actions, and your custom analysis." },
@@ -91,13 +91,13 @@ export default function Index() {
       </section>
 
       {/* Capabilities */}
-      <section className="bg-muted/30 border-y border-border/50">
+      <section ref={capabilities.ref} className="bg-muted/30 border-y border-border/50">
         <div className="container mx-auto px-4 py-16 sm:py-24">
-          <div className="text-center mb-12">
+          <div className={`text-center mb-12 transition-all duration-700 ${capabilities.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
             <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">Everything you need</h2>
             <p className="text-muted-foreground max-w-md mx-auto">One upload, three outputs — plus custom AI analysis from your own prompt.</p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto transition-all duration-700 delay-200 ${capabilities.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
             {[
               { icon: Users, title: "Speaker identification", desc: "Know who said what with automatic speaker labels and diarization." },
               { icon: FileText, title: "Three outputs per file", desc: "Full transcript, smart summary with key actions, and custom AI analysis from your prompt." },
