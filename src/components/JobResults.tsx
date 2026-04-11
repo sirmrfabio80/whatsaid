@@ -405,8 +405,8 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
               )}
               <div className="p-5 sm:p-6">
                 {transcript ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
-                    {applySpeakerNames(transcript.content, speakerNames)}
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
+                    {renderTranscriptWithBoldSpeakers(applySpeakerNames(transcript.content, speakerNames))}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No transcript available.</p>
