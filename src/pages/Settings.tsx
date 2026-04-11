@@ -96,23 +96,23 @@ export default function Settings() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
-      <div className="container mx-auto px-4 py-12 sm:py-16">
-        <div className="max-w-2xl mx-auto space-y-8">
+      <div className="container mx-auto px-4 py-10 sm:py-14">
+        <div className="max-w-2xl mx-auto space-y-6">
           <h1 className="font-heading text-2xl sm:text-3xl font-bold">Settings</h1>
 
           {/* Account */}
-          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-base">Account</h2>
+          <Card className="rounded-xl border-border bg-card shadow-sm">
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <h2 className="font-heading font-semibold text-lg">Account</h2>
               <div className="space-y-2">
                 <Label htmlFor="display-name">Display name</Label>
-                <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-xl h-11" />
+                <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-lg h-11" />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input value={profile?.email || user.email || ""} disabled className="rounded-xl h-11 opacity-60" />
+                <Input value={profile?.email || user.email || ""} disabled className="rounded-lg h-11 opacity-60" />
               </div>
-              <Button className="rounded-xl" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
+              <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
                 <Save className="w-4 h-4 mr-1.5" />
                 Save changes
               </Button>
@@ -120,9 +120,9 @@ export default function Settings() {
           </Card>
 
           {/* Preferences */}
-          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-base">Preferences</h2>
+          <Card className="rounded-xl border-border bg-card shadow-sm">
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <h2 className="font-heading font-semibold text-lg">Preferences</h2>
               <div className="space-y-2">
                 <Label>Default language</Label>
                 <LanguageSelector value={defaultLanguage} onChange={setDefaultLanguage} />
@@ -131,12 +131,12 @@ export default function Settings() {
           </Card>
 
           {/* Security */}
-          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-base">Security</h2>
+          <Card className="rounded-xl border-border bg-card shadow-sm">
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <h2 className="font-heading font-semibold text-lg">Security</h2>
               <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="rounded-xl" size="sm">
+                  <Button variant="outline" className="rounded-lg" size="sm">
                     <Lock className="w-4 h-4 mr-1.5" />
                     Change password
                   </Button>
@@ -149,15 +149,15 @@ export default function Settings() {
                   <div className="space-y-3 py-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="new-pw">New password</Label>
-                      <Input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="rounded-xl h-11" />
+                      <Input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="rounded-lg h-11" />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="confirm-pw">Confirm password</Label>
-                      <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="rounded-xl h-11" />
+                      <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="rounded-lg h-11" />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={changePassword} className="rounded-xl">Update password</Button>
+                    <Button onClick={changePassword} className="rounded-lg">Update password</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -166,12 +166,12 @@ export default function Settings() {
 
           {/* Danger zone */}
           <Card className="rounded-xl border-destructive/30 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-base text-destructive">Danger zone</h2>
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <h2 className="font-heading font-semibold text-lg text-destructive">Danger zone</h2>
               <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data. This action cannot be undone.</p>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" className="rounded-xl">
+                  <Button variant="destructive" size="sm" className="rounded-lg">
                     <Trash2 className="w-4 h-4 mr-1.5" />
                     Delete account
                   </Button>
@@ -184,9 +184,9 @@ export default function Settings() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                    <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       onClick={() => {
                         toast({ title: "Account deletion", description: "Please contact support to complete account deletion." });
                       }}

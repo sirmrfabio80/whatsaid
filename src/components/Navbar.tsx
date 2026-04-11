@@ -39,14 +39,13 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1">
-          {/* Nav links */}
           <Link to="/convert">
-            <Button variant={location.pathname === "/convert" ? "secondary" : "ghost"} size="sm" className="rounded-xl">
+            <Button variant={location.pathname === "/convert" ? "secondary" : "ghost"} size="sm" className="rounded-lg">
               Convert
             </Button>
           </Link>
           <a href="/#pricing">
-            <Button variant="ghost" size="sm" className="rounded-xl">
+            <Button variant="ghost" size="sm" className="rounded-lg">
               Pricing
             </Button>
           </a>
@@ -55,8 +54,8 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-2">
-              {/* Credit badge */}
-              <div className="glass-badge px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm">
+              {/* Credit badge — solid bg, no glass */}
+              <div className="bg-muted border border-border px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm">
                 <CreditCard className="w-3.5 h-3.5 text-primary" />
                 <span className="font-medium">{creditBalance}</span>
               </div>
@@ -64,7 +63,7 @@ export default function Navbar() {
               {/* Avatar dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="rounded-xl gap-1.5 pl-2 pr-2">
+                  <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 pl-2 pr-2">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
                       {initials}
                     </div>
@@ -98,7 +97,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link to="/login">
-              <Button size="sm" className="rounded-xl">Sign in</Button>
+              <Button size="sm" className="rounded-lg">Sign in</Button>
             </Link>
           )}
         </div>
@@ -106,12 +105,12 @@ export default function Navbar() {
         {/* Mobile: credit badge + hamburger */}
         <div className="flex md:hidden items-center gap-2">
           {user && (
-            <div className="glass-badge px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs">
+            <div className="bg-muted border border-border px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs">
               <CreditCard className="w-3 h-3 text-primary" />
               <span className="font-medium">{creditBalance}</span>
             </div>
           )}
-          <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setMobileOpen(!mobileOpen)}>
+          <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
         </div>
@@ -119,12 +118,12 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-border/50 bg-card p-4 space-y-1 animate-page-enter">
+        <div className="md:hidden border-t border-border bg-card p-4 space-y-1 animate-page-enter">
           <Link to="/convert" onClick={() => setMobileOpen(false)}>
-            <Button variant="ghost" className="w-full justify-start rounded-xl">Convert</Button>
+            <Button variant="ghost" className="w-full justify-start rounded-lg">Convert</Button>
           </Link>
           <a href="/#pricing" onClick={() => setMobileOpen(false)}>
-            <Button variant="ghost" className="w-full justify-start rounded-xl">Pricing</Button>
+            <Button variant="ghost" className="w-full justify-start rounded-lg">Pricing</Button>
           </a>
 
           <div className="h-px bg-border my-2" />
@@ -132,32 +131,32 @@ export default function Navbar() {
           {user ? (
             <>
               <Link to="/profile" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                <Button variant="ghost" className="w-full justify-start rounded-lg">
                   <User className="w-4 h-4 mr-2" />Profile
                 </Button>
               </Link>
               <Link to="/history" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                <Button variant="ghost" className="w-full justify-start rounded-lg">
                   <History className="w-4 h-4 mr-2" />History
                 </Button>
               </Link>
               <Link to="/credits" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                <Button variant="ghost" className="w-full justify-start rounded-lg">
                   <CreditCard className="w-4 h-4 mr-2" />Credits
                 </Button>
               </Link>
               <Link to="/settings" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-xl">
+                <Button variant="ghost" className="w-full justify-start rounded-lg">
                   <Settings className="w-4 h-4 mr-2" />Settings
                 </Button>
               </Link>
-              <Button variant="ghost" className="w-full justify-start rounded-xl" onClick={() => { signOut(); setMobileOpen(false); }}>
+              <Button variant="ghost" className="w-full justify-start rounded-lg" onClick={() => { signOut(); setMobileOpen(false); }}>
                 <LogOut className="w-4 h-4 mr-2" />Sign out
               </Button>
             </>
           ) : (
             <Link to="/login" onClick={() => setMobileOpen(false)}>
-              <Button className="w-full rounded-xl">Sign in</Button>
+              <Button className="w-full rounded-lg">Sign in</Button>
             </Link>
           )}
         </div>

@@ -63,7 +63,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
-      <div className="container mx-auto px-4 py-12 sm:py-16">
+      <div className="container mx-auto px-4 py-10 sm:py-14">
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Profile header */}
           <div className="flex items-center gap-4">
@@ -71,22 +71,22 @@ export default function Profile() {
               {initials}
             </div>
             <div>
-              <h1 className="font-heading text-xl font-semibold">{profile?.display_name || "User"}</h1>
+              <h1 className="font-heading text-2xl sm:text-3xl font-bold">{profile?.display_name || "User"}</h1>
               <p className="text-sm text-muted-foreground">{profile?.email || user.email}</p>
               {memberSince && <p className="text-xs text-muted-foreground mt-0.5">Member since {memberSince}</p>}
             </div>
           </div>
 
           {/* Credit balance */}
-          <Card className="rounded-xl border-border/50 bg-card shadow-sm">
+          <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="glass-badge px-3 py-1.5 rounded-lg">
+                <div className="bg-muted border border-border px-3 py-1.5 rounded-lg">
                   <span className="font-heading font-bold text-lg">{creditBalance}</span>
                   <span className="text-sm text-muted-foreground ml-1.5">credits</span>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="rounded-xl" onClick={() => navigate("/credits")}>
+              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => navigate("/credits")}>
                 <CreditCard className="w-4 h-4 mr-1.5" />
                 Buy more
               </Button>
@@ -100,7 +100,7 @@ export default function Profile() {
               { label: "Minutes processed", value: jobStats?.totalMinutes ?? 0, icon: Clock },
               { label: "Last conversion", value: jobStats?.lastJob ?? "—", icon: Clock },
             ].map(({ label, value, icon: Icon }) => (
-              <Card key={label} className="rounded-xl border-border/50 bg-card shadow-sm">
+              <Card key={label} className="rounded-xl border-border bg-card shadow-sm hover:border-primary/20 hover:shadow-md transition-all">
                 <CardContent className="p-4 text-center">
                   <Icon className="w-4 h-4 text-muted-foreground mx-auto mb-2" />
                   <p className="font-heading font-semibold text-lg">{value}</p>
@@ -112,14 +112,14 @@ export default function Profile() {
 
           {/* Quick actions */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button className="flex-1 rounded-xl h-11" onClick={() => navigate("/convert")}>
+            <Button className="flex-1 rounded-lg h-11" onClick={() => navigate("/convert")}>
               Convert audio
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-            <Button variant="outline" className="flex-1 rounded-xl h-11" onClick={() => navigate("/history")}>
+            <Button variant="outline" className="flex-1 rounded-lg h-11" onClick={() => navigate("/history")}>
               View history
             </Button>
-            <Button variant="outline" className="flex-1 rounded-xl h-11" onClick={() => navigate("/settings")}>
+            <Button variant="outline" className="flex-1 rounded-lg h-11" onClick={() => navigate("/settings")}>
               Settings
             </Button>
           </div>

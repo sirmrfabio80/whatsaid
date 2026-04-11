@@ -33,7 +33,6 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
     setDetecting(true);
     setSelectedFile(file);
 
-    // Detect duration using Web Audio API
     try {
       const url = URL.createObjectURL(file);
       const audio = new Audio();
@@ -94,13 +93,17 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
     <div className="w-full">
       {!selectedFile ? (
         <div
-          className={`relative glass-dropzone rounded-xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
+          className={`relative rounded-xl bg-muted/50 border-2 border-dashed border-border p-8 sm:p-12 text-center transition-all cursor-pointer ${
             dragOver ? "!border-primary !border-solid shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]" : "hover:border-primary/50"
           } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload audio file"
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
         >
           <input
             ref={inputRef}
@@ -111,7 +114,7 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
             disabled={disabled}
           />
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
               <Upload className="w-8 h-8 text-primary" />
             </div>
             <div>
@@ -126,7 +129,7 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
           </p>
         </div>
       ) : (
-        <div className="border rounded-xl p-6 bg-card">
+        <div className="border border-border rounded-xl p-6 bg-card">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
               <FileAudio className="w-6 h-6 text-primary" />
