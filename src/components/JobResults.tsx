@@ -73,6 +73,10 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
 
+  // Summary language state
+  const [summaryLang, setSummaryLang] = useState<string>("");
+  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
+
   // Questions tab state
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [askingQuestion, setAskingQuestion] = useState(false);
