@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, Mic, Sparkles, FileText
+  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText
 } from "lucide-react";
 
 type ProcessingStep = "uploading" | "transcribing" | "summarising" | "completed" | "failed";
@@ -22,14 +22,6 @@ const STEP_LABELS: Record<ProcessingStep, string> = {
   summarising: "Generating summary & analysis...",
   completed: "Processing complete",
   failed: "Processing failed",
-};
-
-const STEP_ICONS: Record<ProcessingStep, typeof Loader2> = {
-  uploading: Loader2,
-  transcribing: Mic,
-  summarising: Sparkles,
-  completed: CheckCircle2,
-  failed: AlertCircle,
 };
 
 export default function Convert() {
