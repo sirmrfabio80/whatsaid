@@ -180,7 +180,8 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     URL.revokeObjectURL(url);
   };
 
-  const baseName = meta?.file_name?.replace(/\.[^.]+$/, "") ?? "output";
+  const displayName = meta?.title || meta?.file_name?.replace(/\.[^.]+$/, "") || "output";
+  const baseName = displayName;
 
   const handleDownloadAllJson = () => {
     const payload: Record<string, unknown> = {
