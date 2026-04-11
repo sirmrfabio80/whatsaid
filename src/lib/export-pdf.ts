@@ -271,8 +271,22 @@ export async function exportPdf(payload: ExportPayload): Promise<void> {
       pageIndex += 1;
     }
 
-    pdf.save(`${fileBaseName}.pdf`);
+    // Use explicit blob + anchor download (same pattern as DOCX export)
+    // jsPDF's built-in save() can be blocked in sandboxed iframes
+    const blob = pdf.output("blob");
+    downloadBlob(blob, `${fileBaseName}.pdf`);
   } finally {
     host.remove();
   }
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
