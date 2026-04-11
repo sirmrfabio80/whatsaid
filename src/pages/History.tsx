@@ -84,7 +84,7 @@ export default function History() {
           ) : (
             <div className="space-y-3">
               {jobs.map((job) => (
-                <Card key={job.id} className="rounded-xl border-border/50 shadow-sm hover:border-primary/30 transition-colors cursor-pointer group">
+                <Card key={job.id} className="rounded-xl border-border/50 shadow-sm hover:border-primary/30 transition-colors cursor-pointer group" onClick={() => navigate(`/job/${job.id}`)}>
                   <CardContent className="p-4 sm:p-5 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <FileAudio className="w-5 h-5 text-primary" />
