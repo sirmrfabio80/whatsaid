@@ -102,30 +102,11 @@ export default function Convert() {
     setErrorMessage(null);
 
     try {
-      // 1. Create job row
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert({
-          user_id: user.id,
-          file_name: file.name,
-          file_size_bytes: file.size,
-          duration_seconds: Math.round(duration),
-          language_selected: language,
-          credits_charged: credits,
-          status: "uploading" as const,
-        })
-        .select("id")
-        .single();
-
-      if (jobError || !job) {
-        throw new Error(jobError?.message || "Could not create job");
-      }
-
-      const newJobId = job.id;
-      setJobId(newJobId);
+      // 1. Build file path
+      const newJobId = crypto.randomUUID();
+      const filePath = `${user.id}/${newJobId}/${file.name}`;
 
       // 2. Upload audio to temp-audio bucket
-      const filePath = `${user.id}/${newJobId}/${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("temp-audio")
         .upload(filePath, file, { upsert: false });
@@ -134,11 +115,26 @@ export default function Convert() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // 3. Update job with temp_file_path
-      await supabase
+      // 3. Create job row with temp_file_path already set
+      const { error: jobError } = await supabase
         .from("jobs")
-        .update({ temp_file_path: filePath })
-        .eq("id", newJobId);
+        .insert({
+          id: newJobId,
+          user_id: user.id,
+          file_name: file.name,
+          file_size_bytes: file.size,
+          duration_seconds: Math.round(duration),
+          language_selected: language,
+          credits_charged: credits,
+          status: "uploading" as const,
+          temp_file_path: filePath,
+        });
+
+      if (jobError) {
+        throw new Error(jobError.message || "Could not create job");
+      }
+
+      setJobId(newJobId);
 
       setStep("transcribing");
 
