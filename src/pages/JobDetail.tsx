@@ -179,14 +179,26 @@ export default function JobDetail() {
                 )}
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(meta.created_at).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </Badge>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-0.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
+                      <Calendar className="w-3 h-3" />
+                      {(jobDate ?? new Date(meta.created_at)).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarWidget
+                      mode="single"
+                      selected={jobDate ?? new Date(meta.created_at)}
+                      onSelect={handleDateChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 {meta.duration_seconds != null && (
                   <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
                     <Clock className="w-3 h-3" />
