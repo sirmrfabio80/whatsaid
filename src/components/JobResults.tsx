@@ -3,12 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Download, Check, FileText, Sparkles, MessageSquareText, Globe, FileDown, RotateCw, Send } from "lucide-react";
+import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2 } from "lucide-react";
 import { getLanguageLabel } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocx, exportPdf } from "@/lib/export";
+import SpeakerChips from "@/components/SpeakerChips";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,11 +29,39 @@ export interface JobMeta {
   file_name: string;
   created_at: string;
   speech_model: string | null;
+  speaker_names: Record<string, string>;
 }
 
 interface JobResultsProps {
   jobId: string;
   onMetaLoaded?: (meta: JobMeta) => void;
+}
+
+/** Parse unique speaker labels like "Speaker A:", "Speaker B:" from transcript text */
+function parseSpeakers(text: string): string[] {
+  const matches = text.match(/^(Speaker [A-Z]):/gm);
+  if (!matches) return [];
+  return [...new Set(matches.map((m) => m.replace(":", "")))];
+}
+
+/** Replace speaker labels in text with their renamed versions */
+function applySpeakerNames(text: string, names: Record<string, string>): string {
+  let result = text;
+  for (const [original, renamed] of Object.entries(names)) {
+    if (renamed) {
+      // Replace "Speaker A:" at the start of lines
+      const regex = new RegExp(`^${escapeRegex(original)}:`, "gm");
+      result = result.replace(regex, `${renamed}:`);
+      // Replace inline references
+      const inlineRegex = new RegExp(`\\b${escapeRegex(original)}\\b`, "g");
+      result = result.replace(inlineRegex, renamed);
+    }
+  }
+  return result;
+}
+
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
@@ -42,8 +70,11 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   const [meta, setMeta] = useState<JobMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [regenerating, setRegenerating] = useState(false);
+  const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
+
+  // Questions tab state
+  const [questionPrompt, setQuestionPrompt] = useState("");
+  const [askingQuestion, setAskingQuestion] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -54,15 +85,23 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
         .order("created_at", { ascending: true }),
       supabase
         .from("jobs")
-        .select("language_detected, duration_seconds, file_name, created_at")
+        .select("language_detected, duration_seconds, file_name, created_at, speech_model, speaker_names")
         .eq("id", jobId)
         .maybeSingle(),
     ]);
 
     setOutputs((outputsData as JobOutput[]) ?? []);
-    const m = jobData as JobMeta | null;
-    setMeta(m);
-    if (m) onMetaLoaded?.(m);
+    const m = jobData
+      ? {
+          ...jobData,
+          speaker_names: (jobData.speaker_names as Record<string, string>) ?? {},
+        }
+      : null;
+    setMeta(m as JobMeta | null);
+    if (m) {
+      setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
+      onMetaLoaded?.(m as JobMeta);
+    }
     setLoading(false);
   }, [jobId]);
 
@@ -70,6 +109,19 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     fetchData();
   }, [fetchData]);
 
+  // ---- Speaker renaming ----
+  const handleRenameSpeaker = async (original: string, newName: string) => {
+    const updated = { ...speakerNames, [original]: newName };
+    setSpeakerNames(updated);
+
+    // Persist to DB
+    await supabase
+      .from("jobs")
+      .update({ speaker_names: updated })
+      .eq("id", jobId);
+  };
+
+  // ---- Copy ----
   const handleCopy = async (content: string, id: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedId(id);
@@ -77,6 +129,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // ---- Download helpers ----
   const handleDownload = (content: string, filename: string, mime = "text/plain;charset=utf-8") => {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -87,50 +140,6 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     URL.revokeObjectURL(url);
   };
 
-  const handleRegenerate = async () => {
-    if (!customPrompt.trim()) {
-      toast({ title: "Please enter a prompt", variant: "destructive" });
-      return;
-    }
-
-    setRegenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("regenerate", {
-        body: { job_id: jobId, custom_prompt: customPrompt.trim() },
-      });
-
-      if (error) {
-        toast({ title: "Regeneration failed", description: error.message, variant: "destructive" });
-        return;
-      }
-
-      if (data?.error) {
-        toast({ title: "Regeneration failed", description: data.error, variant: "destructive" });
-        return;
-      }
-
-      toast({ title: "AI output regenerated" });
-      setCustomPrompt("");
-      await fetchData();
-    } catch (e) {
-      toast({ title: "Something went wrong", variant: "destructive" });
-    } finally {
-      setRegenerating(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="text-center text-muted-foreground py-8 text-sm">
-        Loading results...
-      </div>
-    );
-  }
-
-  const transcript = outputs.find((o) => o.output_type === "transcript");
-  const summary = outputs.find((o) => o.output_type === "summary");
-  const custom = outputs.find((o) => o.output_type === "custom");
-
   const baseName = meta?.file_name?.replace(/\.[^.]+$/, "") ?? "output";
 
   const handleDownloadAllJson = () => {
@@ -139,11 +148,14 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
       language_detected: meta?.language_detected ?? null,
       duration_seconds: meta?.duration_seconds ?? null,
     };
-    if (transcript) payload.transcript = transcript.content;
-    if (summary) payload.summary = summary.content;
-    if (custom) {
-      payload.custom_prompt = custom.custom_prompt;
-      payload.custom_output = custom.content;
+    if (transcript) payload.transcript = applySpeakerNames(transcript.content, speakerNames);
+    if (summary) payload.summary = applySpeakerNames(summary.content, speakerNames);
+    const questionEntries = getQuestionEntries();
+    if (questionEntries.length > 0) {
+      payload.questions = questionEntries.map((q) => ({
+        prompt: q.custom_prompt,
+        answer: applySpeakerNames(q.content, speakerNames),
+      }));
     }
     handleDownload(JSON.stringify(payload, null, 2), `${baseName}.json`, "application/json");
   };
@@ -153,10 +165,10 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
     durationSeconds: meta?.duration_seconds ?? null,
     createdAt: meta?.created_at ?? null,
-    transcript: transcript?.content ?? null,
-    summary: summary?.content ?? null,
-    customPrompt: custom?.custom_prompt ?? null,
-    customOutput: custom?.content ?? null,
+    transcript: transcript ? applySpeakerNames(transcript.content, speakerNames) : null,
+    summary: summary ? applySpeakerNames(summary.content, speakerNames) : null,
+    customPrompt: null,
+    customOutput: null,
   });
 
   const handleExportDocx = async () => {
@@ -176,18 +188,57 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     }
   };
 
-  const tabs = [
-    transcript && { key: "transcript", label: "Transcript", icon: FileText, output: transcript },
-    summary && { key: "summary", label: "Summary", icon: Sparkles, output: summary },
-    custom && { key: "custom", label: "AI Output", icon: MessageSquareText, output: custom },
-  ].filter(Boolean) as Array<{
-    key: string;
-    label: string;
-    icon: typeof FileText;
-    output: JobOutput;
-  }>;
+  // ---- Ask question ----
+  const handleAskQuestion = async () => {
+    if (!questionPrompt.trim()) {
+      toast({ title: "Please enter a question", variant: "destructive" });
+      return;
+    }
 
-  if (tabs.length === 0) {
+    setAskingQuestion(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("regenerate", {
+        body: { job_id: jobId, custom_prompt: questionPrompt.trim() },
+      });
+
+      if (error) {
+        toast({ title: "Failed to get answer", description: error.message, variant: "destructive" });
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Failed to get answer", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Answer saved" });
+      setQuestionPrompt("");
+      await fetchData();
+    } catch {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
+      setAskingQuestion(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center text-muted-foreground py-8 text-sm">
+        Loading results...
+      </div>
+    );
+  }
+
+  const transcript = outputs.find((o) => o.output_type === "transcript");
+  const summary = outputs.find((o) => o.output_type === "summary");
+
+  // Questions: include both legacy "custom" outputs and new "question" outputs
+  const getQuestionEntries = () =>
+    outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
+
+  const speakers = transcript ? parseSpeakers(transcript.content) : [];
+
+  if (!transcript && !summary) {
     return (
       <div className="text-center text-muted-foreground py-8 text-sm">
         No outputs found for this job.
@@ -195,142 +246,228 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     );
   }
 
+  const questionEntries = getQuestionEntries();
+
+  // ---- Per-tab actions ----
+  const ActionsBar = ({ content, id, tabKey }: { content: string; id: string; tabKey: string }) => (
+    <div className="flex items-center justify-end gap-2 p-3 border-b border-border/50">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="rounded-lg gap-1.5 text-xs h-8"
+        onClick={() => handleCopy(applySpeakerNames(content, speakerNames), id)}
+      >
+        {copiedId === id ? (
+          <Check className="w-3.5 h-3.5 text-primary" />
+        ) : (
+          <Copy className="w-3.5 h-3.5" />
+        )}
+        {copiedId === id ? "Copied" : "Copy"}
+      </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
+            <FileDown className="w-3.5 h-3.5" />
+            Export
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[140px]">
+          <DropdownMenuItem
+            onClick={() =>
+              handleDownload(
+                applySpeakerNames(content, speakerNames),
+                `${baseName}_${tabKey}.txt`
+              )
+            }
+          >
+            <Download className="w-3.5 h-3.5 mr-2" />
+            Plain text (.txt)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleDownloadAllJson}>
+            <Download className="w-3.5 h-3.5 mr-2" />
+            JSON (.json)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportDocx}>
+            <Download className="w-3.5 h-3.5 mr-2" />
+            Word (.docx)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportPdf}>
+            <Download className="w-3.5 h-3.5 mr-2" />
+            PDF (print)
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
   return (
     <div className="space-y-4 animate-page-enter">
-      {/* Language badge */}
-      {meta?.language_detected && (
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
-            <Globe className="w-3 h-3" />
-            {getLanguageLabel(meta.language_detected)}
-          </Badge>
-        </div>
-      )}
-
-      <Tabs defaultValue={tabs[0].key} className="w-full">
-        <TabsList className="w-full justify-start rounded-xl bg-muted/50 p-1 h-auto flex-wrap">
-          {tabs.map(({ key, label, icon: Icon }) => (
-            <TabsTrigger
-              key={key}
-              value={key}
-              className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </TabsTrigger>
-          ))}
+      <Tabs defaultValue="transcript" className="w-full">
+        <TabsList className="w-full justify-start rounded-xl bg-muted/50 p-1 h-auto">
+          <TabsTrigger
+            value="transcript"
+            className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Transcript
+          </TabsTrigger>
+          <TabsTrigger
+            value="summary"
+            className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Summary
+          </TabsTrigger>
+          <TabsTrigger
+            value="questions"
+            className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            Questions
+          </TabsTrigger>
         </TabsList>
 
-        {tabs.map(({ key, output }) => (
-          <TabsContent key={key} value={key} className="mt-4">
-            <Card className="rounded-xl border-border/50 shadow-sm">
-              <CardContent className="p-0">
-                {/* Actions bar */}
-                <div className="flex items-center justify-end gap-2 p-3 border-b border-border/50">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-lg gap-1.5 text-xs h-8"
-                    onClick={() => handleCopy(output.content, output.id)}
-                  >
-                    {copiedId === output.id ? (
-                      <Check className="w-3.5 h-3.5 text-primary" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                    {copiedId === output.id ? "Copied" : "Copy"}
-                  </Button>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
-                        <FileDown className="w-3.5 h-3.5" />
-                        Export
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[140px]">
-                      <DropdownMenuItem onClick={() => handleDownload(output.content, `${baseName}_${key}.txt`)}>
-                        <Download className="w-3.5 h-3.5 mr-2" />
-                        Plain text (.txt)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleDownloadAllJson}>
-                        <Download className="w-3.5 h-3.5 mr-2" />
-                        JSON (.json)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleExportDocx}>
-                        <Download className="w-3.5 h-3.5 mr-2" />
-                        Word (.docx)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleExportPdf}>
-                        <Download className="w-3.5 h-3.5 mr-2" />
-                        PDF (print)
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Content */}
-                <div className="p-5 sm:p-6">
-                  {output.custom_prompt && (
-                    <div className="mb-4 p-3 rounded-lg bg-muted/50 text-sm">
-                      <span className="text-muted-foreground font-medium">Prompt: </span>
-                      <span className="text-foreground">{output.custom_prompt}</span>
-                    </div>
-                  )}
+        {/* ===== TRANSCRIPT TAB ===== */}
+        <TabsContent value="transcript" className="mt-4">
+          <Card className="rounded-xl border-border/50 shadow-sm">
+            <CardContent className="p-0">
+              {transcript && (
+                <ActionsBar content={transcript.content} id={transcript.id} tabKey="transcript" />
+              )}
+              <div className="p-5 sm:p-6">
+                {speakers.length > 0 && (
+                  <SpeakerChips
+                    speakers={speakers}
+                    speakerNames={speakerNames}
+                    onRename={handleRenameSpeaker}
+                  />
+                )}
+                {transcript ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
-                    {output.content}
+                    {applySpeakerNames(transcript.content, speakerNames)}
                   </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No transcript available.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== SUMMARY TAB ===== */}
+        <TabsContent value="summary" className="mt-4">
+          <Card className="rounded-xl border-border/50 shadow-sm">
+            <CardContent className="p-0">
+              {summary && (
+                <ActionsBar content={summary.content} id={summary.id} tabKey="summary" />
+              )}
+              <div className="p-5 sm:p-6">
+                {summary ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
+                    {applySpeakerNames(summary.content, speakerNames)}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No summary available.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== QUESTIONS TAB ===== */}
+        <TabsContent value="questions" className="mt-4">
+          <Card className="rounded-xl border-border/50 shadow-sm">
+            <CardContent className="p-0">
+              {/* Question input */}
+              <div className="p-4 sm:p-5 border-b border-border/50">
+                <label htmlFor="question-input" className="text-sm font-medium mb-2 block">
+                  Ask a question about this transcript
+                </label>
+                <div className="flex gap-2">
+                  <Textarea
+                    id="question-input"
+                    placeholder="e.g. What medication was mentioned? What are the next steps?"
+                    value={questionPrompt}
+                    onChange={(e) => setQuestionPrompt(e.target.value)}
+                    className="rounded-xl text-sm min-h-[60px] resize-none flex-1"
+                    disabled={askingQuestion}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAskQuestion();
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleAskQuestion}
+                    disabled={askingQuestion || !questionPrompt.trim()}
+                    size="sm"
+                    className="rounded-xl self-end"
+                    aria-label="Submit question"
+                  >
+                    {askingQuestion ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        ))}
+              </div>
+
+              {/* Saved Q&A list */}
+              <div role="log" aria-live="polite" aria-label="Questions and answers">
+                {questionEntries.length === 0 ? (
+                  <div className="p-5 text-center text-sm text-muted-foreground">
+                    No questions asked yet. Ask a question above to get AI-generated answers based on the transcript.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {[...questionEntries].reverse().map((entry) => (
+                      <div key={entry.id} className="p-4 sm:p-5">
+                        {entry.custom_prompt && (
+                          <p className="text-sm font-medium text-muted-foreground mb-2">
+                            Q: {entry.custom_prompt}
+                          </p>
+                        )}
+                        <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
+                          {applySpeakerNames(entry.content, speakerNames)}
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-lg gap-1.5 text-xs h-7"
+                            onClick={() => handleCopy(entry.content, entry.id)}
+                          >
+                            {copiedId === entry.id ? (
+                              <Check className="w-3 h-3 text-primary" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            {copiedId === entry.id ? "Copied" : "Copy"}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
-      {/* AI accuracy disclaimer */}
-      <p className="text-xs text-muted-foreground px-1">
-        This output was generated by AI and may contain errors. It should not be used as a verbatim legal or medical record. Speaker identification is approximate.
-      </p>
-
-      {/* Regenerate custom output */}
-      <Card className="rounded-xl border-border/50 shadow-sm">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <RotateCw className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-medium">
-              {custom ? "Regenerate AI output" : "Generate AI output"}
-            </h3>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Enter a custom prompt to apply to the transcript. {custom ? "This will replace the current AI output." : ""}
-          </p>
-          <Textarea
-            placeholder="e.g. Extract all decisions made and list who is responsible for each..."
-            value={customPrompt}
-            onChange={(e) => setCustomPrompt(e.target.value)}
-            className="rounded-xl text-sm min-h-[80px] mb-3 resize-none"
-            disabled={regenerating}
-          />
-          <Button
-            onClick={handleRegenerate}
-            disabled={regenerating || !customPrompt.trim()}
-            className="rounded-xl gap-1.5"
-            size="sm"
-          >
-            {regenerating ? (
-              <>
-                <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Send className="w-3.5 h-3.5" />
-                {custom ? "Regenerate" : "Generate"}
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Strengthened AI disclaimer */}
+      <div
+        role="note"
+        className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/30 p-4"
+      >
+        <AlertTriangle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          <strong className="text-foreground/80">AI-generated content</strong> — This transcript, summary, and any AI outputs may contain errors including misidentified speakers, inaccurate medical or technical terms, and omitted or fabricated details. Do not rely on this as a verbatim record for medical, legal, or financial decisions. Always verify critical information with the original source.
+        </p>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,8 @@ import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 
+// JobMeta now includes speaker_names from the rewritten JobResults
+
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
