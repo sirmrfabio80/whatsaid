@@ -1,76 +1,53 @@
 
 
-# Bug Fix Plan: Session Stability, Navigation, and Summary Language
+# Questions Tab: Markdown Rendering, Export Inclusion Controls, and Export Access
 
-## Root Causes Confirmed
+## Changes
 
-1. **Bug 1 (Post-processing navigation)**: `Convert.tsx` line 73-76 — on completion, sets `step="completed"` and shows inline results instead of navigating to `/job/{id}`.
+### 1. Export `SectionBody` from `StructuredSummary.tsx`
+Add named export so it can be reused for Q&A answer rendering.
 
-2. **Bugs 2, 3, 4 (Summary language breaks session)**: `JobDetail.tsx` line 29-31 — `if (!user) navigate("/login")` fires during token refresh. When `regenerate` edge function is invoked, the brief auth token refresh causes `user` to become null, triggering redirect to `/login`. This makes it *look* like a new job was created or session broke.
+### 2. Update `JobResults.tsx` — three changes
 
-3. **Bug 3 (Language label mismatch)**: `JobResults.tsx` line 135 — `setSummaryLang(langCode)` is set optimistically but never reverted on error.
+**A. Markdown rendering for Q&A answers (lines 583-585)**
+Replace raw `whitespace-pre-wrap` text with `<SectionBody body={...} />` — the same component used in Summary. This handles bold, bullets, paragraphs, and spacing.
 
-4. **Bug 5 (Session fragility)**: Same root cause as bugs 2/4 — `History.tsx` line 46-48 and `Credits.tsx` line 12-14 also redirect without checking `loading` state.
+**B. "Include in export" checkbox on each Q&A card**
+- Add `excludedQAIds` state (`Set<string>`) — tracks which entries are excluded (default: all included).
+- Each Q&A card gets a checkbox with label "Include in export", checked by default. Toggling it adds/removes the entry ID from the excluded set.
+- Visual indicator: when unchecked, the card gets a subtle `opacity-60` treatment so the user immediately sees it won't be exported.
+- Accessible: proper `<label>`, keyboard-focusable, `aria-label` describing the action.
 
-## Verification of Summary Language Flow (Edge Function)
+**C. Export actions bar above Q&A list (when entries exist)**
+- Add a bar matching the other tabs' style: "Copy All" button + Export dropdown (TXT, JSON, DOCX, PDF).
+- **All exports respect the inclusion set** — only non-excluded Q&A entries are included.
+- The existing `buildExportPayload()` and `handleDownloadAllJson()` will be updated to accept an optional filter, so the global export from Transcript/Summary tabs also respects exclusions.
 
-The `regenerate` edge function (already reviewed):
-- Receives `job_id` + `output_type: "summary"` + `target_language`
-- Deletes existing summary row: `DELETE FROM job_outputs WHERE job_id = X AND output_type = 'summary'`
-- Inserts new summary row under same `job_id`
-- Increments `regeneration_count` on the same job
-- **Does NOT create a new job** — confirmed
-- **Same job_id preserved** — confirmed
-- **Only summary output replaced** — confirmed (filtered by `output_type = 'summary'`)
-- **No duplicate rows** — delete then insert pattern prevents duplicates
+### 3. Export behaviour — explicit and consistent
 
-## Implementation Steps
+| Export from | What's included |
+|---|---|
+| Transcript tab Export | Transcript + Summary + **included** Q&A |
+| Summary tab Export | Transcript + Summary + **included** Q&A |
+| Questions tab Export | Transcript + Summary + **included** Q&A |
 
-### Step 1: Fix `JobDetail.tsx` auth guard
-Change `useEffect` to check `loading` before redirecting:
-```tsx
-const { user, loading: authLoading } = useAuth();
-useEffect(() => {
-  if (!authLoading && !user) navigate("/login");
-}, [user, authLoading, navigate]);
-```
+All tabs use the same `buildExportPayload()` which filters by `excludedQAIds`. No confusing differences.
 
-### Step 2: Fix `Convert.tsx` — navigate on completion
-Change the polling completion handler (line 73-76) to navigate instead of showing inline results:
-```tsx
-} else if (job.status === "completed") {
-  if (pollRef.current) clearInterval(pollRef.current);
-  setProcessing(false);
-  navigate(`/job/${jobId}`);
-}
-```
-Remove the `step === "completed"` JSX branch (lines 183-204) since we navigate away.
+**Q&A-only TXT export** from the Questions tab will export only the included Q&A items (not transcript/summary), giving users a focused Q&A-only text file.
 
-### Step 3: Fix `JobResults.tsx` — revert language on error
-Save previous language before setting new one. On error, revert:
-```tsx
-const prevLang = summaryLang;
-setSummaryLang(langCode);
-// ...on error:
-setSummaryLang(prevLang);
-```
+### 4. Accessibility
 
-### Step 4: Fix `History.tsx` auth guard
-Change line 46-48 to use `loading` from AuthContext.
+- Checkbox uses shadcn `Checkbox` component with proper `id` and `<label htmlFor>`.
+- Focus ring visible on keyboard navigation.
+- Screen reader: label reads "Include [question text] in export".
+- The Q&A export bar buttons follow the same accessible patterns as existing action bars.
 
-### Step 5: Fix `Credits.tsx` auth guard
-Change line 12-14 to use `loading` + `useEffect` pattern instead of inline redirect during render.
+## Files changed
+- `src/components/StructuredSummary.tsx` — export `SectionBody`
+- `src/components/JobResults.tsx` — markdown rendering, inclusion checkboxes, Q&A export bar, updated export payload filtering
 
-## Files Changed
-- `src/pages/JobDetail.tsx` — auth guard
-- `src/pages/Convert.tsx` — navigate on completion, remove inline completed state
-- `src/components/JobResults.tsx` — revert summaryLang on error
-- `src/pages/History.tsx` — auth guard
-- `src/pages/Credits.tsx` — auth guard
-
-## No Changes Needed
-- No edge function changes
-- No database/migration changes
-- No guest flow changes
-- No UI redesign
+## No changes
+- No backend/schema changes
+- No edge function changes  
+- No changes to other pages or tabs' layout
 
