@@ -24,9 +24,21 @@ function findBox(
   const target = path[0];
   let pos = start;
 
-  while (pos < end - 8) {
-    const size = view.getUint32(pos);
-    if (size < 8) break;
+  while (pos <= end - 8) {
+    let size = view.getUint32(pos);
+    let headerSize = 8;
+
+    if (size === 1) {
+      if (pos + 16 > end) break;
+      const high = view.getUint32(pos + 8);
+      const low = view.getUint32(pos + 12);
+      size = high * 0x100000000 + low;
+      headerSize = 16;
+    } else if (size === 0) {
+      size = end - pos;
+    }
+
+    if (size < headerSize || pos + size > end) break;
 
     const type = String.fromCharCode(
       view.getUint8(pos + 4),
@@ -36,13 +48,18 @@ function findBox(
     );
 
     if (type === target) {
-      if (path.length === 1) {
-        return { offset: pos + 8, size: size - 8 };
-      }
       const skip = skipBytesForContainer?.[0] ?? 0;
+      const contentOffset = pos + headerSize + skip;
+      const contentSize = size - headerSize - skip;
+      if (contentSize < 0) return null;
+
+      if (path.length === 1) {
+        return { offset: contentOffset, size: contentSize };
+      }
+
       return findBox(
         view,
-        pos + 8 + skip,
+        contentOffset,
         pos + size,
         path.slice(1),
         skipBytesForContainer?.slice(1)
