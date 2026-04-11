@@ -28,7 +28,7 @@ export default function SpeakerChips({ speakers, speakerNames, onRename, onReset
   const hasRenames = Object.values(speakerNames).some((v) => !!v);
 
   return (
-    <div className="flex items-center gap-2 flex-wrap mb-4" role="group" aria-label="Speaker labels">
+    <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Speaker labels">
       <span className="text-xs text-muted-foreground font-medium mr-1">Speakers:</span>
       {speakers.map((speaker) => (
         <SpeakerChip
