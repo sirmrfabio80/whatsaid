@@ -68,7 +68,7 @@
     --secondary-foreground: 210 20% 95%;
 
     --muted: 225 18% 14%;
-    --muted-foreground: 215 15% 55%;
+    --muted-foreground: 215 15% 63%;
 
     --accent: 170 55% 48%;
     --accent-foreground: 0 0% 100%;
@@ -76,8 +76,8 @@
     --destructive: 0 65% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 225 15% 15%;
-    --input: 225 15% 15%;
+    --border: 225 15% 18%;
+    --input: 225 15% 18%;
     --ring: 245 65% 62%;
 
     --success: 145 55% 45%;
@@ -91,7 +91,7 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 225 18% 14%;
     --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 225 15% 15%;
+    --sidebar-border: 225 15% 18%;
     --sidebar-ring: 245 65% 62%;
   }
 }
@@ -110,6 +110,29 @@
     font-family: 'Space Grotesk', system-ui, sans-serif;
   }
 }
+
+/* Page enter animation */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.4s ease-out both;
+}
+
+/* Staggered children */
+.animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.animate-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.animate-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.animate-stagger > *:nth-child(4) { animation-delay: 240ms; }
+.animate-stagger > *:nth-child(5) { animation-delay: 320ms; }
 
 @layer utilities {
   /* Liquid Glass — Navbar */

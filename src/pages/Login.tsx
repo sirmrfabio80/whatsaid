@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +34,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
-      <Card className="w-full max-w-md rounded-xl border-border/50">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12 animate-page-enter">
+      <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
         <CardHeader className="text-center">
           <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-4">
             <Mic className="w-6 h-6 text-primary-foreground" />
@@ -67,8 +67,7 @@ export default function Login() {
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link>
+            WhatSaid is currently in private beta.
           </p>
         </CardContent>
       </Card>

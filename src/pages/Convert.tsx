@@ -36,7 +36,7 @@ export default function Convert() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-12 sm:py-16">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
@@ -45,7 +45,7 @@ export default function Convert() {
           </div>
 
           {/* Step 1: Upload */}
-          <Card className="rounded-xl border-border/50 bg-card mb-6">
+          <Card className="rounded-xl border-border/50 bg-card shadow-sm mb-6">
             <CardContent className="p-6 sm:p-8">
               <AudioUploader onFileSelected={handleFileSelected} />
 
@@ -58,9 +58,9 @@ export default function Convert() {
                       <p className="text-sm font-medium truncate">{file.name}</p>
                       <p className="text-xs text-muted-foreground">{formatDuration(duration)} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
                     </div>
-                    <button onClick={handleReset} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={handleReset}>
                       Change
-                    </button>
+                    </Button>
                   </div>
 
                   {/* Step 2: Configure */}
