@@ -121,12 +121,8 @@ Rules:
 
       userPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
 
-      // Delete existing custom output
-      await supabase
-        .from("job_outputs")
-        .delete()
-        .eq("job_id", job_id)
-        .eq("output_type", "custom");
+
+
 
       console.log(`[regenerate] Processing job ${job_id}, prompt: "${custom_prompt.slice(0, 80)}..."`);
     }
