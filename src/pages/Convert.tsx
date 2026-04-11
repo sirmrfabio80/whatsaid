@@ -6,8 +6,8 @@ import LanguageSelector from "@/components/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { creditsForDuration, guestPriceForDuration, formatDuration } from "@/lib/pricing";
-import { ArrowRight, FileAudio, Clock, Coins } from "lucide-react";
+import { creditsForDuration, formatDuration } from "@/lib/pricing";
+import { ArrowRight, FileAudio, Clock } from "lucide-react";
 
 export default function Convert() {
   const { user, creditBalance } = useAuth();
