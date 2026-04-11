@@ -1,47 +1,51 @@
 
 
-# URGENT Fixes: Questions deletion + Transcript mobile layout
+# Add Time Editing to Job Date Picker
 
-## Issue 1: New question deletes all previous answers
+## What changes
 
-**Root cause**: In `supabase/functions/regenerate/index.ts` (lines 124-129), when asking a custom question, the code deletes ALL existing `output_type = "custom"` rows before inserting the new one:
+**Single file**: `src/pages/JobDetail.tsx`
 
-```sql
-DELETE FROM job_outputs WHERE job_id = ? AND output_type = 'custom'
+### 1. Display date AND time in the trigger button
+
+Change the date badge from showing only "Apr 11, 2026" to "Apr 11, 2026 · 14:30". This uses the job's `created_at` timestamp which already stores the full date+time.
+
+### 2. Add time input inside the popover
+
+Below the calendar widget, add a styled `<input type="time">` with a subtle separator. The popover becomes:
+
+```text
+┌─────────────────────┐
+│    « April 2026 »   │
+│ Mo Tu We Th Fr Sa Su│
+│  .  .  .  1  2  3  4│
+│  5  6  7  8  9 10 11│
+│ ...                  │
+├─────────────────────┤
+│  🕐  14:30           │
+└─────────────────────┘
 ```
 
-This wipes every previous Q&A answer.
+### 3. Preserve time when changing date, preserve date when changing time
 
-**Fix**: Remove the delete statement (lines 125-129) from the custom/question branch. The insert at line 170 already creates a new row — that's correct behavior for accumulating Q&A entries. The delete should only remain for the summary branch (where replacing is intentional).
+- `handleDateChange`: merges the selected calendar day with the existing time from `jobDate`
+- New `handleTimeChange`: merges the new HH:MM with the existing date from `jobDate`
+- Both persist the combined `Date` to the `created_at` column (no schema change needed)
 
-Also change `output_type` from `"custom"` to `"question"` on the insert (line 173) so new questions use the dedicated type and don't conflict with any legacy custom outputs. Update line 35 accordingly: `const regenerateType = output_type === "summary" ? "summary" : "question";`
+### 4. Semantic clarity
 
-**File**: `supabase/functions/regenerate/index.ts`
+The `created_at` column already stores when the job was created (which corresponds to when the recording was uploaded). The UI will not label this as "created" or "modified" — it simply shows as the recording's date and time, which the user can adjust if needed.
 
----
+### No other changes
 
-## Issue 2: Transcript tab mobile layout
+- No database migration (timestamp column already supports date+time)
+- No edge function changes
+- No new components
+- Location feature excluded (not viable as previously discussed)
 
-**Current layout** (390px): The `ActionsBar` component uses a single horizontal flex row with SpeakerChips on the left and Copy/Export on the right. With 2+ speakers, the chips compete for space with the buttons, creating a cramped layout.
+### Styling
 
-**Fix**: Restructure the Transcript tab header area to stack vertically on mobile:
-
-1. **Top row**: Copy and Export buttons aligned to the right (compact, no left content)
-2. **Below**: SpeakerChips rendered as a separate full-width section with `flex-wrap`, so chips flow naturally across the full width and wrap to additional rows as needed
-
-**Changes in `src/components/JobResults.tsx`** (lines 422-453):
-- Remove the `leftContent` prop usage for the Transcript ActionsBar — render it without SpeakerChips
-- Add a separate SpeakerChips section below the ActionsBar, inside a `div` with `px-4 py-3 border-b border-border/50` styling
-- SpeakerChips already uses `flex-wrap` in its container, so it will naturally handle 4+ speakers across the full width
-
-**No changes needed to `SpeakerChips.tsx`** — it already has `flex items-center gap-2 flex-wrap`.
-
----
-
-## Summary of file changes
-
-| File | Change |
-|------|--------|
-| `supabase/functions/regenerate/index.ts` | Remove delete-all-custom block (lines 125-129), change output_type to `"question"` |
-| `src/components/JobResults.tsx` | Separate SpeakerChips from ActionsBar into its own full-width row below |
+- Time input styled to match the premium theme: `bg-transparent`, subtle border-top separator, consistent font size
+- Dark mode compatible via existing CSS variables
+- Keyboard accessible (native time input supports arrow keys, tab)
 
