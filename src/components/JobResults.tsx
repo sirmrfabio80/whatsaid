@@ -682,21 +682,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                           key={entry.id}
                           className={`p-4 sm:p-5 transition-opacity ${isExcluded ? "opacity-50" : ""}`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              {entry.custom_prompt && (
-                                <div className="flex items-start gap-2 mb-2">
-                                  <span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span>
-                                  <p className="text-sm font-medium">
-                                    {entry.custom_prompt}
-                                  </p>
-                                </div>
-                              )}
-                              <div className="pl-5">
-                                <SectionBody body={applySpeakerNames(entry.content, speakerNames)} />
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/50">
                               <div className="flex items-center gap-2">
                                 <Checkbox
                                   id={checkboxId}
@@ -734,6 +721,19 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                                 )}
                                 {copiedId === entry.id ? "Copied" : "Copy"}
                               </Button>
+                            </div>
+                            <div>
+                              {entry.custom_prompt && (
+                                <div className="flex items-start gap-2 mb-2">
+                                  <span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span>
+                                  <p className="text-sm font-medium">
+                                    {entry.custom_prompt}
+                                  </p>
+                                </div>
+                              )}
+                              <div className="pl-5">
+                                <SectionBody body={applySpeakerNames(entry.content, speakerNames)} />
+                              </div>
                             </div>
                           </div>
                         </div>
