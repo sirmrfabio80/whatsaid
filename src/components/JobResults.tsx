@@ -202,9 +202,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   };
 
   const persistedJobTitle = meta?.title?.trim() || null;
-  const generatedTitle = !persistedJobTitle ? currentTitle?.trim() || null : null;
+  const originalBaseName = meta?.file_name?.replace(/\.[^.]+$/, "").trim() || null;
+  const liveTitle = currentTitle?.trim() || null;
+  const hasDistinctLiveTitle = Boolean(liveTitle && liveTitle !== originalBaseName);
+  const effectiveJobTitle = hasDistinctLiveTitle ? liveTitle : persistedJobTitle;
+  const generatedTitle = !persistedJobTitle && hasDistinctLiveTitle ? liveTitle : null;
   const baseName = resolveExportBaseName({
-    jobTitle: persistedJobTitle,
+    jobTitle: effectiveJobTitle,
     generatedTitle,
     originalFileName: meta?.file_name ?? null,
   });
@@ -235,7 +239,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     }));
     return {
       fileName: baseName,
-      jobTitle: persistedJobTitle,
+      jobTitle: effectiveJobTitle,
       generatedTitle,
       originalFileName: meta?.file_name ?? null,
       language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
