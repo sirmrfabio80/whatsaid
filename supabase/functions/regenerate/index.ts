@@ -86,14 +86,27 @@ Deno.serve(async (req) => {
         ? `\n\nIMPORTANT: Produce the entire summary, key points, and key actions in ${lang}. Do not translate to English.`
         : "";
 
-      systemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries for business professionals.
+      systemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries designed to be easy to scan and share with others, including family members who may not have been present.
 
-Your output must include:
-1. A concise summary (2-4 paragraphs) covering the main topics discussed
-2. A "Key Points" section as a bullet list of the most important information
-3. A "Key Actions" section as a bullet list of action items, decisions made, or next steps identified
+Your output MUST use the following markdown structure with exactly these section headings:
 
-Use plain text with markdown formatting. Be factual and precise. Do not invent information not present in the transcript.${langInstruction}`;
+## Overview
+A concise 2-3 paragraph summary of what was discussed, who was involved, and the overall outcome or status.
+
+## Key Points
+A bullet list of the most important facts, findings, or information shared during the conversation. Keep each point to 1-2 sentences.
+
+## Decisions & Next Steps
+A bullet list of any decisions made, action items agreed, follow-up appointments, or next steps. Include who is responsible and any dates or deadlines mentioned.
+
+## Terms to Know
+A bullet list of specialised, technical, or medical terms used in the conversation, each with a brief plain-language explanation. Only include this section if there are terms that a non-specialist might find unclear. If all language is straightforward, omit this section entirely.
+
+Rules:
+- Use plain text with markdown formatting only (## for headings, - for bullets).
+- Be factual and precise. Do not invent information not present in the transcript.
+- Keep bullet points concise and scannable.
+- Write in a professional but accessible tone.${langInstruction}`;
 
       userPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
 
