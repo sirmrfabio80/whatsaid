@@ -12,6 +12,8 @@ import {
 export default function Index() {
   const { user, creditBalance } = useAuth();
   const navigate = useNavigate();
+  const howItWorks = useScrollReveal();
+  const capabilities = useScrollReveal();
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
