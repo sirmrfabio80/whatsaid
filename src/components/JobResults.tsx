@@ -62,14 +62,29 @@ export default function JobResults({ jobId }: JobResultsProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDownload = (content: string, filename: string) => {
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const handleDownload = (content: string, filename: string, mime = "text/plain;charset=utf-8") => {
+    const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadAllJson = () => {
+    const payload: Record<string, unknown> = {
+      file_name: meta?.file_name ?? null,
+      language_detected: meta?.language_detected ?? null,
+      duration_seconds: meta?.duration_seconds ?? null,
+    };
+    if (transcript) payload.transcript = transcript.content;
+    if (summary) payload.summary = summary.content;
+    if (custom) {
+      payload.custom_prompt = custom.custom_prompt;
+      payload.custom_output = custom.content;
+    }
+    handleDownload(JSON.stringify(payload, null, 2), `${baseName}.json`, "application/json");
   };
 
   if (loading) {
@@ -150,16 +165,25 @@ export default function JobResults({ jobId }: JobResultsProps) {
                     )}
                     {copiedId === output.id ? "Copied" : "Copy"}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-lg gap-1.5 text-xs h-8"
-                    onClick={() => handleDownload(output.content, `${baseName}_${key}.txt`)}
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download TXT
-                  </Button>
-                </div>
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     className="rounded-lg gap-1.5 text-xs h-8"
+                     onClick={() => handleDownload(output.content, `${baseName}_${key}.txt`)}
+                   >
+                     <Download className="w-3.5 h-3.5" />
+                     TXT
+                   </Button>
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     className="rounded-lg gap-1.5 text-xs h-8"
+                     onClick={handleDownloadAllJson}
+                   >
+                     <Download className="w-3.5 h-3.5" />
+                     JSON
+                   </Button>
+                 </div>
 
                 {/* Content */}
                 <div className="p-5 sm:p-6">
