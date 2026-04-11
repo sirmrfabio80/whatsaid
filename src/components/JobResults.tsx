@@ -84,6 +84,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   // Questions tab state
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [askingQuestion, setAskingQuestion] = useState(false);
+  const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -189,7 +190,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     };
     if (transcript) payload.transcript = applySpeakerNames(transcript.content, speakerNames);
     if (summary) payload.summary = applySpeakerNames(summary.content, speakerNames);
-    const questionEntries = getQuestionEntries();
+    const questionEntries = getQuestionEntries().filter((q) => !excludedQAIds.has(q.id));
     if (questionEntries.length > 0) {
       payload.questions = questionEntries.map((q) => ({
         prompt: q.custom_prompt,
@@ -200,7 +201,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   };
 
   const buildExportPayload = () => {
-    const qEntries = getQuestionEntries();
+    const qEntries = getQuestionEntries().filter((q) => !excludedQAIds.has(q.id));
     const questions: QAEntry[] = qEntries.map((q) => ({
       prompt: q.custom_prompt,
       answer: applySpeakerNames(q.content, speakerNames),
