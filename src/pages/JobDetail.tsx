@@ -26,6 +26,8 @@ export default function JobDetail() {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [generatingTitle, setGeneratingTitle] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [jobDate, setJobDate] = useState<Date | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
