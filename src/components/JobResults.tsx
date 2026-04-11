@@ -180,7 +180,8 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
     URL.revokeObjectURL(url);
   };
 
-  const baseName = meta?.file_name?.replace(/\.[^.]+$/, "") ?? "output";
+  const displayName = meta?.title || meta?.file_name?.replace(/\.[^.]+$/, "") || "output";
+  const baseName = displayName;
 
   const handleDownloadAllJson = () => {
     const payload: Record<string, unknown> = {
@@ -207,7 +208,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
       answer: applySpeakerNames(q.content, speakerNames),
     }));
     return {
-      fileName: meta?.file_name ?? "output",
+      fileName: displayName,
       language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
       durationSeconds: meta?.duration_seconds ?? null,
       createdAt: meta?.created_at ?? null,
