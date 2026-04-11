@@ -15,6 +15,8 @@ import Credits from "./pages/Credits";
 import History from "./pages/History";
 import JobDetail from "./pages/JobDetail";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/credits" element={<Credits />} />
             <Route path="/history" element={<History />} />
             <Route path="/job/:id" element={<JobDetail />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
