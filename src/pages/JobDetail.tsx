@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, Globe, Calendar } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Calendar, Plus } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
