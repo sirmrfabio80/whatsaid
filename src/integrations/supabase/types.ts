@@ -114,6 +114,8 @@ export type Database = {
           id: string
           language_detected: string | null
           language_selected: string | null
+          recorded_at: string | null
+          recorded_at_source: string | null
           regeneration_count: number
           speaker_names: Json
           speech_model: string | null
@@ -138,6 +140,8 @@ export type Database = {
           id?: string
           language_detected?: string | null
           language_selected?: string | null
+          recorded_at?: string | null
+          recorded_at_source?: string | null
           regeneration_count?: number
           speaker_names?: Json
           speech_model?: string | null
@@ -162,6 +166,8 @@ export type Database = {
           id?: string
           language_detected?: string | null
           language_selected?: string | null
+          recorded_at?: string | null
+          recorded_at_source?: string | null
           regeneration_count?: number
           speaker_names?: Json
           speech_model?: string | null

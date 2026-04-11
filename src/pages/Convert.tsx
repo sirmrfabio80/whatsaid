@@ -106,6 +106,8 @@ export default function Convert() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
+      const recordedAt = new Date(file.lastModified).toISOString();
+
       const { error: jobError } = await supabase
         .from("jobs")
         .insert({
@@ -118,6 +120,8 @@ export default function Convert() {
           credits_charged: credits,
           status: "uploading" as const,
           temp_file_path: filePath,
+          recorded_at: recordedAt,
+          recorded_at_source: "file_last_modified",
         });
 
       if (jobError) {
