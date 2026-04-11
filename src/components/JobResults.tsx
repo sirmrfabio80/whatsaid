@@ -502,13 +502,16 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
             <CardContent className="p-0">
               {/* Question input */}
               <div className="p-4 sm:p-5 border-b border-border/50">
-                <label htmlFor="question-input" className="text-sm font-medium mb-2 block">
+                <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">
                   Ask a question about this transcript
                 </label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Ask about terms, decisions, medications, next steps, or anything discussed. Each answer is saved automatically.
+                </p>
                 <div className="flex gap-2">
                   <Textarea
                     id="question-input"
-                    placeholder="e.g. What medication was mentioned? What are the next steps?"
+                    placeholder="e.g. What medication was mentioned? What did the doctor recommend?"
                     value={questionPrompt}
                     onChange={(e) => setQuestionPrompt(e.target.value)}
                     className="rounded-xl text-sm min-h-[60px] resize-none flex-1"
@@ -524,34 +527,45 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                     onClick={handleAskQuestion}
                     disabled={askingQuestion || !questionPrompt.trim()}
                     size="sm"
-                    className="rounded-xl self-end"
-                    aria-label="Submit question"
+                    className="rounded-xl self-end gap-1.5 px-3"
                   >
                     {askingQuestion ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline text-xs">Ask</span>
+                      </>
                     )}
                   </Button>
                 </div>
               </div>
 
               {/* Saved Q&A list */}
-              <div role="log" aria-live="polite" aria-label="Questions and answers">
+              <div role="log" aria-live="polite" aria-label="Saved questions and answers">
                 {questionEntries.length === 0 ? (
-                  <div className="p-5 text-center text-sm text-muted-foreground">
-                    No questions asked yet. Ask a question above to get AI-generated answers based on the transcript.
+                  <div className="p-6 sm:p-8 text-center">
+                    <HelpCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      No questions yet
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      Your saved questions and AI answers will appear here
+                    </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-border/50">
                     {[...questionEntries].reverse().map((entry) => (
                       <div key={entry.id} className="p-4 sm:p-5">
                         {entry.custom_prompt && (
-                          <p className="text-sm font-medium text-muted-foreground mb-2">
-                            Q: {entry.custom_prompt}
-                          </p>
+                          <div className="flex items-start gap-2 mb-2">
+                            <span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span>
+                            <p className="text-sm font-medium">
+                              {entry.custom_prompt}
+                            </p>
+                          </div>
                         )}
-                        <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
+                        <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed pl-5">
                           {applySpeakerNames(entry.content, speakerNames)}
                         </div>
                         <div className="mt-2 flex justify-end">
@@ -559,7 +573,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
                             variant="ghost"
                             size="sm"
                             className="rounded-lg gap-1.5 text-xs h-7"
-                            onClick={() => handleCopy(entry.content, entry.id)}
+                            onClick={() => handleCopy(applySpeakerNames(entry.content, speakerNames), entry.id)}
                           >
                             {copiedId === entry.id ? (
                               <Check className="w-3 h-3 text-primary" />
