@@ -67,7 +67,7 @@ export default function Index() {
       <section className="container mx-auto px-4 py-16 sm:py-24">
         <div className="text-center mb-12">
           <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">How it works</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">Three steps. No account required for one-off conversions.</p>
+          <p className="text-muted-foreground max-w-md mx-auto">Three simple steps to go from audio to insight.</p>
         </div>
         <div className="grid sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
           {[
@@ -100,7 +100,7 @@ export default function Index() {
               { icon: FileText, title: "Three outputs per file", desc: "Full transcript, smart summary with key actions, and custom AI analysis from your prompt." },
               { icon: Globe, title: "99 languages", desc: "Auto-detects the spoken language — or manually select one before processing." },
               { icon: Shield, title: "Audio deleted after processing", desc: "Your audio is never stored. Files are deleted immediately after transcription." },
-              { icon: Clock, title: "Pay as you go", desc: "No subscription. Pay per job as a guest, or buy credit packs for volume discounts." },
+              { icon: Clock, title: "Fast turnaround", desc: "Upload and get your results in minutes — no waiting, no queues." },
               { icon: MessageSquareText, title: "Custom AI prompts", desc: "Ask anything about your transcript — extract quotes, action items, decisions, or anything else." },
             ].map(({ icon: Icon, title, desc }) => (
               <Card key={title} className="rounded-xl border-border/50 hover:border-primary/20 transition-all hover:shadow-md bg-card">
@@ -117,72 +117,17 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* Pricing - coming soon */}
       <section id="pricing" className="container mx-auto px-4 py-16 sm:py-24">
-        <div className="text-center mb-12">
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">Simple, transparent pricing</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">Pay once per conversion — no subscription. Save up to 50% with credit packs.</p>
+        <div className="text-center mb-8">
+          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">Pricing coming soon</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">WhatSaid is currently in private beta. Pricing details will be available when we launch publicly.</p>
         </div>
-
-        <div className="grid lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Guest pricing */}
-          <Card className="rounded-xl border-border/50 bg-card">
-            <CardContent className="p-6 sm:p-8">
-              <h3 className="font-heading font-semibold text-lg mb-1">One-off conversion</h3>
-              <p className="text-sm text-muted-foreground mb-6">No account required. Pay and convert instantly.</p>
-              <div className="space-y-3 mb-6">
-                {[
-                  { label: "Up to 15 minutes", price: "$2.99" },
-                  { label: "15–30 minutes", price: "$4.99" },
-                  { label: "30–60 minutes", price: "$7.99" },
-                ].map(({ label, price }) => (
-                  <div key={label} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                    <span className="text-sm">{label}</span>
-                    <span className="font-heading font-semibold">{price}</span>
-                  </div>
-                ))}
-              </div>
-              <Button className="w-full h-11 rounded-xl" onClick={() => navigate("/convert")}>
-                Convert your audio
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Credit packs */}
-          <Card className="rounded-xl border-primary/30 bg-card relative overflow-hidden">
-            <div className="absolute top-0 right-0 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-bl-xl">
-              Save up to 50%
-            </div>
-            <CardContent className="p-6 sm:p-8">
-              <h3 className="font-heading font-semibold text-lg mb-1">Credit packs</h3>
-              <p className="text-sm text-muted-foreground mb-6">Create an account and buy credits for volume discounts.</p>
-              <div className="space-y-3 mb-6">
-                {CREDIT_PACKS.map(({ credits, price, perCredit, label }) => (
-                  <div key={label} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                    <div>
-                      <span className="text-sm font-medium">{credits} credits</span>
-                      <span className="text-xs text-muted-foreground ml-2">{label}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-heading font-semibold">${price}</span>
-                      <span className="text-xs text-muted-foreground ml-1">(${perCredit}/ea)</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {user ? (
-                <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => navigate("/credits")}>
-                  Buy more credits
-                </Button>
-              ) : (
-                <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => navigate("/signup")}>
-                  Get started
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+        <div className="flex justify-center">
+          <Button size="lg" className="h-12 px-8 text-base font-medium rounded-xl" onClick={() => navigate("/convert")}>
+            Convert your audio
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
         </div>
       </section>
 
