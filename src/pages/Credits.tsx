@@ -6,13 +6,14 @@ import { CreditCard, Check, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Credits() {
-  const { user, creditBalance } = useAuth();
+  const { user, loading: authLoading, creditBalance } = useAuth();
   const navigate = useNavigate();
 
-  if (!user) {
-    navigate("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && !user) navigate("/login");
+  }, [user, authLoading, navigate]);
+
+  if (authLoading || !user) return null;
 
   const handleBuyPack = (packIndex: number) => {
     console.log("Buy pack:", CREDIT_PACKS[packIndex]);
