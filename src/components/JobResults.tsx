@@ -165,16 +165,25 @@ export default function JobResults({ jobId }: JobResultsProps) {
                     )}
                     {copiedId === output.id ? "Copied" : "Copy"}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-lg gap-1.5 text-xs h-8"
-                    onClick={() => handleDownload(output.content, `${baseName}_${key}.txt`)}
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download TXT
-                  </Button>
-                </div>
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     className="rounded-lg gap-1.5 text-xs h-8"
+                     onClick={() => handleDownload(output.content, `${baseName}_${key}.txt`)}
+                   >
+                     <Download className="w-3.5 h-3.5" />
+                     TXT
+                   </Button>
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     className="rounded-lg gap-1.5 text-xs h-8"
+                     onClick={handleDownloadAllJson}
+                   >
+                     <Download className="w-3.5 h-3.5" />
+                     JSON
+                   </Button>
+                 </div>
 
                 {/* Content */}
                 <div className="p-5 sm:p-6">
