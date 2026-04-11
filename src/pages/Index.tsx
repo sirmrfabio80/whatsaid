@@ -104,7 +104,7 @@ export default function Index() {
               { icon: Users, title: "Speaker identification", desc: "Know who said what with automatic speaker labels and diarization." },
               { icon: FileText, title: "Three outputs per file", desc: "Full transcript, smart summary with key actions, and custom AI analysis from your prompt." },
               { icon: Globe, title: "99 languages", desc: "Auto-detects the spoken language — or manually select one before processing." },
-              { icon: Shield, title: "Audio deleted after processing", desc: "Your audio is never stored. Files are deleted immediately after transcription." },
+              { icon: Shield, title: "Audio deleted after processing", desc: "Your audio is deleted immediately after transcription. Only your transcripts and outputs are retained." },
               { icon: Clock, title: "Fast turnaround", desc: "Upload and get your results in minutes — no waiting, no queues." },
               { icon: MessageSquareText, title: "Custom AI prompts", desc: "Ask anything about your transcript — extract quotes, action items, decisions, or anything else." },
             ].map(({ icon: Icon, title, desc }) => (
@@ -141,7 +141,7 @@ export default function Index() {
         <div className={`container mx-auto px-4 py-8 transition-all duration-700 ${trust.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
           <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
             <Shield className="w-4 h-4 text-primary" />
-            <span>Your audio is deleted immediately after processing. No storage. No retention.</span>
+            <span>Audio files are deleted immediately after processing. Transcripts and outputs are retained in your account.</span>
           </div>
         </div>
       </section>
@@ -159,6 +159,8 @@ export default function Index() {
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
               <Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             </div>
             <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} WhatSaid. All rights reserved.</p>
           </div>

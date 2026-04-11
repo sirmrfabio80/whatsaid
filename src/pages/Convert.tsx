@@ -10,9 +10,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText
+  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type ProcessingStep = "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 
@@ -38,6 +40,7 @@ export default function Convert() {
   const [jobId, setJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
 
   const handleFileSelected = useCallback((f: File, dur: number) => {
@@ -314,12 +317,32 @@ export default function Convert() {
                       </div>
                     </div>
 
+                    {/* Recording consent checkbox */}
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="recording-consent"
+                        checked={consentChecked}
+                        onCheckedChange={(c) => setConsentChecked(c === true)}
+                        className="mt-0.5"
+                      />
+                      <label htmlFor="recording-consent" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                        I confirm that I have the right to upload and process this recording, and that all applicable consent requirements have been met.
+                      </label>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      Audio is processed using third-party AI services and deleted immediately after. By converting, you agree to our{" "}
+                      <Link to="/terms" className="text-primary hover:underline" target="_blank">Terms</Link>{" "}and{" "}
+                      <Link to="/privacy" className="text-primary hover:underline" target="_blank">Privacy Policy</Link>.
+                    </p>
+
                     {user ? (
                       <Button
                         className="w-full h-12 text-base font-medium rounded-xl"
                         size="lg"
                         onClick={handleConvert}
-                        disabled={processing}
+                        disabled={processing || !consentChecked}
                       >
                         Convert now<ArrowRight className="w-4 h-4 ml-2" />
                       </Button>

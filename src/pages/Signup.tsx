@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Mic, AlertCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Signup() {
@@ -14,6 +15,7 @@ export default function Signup() {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -66,6 +68,21 @@ export default function Signup() {
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="At least 6 characters" className="rounded-xl h-11" />
             </div>
 
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(c) => setAcceptedTerms(c === true)}
+                className="mt-0.5"
+              />
+              <label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                I agree to the{" "}
+                <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank">Terms of Service</Link>
+                {" "}and{" "}
+                <Link to="/privacy" className="text-primary hover:underline font-medium" target="_blank">Privacy Policy</Link>
+              </label>
+            </div>
+
             {error && (
               <div className="flex items-center gap-2 text-destructive text-sm">
                 <AlertCircle className="w-4 h-4" />
@@ -73,7 +90,7 @@ export default function Signup() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading}>
+            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading || !acceptedTerms}>
               {loading ? "Creating account..." : "Create account"}
             </Button>
           </form>
