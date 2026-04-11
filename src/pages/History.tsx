@@ -18,6 +18,7 @@ interface Job {
   language_selected: string | null;
   credits_charged: number;
   created_at: string;
+  speech_model: string | null;
 }
 
 export default function History() {
