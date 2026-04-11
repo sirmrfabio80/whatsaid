@@ -5,10 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 import {
-  Sparkles, FileText, Users, ArrowRight, Shield, Clock,
+  Mic, Sparkles, FileText, Users, ArrowRight, Shield, Clock,
   Upload, Cpu, Download, Globe, MessageSquareText
 } from "lucide-react";
-import whatsaidLogo from "@/assets/whatsaid-logo.png";
 
 export default function Index() {
   const { user, creditBalance } = useAuth();
@@ -152,7 +151,9 @@ export default function Index() {
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src={whatsaidLogo} alt="WhatSaid logo" className="w-9 h-9" />
+              <div className="w-7 h-7 rounded-xl bg-primary flex items-center justify-center">
+                <Mic className="w-4 h-4 text-primary-foreground" />
+              </div>
               <span className="font-heading font-semibold text-sm">WhatSaid</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
