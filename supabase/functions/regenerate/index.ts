@@ -21,14 +21,20 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { job_id, custom_prompt } = await req.json();
+    const body = await req.json();
+    const { job_id, custom_prompt, output_type, target_language } = body;
+
     if (!job_id) {
       return new Response(JSON.stringify({ error: "job_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!custom_prompt || !custom_prompt.trim()) {
+
+    // Determine what we're regenerating
+    const regenerateType = output_type === "summary" ? "summary" : "custom";
+
+    if (regenerateType === "custom" && (!custom_prompt || !custom_prompt.trim())) {
       return new Response(JSON.stringify({ error: "custom_prompt is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,7 +44,7 @@ Deno.serve(async (req) => {
     // Verify job exists and is completed
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .select("id, status, regeneration_count")
+      .select("id, status, regeneration_count, language_detected")
       .eq("id", job_id)
       .single();
 
@@ -69,19 +75,51 @@ Deno.serve(async (req) => {
     }
 
     const transcript = transcriptRow.content;
-    console.log(`[regenerate] Processing job ${job_id}, prompt: "${custom_prompt.slice(0, 80)}..."`);
 
-    // Delete existing custom output for this job
-    await supabase
-      .from("job_outputs")
-      .delete()
-      .eq("job_id", job_id)
-      .eq("output_type", "custom");
+    let systemPrompt: string;
+    let userPrompt: string;
 
-    // Generate custom output
-    const systemPrompt = `You are a professional analysis assistant. The user has provided a transcript and a custom instruction. Apply the instruction to the transcript and produce a clear, well-structured response. Be factual and precise. Do not invent information not present in the transcript.`;
+    if (regenerateType === "summary") {
+      // Determine language for summary
+      const lang = target_language || job.language_detected || null;
+      const langInstruction = lang && lang !== "en"
+        ? `\n\nIMPORTANT: Produce the entire summary, key points, and key actions in ${lang}. Do not translate to English.`
+        : "";
 
-    const userPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
+      systemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries for business professionals.
+
+Your output must include:
+1. A concise summary (2-4 paragraphs) covering the main topics discussed
+2. A "Key Points" section as a bullet list of the most important information
+3. A "Key Actions" section as a bullet list of action items, decisions made, or next steps identified
+
+Use plain text with markdown formatting. Be factual and precise. Do not invent information not present in the transcript.${langInstruction}`;
+
+      userPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
+
+      // Delete existing summary
+      await supabase
+        .from("job_outputs")
+        .delete()
+        .eq("job_id", job_id)
+        .eq("output_type", "summary");
+
+      console.log(`[regenerate] Regenerating summary for job ${job_id} in language: ${lang || "default"}`);
+    } else {
+      // Custom prompt / question
+      systemPrompt = `You are a professional analysis assistant. The user has provided a transcript and a custom instruction. Apply the instruction to the transcript and produce a clear, well-structured response. Be factual and precise. Do not invent information not present in the transcript.`;
+
+      userPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
+
+      // Delete existing custom output
+      await supabase
+        .from("job_outputs")
+        .delete()
+        .eq("job_id", job_id)
+        .eq("output_type", "custom");
+
+      console.log(`[regenerate] Processing job ${job_id}, prompt: "${custom_prompt.slice(0, 80)}..."`);
+    }
 
     const res = await fetch(AI_GATEWAY, {
       method: "POST",
@@ -118,12 +156,12 @@ Deno.serve(async (req) => {
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content ?? "";
 
-    // Insert new custom output
+    // Insert the output
     await supabase.from("job_outputs").insert({
       job_id,
-      output_type: "custom",
+      output_type: regenerateType,
       content,
-      custom_prompt,
+      custom_prompt: regenerateType === "custom" ? custom_prompt : null,
     });
 
     // Increment regeneration count
@@ -132,7 +170,7 @@ Deno.serve(async (req) => {
       .update({ regeneration_count: (job.regeneration_count ?? 0) + 1 })
       .eq("id", job_id);
 
-    console.log(`[regenerate] Custom output regenerated for job ${job_id}`);
+    console.log(`[regenerate] ${regenerateType} output regenerated for job ${job_id}`);
 
     return new Response(
       JSON.stringify({ success: true, job_id }),
