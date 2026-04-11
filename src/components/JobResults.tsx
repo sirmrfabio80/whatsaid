@@ -65,6 +65,25 @@ function applySpeakerNames(text: string, names: Record<string, string>): string 
   return result;
 }
 
+/** Render transcript text with speaker labels in bold */
+function renderTranscriptWithBoldSpeakers(text: string): React.ReactNode[] {
+  const lines = text.split("\n");
+  return lines.map((line, i) => {
+    // Match speaker label at start of line, e.g. "Speaker A:" or custom name
+    const match = line.match(/^(.+?):\s/);
+    if (match) {
+      const label = match[1] + ":";
+      const rest = line.slice(match[0].length);
+      return (
+        <p key={i} className="mb-3">
+          <strong className="font-semibold">{label}</strong> {rest}
+        </p>
+      );
+    }
+    return line.trim() ? <p key={i} className="mb-3">{line}</p> : <div key={i} className="h-2" />;
+  });
+}
+
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
