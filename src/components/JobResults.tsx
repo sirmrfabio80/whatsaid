@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
 import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
 import { useToast } from "@/hooks/use-toast";
-import { exportDocx, exportPdf } from "@/lib/export";
+import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
 import SpeakerChips from "@/components/SpeakerChips";
 import {
   DropdownMenu,
