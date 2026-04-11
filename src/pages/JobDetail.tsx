@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { ArrowLeft, Clock, Globe, Calendar, Plus, Cpu, Pencil, Check, Loader2, Sparkles } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
@@ -24,6 +26,8 @@ export default function JobDetail() {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [generatingTitle, setGeneratingTitle] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [jobDate, setJobDate] = useState<Date | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -35,6 +39,7 @@ export default function JobDetail() {
     setMeta(m);
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
+    setJobDate(new Date(m.created_at));
 
     // Auto-generate title if none exists
     if (!m.title && id) {
@@ -75,6 +80,14 @@ export default function JobDetail() {
     setEditing(false);
     await supabase.from("jobs").update({ title: trimmed } as any).eq("id", id);
     toast({ title: "Title updated" });
+  };
+
+  const handleDateChange = async (date: Date | undefined) => {
+    if (!date || !id) return;
+    setJobDate(date);
+    setDatePickerOpen(false);
+    await supabase.from("jobs").update({ created_at: date.toISOString() } as any).eq("id", id);
+    toast({ title: "Date updated" });
   };
 
   if (!id) return null;
@@ -166,14 +179,26 @@ export default function JobDetail() {
                 )}
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(meta.created_at).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </Badge>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-0.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
+                      <Calendar className="w-3 h-3" />
+                      {(jobDate ?? new Date(meta.created_at)).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarWidget
+                      mode="single"
+                      selected={jobDate ?? new Date(meta.created_at)}
+                      onSelect={handleDateChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 {meta.duration_seconds != null && (
                   <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
                     <Clock className="w-3 h-3" />
