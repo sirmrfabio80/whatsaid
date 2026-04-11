@@ -18,6 +18,8 @@ interface SpeakerChipsProps {
   speakerNames: Record<string, string>;
   /** Called when a speaker is renamed */
   onRename: (original: string, newName: string) => void;
+  /** Called when all names are reset */
+  onReset?: () => void;
 }
 
 export default function SpeakerChips({ speakers, speakerNames, onRename }: SpeakerChipsProps) {
