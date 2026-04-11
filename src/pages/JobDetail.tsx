@@ -201,6 +201,12 @@ export default function JobDetail() {
                         month: "short",
                         day: "numeric",
                       })}
+                      <span className="text-muted-foreground">·</span>
+                      <Clock className="w-3 h-3" />
+                      {timeValue || (new Date(meta.created_at)).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -210,6 +216,16 @@ export default function JobDetail() {
                       onSelect={handleDateChange}
                       initialFocus
                     />
+                    <div className="border-t border-border px-3 py-2.5 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <input
+                        type="time"
+                        value={timeValue}
+                        onChange={handleTimeChange}
+                        className="bg-transparent text-sm font-medium text-foreground outline-none w-full [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+                        aria-label="Recording time"
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
                 {meta.duration_seconds != null && (
