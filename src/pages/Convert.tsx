@@ -96,50 +96,25 @@ export default function Convert() {
                       </div>
                       <span className="text-sm font-medium">{formatDuration(duration)}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Coins className="w-4 h-4" />
-                        Cost
-                      </div>
-                      {user ? (
-                        <span className="text-sm font-medium">{credits} credit{credits > 1 ? "s" : ""}</span>
-                      ) : (
-                        <span className="font-heading font-bold text-lg">{guestPrice.label}</span>
-                      )}
-                    </div>
                   </div>
 
-                  <Button
-                    className="w-full h-12 text-base font-medium rounded-xl"
-                    size="lg"
-                    onClick={handleConvert}
-                    disabled={user ? !hasEnoughCredits : false}
-                  >
-                    {user ? (
-                      hasEnoughCredits ? (
-                        <>Use {credits} credit{credits > 1 ? "s" : ""} and convert<ArrowRight className="w-4 h-4 ml-2" /></>
-                      ) : (
-                        "Not enough credits"
-                      )
-                    ) : (
-                      <>Pay {guestPrice.label} and convert<ArrowRight className="w-4 h-4 ml-2" /></>
-                    )}
-                  </Button>
-
-                  {user && !hasEnoughCredits && (
-                    <Button variant="outline" className="w-full rounded-xl" onClick={() => navigate("/credits")}>
-                      Buy more credits
+                  {user ? (
+                    <Button
+                      className="w-full h-12 text-base font-medium rounded-xl"
+                      size="lg"
+                      onClick={handleConvert}
+                    >
+                      Convert now<ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
-                  )}
-
-                  {!user && (
-                    <p className="text-center text-sm text-muted-foreground">
-                      No account needed.{" "}
-                      <button onClick={() => navigate("/signup")} className="text-primary hover:underline">
-                        Sign up
-                      </button>{" "}
-                      for credit packs and save up to 50%.
-                    </p>
+                  ) : (
+                    <div className="text-center space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Sign in to convert your audio.
+                      </p>
+                      <Button className="w-full rounded-xl" onClick={() => navigate("/login")}>
+                        Sign in
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
