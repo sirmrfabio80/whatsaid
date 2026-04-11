@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [meta, setMeta] = useState<JobMeta | null>(null);
@@ -27,8 +27,8 @@ export default function JobDetail() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!user) navigate("/login");
-  }, [user, navigate]);
+    if (!authLoading && !user) navigate("/login");
+  }, [user, authLoading, navigate]);
 
   // When meta loads, set title and auto-generate if missing
   const handleMetaLoaded = (m: JobMeta) => {

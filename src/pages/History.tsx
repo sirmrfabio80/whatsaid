@@ -34,7 +34,7 @@ interface Job {
 }
 
 export default function History() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -43,6 +43,7 @@ export default function History() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate("/login");
       return;

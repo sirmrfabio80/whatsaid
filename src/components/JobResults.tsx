@@ -132,6 +132,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
   // ---- Summary language change ----
   const handleSummaryLanguageChange = async (langCode: string) => {
     if (langCode === summaryLang) return;
+    const prevLang = summaryLang;
     setSummaryLang(langCode);
     setRegeneratingSummary(true);
     try {
@@ -139,6 +140,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
         body: { job_id: jobId, output_type: "summary", target_language: langCode },
       });
       if (error || data?.error) {
+        setSummaryLang(prevLang);
         toast({
           title: "Failed to regenerate summary",
           description: error?.message || data?.error,
@@ -149,6 +151,7 @@ export default function JobResults({ jobId, onMetaLoaded }: JobResultsProps) {
       toast({ title: `Summary regenerated in ${getLanguageLabel(langCode)}` });
       await fetchData();
     } catch {
+      setSummaryLang(prevLang);
       toast({ title: "Something went wrong", variant: "destructive" });
     } finally {
       setRegeneratingSummary(false);
