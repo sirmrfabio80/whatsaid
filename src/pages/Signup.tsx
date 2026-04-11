@@ -47,8 +47,8 @@ export default function Signup() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md rounded-xl border-border/50">
         <CardHeader className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-4">
-            <Mic className="w-6 h-6 text-primary-foreground" />
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Mic className="w-6 h-6 text-primary" />
           </div>
           <CardTitle className="font-heading text-2xl">Create your account</CardTitle>
           <CardDescription>Get credit packs and save up to 50% on transcriptions</CardDescription>
