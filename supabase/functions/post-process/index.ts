@@ -84,20 +84,31 @@ Deno.serve(async (req) => {
 
     const detectedLang = jobRow?.language_detected || null;
 
-    // Build language instruction for summary
-    const languageInstruction = detectedLang && detectedLang !== "en"
-      ? `\n\nIMPORTANT: The transcript is in ${detectedLang}. You MUST produce the entire summary, key points, and key actions in the same language as the transcript. Do not translate to English.`
-      : "";
+    // Build language instruction — ALWAYS specify output language
+    const langLabel = detectedLang || "en";
+    const languageInstruction = `\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST write the ENTIRE output in ${langLabel}. Every heading, every bullet point, every sentence must be in ${langLabel}. Do NOT use English unless ${langLabel} IS English. This is mandatory and non-negotiable.`;
 
-    // 2. Generate summary with key actions
-    const summarySystemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries for business professionals.
+    // 2. Generate summary with structured sections
+    const summarySystemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries designed to be easy to scan and share.
 
-Your output must include:
-1. A concise summary (2-4 paragraphs) covering the main topics discussed
-2. A "Key Points" section as a bullet list of the most important information
-3. A "Key Actions" section as a bullet list of action items, decisions made, or next steps identified
+Your output MUST use the following markdown structure with exactly these section headings (translate the heading names into the output language):
 
-Use plain text with markdown formatting. Be factual and precise. Do not invent information not present in the transcript.${languageInstruction}`;
+## Overview
+A concise 2-3 paragraph summary of what was discussed and the overall outcome.
+
+## Key Points
+A bullet list of the most important facts or information shared. Keep each point to 1-2 sentences.
+
+## Decisions & Next Steps
+A bullet list of decisions made, action items, follow-ups, or next steps. Include who is responsible and any dates mentioned.
+
+## Terms to Know
+A bullet list of specialised or technical terms with brief plain-language explanations. Only include this section if there are terms a non-specialist would find unclear. Omit entirely if not needed.
+
+Rules:
+- Use markdown: ## for headings, - for bullets, **bold** for emphasis.
+- Be factual and precise. Do not invent information.
+- Keep bullet points concise and scannable.${languageInstruction}`;
 
     const summaryPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
 
