@@ -13,10 +13,14 @@ interface SummarySection {
 
 const SECTION_ICONS: Record<string, ReactNode> = {
   "overview": <FileText className="w-4 h-4 text-primary" />,
+  "panoramica": <FileText className="w-4 h-4 text-primary" />,
   "key points": <ListChecks className="w-4 h-4 text-primary" />,
+  "punti chiave": <ListChecks className="w-4 h-4 text-primary" />,
   "decisions & next steps": <ArrowRight className="w-4 h-4 text-primary" />,
   "decisions and next steps": <ArrowRight className="w-4 h-4 text-primary" />,
+  "decisioni e prossimi passi": <ArrowRight className="w-4 h-4 text-primary" />,
   "terms to know": <BookOpen className="w-4 h-4 text-primary" />,
+  "termini da conoscere": <BookOpen className="w-4 h-4 text-primary" />,
 };
 
 function getIcon(heading: string): ReactNode {
@@ -24,7 +28,6 @@ function getIcon(heading: string): ReactNode {
   return SECTION_ICONS[key] ?? <FileText className="w-4 h-4 text-primary" />;
 }
 
-/** Parse markdown with ## headings into sections */
 function parseSections(content: string): SummarySection[] {
   const lines = content.split("\n");
   const sections: SummarySection[] = [];
@@ -34,7 +37,6 @@ function parseSections(content: string): SummarySection[] {
   for (const line of lines) {
     const headingMatch = line.match(/^##\s+(.+)$/);
     if (headingMatch) {
-      // Save previous section
       if (currentHeading || currentLines.length > 0) {
         sections.push({
           heading: currentHeading,
@@ -49,7 +51,6 @@ function parseSections(content: string): SummarySection[] {
     }
   }
 
-  // Save last section
   if (currentHeading || currentLines.length > 0) {
     sections.push({
       heading: currentHeading,
@@ -61,25 +62,33 @@ function parseSections(content: string): SummarySection[] {
   return sections.filter((s) => s.body.length > 0);
 }
 
-/** Render a bullet line, stripping the leading `- ` */
-function BulletItem({ text }: { text: string }) {
-  return (
-    <li className="text-sm leading-relaxed text-foreground/90">
-      {text}
-    </li>
-  );
+function renderLine(line: string): ReactNode {
+  // Bold: **text**
+  const parts: ReactNode[] = [];
+  const regex = /\*\*(.+?)\*\*/g;
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = regex.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(line.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={key++}>{match[1]}</strong>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < line.length) {
+    parts.push(line.slice(lastIndex));
+  }
+  return parts.length > 0 ? parts : line;
 }
 
-/** Render section body: detect bullet lists vs prose */
 function SectionBody({ body }: { body: string }) {
   const lines = body.split("\n").filter((l) => l.trim().length > 0);
-
-  // Check if mostly bullets
   const bulletLines = lines.filter((l) => /^\s*[-*]\s/.test(l));
   const isBulletList = bulletLines.length > 0 && bulletLines.length >= lines.length * 0.5;
 
   if (isBulletList) {
-    // Split into prose lines before bullets and bullet items
     const proseLines: string[] = [];
     const bullets: string[] = [];
     let inBullets = false;
@@ -91,7 +100,6 @@ function SectionBody({ body }: { body: string }) {
       } else if (!inBullets) {
         proseLines.push(line);
       } else {
-        // Continuation of previous bullet
         if (bullets.length > 0) {
           bullets[bullets.length - 1] += " " + line.trim();
         }
@@ -102,24 +110,25 @@ function SectionBody({ body }: { body: string }) {
       <div className="space-y-2">
         {proseLines.length > 0 && (
           <p className="text-sm leading-relaxed text-foreground/90">
-            {proseLines.join(" ")}
+            {renderLine(proseLines.join(" "))}
           </p>
         )}
         <ul className="space-y-1.5 list-disc list-outside pl-4 marker:text-primary/40">
           {bullets.map((b, i) => (
-            <BulletItem key={i} text={b} />
+            <li key={i} className="text-sm leading-relaxed text-foreground/90">
+              {renderLine(b)}
+            </li>
           ))}
         </ul>
       </div>
     );
   }
 
-  // Prose paragraphs
   return (
     <div className="space-y-2">
       {lines.map((line, i) => (
         <p key={i} className="text-sm leading-relaxed text-foreground/90">
-          {line}
+          {renderLine(line)}
         </p>
       ))}
     </div>
@@ -129,11 +138,15 @@ function SectionBody({ body }: { body: string }) {
 export default function StructuredSummary({ content }: StructuredSummaryProps) {
   const sections = parseSections(content);
 
-  // Fallback: if no sections were parsed (old-format summary), render as prose
+  // Fallback for old-format summaries without ## headings
   if (sections.length <= 1 && !sections[0]?.heading) {
     return (
-      <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
-        {content}
+      <div className="space-y-2">
+        {content.split("\n").filter(l => l.trim()).map((line, i) => (
+          <p key={i} className="text-sm leading-relaxed text-foreground/90">
+            {renderLine(line)}
+          </p>
+        ))}
       </div>
     );
   }

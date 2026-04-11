@@ -81,32 +81,29 @@ Deno.serve(async (req) => {
 
     if (regenerateType === "summary") {
       // Determine language for summary
-      const lang = target_language || job.language_detected || null;
-      const langInstruction = lang && lang !== "en"
-        ? `\n\nIMPORTANT: Produce the entire summary, key points, and key actions in ${lang}. Do not translate to English.`
-        : "";
+      const lang = target_language || job.language_detected || "en";
+      const langInstruction = `\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST write the ENTIRE output in ${lang}. Every heading, every bullet point, every sentence must be in ${lang}. Do NOT use English unless ${lang} IS English. This is mandatory and non-negotiable.`;
 
-      systemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries designed to be easy to scan and share with others, including family members who may not have been present.
+      systemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries designed to be easy to scan and share.
 
-Your output MUST use the following markdown structure with exactly these section headings:
+Your output MUST use the following markdown structure with exactly these section headings (translate the heading names into the output language):
 
 ## Overview
-A concise 2-3 paragraph summary of what was discussed, who was involved, and the overall outcome or status.
+A concise 2-3 paragraph summary of what was discussed and the overall outcome.
 
 ## Key Points
-A bullet list of the most important facts, findings, or information shared during the conversation. Keep each point to 1-2 sentences.
+A bullet list of the most important facts or information shared. Keep each point to 1-2 sentences.
 
 ## Decisions & Next Steps
-A bullet list of any decisions made, action items agreed, follow-up appointments, or next steps. Include who is responsible and any dates or deadlines mentioned.
+A bullet list of decisions made, action items, follow-ups, or next steps. Include who is responsible and any dates mentioned.
 
 ## Terms to Know
-A bullet list of specialised, technical, or medical terms used in the conversation, each with a brief plain-language explanation. Only include this section if there are terms that a non-specialist might find unclear. If all language is straightforward, omit this section entirely.
+A bullet list of specialised or technical terms with brief plain-language explanations. Only include this section if there are terms a non-specialist would find unclear. Omit entirely if not needed.
 
 Rules:
-- Use plain text with markdown formatting only (## for headings, - for bullets).
-- Be factual and precise. Do not invent information not present in the transcript.
-- Keep bullet points concise and scannable.
-- Write in a professional but accessible tone.${langInstruction}`;
+- Use markdown: ## for headings, - for bullets, **bold** for emphasis.
+- Be factual and precise. Do not invent information.
+- Keep bullet points concise and scannable.${langInstruction}`;
 
       userPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
 
