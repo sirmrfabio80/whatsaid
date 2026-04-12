@@ -202,15 +202,17 @@ export default function JobDetail() {
                 {(() => {
                   const loc = meta.metadata_location_iso6709 ? parseISO6709(meta.metadata_location_iso6709) : null;
                   if (!loc) return null;
+                  const label = locationLabel || formatCoordinates(loc);
                   return (
                     <a
                       href={mapsUrl(loc)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex"
+                      title={formatCoordinates(loc)}
                     >
                       <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
-                        <MapPin className="w-3 h-3" />{formatCoordinates(loc)}
+                        <MapPin className="w-3 h-3" />{label}
                       </Badge>
                     </a>
                   );
