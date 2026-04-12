@@ -114,6 +114,9 @@ export type Database = {
           id: string
           language_detected: string | null
           language_selected: string | null
+          metadata_apple_creationdate: string | null
+          metadata_file_lastmodified: string | null
+          metadata_mvhd_creation: string | null
           recorded_at: string | null
           recorded_at_source: string | null
           regeneration_count: number
@@ -140,6 +143,9 @@ export type Database = {
           id?: string
           language_detected?: string | null
           language_selected?: string | null
+          metadata_apple_creationdate?: string | null
+          metadata_file_lastmodified?: string | null
+          metadata_mvhd_creation?: string | null
           recorded_at?: string | null
           recorded_at_source?: string | null
           regeneration_count?: number
@@ -166,6 +172,9 @@ export type Database = {
           id?: string
           language_detected?: string | null
           language_selected?: string | null
+          metadata_apple_creationdate?: string | null
+          metadata_file_lastmodified?: string | null
+          metadata_mvhd_creation?: string | null
           recorded_at?: string | null
           recorded_at_source?: string | null
           regeneration_count?: number

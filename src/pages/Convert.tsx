@@ -110,9 +110,10 @@ export default function Convert() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
+      const fileLastModifiedIso = new Date(file.lastModified).toISOString();
       const recordedAt = fileCreationDate
         ? fileCreationDate.isoString
-        : new Date(file.lastModified).toISOString();
+        : fileLastModifiedIso;
       const recordedAtSource = fileCreationDate
         ? fileCreationDate.source
         : "file_last_modified";
@@ -131,7 +132,10 @@ export default function Convert() {
           temp_file_path: filePath,
           recorded_at: recordedAt,
           recorded_at_source: recordedAtSource,
-        });
+          metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
+          metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
+          metadata_file_lastmodified: fileLastModifiedIso,
+        } as any);
 
       if (jobError) {
         throw new Error(jobError.message || "Could not create job");
