@@ -144,9 +144,7 @@ Deno.serve(async (req) => {
       status: 'pending',
     })
 
-    const subjectLine = senderDisplayName
-      ? `${senderDisplayName} shared a transcript with you: ${title}`
-      : `${senderEmail} shared a transcript with you: ${title}`
+    const subjectLine = `Transcript shared with you: ${title}`
 
     await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
@@ -155,6 +153,7 @@ Deno.serve(async (req) => {
         idempotency_key: `share-record-${messageId}`,
         to: recipient_email,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        reply_to: senderEmail,
         sender_domain: SENDER_DOMAIN,
         subject: subjectLine,
         html: buildShareRecordEmail({ title, senderLabel, claimUrl }),
