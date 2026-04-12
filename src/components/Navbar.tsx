@@ -21,6 +21,20 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const lastScrollY = useRef(0);
+
+  // Auto-close mobile menu on scroll
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - lastScrollY.current) > 10) {
+        setMobileOpen(false);
+      }
+    };
+    lastScrollY.current = window.scrollY;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [mobileOpen]);
 
   const initials = user
     ? (user.user_metadata?.full_name || user.email || "U")
