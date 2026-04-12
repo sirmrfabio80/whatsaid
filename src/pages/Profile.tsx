@@ -67,9 +67,13 @@ export default function Profile() {
       <div className="container mx-auto px-4 py-10 sm:py-14">
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-heading font-bold text-xl">
-              {initials}
-            </div>
+            <AvatarUpload
+              userId={user.id}
+              avatarUrl={avatarUrl}
+              initials={initials}
+              size="lg"
+              onUploaded={() => refreshAvatar()}
+            />
             <div>
               <h1 className="font-heading text-2xl sm:text-3xl font-bold">{profile?.display_name || t("profile.user")}</h1>
               <p className="text-sm text-muted-foreground">{profile?.email || user.email}</p>
