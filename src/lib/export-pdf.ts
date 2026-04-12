@@ -5,8 +5,11 @@ import type { CanonicalExportData } from "./export-types";
 
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
+const MARGIN_MM = 15;
+const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_MM * 2;
 const RENDER_WIDTH_PX = 794;
 const RENDER_SCALE = 2;
+const SECTION_GAP_MM = 4;
 
 function escapeHtml(value: string): string {
   return value
@@ -90,45 +93,62 @@ function transcriptToHtml(text: string): string {
     .join("");
 }
 
-export function buildPdfDocumentHtml(data: CanonicalExportData): string {
+interface PdfSection {
+  html: string;
+  forceNewPage: boolean;
+}
+
+export function buildPdfSections(data: CanonicalExportData): PdfSection[] {
+  const sections: PdfSection[] = [];
+
+  // Header section
   const meta: string[] = [];
   meta.push(`Date: ${data.createdAt}`);
   if (data.duration) meta.push(`Duration: ${data.duration}`);
   if (data.language) meta.push(`Language: ${data.language}`);
 
-  let body = `<header style="margin-bottom:24px"><h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
-  body += `<p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
-  body += "</header>";
+  let header = `<header><h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
+  header += `<p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
+  header += "</header>";
+  sections.push({ html: header, forceNewPage: false });
 
   // Summary
   if (data.summary) {
-    body += `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
+    const summaryHtml = `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
+    sections.push({ html: summaryHtml, forceNewPage: false });
   }
 
-  // Questions & Answers (page break via CSS)
+  // Questions & Answers
   if (data.questions && data.questions.length > 0) {
-    body += `<section style="margin-top:30px;page-break-before:always"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`;
+    let qaHtml = `<section><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`;
     data.questions.forEach((entry) => {
       if (entry.prompt) {
-        body += `<p style="margin:16px 0 6px;font-size:14px;line-height:1.5;font-weight:700;color:#111827">Q: ${escapeHtml(entry.prompt)}</p>`;
+        qaHtml += `<p style="margin:16px 0 6px;font-size:14px;line-height:1.5;font-weight:700;color:#111827">Q: ${escapeHtml(entry.prompt)}</p>`;
       }
-      body += `<div style="margin:0 0 14px">${markdownToHtml(entry.answer)}</div>`;
+      qaHtml += `<div style="margin:0 0 14px">${markdownToHtml(entry.answer)}</div>`;
     });
-    body += "</section>";
+    qaHtml += "</section>";
+    sections.push({ html: qaHtml, forceNewPage: true });
   }
 
-  // Transcript (page break via CSS)
+  // Transcript
   if (data.transcript) {
-    body += `<section style="margin-top:26px;page-break-before:always"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>${transcriptToHtml(data.transcript)}</section>`;
+    const transcriptHtml = `<section><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>${transcriptToHtml(data.transcript)}</section>`;
+    sections.push({ html: transcriptHtml, forceNewPage: true });
   }
 
-  return body;
+  return sections;
 }
 
-function createRenderRoot(markup: string): HTMLDivElement {
-  const host = document.createElement("div");
-  host.setAttribute("data-export-pdf-root", "true");
-  Object.assign(host.style, {
+// Keep for backward compat / testing
+export function buildPdfDocumentHtml(data: CanonicalExportData): string {
+  return buildPdfSections(data).map((s) => s.html).join("");
+}
+
+function createSectionElement(html: string): HTMLDivElement {
+  const el = document.createElement("div");
+  el.setAttribute("data-export-pdf-section", "true");
+  Object.assign(el.style, {
     position: "fixed",
     left: "-10000px",
     top: "0",
@@ -137,26 +157,9 @@ function createRenderRoot(markup: string): HTMLDivElement {
     pointerEvents: "none",
     zIndex: "-1",
   });
-
-  host.innerHTML = `
-    <div
-      style="
-        box-sizing:border-box;
-        width:${RENDER_WIDTH_PX}px;
-        background:#ffffff;
-        color:#111827;
-        padding:48px 56px;
-        font-family:Arial,Helvetica,sans-serif;
-        font-size:13px;
-        line-height:1.7;
-      "
-    >
-      ${markup}
-    </div>
-  `;
-
-  document.body.appendChild(host);
-  return host;
+  el.innerHTML = `<div style="box-sizing:border-box;width:${RENDER_WIDTH_PX}px;background:#ffffff;color:#111827;padding:24px 56px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;">${html}</div>`;
+  document.body.appendChild(el);
+  return el;
 }
 
 async function waitForLayout(): Promise<void> {
@@ -166,28 +169,31 @@ async function waitForLayout(): Promise<void> {
   }
 }
 
-export async function exportPdf(data: CanonicalExportData): Promise<void> {
-  const host = createRenderRoot(buildPdfDocumentHtml(data));
-  const content = host.firstElementChild as HTMLElement | null;
+async function renderSectionCanvas(el: HTMLDivElement): Promise<HTMLCanvasElement> {
+  const content = el.firstElementChild as HTMLElement;
+  return html2canvas(content, {
+    backgroundColor: "#ffffff",
+    logging: false,
+    scale: RENDER_SCALE,
+    useCORS: true,
+    width: content.scrollWidth,
+    height: content.scrollHeight,
+    windowWidth: content.scrollWidth,
+    windowHeight: content.scrollHeight,
+  });
+}
 
-  if (!content) {
-    host.remove();
-    throw new Error("Failed to render PDF content");
-  }
+export async function exportPdf(data: CanonicalExportData): Promise<void> {
+  const sections = buildPdfSections(data);
+  const elements: HTMLDivElement[] = [];
 
   try {
-    await waitForLayout();
+    // Create all section DOM elements
+    for (const section of sections) {
+      elements.push(createSectionElement(section.html));
+    }
 
-    const canvas = await html2canvas(content, {
-      backgroundColor: "#ffffff",
-      logging: false,
-      scale: RENDER_SCALE,
-      useCORS: true,
-      width: content.scrollWidth,
-      height: content.scrollHeight,
-      windowWidth: content.scrollWidth,
-      windowHeight: content.scrollHeight,
-    });
+    await waitForLayout();
 
     const pdf = new jsPDF({
       orientation: "portrait",
@@ -203,40 +209,87 @@ export async function exportPdf(data: CanonicalExportData): Promise<void> {
       author: "WhatSaid",
     });
 
-    const pageHeightPx = Math.floor((canvas.width * PAGE_HEIGHT_MM) / PAGE_WIDTH_MM);
-    let offsetY = 0;
+    let currentY = MARGIN_MM;
     let pageIndex = 0;
+    const usableHeight = PAGE_HEIGHT_MM - MARGIN_MM * 2;
+    const pageHeightPx = Math.floor((RENDER_WIDTH_PX * RENDER_SCALE * usableHeight) / CONTENT_WIDTH_MM);
 
-    while (offsetY < canvas.height) {
-      const sliceHeight = Math.min(pageHeightPx, canvas.height - offsetY);
-      const pageCanvas = document.createElement("canvas");
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = sliceHeight;
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      const canvas = await renderSectionCanvas(elements[i]);
 
-      const context = pageCanvas.getContext("2d");
-      if (!context) {
-        throw new Error("Failed to create PDF canvas context");
-      }
+      const scaleFactor = CONTENT_WIDTH_MM / (canvas.width / RENDER_SCALE);
+      const sectionHeightMm = (canvas.height / RENDER_SCALE) * scaleFactor;
 
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-      context.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, pageCanvas.width, pageCanvas.height);
-
-      const imageHeightMm = (sliceHeight * PAGE_WIDTH_MM) / canvas.width;
-      if (pageIndex > 0) {
+      // Force new page for Q&A and Transcript sections
+      if (section.forceNewPage && pageIndex > 0) {
         pdf.addPage();
+        pageIndex++;
+        currentY = MARGIN_MM;
       }
 
-      pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", 0, 0, PAGE_WIDTH_MM, imageHeightMm, undefined, "FAST");
+      // If section fits on current page, render it directly
+      if (sectionHeightMm <= usableHeight - (currentY - MARGIN_MM)) {
+        pdf.addImage(
+          canvas.toDataURL("image/png"),
+          "PNG",
+          MARGIN_MM,
+          currentY,
+          CONTENT_WIDTH_MM,
+          sectionHeightMm,
+          undefined,
+          "FAST"
+        );
+        currentY += sectionHeightMm + SECTION_GAP_MM;
+      } else {
+        // Section is taller than remaining space (or taller than a full page) — slice it
+        let offsetY = 0;
 
-      offsetY += sliceHeight;
-      pageIndex += 1;
+        while (offsetY < canvas.height) {
+          const remainingPageMm = usableHeight - (currentY - MARGIN_MM);
+          const remainingPagePx = Math.floor((remainingPageMm / CONTENT_WIDTH_MM) * canvas.width);
+          const sliceHeight = Math.min(remainingPagePx, canvas.height - offsetY);
+
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sliceHeight;
+
+          const context = pageCanvas.getContext("2d");
+          if (!context) throw new Error("Failed to create PDF canvas context");
+
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          context.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, pageCanvas.width, sliceHeight);
+
+          const sliceHeightMm = (sliceHeight / RENDER_SCALE) * scaleFactor;
+
+          if (offsetY > 0) {
+            pdf.addPage();
+            pageIndex++;
+            currentY = MARGIN_MM;
+          }
+
+          pdf.addImage(
+            pageCanvas.toDataURL("image/png"),
+            "PNG",
+            MARGIN_MM,
+            currentY,
+            CONTENT_WIDTH_MM,
+            sliceHeightMm,
+            undefined,
+            "FAST"
+          );
+
+          currentY += sliceHeightMm + SECTION_GAP_MM;
+          offsetY += sliceHeight;
+        }
+      }
     }
 
     const blob = pdf.output("blob");
     downloadBlob(blob, `${data.title}.pdf`);
   } finally {
-    host.remove();
+    elements.forEach((el) => el.remove());
   }
 }
 
