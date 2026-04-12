@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, Check, AlertCircle } from "lucide-react";
+import { Save, Lock, Trash2, Check, AlertCircle, Mail } from "lucide-react";
 
 export default function Settings() {
   const { user, loading, signOut } = useAuth();
@@ -27,6 +27,11 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailSaved, setEmailSaved] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
 
   // Inline feedback states
   const [profileSaved, setProfileSaved] = useState(false);
@@ -79,6 +84,37 @@ export default function Settings() {
     },
   });
 
+  const changeEmail = async () => {
+    setEmailError(null);
+    setEmailSaved(false);
+    setEmailLoading(true);
+
+    if (!newEmail || !newEmail.includes("@")) {
+      setEmailError("Enter a valid email address.");
+      setEmailLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    if (error) {
+      setEmailError(error.message);
+      setEmailLoading(false);
+    } else {
+      // Also update the profiles table
+      if (user) {
+        await supabase.from("profiles").update({ email: newEmail }).eq("user_id", user.id);
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+      }
+      setEmailSaved(true);
+      setEmailLoading(false);
+      setNewEmail("");
+      setTimeout(() => {
+        setEmailOpen(false);
+        setEmailSaved(false);
+      }, 2000);
+    }
+  };
+
   const changePassword = async () => {
     setPasswordError(null);
     setPasswordSaved(false);
@@ -125,11 +161,48 @@ export default function Settings() {
                 <Label>Email</Label>
                 <Input value={profile?.email || user.email || ""} disabled className="rounded-lg h-11 opacity-60" />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
                   <Save className="w-4 h-4 mr-1.5" />
                   Save changes
                 </Button>
+                <Dialog open={emailOpen} onOpenChange={(open) => { setEmailOpen(open); if (!open) { setEmailError(null); setEmailSaved(false); } }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="rounded-lg" size="sm">
+                      <Mail className="w-4 h-4 mr-1.5" />
+                      Change email
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="rounded-xl">
+                    <DialogHeader>
+                      <DialogTitle>Change email address</DialogTitle>
+                      <DialogDescription>Enter your new email address. You may need to verify it before the change takes effect.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="new-email">New email</Label>
+                        <Input id="new-email" type="email" value={newEmail} onChange={(e) => { setNewEmail(e.target.value); setEmailError(null); }} placeholder="you@example.com" className="rounded-lg h-11" />
+                      </div>
+                      {emailError && (
+                        <div className="flex items-center gap-2 text-destructive text-sm">
+                          <AlertCircle className="w-4 h-4" />
+                          <span>{emailError}</span>
+                        </div>
+                      )}
+                      {emailSaved && (
+                        <div className="flex items-center gap-2 text-primary text-sm">
+                          <Check className="w-4 h-4" />
+                          <span>Email updated</span>
+                        </div>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={changeEmail} className="rounded-lg" disabled={emailLoading}>
+                        {emailLoading ? "Updating..." : "Update email"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
                 {profileSaved && (
                   <span className="text-xs text-primary flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>
                 )}
