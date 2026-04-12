@@ -139,10 +139,16 @@ Rules:
       });
     }
 
-    // 5. Mark job as completed and record summary language
+    // 5. Generate short summary for history view
+    const shortSummarySystemPrompt = `You are a concise summariser. Given a transcript, produce a 1-2 sentence summary (max 200 characters) capturing the core topic and outcome. No markdown, no bullet points, just plain text.${languageInstruction}`;
+    const shortSummaryPrompt = `Summarise this transcript in 1-2 sentences:\n\n${transcript.slice(0, 8000)}`;
+    const shortSummary = await callAI(LOVABLE_API_KEY, shortSummarySystemPrompt, shortSummaryPrompt);
+    console.log(`[post-process] Short summary generated for job ${job_id}`);
+
+    // 6. Mark job as completed and record summary language + short summary
     await supabase
       .from("jobs")
-      .update({ status: "completed", summary_language: langLabel })
+      .update({ status: "completed", summary_language: langLabel, short_summary: shortSummary.trim().slice(0, 300) })
       .eq("id", job_id);
 
     console.log(`[post-process] Job ${job_id} completed`);
