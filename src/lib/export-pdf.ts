@@ -6,7 +6,9 @@ import type { CanonicalExportData } from "./export-types";
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
 const MARGIN_MM = 15;
+const BOTTOM_PADDING_MM = 10;
 const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_MM * 2;
+const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - MARGIN_MM - BOTTOM_PADDING_MM;
 const RENDER_WIDTH_PX = 794;
 const RENDER_SCALE = 2;
 const SECTION_GAP_MM = 4;
@@ -100,9 +102,8 @@ interface PdfSection {
 
 export function buildPdfSections(data: CanonicalExportData): PdfSection[] {
   const sections: PdfSection[] = [];
-
-  // Header section
   const meta: string[] = [];
+
   meta.push(`Date: ${data.createdAt}`);
   if (data.duration) meta.push(`Duration: ${data.duration}`);
   if (data.language) meta.push(`Language: ${data.language}`);
@@ -112,13 +113,11 @@ export function buildPdfSections(data: CanonicalExportData): PdfSection[] {
   header += "</header>";
   sections.push({ html: header, forceNewPage: false });
 
-  // Summary
   if (data.summary) {
     const summaryHtml = `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
     sections.push({ html: summaryHtml, forceNewPage: false });
   }
 
-  // Questions & Answers
   if (data.questions && data.questions.length > 0) {
     let qaHtml = `<section><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`;
     data.questions.forEach((entry) => {
@@ -131,7 +130,6 @@ export function buildPdfSections(data: CanonicalExportData): PdfSection[] {
     sections.push({ html: qaHtml, forceNewPage: true });
   }
 
-  // Transcript
   if (data.transcript) {
     const transcriptHtml = `<section><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>${transcriptToHtml(data.transcript)}</section>`;
     sections.push({ html: transcriptHtml, forceNewPage: true });
@@ -140,9 +138,8 @@ export function buildPdfSections(data: CanonicalExportData): PdfSection[] {
   return sections;
 }
 
-// Keep for backward compat / testing
 export function buildPdfDocumentHtml(data: CanonicalExportData): string {
-  return buildPdfSections(data).map((s) => s.html).join("");
+  return buildPdfSections(data).map((section) => section.html).join("");
 }
 
 function createSectionElement(html: string): HTMLDivElement {
@@ -157,7 +154,24 @@ function createSectionElement(html: string): HTMLDivElement {
     pointerEvents: "none",
     zIndex: "-1",
   });
-  el.innerHTML = `<div style="box-sizing:border-box;width:${RENDER_WIDTH_PX}px;background:#ffffff;color:#111827;padding:24px 56px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;">${html}</div>`;
+
+  el.innerHTML = `
+    <div
+      style="
+        box-sizing:border-box;
+        width:${RENDER_WIDTH_PX}px;
+        background:#ffffff;
+        color:#111827;
+        padding:24px 56px;
+        font-family:Arial,Helvetica,sans-serif;
+        font-size:13px;
+        line-height:1.7;
+      "
+    >
+      ${html}
+    </div>
+  `;
+
   document.body.appendChild(el);
   return el;
 }
@@ -183,16 +197,32 @@ async function renderSectionCanvas(el: HTMLDivElement): Promise<HTMLCanvasElemen
   });
 }
 
+function getRenderedHeightMm(imageWidthPx: number, imageHeightPx: number): number {
+  return (imageHeightPx * CONTENT_WIDTH_MM) / imageWidthPx;
+}
+
+function createSliceCanvas(sourceCanvas: HTMLCanvasElement, offsetY: number, sliceHeight: number): HTMLCanvasElement {
+  const pageCanvas = document.createElement("canvas");
+  pageCanvas.width = sourceCanvas.width;
+  pageCanvas.height = sliceHeight;
+
+  const context = pageCanvas.getContext("2d");
+  if (!context) {
+    throw new Error("Failed to create PDF canvas context");
+  }
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+  context.drawImage(sourceCanvas, 0, offsetY, sourceCanvas.width, sliceHeight, 0, 0, pageCanvas.width, sliceHeight);
+
+  return pageCanvas;
+}
+
 export async function exportPdf(data: CanonicalExportData): Promise<void> {
   const sections = buildPdfSections(data);
-  const elements: HTMLDivElement[] = [];
+  const elements = sections.map((section) => createSectionElement(section.html));
 
   try {
-    // Create all section DOM elements
-    for (const section of sections) {
-      elements.push(createSectionElement(section.html));
-    }
-
     await waitForLayout();
 
     const pdf = new jsPDF({
@@ -210,26 +240,25 @@ export async function exportPdf(data: CanonicalExportData): Promise<void> {
     });
 
     let currentY = MARGIN_MM;
-    let pageIndex = 0;
-    const usableHeight = PAGE_HEIGHT_MM - MARGIN_MM * 2;
-    const pageHeightPx = Math.floor((RENDER_WIDTH_PX * RENDER_SCALE * usableHeight) / CONTENT_WIDTH_MM);
 
-    for (let i = 0; i < sections.length; i++) {
-      const section = sections[i];
-      const canvas = await renderSectionCanvas(elements[i]);
+    for (let index = 0; index < sections.length; index += 1) {
+      const section = sections[index];
+      const canvas = await renderSectionCanvas(elements[index]);
+      const sectionHeightMm = getRenderedHeightMm(canvas.width, canvas.height);
 
-      const scaleFactor = CONTENT_WIDTH_MM / (canvas.width / RENDER_SCALE);
-      const sectionHeightMm = (canvas.height / RENDER_SCALE) * scaleFactor;
-
-      // Force new page for Q&A and Transcript sections
-      if (section.forceNewPage && pageIndex > 0) {
+      if (section.forceNewPage && currentY > MARGIN_MM) {
         pdf.addPage();
-        pageIndex++;
         currentY = MARGIN_MM;
       }
 
-      // If section fits on current page, render it directly
-      if (sectionHeightMm <= usableHeight - (currentY - MARGIN_MM)) {
+      if (currentY >= MAX_CONTENT_Y_MM) {
+        pdf.addPage();
+        currentY = MARGIN_MM;
+      }
+
+      const remainingPageMm = MAX_CONTENT_Y_MM - currentY;
+
+      if (sectionHeightMm <= remainingPageMm) {
         pdf.addImage(
           canvas.toDataURL("image/png"),
           "PNG",
@@ -238,50 +267,53 @@ export async function exportPdf(data: CanonicalExportData): Promise<void> {
           CONTENT_WIDTH_MM,
           sectionHeightMm,
           undefined,
-          "FAST"
+          "FAST",
         );
-        currentY += sectionHeightMm + SECTION_GAP_MM;
-      } else {
-        // Section is taller than remaining space (or taller than a full page) — slice it
-        let offsetY = 0;
 
-        while (offsetY < canvas.height) {
-          const remainingPageMm = usableHeight - (currentY - MARGIN_MM);
-          const remainingPagePx = Math.floor((remainingPageMm / CONTENT_WIDTH_MM) * canvas.width);
-          const sliceHeight = Math.min(remainingPagePx, canvas.height - offsetY);
+        currentY += sectionHeightMm;
+        if (index < sections.length - 1) {
+          currentY += SECTION_GAP_MM;
+        }
+        continue;
+      }
 
-          const pageCanvas = document.createElement("canvas");
-          pageCanvas.width = canvas.width;
-          pageCanvas.height = sliceHeight;
+      let offsetY = 0;
 
-          const context = pageCanvas.getContext("2d");
-          if (!context) throw new Error("Failed to create PDF canvas context");
+      while (offsetY < canvas.height) {
+        let remainingSliceMm = MAX_CONTENT_Y_MM - currentY;
+        if (remainingSliceMm <= 0) {
+          pdf.addPage();
+          currentY = MARGIN_MM;
+          remainingSliceMm = MAX_CONTENT_Y_MM - currentY;
+        }
 
-          context.fillStyle = "#ffffff";
-          context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-          context.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, pageCanvas.width, sliceHeight);
+        const remainingSlicePx = Math.max(
+          1,
+          Math.floor((remainingSliceMm * canvas.width) / CONTENT_WIDTH_MM),
+        );
+        const sliceHeight = Math.min(remainingSlicePx, canvas.height - offsetY);
+        const sliceCanvas = createSliceCanvas(canvas, offsetY, sliceHeight);
+        const sliceHeightMm = getRenderedHeightMm(sliceCanvas.width, sliceCanvas.height);
 
-          const sliceHeightMm = (sliceHeight / RENDER_SCALE) * scaleFactor;
+        pdf.addImage(
+          sliceCanvas.toDataURL("image/png"),
+          "PNG",
+          MARGIN_MM,
+          currentY,
+          CONTENT_WIDTH_MM,
+          sliceHeightMm,
+          undefined,
+          "FAST",
+        );
 
-          if (offsetY > 0) {
-            pdf.addPage();
-            pageIndex++;
-            currentY = MARGIN_MM;
-          }
+        currentY += sliceHeightMm;
+        offsetY += sliceHeight;
 
-          pdf.addImage(
-            pageCanvas.toDataURL("image/png"),
-            "PNG",
-            MARGIN_MM,
-            currentY,
-            CONTENT_WIDTH_MM,
-            sliceHeightMm,
-            undefined,
-            "FAST"
-          );
-
-          currentY += sliceHeightMm + SECTION_GAP_MM;
-          offsetY += sliceHeight;
+        if (offsetY < canvas.height) {
+          pdf.addPage();
+          currentY = MARGIN_MM;
+        } else if (index < sections.length - 1) {
+          currentY += SECTION_GAP_MM;
         }
       }
     }
