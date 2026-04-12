@@ -274,6 +274,21 @@
     "reportIssuePlaceholder": "Cette fonctionnalité arrive bientôt. En attendant, vous pouvez modifier la transcription directement.",
     "changeSpeaker": "Intervenant"
   },
+  "share": {
+    "share": "Partager",
+    "shareTitle": "Partager cette transcription",
+    "shareDesc": "Envoyez la transcription complète et le résumé par email.",
+    "emailLabel": "Email du destinataire",
+    "emailPlaceholder": "collegue@entreprise.com",
+    "sendEmailLabel": "Envoyer par email",
+    "sendEmailDesc": "Envoie un email lisible avec le titre, le résumé, les questions-réponses et la transcription complète.",
+    "shareRecordLabel": "Partager comme enregistrement",
+    "shareRecordDesc": "Permet au destinataire d'ouvrir sa propre copie de cette transcription dans WhatSaid.",
+    "comingSoon": "Bientôt",
+    "sent": "Email envoyé",
+    "sentSuccess": "Transcription partagée avec succès",
+    "sendFailed": "Impossible d'envoyer l'email. Veuillez réessayer."
+  },
   "audioUploader": {
     "dropTitle": "Déposez votre fichier audio ici",
     "dropDesc": "ou cliquez pour parcourir · .m4a, .mp3, .wav · max 60 min / 200 Mo",
