@@ -118,7 +118,20 @@ export default function Settings() {
     else { setPasswordSaved(true); setNewPassword(""); setConfirmPassword(""); setTimeout(() => { setPasswordOpen(false); setPasswordSaved(false); }, 1500); }
   };
 
-  if (loading || !user) return null;
+  const handleSetupPassword = async () => {
+    setSetupError(null);
+    if (setupPassword.length < 6) { setSetupError(t("settings.minLength")); return; }
+    if (setupPassword !== setupConfirmPassword) { setSetupError(t("settings.mismatch")); return; }
+    setSetupSaving(true);
+    const { error } = await supabase.auth.updateUser({ password: setupPassword });
+    if (error) { setSetupError(error.message); setSetupSaving(false); return; }
+    await supabase.from("profiles").update({ needs_password_setup: false } as any).eq("user_id", user!.id);
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    setSetupSaving(false);
+    setSetupPassword(""); setSetupConfirmPassword("");
+    // Force a page reload to clear the needsPasswordSetup state
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
