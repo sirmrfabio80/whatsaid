@@ -58,7 +58,7 @@ describe("extractAudioCreationDate", () => {
     const result = await extractAudioCreationDate(file);
 
     expect(result).not.toBeNull();
-    expect(result?.toISOString()).toBe("2026-03-13T09:49:00.000Z");
+    expect(result!.isoString).toBe("2026-03-13T10:49:00+01:00");
+    expect(result!.source).toBe("apple_metadata");
   });
 });
-

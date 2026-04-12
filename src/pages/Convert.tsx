@@ -15,6 +15,7 @@ import {
   ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 
 type ProcessingStep = "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 
@@ -24,7 +25,7 @@ export default function Convert() {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
-  const [fileCreationDate, setFileCreationDate] = useState<Date | null>(null);
+  const [fileCreationDate, setFileCreationDate] = useState<AudioCreationDateResult | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -44,7 +45,7 @@ export default function Convert() {
     failed: t("convert.stepFailed"),
   };
 
-  const handleFileSelected = useCallback((f: File, dur: number, creationDate: Date | null) => {
+  const handleFileSelected = useCallback((f: File, dur: number, creationDate: AudioCreationDateResult | null) => {
     setFile(f);
     setDuration(dur);
     setFileCreationDate(creationDate);
@@ -110,9 +111,11 @@ export default function Convert() {
       }
 
       const recordedAt = fileCreationDate
-        ? fileCreationDate.toISOString()
+        ? fileCreationDate.isoString
         : new Date(file.lastModified).toISOString();
-      const recordedAtSource = fileCreationDate ? "file_creation_date" : "file_last_modified";
+      const recordedAtSource = fileCreationDate
+        ? fileCreationDate.source
+        : "file_last_modified";
 
       const { error: jobError } = await supabase
         .from("jobs")

@@ -110,8 +110,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   return (
     <div className="space-y-4 animate-page-enter">
-      <div className="flex justify-end"><ExportButton data={canonicalData} disabled={!transcript} /></div>
-
       <Tabs defaultValue="transcript" className="w-full">
         <TabsList className="w-full justify-start rounded-xl bg-muted/50 p-1 h-auto">
           <TabsTrigger value="transcript" className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-3.5 h-3.5" />{t("jobResults.transcript")}</TabsTrigger>
@@ -125,9 +123,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
               {transcript && (
                 <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
                   <div className="flex items-center gap-2 min-w-0 flex-1">{speakers.length > 0 && <div className="hidden sm:block"><SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} /></div>}</div>
-                  <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
-                    {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <ExportButton data={canonicalData} disabled={!transcript} />
+                    <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
+                      {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
+                    </Button>
+                  </div>
                 </div>
               )}
               {speakers.length > 0 && <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} /></div>}
@@ -151,11 +152,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </Select>
                   {regeneratingSummary && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
                 </div>
-                {summary && (
-                  <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}>
-                    {copiedId === summary.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === summary.id ? t("common.copied") : t("common.copy")}
-                  </Button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <ExportButton data={canonicalData} disabled={!transcript} />
+                  {summary && (
+                    <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}>
+                      {copiedId === summary.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === summary.id ? t("common.copied") : t("common.copy")}
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="p-5 sm:p-6">
                 {regeneratingSummary ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.regeneratingSummary")}</div>
@@ -180,21 +184,27 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               </div>
 
-              {questionEntries.length > 0 && (
-                <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
-                  <p className="text-xs text-muted-foreground">{t("jobResults.includedInExport", { included: questionEntries.length - excludedQAIds.size, total: questionEntries.length })}</p>
-                  <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => { const included = questionEntries.filter((q) => !excludedQAIds.has(q.id)); const text = included.map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`).join("\n\n"); handleCopy(text, "qa-all"); }}>
-                    {copiedId === "qa-all" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === "qa-all" ? t("common.copied") : t("common.copyAll")}
-                  </Button>
+              <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  {questionEntries.length > 0
+                    ? t("jobResults.includedInExport", { included: questionEntries.length - excludedQAIds.size, total: questionEntries.length })
+                    : t("jobResults.noQuestions")}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <ExportButton data={canonicalData} disabled={!transcript} />
+                  {questionEntries.length > 0 && (
+                    <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => { const included = questionEntries.filter((q) => !excludedQAIds.has(q.id)); const text = included.map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`).join("\n\n"); handleCopy(text, "qa-all"); }}>
+                      {copiedId === "qa-all" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === "qa-all" ? t("common.copied") : t("common.copyAll")}
+                    </Button>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div role="log" aria-live="polite" aria-label="Saved questions and answers">
                 {questionEntries.length === 0 ? (
                   <div className="p-6 sm:p-8 text-center">
                     <HelpCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">{t("jobResults.noQuestions")}</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">{t("jobResults.noQuestionsDesc")}</p>
+                    <p className="text-sm text-muted-foreground">{t("jobResults.noQuestionsDesc")}</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-border/50">
