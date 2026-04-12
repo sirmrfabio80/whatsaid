@@ -21,6 +21,8 @@ import NotFound from "./pages/NotFound";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
+import Signup from "./pages/Signup";
+import ClaimShare from "./pages/ClaimShare";
 import Footer from "@/components/Footer";
 
 const queryClient = new QueryClient();
