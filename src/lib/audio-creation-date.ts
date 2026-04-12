@@ -226,18 +226,27 @@ export async function extractAudioCreationDate(file: File): Promise<AudioCreatio
     if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
       const buffer = await readBlobAsArrayBuffer(file);
 
-      // Priority 1: Apple QuickTime metadata
+      // Extract all available sources
       const appleIso = extractAppleCreationDate(buffer);
+      const mvhdIso = extractMp4CreationDate(buffer);
+
+      const allSources = {
+        apple_metadata: appleIso,
+        mvhd_creation: mvhdIso,
+      };
+
+      console.log("[audio-creation-date] All sources:", allSources);
+
+      // Priority 1: Apple QuickTime metadata
       if (appleIso) {
-        console.log("[audio-creation-date] Source: com.apple.quicktime.creationdate");
-        return { isoString: appleIso, source: "apple_metadata" };
+        console.log("[audio-creation-date] Chosen source: com.apple.quicktime.creationdate");
+        return { isoString: appleIso, source: "apple_metadata", allSources };
       }
 
       // Priority 2: mvhd atom
-      const mvhdIso = extractMp4CreationDate(buffer);
       if (mvhdIso) {
-        console.log("[audio-creation-date] Source: mvhd");
-        return { isoString: mvhdIso, source: "mvhd_creation" };
+        console.log("[audio-creation-date] Chosen source: mvhd");
+        return { isoString: mvhdIso, source: "mvhd_creation", allSources };
       }
     }
 
