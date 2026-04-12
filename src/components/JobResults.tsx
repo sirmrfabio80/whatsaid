@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,19 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Download, Check, FileText, Sparkles, HelpCircle, FileDown, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
-import { getLanguageLabel, LANGUAGES } from "@/lib/languages";
-
-import { exportDocx, exportPdf, type QAEntry } from "@/lib/export";
-import { resolveExportBaseName } from "@/lib/export-filename";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
+import { LANGUAGES } from "@/lib/languages";
+import { applySpeakerNames } from "@/lib/speaker-names";
+import { buildCanonicalPayload } from "@/lib/export-payload";
+import ExportButton from "@/components/ExportButton";
 import SpeakerChips from "@/components/SpeakerChips";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface JobOutput {
   id: string;
@@ -53,27 +47,10 @@ function parseSpeakers(text: string): string[] {
   return [...new Set(matches.map((m) => m.replace(":", "")))];
 }
 
-/** Replace speaker labels in text with their renamed versions */
-function applySpeakerNames(text: string, names: Record<string, string>): string {
-  let result = text;
-  for (const [original, renamed] of Object.entries(names)) {
-    if (renamed) {
-      // Replace "Speaker A:" at the start of lines
-      const regex = new RegExp(`^${escapeRegex(original)}:`, "gm");
-      result = result.replace(regex, `${renamed}:`);
-      // Replace inline references
-      const inlineRegex = new RegExp(`\\b${escapeRegex(original)}\\b`, "g");
-      result = result.replace(inlineRegex, renamed);
-    }
-  }
-  return result;
-}
-
 /** Render transcript text with speaker labels in bold */
 function renderTranscriptWithBoldSpeakers(text: string): React.ReactNode[] {
   const lines = text.split("\n");
   return lines.map((line, i) => {
-    // Match speaker label at start of line, e.g. "Speaker A:" or custom name
     const match = line.match(/^(.+?):\s/);
     if (match) {
       const label = match[1] + ":";
@@ -88,12 +65,7 @@ function renderTranscriptWithBoldSpeakers(text: string): React.ReactNode[] {
   });
 }
 
-function escapeRegex(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
-  
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
   const [meta, setMeta] = useState<JobMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -184,85 +156,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // ---- Download helpers ----
-  const handleDownload = (content: string, filename: string, mime = "text/plain;charset=utf-8") => {
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const persistedJobTitle = meta?.title?.trim() || null;
-  const originalBaseName = meta?.file_name?.replace(/\.[^.]+$/, "").trim() || null;
-  const liveTitle = currentTitle?.trim() || null;
-  const hasDistinctLiveTitle = Boolean(liveTitle && liveTitle !== originalBaseName);
-  const effectiveJobTitle = hasDistinctLiveTitle ? liveTitle : persistedJobTitle;
-  const generatedTitle = !persistedJobTitle && hasDistinctLiveTitle ? liveTitle : null;
-  const baseName = resolveExportBaseName({
-    jobTitle: effectiveJobTitle,
-    generatedTitle,
-    originalFileName: meta?.file_name ?? null,
-  });
-
-  const handleDownloadAllJson = () => {
-    const payload: Record<string, unknown> = {
-      file_name: meta?.file_name ?? null,
-      language_detected: meta?.language_detected ?? null,
-      duration_seconds: meta?.duration_seconds ?? null,
-    };
-    if (transcript) payload.transcript = applySpeakerNames(transcript.content, speakerNames);
-    if (summary) payload.summary = applySpeakerNames(summary.content, speakerNames);
-    const questionEntries = getQuestionEntries().filter((q) => !excludedQAIds.has(q.id));
-    if (questionEntries.length > 0) {
-      payload.questions = questionEntries.map((q) => ({
-        prompt: q.custom_prompt,
-        answer: applySpeakerNames(q.content, speakerNames),
-      }));
-    }
-    handleDownload(JSON.stringify(payload, null, 2), `${baseName}.json`, "application/json");
-  };
-
-  const buildExportPayload = () => {
-    const qEntries = getQuestionEntries().filter((q) => !excludedQAIds.has(q.id));
-    const questions: QAEntry[] = qEntries.map((q) => ({
-      prompt: q.custom_prompt,
-      answer: applySpeakerNames(q.content, speakerNames),
-    }));
-    return {
-      fileName: baseName,
-      jobTitle: effectiveJobTitle,
-      generatedTitle,
-      originalFileName: meta?.file_name ?? null,
-      language: meta?.language_detected ? getLanguageLabel(meta.language_detected) : null,
-      durationSeconds: meta?.duration_seconds ?? null,
-      createdAt: meta?.created_at ?? null,
-      transcript: transcript ? applySpeakerNames(transcript.content, speakerNames) : null,
-      summary: summary ? applySpeakerNames(summary.content, speakerNames) : null,
-      customPrompt: null,
-      customOutput: null,
-      questions: questions.length > 0 ? questions : undefined,
-    };
-  };
-
-  const handleExportDocx = async () => {
-    try {
-      await exportDocx(buildExportPayload());
-    } catch {
-      return;
-    }
-  };
-
-  const handleExportPdf = async () => {
-    try {
-      await exportPdf(buildExportPayload());
-    } catch {
-      return;
-    }
-  };
-
   // ---- Ask question ----
   const handleAskQuestion = async () => {
     const prompt = questionPrompt.trim();
@@ -306,7 +199,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const transcript = outputs.find((o) => o.output_type === "transcript");
   const summary = outputs.find((o) => o.output_type === "summary");
 
-  // Questions: include both legacy "custom" outputs and new "question" outputs
   const getQuestionEntries = () =>
     outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
 
@@ -322,66 +214,41 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   const questionEntries = getQuestionEntries();
 
-  // ---- Per-tab actions ----
-  const ActionsBar = ({ content, id, tabKey, leftContent }: { content: string; id: string; tabKey: string; leftContent?: React.ReactNode }) => (
-    <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        {leftContent}
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-lg gap-1.5 text-xs h-8"
-          onClick={() => handleCopy(applySpeakerNames(content, speakerNames), id)}
-        >
-          {copiedId === id ? (
-            <Check className="w-3.5 h-3.5 text-primary" />
-          ) : (
-            <Copy className="w-3.5 h-3.5" />
-          )}
-          {copiedId === id ? "Copied" : "Copy"}
-        </Button>
+  // Build canonical export data
+  const persistedJobTitle = meta?.title?.trim() || null;
+  const originalBaseName = meta?.file_name?.replace(/\.[^.]+$/, "").trim() || null;
+  const liveTitle = currentTitle?.trim() || null;
+  const hasDistinctLiveTitle = Boolean(liveTitle && liveTitle !== originalBaseName);
+  const effectiveJobTitle = hasDistinctLiveTitle ? liveTitle : persistedJobTitle;
+  const generatedTitle = !persistedJobTitle && hasDistinctLiveTitle ? liveTitle : null;
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
-              <FileDown className="w-3.5 h-3.5" />
-              Export
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[140px]">
-            <DropdownMenuItem
-              onClick={() =>
-                handleDownload(
-                  applySpeakerNames(content, speakerNames),
-                  `${baseName}_${tabKey}.txt`
-                )
-              }
-            >
-              <Download className="w-3.5 h-3.5 mr-2" />
-              Plain text (.txt)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDownloadAllJson}>
-              <Download className="w-3.5 h-3.5 mr-2" />
-              JSON (.json)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportDocx}>
-              <Download className="w-3.5 h-3.5 mr-2" />
-              Word (.docx)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportPdf}>
-              <Download className="w-3.5 h-3.5 mr-2" />
-              PDF (.pdf)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
+  const canonicalData = transcript
+    ? buildCanonicalPayload({
+        jobTitle: effectiveJobTitle,
+        generatedTitle,
+        originalFileName: meta?.file_name ?? null,
+        createdAt: meta?.recorded_at ?? meta?.created_at ?? null,
+        durationSeconds: meta?.duration_seconds ?? null,
+        languageCode: meta?.language_detected ?? null,
+        speakerNames,
+        transcript: transcript.content,
+        summary: summary?.content ?? null,
+        questionEntries: questionEntries.map((q) => ({
+          id: q.id,
+          prompt: q.custom_prompt,
+          content: q.content,
+        })),
+        excludedQAIds,
+      })
+    : null;
 
   return (
     <div className="space-y-4 animate-page-enter">
+      {/* Single export button above tabs */}
+      <div className="flex justify-end">
+        <ExportButton data={canonicalData} disabled={!transcript} />
+      </div>
+
       <Tabs defaultValue="transcript" className="w-full">
         <TabsList className="w-full justify-start rounded-xl bg-muted/50 p-1 h-auto">
           <TabsTrigger
@@ -412,12 +279,9 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
               {transcript && (
-                <ActionsBar
-                  content={transcript.content}
-                  id={transcript.id}
-                  tabKey="transcript"
-                  leftContent={
-                    speakers.length > 0 ? (
+                <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {speakers.length > 0 && (
                       <div className="hidden sm:block">
                         <SpeakerChips
                           speakers={speakers}
@@ -426,9 +290,22 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                           onReset={handleResetSpeakerNames}
                         />
                       </div>
-                    ) : undefined
-                  }
-                />
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-lg gap-1.5 text-xs h-8"
+                    onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}
+                  >
+                    {copiedId === transcript.id ? (
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    {copiedId === transcript.id ? "Copied" : "Copy"}
+                  </Button>
+                </div>
               )}
               {speakers.length > 0 && (
                 <div className="px-4 py-3 border-b border-border/50 sm:hidden">
@@ -483,56 +360,21 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   {regeneratingSummary && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
                 </div>
 
-                {/* Copy / Export actions */}
+                {/* Copy action */}
                 {summary && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-lg gap-1.5 text-xs h-8"
-                      onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}
-                    >
-                      {copiedId === summary.id ? (
-                        <Check className="w-3.5 h-3.5 text-primary" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                      {copiedId === summary.id ? "Copied" : "Copy"}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
-                          <FileDown className="w-3.5 h-3.5" />
-                          Export
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-[140px]">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleDownload(
-                              applySpeakerNames(summary.content, speakerNames),
-                              `${baseName}_summary.txt`
-                            )
-                          }
-                        >
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          Plain text (.txt)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleDownloadAllJson}>
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          JSON (.json)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleExportDocx}>
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          Word (.docx)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleExportPdf}>
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          PDF (.pdf)
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-lg gap-1.5 text-xs h-8"
+                    onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}
+                  >
+                    {copiedId === summary.id ? (
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    {copiedId === summary.id ? "Copied" : "Copy"}
+                  </Button>
                 )}
               </div>
               <div className="p-5 sm:p-6">
@@ -563,7 +405,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 <p className="text-xs text-muted-foreground mb-3">
                   Ask about terms, decisions, medications, next steps, or anything discussed. Each answer is saved automatically.
                 </p>
-              <div className="relative">
+                <div className="relative">
                   <Textarea
                     id="question-input"
                     placeholder="e.g. What medication was mentioned? What did the doctor recommend?"
@@ -596,67 +438,31 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               </div>
 
-              {/* Q&A Export bar */}
+              {/* Q&A export info bar */}
               {questionEntries.length > 0 && (
                 <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
                   <p className="text-xs text-muted-foreground">
                     {questionEntries.length - excludedQAIds.size} of {questionEntries.length} included in export
                   </p>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-lg gap-1.5 text-xs h-8"
-                      onClick={() => {
-                        const included = questionEntries.filter((q) => !excludedQAIds.has(q.id));
-                        const text = included
-                          .map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`)
-                          .join("\n\n");
-                        handleCopy(text, "qa-all");
-                      }}
-                    >
-                      {copiedId === "qa-all" ? (
-                        <Check className="w-3.5 h-3.5 text-primary" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                      {copiedId === "qa-all" ? "Copied" : "Copy All"}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8">
-                          <FileDown className="w-3.5 h-3.5" />
-                          Export
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-[140px]">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const included = questionEntries.filter((q) => !excludedQAIds.has(q.id));
-                            const text = included
-                              .map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`)
-                              .join("\n\n");
-                            handleDownload(text, `${baseName}_qa.txt`);
-                          }}
-                        >
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          Q&A only (.txt)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleDownloadAllJson}>
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          Full JSON (.json)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleExportDocx}>
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          Word (.docx)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleExportPdf}>
-                          <Download className="w-3.5 h-3.5 mr-2" />
-                          PDF (.pdf)
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-lg gap-1.5 text-xs h-8"
+                    onClick={() => {
+                      const included = questionEntries.filter((q) => !excludedQAIds.has(q.id));
+                      const text = included
+                        .map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`)
+                        .join("\n\n");
+                      handleCopy(text, "qa-all");
+                    }}
+                  >
+                    {copiedId === "qa-all" ? (
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    {copiedId === "qa-all" ? "Copied" : "Copy All"}
+                  </Button>
                 </div>
               )}
 
