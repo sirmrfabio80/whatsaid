@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 
 import History from "./pages/History";
 import JobDetail from "./pages/JobDetail";
+import ClaimShare from "./pages/ClaimShare";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -46,6 +47,7 @@ const App = () => (
             
             <Route path="/history" element={<History />} />
             <Route path="/job/:id" element={<JobDetail />} />
+            <Route path="/claim/:token" element={<ClaimShare />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
