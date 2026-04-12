@@ -10,8 +10,15 @@
  */
 
 export interface AudioCreationDateResult {
+  /** The chosen ISO string based on priority */
   isoString: string;
+  /** Which source was chosen */
   source: "apple_metadata" | "mvhd_creation" | "file_last_modified";
+  /** All raw values found — for debugging / cross-checking */
+  allSources: {
+    apple_metadata: string | null;
+    mvhd_creation: string | null;
+  };
 }
 
 const MAC_EPOCH_OFFSET = 2082844800;
