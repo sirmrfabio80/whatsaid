@@ -1,54 +1,26 @@
 
 
-# Plan: Fix Share Emails — Sender Identity, Canonical URL, and Auth Redirect
+# Bug-Fix Plan: 5 Regressions
 
-## Summary
+## Root Cause Analysis
 
-Fix three issues: (1) emails using stale auth email instead of profile email/display name, (2) claim link using wrong domain causing 404, (3) Login/Signup not honoring `?redirect=` param so claim flow breaks after auth.
+### 1. Share popover not centered on mobile
+The `PopoverContent` uses Radix UI's positioning, which anchors relative to the trigger button. On mobile, `align="center"` centers on the **trigger element**, not the viewport. Since the Share button sits inside a flex container at the right side of each tab, the popover ends up offset. The fix is to override Radix's transform-based positioning on mobile with a CSS approach that forces viewport centering.
 
-## Changes
+### 2. Share emails going to Junk
+The email domain (`notify.whatsaid.app`) is verified and DNS is correct. The likely spam triggers are:
+- **Reply-To missing**: No `reply_to` field, which looks suspicious to spam filters
+- **Subject line starts with a person's name** — can trigger personal-spam heuristics
+- **No `h:Reply-To`** header — legitimate transactional emails usually have one
+- The `from` address (`noreply@whatsaid.app`) is fine, but adding a Reply-To pointing to the sender's real email improves legitimacy
+- Subject lines could be more professional (e.g., "Transcript shared: {title}" rather than "{name} shared a transcript: {title}")
 
-### 1. Update `share-transcript` edge function
-- Fetch sender profile (`display_name`, `email`) from `profiles` table using `user.id`
-- Use display name first in email copy: "Shared by **Fabio Petito** via WhatSaid" (with email as secondary/fallback)
-- Fallback order: `profiles.display_name` → `profiles.email` → `user.email` → `"someone"`
-- Change `SITE_URL` from `'https://whatsaid.app'` to `'https://whatsaid.lovable.app'` (canonical production URL, single constant)
-- Update subject line to use display name instead of raw email
+### 3. Claim link shows 404
+The `SITE_URL` constant is `https://whatsaid.lovable.app` and the claim URL is built as `${SITE_URL}/claim/${token}`. The route `/claim/:token` exists in `App.tsx`. The published URL is also `https://whatsaid.lovable.app`. The SPA fallback should serve `index.html` for `/claim/...` paths. Let me verify — the broken example link `https://whatsaid.lovable.app/claim/87da2499...` should work if the SPA is published. The issue may be that the project needs to be re-published after the `/claim/:token` route was added. However, I should also check if the route is correctly defined — it is (`<Route path="/claim/:token" element={<ClaimShare />} />`). The real issue is likely the **Login page ignoring the `redirect` query param**: after auth, the user goes to `/` instead of back to `/claim/:token`. Let me verify Login.tsx — yes, `handleLogin` always navigates to `"/"` (line 54) and `handleGoogleLogin` also redirects to `redirectAfterAuth` which is either `/pricing` or `/` — it never reads the `redirect` search param.
 
-### 2. Update `share-transcript-record` edge function
-- Same sender profile fetch and display name priority
-- Change `SITE_URL` from `'https://whatsaid.lovable.app'` — already correct, but ensure consistency
-- Update email body: "**Fabio Petito** shared a transcript with you" instead of raw email
-- Update subject line: "Fabio Petito shared a transcript with you: Title"
-- Update plain text fallback similarly
+### 4. Login/Signup not honoring redirect param
+- **Login.tsx**: Never reads `redirect` param. `handleLogin` navigates to `/`. Google OAuth `redirect_uri` is `window.location.origin` (root).
+- **Signup.tsx**: Reads `redirectParam` for `emailRedirectTo` but that's for email confirmation redirect, not for post-login navigation.
 
-### 3. Create shared constant file `supabase/functions/_shared/constants.ts`
-- Export `SITE_NAME = 'WhatSaid'` and `SITE_URL = 'https://whatsaid.lovable.app'`
-- Export `SENDER_DOMAIN = 'notify.whatsaid.app'` and `FROM_DOMAIN = 'whatsaid.app'`
-- Both share functions import from this single source of truth — no more drift
-
-### 4. Update `Login.tsx` — honor `?redirect=` param
-- Read `redirect` from `searchParams`
-- After successful password login: `navigate(redirect || redirectAfterAuth)`
-- For Google OAuth: pass `redirect_uri` that preserves the redirect param (use `window.location.origin + (redirect || '/')`)
-
-### 5. Update `Signup.tsx` — honor `?redirect=` param
-- Read `redirect` from `searchParams`
-- Set `emailRedirectTo` to include the redirect path so email confirmation returns to `/claim/:token`
-- On success screen "Go to Sign In" button: preserve redirect param in link to `/login`
-
-### 6. Redeploy edge functions
-- Deploy `share-transcript`, `share-transcript-record`, `claim-transcript-share`
-
-## Files modified
-- `supabase/functions/_shared/constants.ts` (new)
-- `supabase/functions/share-transcript/index.ts`
-- `supabase/functions/share-transcript-record/index.ts`
-- `src/pages/Login.tsx`
-- `src/pages/Signup.tsx`
-
-## Not modified
-- `ClaimShare.tsx` — already correctly passes redirect params
-- `claim-transcript-share/index.ts` — already fetches sender profile for validation page
-- Database schema — no changes needed
-
+### 5. Date showing wrong value
+The `getEffectiveIso` function falls back to `m.created_at` when `m.recorded_at` is null. But looking at the DB query result, `recorded_at` is `2026-04-12 10:34:24+00` (UTC, no offset) while `created_at` is `2026-04-12 21:50:07+00`. The `recorded_at` value has offset `+00` (UTC). The `parseRecordedAt` function parses the offset correctly for `Z` but the DB returns `+00` format — let me check the regex. The ISO_RE handles `([+-])(\d{2}):?(\d{2})` — for `+00` without the minutes part, it would need `+00:00` or `+0000`. The string `2026-04-12 10:34:24+00` only has `+00` (2 digits, no minutes). The regex expects `(\d{2}):?(\d{2})` — two groups of 2 digits. `+00` only has one group. So `m[9]` would be undefined → `Number(undefined)` = `NaN` → offset becomes `NaN` → display breaks. This is the bug: the regex doesn't handle the PostgreSQL short offset format `+00` (without
