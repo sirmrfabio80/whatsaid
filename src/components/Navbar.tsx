@@ -102,9 +102,12 @@ export default function Navbar() {
               </DropdownMenu>
             </div>
           ) : (
-            <Link to="/login">
-              <Button size="sm" className="rounded-lg">{t("common.signIn")}</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher />
+              <Link to="/login">
+                <Button size="sm" className="rounded-lg">{t("common.signIn")}</Button>
+              </Link>
+            </div>
           )}
         </div>
 
@@ -161,9 +164,12 @@ export default function Navbar() {
               </Button>
             </>
           ) : (
-            <Link to="/login" onClick={() => setMobileOpen(false)}>
-              <Button className="w-full rounded-lg">{t("common.signIn")}</Button>
-            </Link>
+            <>
+              <LanguageSwitcher />
+              <Link to="/login" onClick={() => setMobileOpen(false)}>
+                <Button className="w-full rounded-lg">{t("common.signIn")}</Button>
+              </Link>
+            </>
           )}
         </div>
       )}
