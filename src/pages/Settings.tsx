@@ -45,6 +45,10 @@ export default function Settings() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [setupPassword, setSetupPassword] = useState("");
+  const [setupConfirmPassword, setSetupConfirmPassword] = useState("");
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [setupSaving, setSetupSaving] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
 
