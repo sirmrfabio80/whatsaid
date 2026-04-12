@@ -129,15 +129,13 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section ref={pricing.ref} id="pricing" className="container mx-auto px-4 py-16 sm:py-24">
+      {/* Pricing CTA */}
+      <section ref={pricing.ref} className="container mx-auto px-4 py-16 sm:py-24">
         <div className={`text-center mb-8 transition-all duration-700 ${pricing.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">{t("home.pricingTitle")}</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">{t("home.pricingDesc")}</p>
-        </div>
-        <div className={`flex justify-center transition-all duration-700 delay-200 ${pricing.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-          <Button size="lg" className="h-12 px-8 text-base font-medium rounded-lg" onClick={() => navigate("/convert")}>
-            {t("home.ctaPrimary")}
+          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">{t("home.pricingCtaTitle")}</h2>
+          <p className="text-muted-foreground max-w-md mx-auto mb-6">{t("home.pricingCtaDesc")}</p>
+          <Button size="lg" className="h-12 px-8 text-base font-medium rounded-lg" onClick={() => navigate("/pricing")}>
+            {t("nav.pricing")}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

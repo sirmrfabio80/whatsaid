@@ -117,12 +117,15 @@ function formatPrice(amount: number, currency: Currency): string {
   }
 }
 
-function basePrices(): LocalizedPrice[] {
+function basePrices(cur: Currency = "GBP"): LocalizedPrice[] {
+  // Without Paddle, show base GBP prices formatted in the selected currency symbol.
+  // These are NOT converted — they are the GBP amounts displayed with the selected currency format.
+  // When Paddle is wired, this fallback is only used if PricePreview fails.
   return PRICING_PRODUCTS.map((p) => ({
     productId: p.id,
-    formatted: formatPrice(p.basePriceGBP, "GBP"),
+    formatted: formatPrice(p.basePriceGBP, cur),
     amount: p.basePriceGBP,
-    currency: "GBP" as Currency,
+    currency: cur,
   }));
 }
 
