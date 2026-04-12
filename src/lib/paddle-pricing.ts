@@ -105,6 +105,22 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = {
   EUR: "€",
 };
 
+/**
+ * Approximate GBP→X rates used ONLY as a pre-Paddle fallback.
+ * These will be replaced by Paddle's real localized pricing once wired.
+ * Updated periodically to stay reasonable.
+ */
+const FALLBACK_FX_FROM_GBP: Record<Currency, number> = {
+  GBP: 1,
+  USD: 1.27,
+  EUR: 1.18,
+};
+
+/** Round to nearest .99 for clean pricing display */
+function roundToNinetyNine(value: number): number {
+  return Math.floor(value) + 0.99;
+}
+
 function formatPrice(amount: number, currency: Currency): string {
   try {
     return new Intl.NumberFormat("en-GB", {
@@ -118,15 +134,16 @@ function formatPrice(amount: number, currency: Currency): string {
 }
 
 function basePrices(cur: Currency = "GBP"): LocalizedPrice[] {
-  // Without Paddle, show base GBP prices formatted in the selected currency symbol.
-  // These are NOT converted — they are the GBP amounts displayed with the selected currency format.
-  // When Paddle is wired, this fallback is only used if PricePreview fails.
-  return PRICING_PRODUCTS.map((p) => ({
-    productId: p.id,
-    formatted: formatPrice(p.basePriceGBP, cur),
-    amount: p.basePriceGBP,
-    currency: cur,
-  }));
+  const rate = FALLBACK_FX_FROM_GBP[cur];
+  return PRICING_PRODUCTS.map((p) => {
+    const converted = cur === "GBP" ? p.basePriceGBP : roundToNinetyNine(p.basePriceGBP * rate);
+    return {
+      productId: p.id,
+      formatted: formatPrice(converted, cur),
+      amount: converted,
+      currency: cur,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
