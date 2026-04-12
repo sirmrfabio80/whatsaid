@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe } from "lucide-react";
+import AdminInviteCard from "@/components/AdminInviteCard";
 
 const UI_LANGUAGES = [
   { code: "en", label: "English" },
@@ -46,6 +47,16 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      return !!data;
+    },
+    enabled: !!user,
+  });
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
