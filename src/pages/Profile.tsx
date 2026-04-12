@@ -107,14 +107,20 @@ export default function Profile() {
           </Card>
 
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {stats.map(({ label, value, icon: Icon }) => (
+            {stats.map(({ label, value, dateValue, icon: Icon }) => (
               <Card key={label} className="rounded-xl border-border bg-card shadow-sm hover:border-primary/20 hover:shadow-md transition-all overflow-hidden">
                 <CardContent className="p-3 sm:p-4 text-center">
                   <Icon className="w-4 h-4 text-muted-foreground mx-auto mb-2" />
                   {isStatsLoading ? (
                     <Skeleton className="h-6 w-12 mx-auto mb-1 rounded-lg" />
+                  ) : dateValue ? (
+                    <p className="font-heading font-semibold text-base sm:text-lg leading-tight">
+                      <span>{dateValue.dayMonth}</span>
+                      <br className="sm:hidden" />
+                      <span className="sm:ml-1">{dateValue.year}</span>
+                    </p>
                   ) : (
-                    <p className="font-heading font-semibold text-base sm:text-lg truncate">{value}</p>
+                    <p className="font-heading font-semibold text-base sm:text-lg">{value}</p>
                   )}
                   <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{label}</p>
                 </CardContent>
