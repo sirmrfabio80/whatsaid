@@ -24,7 +24,7 @@
     "pricing": "Tarifs",
     "profile": "Profil",
     "history": "Historique",
-    "credits": "Crédits",
+    "settings": "Paramètres"
     "settings": "Paramètres"
   },
   "home": {
@@ -235,18 +235,6 @@
     "deleteTitle": "Supprimer la transcription ?",
     "deleteDesc": "Cela supprimera définitivement <strong>{{fileName}}</strong> et tous ses résultats, y compris le résumé, la transcription et les questions enregistrées. Cette action est irréversible.",
     "deleting": "Suppression…"
-  },
-  "creditsPage": {
-    "title": "Vos crédits",
-    "remaining": "crédits restants",
-    "oneTime": "paiement unique",
-    "perCredit": "par crédit",
-    "popular": "Populaire",
-    "noExpiry": "Sans expiration",
-    "jobHistory": "Historique des travaux",
-    "extraRegenerations": "Régénérations supplémentaires",
-    "buyCredits": "Acheter {{count}} crédits",
-    "creditExplainer": "1 crédit = jusqu'à 15 min d'audio · 2 crédits = 15-30 min · 3 crédits = 30-45 min · 4 crédits = 45-60 min"
   },
   "jobDetail": {
     "backToHistory": "Retour à l'historique",

@@ -24,7 +24,7 @@
     "pricing": "Pricing",
     "profile": "Profile",
     "history": "History",
-    "credits": "Credits",
+    "settings": "Settings"
     "settings": "Settings"
   },
   "home": {
@@ -235,18 +235,6 @@
     "deleteTitle": "Delete transcription?",
     "deleteDesc": "This will permanently delete <strong>{{fileName}}</strong> and all its outputs including summary, transcript, and saved questions. This action cannot be undone.",
     "deleting": "Deleting…"
-  },
-  "creditsPage": {
-    "title": "Your Credits",
-    "remaining": "credits remaining",
-    "oneTime": "one-time",
-    "perCredit": "per credit",
-    "popular": "Popular",
-    "noExpiry": "No expiry",
-    "jobHistory": "Job history",
-    "extraRegenerations": "Extra regenerations",
-    "buyCredits": "Buy {{count}} credits",
-    "creditExplainer": "1 credit = up to 15 min of audio · 2 credits = 15-30 min · 3 credits = 30-45 min · 4 credits = 45-60 min"
   },
   "jobDetail": {
     "backToHistory": "Back to history",
@@ -505,6 +493,7 @@
     "finalTitle": "Choose the option that fits how you work",
     "finalBody": "Start with one file or get credits for repeat use — your results stay saved in your account.",
     "finalCta": "Create account and continue",
-    "finalCtaLoggedIn": "Continue"
+    "finalCtaLoggedIn": "Continue",
+    "comingSoon": "Payment system is being finalised — check back soon."
   }
 }
