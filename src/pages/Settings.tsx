@@ -133,6 +133,8 @@ export default function Settings() {
     window.location.reload();
   };
 
+  if (loading || !user) return null;
+
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-10 sm:py-14">
