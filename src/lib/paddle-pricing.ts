@@ -112,7 +112,7 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = {
  */
 const FALLBACK_FX_FROM_GBP: Record<Currency, number> = {
   GBP: 1,
-  USD: 1.27,
+  USD: 1.33,
   EUR: 1.18,
 };
 
