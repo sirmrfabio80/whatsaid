@@ -188,12 +188,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-4">
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 border-b border-border/50">
-                <p className="text-xs text-muted-foreground">
-                  {questionEntries.length > 0
-                    ? t("jobResults.includedInExport", { included: questionEntries.length - excludedQAIds.size, total: questionEntries.length })
-                    : t("jobResults.noQuestions")}
-                </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-2 p-3 border-b border-border/50">
                 <div className="flex items-center gap-1.5">
                   {questionEntries.length > 0 && (
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => { const included = questionEntries.filter((q) => !excludedQAIds.has(q.id)); const text = included.map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`).join("\n\n"); handleCopy(text, "qa-all"); }}>
