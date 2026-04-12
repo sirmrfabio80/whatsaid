@@ -188,18 +188,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-4">
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
-              <div className="p-4 sm:p-5 border-b border-border/50">
-                <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">{t("jobResults.askQuestion")}</label>
-                <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
-                <div className="relative">
-                  <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
-                  <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim()} size="sm" className="absolute bottom-2.5 right-2.5 rounded-xl gap-1.5 px-3 h-8">
-                    {askingQuestion ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 border-b border-border/50">
                 <p className="text-xs text-muted-foreground">
                   {questionEntries.length > 0
                     ? t("jobResults.includedInExport", { included: questionEntries.length - excludedQAIds.size, total: questionEntries.length })
@@ -213,6 +202,17 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   )}
                   <ShareButton jobId={jobId} disabled={!transcript} />
                   <ExportButton data={canonicalData} disabled={!transcript} />
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5 border-b border-border/50">
+                <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">{t("jobResults.askQuestion")}</label>
+                <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
+                <div className="relative">
+                  <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
+                  <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim()} size="sm" className="absolute bottom-2.5 right-2.5 rounded-xl gap-1.5 px-3 h-8">
+                    {askingQuestion ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
+                  </Button>
                 </div>
               </div>
 
