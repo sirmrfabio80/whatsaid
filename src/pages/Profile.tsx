@@ -56,10 +56,20 @@ export default function Profile() {
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "";
 
+  const formatLastJob = (dateStr: string | null) => {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    const dayMonth = d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    const year = d.getFullYear();
+    return { dayMonth, year };
+  };
+
+  const lastJobFormatted = formatLastJob(jobStats?.lastJob ?? null);
+
   const stats = [
-    { label: t("profile.totalJobs"), value: jobStats?.totalJobs ?? 0, icon: FileText },
-    { label: t("profile.minutesProcessed"), value: jobStats?.totalMinutes ?? 0, icon: Clock },
-    { label: t("profile.lastConversion"), value: jobStats?.lastJob ?? "—", icon: Clock },
+    { label: t("profile.totalJobs"), value: String(jobStats?.totalJobs ?? 0), icon: FileText },
+    { label: t("profile.minutesProcessed"), value: String(jobStats?.totalMinutes ?? 0), icon: Clock },
+    { label: t("profile.lastConversion"), value: typeof lastJobFormatted === "string" ? lastJobFormatted : null, dateValue: typeof lastJobFormatted === "object" ? lastJobFormatted : null, icon: Clock },
   ];
 
   return (
