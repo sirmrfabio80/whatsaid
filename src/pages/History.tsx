@@ -25,6 +25,7 @@ interface Job {
   credits_charged: number;
   created_at: string;
   speech_model: string | null;
+  short_summary: string | null;
 }
 
 export default function History() {
@@ -42,7 +43,7 @@ export default function History() {
     const fetchJobs = async () => {
       const { data } = await supabase
         .from("jobs")
-        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model")
+        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setJobs((data as Job[]) ?? []);
@@ -129,8 +130,10 @@ export default function History() {
                           {job.duration_seconds && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>}
                           <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
                           <span>{new Date(job.created_at).toLocaleDateString()}</span>
-                          
                         </div>
+                        {job.short_summary && (
+                          <p className="text-xs text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-end mt-2 sm:mt-0">

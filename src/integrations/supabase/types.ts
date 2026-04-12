@@ -120,6 +120,7 @@ export type Database = {
           recorded_at: string | null
           recorded_at_source: string | null
           regeneration_count: number
+          short_summary: string | null
           speaker_names: Json
           speech_model: string | null
           status: Database["public"]["Enums"]["job_status"]
@@ -149,6 +150,7 @@ export type Database = {
           recorded_at?: string | null
           recorded_at_source?: string | null
           regeneration_count?: number
+          short_summary?: string | null
           speaker_names?: Json
           speech_model?: string | null
           status?: Database["public"]["Enums"]["job_status"]
@@ -178,6 +180,7 @@ export type Database = {
           recorded_at?: string | null
           recorded_at_source?: string | null
           regeneration_count?: number
+          short_summary?: string | null
           speaker_names?: Json
           speech_model?: string | null
           status?: Database["public"]["Enums"]["job_status"]
