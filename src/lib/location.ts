@@ -52,3 +52,28 @@ export function formatCoordinates(loc: ParsedLocation): string {
 export function mapsUrl(loc: ParsedLocation): string {
   return `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`;
 }
+
+/**
+ * Reverse geocode coordinates to a human-readable label via OpenStreetMap Nominatim.
+ * Returns e.g. "Milan, Italy" or null on failure.
+ */
+export async function reverseGeocode(loc: ParsedLocation): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${loc.latitude}&lon=${loc.longitude}&format=json&zoom=10&accept-language=en`,
+      { headers: { "User-Agent": "WhatSaid/1.0" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const addr = data.address;
+    if (!addr) return null;
+
+    // Build a concise label: city/town, country
+    const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || "";
+    const country = addr.country || "";
+    if (!city && !country) return data.display_name?.split(",").slice(0, 2).join(",").trim() || null;
+    return [city, country].filter(Boolean).join(", ");
+  } catch {
+    return null;
+  }
+}
