@@ -60,5 +60,6 @@ describe("extractAudioCreationDate", () => {
     expect(result).not.toBeNull();
     expect(result!.isoString).toBe("2026-03-13T10:49:00+01:00");
     expect(result!.source).toBe("apple_metadata");
-  });
+    expect(result!.allSources.apple_metadata).toBe("2026-03-13T10:49:00+01:00");
+    expect(result!.allSources.mvhd_creation).toBeNull();
 });
