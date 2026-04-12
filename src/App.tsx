@@ -17,11 +17,12 @@ import Settings from "./pages/Settings";
 
 import History from "./pages/History";
 import JobDetail from "./pages/JobDetail";
-import ClaimShare from "./pages/ClaimShare";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
+import Signup from "./pages/Signup";
+import ClaimShare from "./pages/ClaimShare";
 import Footer from "@/components/Footer";
 
 const queryClient = new QueryClient();
@@ -47,10 +48,11 @@ const App = () => (
             
             <Route path="/history" element={<History />} />
             <Route path="/job/:id" element={<JobDetail />} />
-            <Route path="/claim/:token" element={<ClaimShare />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/claim/:token" element={<ClaimShare />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />

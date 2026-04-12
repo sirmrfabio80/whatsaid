@@ -24,8 +24,7 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const purchaseIntent = searchParams.get("intent") === "purchase";
   const productParam = searchParams.get("product");
-  const redirectParam = searchParams.get("redirect");
-  const redirectAfterAuth = redirectParam || (purchaseIntent ? "/pricing" : "/");
+  const redirectAfterAuth = purchaseIntent ? "/pricing" : "/";
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -52,7 +51,7 @@ export default function Login() {
       setLoading(false);
       return;
     }
-    navigate(redirectAfterAuth);
+    navigate("/");
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
