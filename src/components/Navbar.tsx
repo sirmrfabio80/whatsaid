@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Mic, LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
+import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { useState } from "react";
 
 export default function Navbar() {
@@ -33,9 +34,7 @@ export default function Navbar() {
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-            <Mic className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <img src={logoImg} alt="WhatSaid" className="w-9 h-9 rounded-xl" />
           <span className="font-heading font-bold text-xl tracking-tight">WhatSaid</span>
         </Link>
 
