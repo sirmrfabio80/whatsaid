@@ -1,92 +1,141 @@
 
 
-# Revised Plan: Dedicated Pricing Page
+# Plan: Admin Invite Feature for WhatSaid
 
 ## Summary
 
-Create a new `/pricing` page with outcome-focused messaging, Paddle-ready localized pricing architecture, and a purchase-intent signup flow. Remove all guest pricing references. Leave `src/lib/pricing.ts` shared logic untouched.
+Add an owner-only invite panel to the Settings page. The platform owner (Fabio) can invite users by email and gift them a credit package. Invitations are fulfilled via a `pending_invites` table with atomic, one-time-only redemption after the invited user authenticates.
 
 ---
 
-## Key changes from previous plan
+## Architecture
 
-1. **Paddle localization**: No currency-to-country mapping. The hook will call `Paddle.PricePreview()` with Paddle's own auto-detected address context as the primary path. Manual currency override will pass `currencyCode` directly to Paddle's API — not a fake country mapping. When Paddle.js is not yet loaded, fall back to base GBP prices.
+```text
+Settings page (admin-only card)
+  ├─ Email input
+  ├─ Package selector: One-time (1 credit) / 5-pack / 20-pack
+  ├─ "Send invite email" → edge function → Supabase auth.admin.inviteUserByEmail
+  └─ "Generate magic link" → edge function → returns URL to copy
 
-2. **"Production-ready architecture"**: All references use this phrasing since Paddle.js, client-side token, and real Price IDs are not yet wired. The code will be structured so plugging in real IDs and loading Paddle.js completes the integration with no structural changes.
+invite-user edge function (service role)
+  ├─ Validates caller is admin (has_role check)
+  ├─ Creates pending_invites row
+  ├─ If user already exists: adds credits immediately via add_credits RPC
+  └─ If new user: leaves pending_invites unclaimed for later redemption
 
-3. **Guest pricing removal**: `guestPriceForDuration` in `src/lib/pricing.ts` is defined but never imported anywhere else. It will be removed (along with its JSDoc comment). No other files reference it. The old `CREDIT_PACKS` constant and `creditsForDuration` remain untouched — they are used by `Credits.tsx`, `Convert.tsx`, etc. The new pricing page will define its own product list independently.
-
-4. **Purchase-intent signup flow**: CTA buttons for unauthenticated users will route to `/signup?intent=purchase&product=<id>` (or `/login?intent=purchase&product=<id>` for existing users). The Signup/Login pages will detect the `intent` query param and show contextual copy like "Create your account to complete your purchase" instead of the generic form. After successful auth, redirect to `/credits` (or future checkout) with the product context preserved.
-
-5. **No modification to shared pricing logic**: `CREDIT_PACKS`, `creditsForDuration`, `formatDuration`, `MAX_FILE_SIZE`, etc. all stay exactly as they are. The pricing page defines its own `PRICING_PRODUCTS` array with the new GBP base prices (£4.99, £14.99, £39.99) and Paddle Price ID placeholders.
-
----
-
-## New files
-
-### `src/lib/paddle-pricing.ts`
-- `PRICING_PRODUCTS` array: 3 products (one-time, 5-pack, 20-pack) each with `{ id, paddlePriceId: string | null, basePrice: number, currency: 'GBP' }` and feature lists
-- `usePaddlePricing(currencyOverride?: 'GBP' | 'USD' | 'EUR')` hook:
-  - If Paddle.js is loaded and Price IDs are set: call `Paddle.PricePreview({ items })` with auto-detected locale as default, or with explicit `currencyCode` if user manually overrides
-  - Returns `{ prices, loading, currency, isLocalized }` — where `isLocalized` indicates whether Paddle data was used or GBP fallback
-  - If Paddle is unavailable: return base GBP prices formatted via `Intl.NumberFormat`
-  - No fake FX conversion anywhere
-- Typed interfaces for all structures
-
-### `src/pages/Pricing.tsx`
-Seven sections as specified in the original brief:
-
-1. **Hero** — headline, subheadline, CTAs ("Get started" → signup with intent, "See pricing options" → anchor scroll)
-2. **Value grid** — 5 outcome-focused cards (transcript, summary, questions, downloads, saved history)
-3. **Pricing cards** — 3 cards consuming `usePaddlePricing`, currency toggle (GBP/USD/EUR), "Most popular" badge on 5-pack, subtle Paddle disclaimer
-4. **Account/trust section** — why account is required, fast creation, persistent access
-5. **How it works** — 3 steps
-6. **FAQ** — 6 items in accordion
-7. **Final CTA**
-
-CTA behavior:
-- Authenticated users → placeholder checkout action (ready for Paddle wiring)
-- Unauthenticated users → `/signup?intent=purchase&product=one-time|5-pack|20-pack`
+Redemption (client-side, after login/signup)
+  └─ Settings/Profile/Convert page checks pending_invites by email
+      → calls redeem-invite edge function → atomically marks claimed + adds credits
+```
 
 ---
 
-## Modified files
+## Database changes
 
-### `src/App.tsx`
-- Add `<Route path="/pricing" element={<Pricing />} />`
+### 1. `pending_invites` table (migration)
 
-### `src/components/Navbar.tsx`
-- Change `/#pricing` links to `/pricing` (desktop + mobile, 2 locations)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | default gen_random_uuid() |
+| email | text NOT NULL | invited user's email |
+| credits | integer NOT NULL | number of credits to grant |
+| package_id | text NOT NULL | 'one-time', '5-pack', '20-pack' |
+| invited_by | uuid NOT NULL | admin user_id |
+| claimed | boolean NOT NULL DEFAULT false | |
+| claimed_at | timestamptz | null until claimed |
+| created_at | timestamptz DEFAULT now() | |
 
-### `src/pages/Index.tsx`
-- Change `#pricing` anchor CTA to `/pricing` link
-- Change footer `#pricing` link to `/pricing`
+RLS:
+- Service role: full access
+- Admin SELECT: `has_role(auth.uid(), 'admin')`
+- Authenticated SELECT on own email: `auth.jwt()->>'email' = email` (for redemption check)
 
-### `src/pages/Login.tsx` and `src/pages/Signup.tsx`
-- Read `intent` and `product` from URL search params
-- When `intent=purchase`: show contextual heading ("Create your account to complete your purchase"), and after successful auth redirect to `/credits` (or `/pricing`) with product context instead of `/`
+### 2. Assign admin role to Fabio
 
-### `src/lib/pricing.ts`
-- Remove only `guestPriceForDuration` function (lines 10-16). Nothing else changes.
-
-### Translation files (`en.json`, `it.json`, `fr.json`)
-- Add `pricing.*` namespace keys for all page content
+A one-time data INSERT into `user_roles` using the insert tool (not a migration). Fabio's user ID will be needed — can be looked up by email from profiles table.
 
 ---
+
+## Edge functions
+
+### `invite-user/index.ts` (new)
+
+- Accepts: `{ email, packageId, method: 'email' | 'magic-link' }`
+- Validates JWT, checks `has_role(caller, 'admin')` via service-role client
+- Maps packageId to credits: one-time=1, 5-pack=5, 20-pack=20
+- Inserts into `pending_invites`
+- Checks if user already exists (lookup by email in auth.admin)
+  - If exists: immediately call `add_credits` RPC and mark invite as claimed
+  - If not exists and method='email': `auth.admin.inviteUserByEmail(email)`
+  - If not exists and method='magic-link': `auth.admin.generateLink({ type: 'magiclink', email })` and return URL
+- Returns success + optional magic link URL
+
+### `redeem-invite/index.ts` (new)
+
+- Called by client after user authenticates
+- Validates JWT (gets user email from token)
+- Finds unclaimed `pending_invites` rows for that email
+- Atomically: calls `add_credits` for each, sets `claimed=true, claimed_at=now()`
+- Uses a SELECT ... FOR UPDATE or single UPDATE ... RETURNING to prevent double-claim
+- Returns total credits granted
+
+---
+
+## Client changes
+
+### `src/pages/Settings.tsx`
+
+- Add admin role check: `supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })`
+- If admin: render "Invite Users" card with:
+  - Email input
+  - Package selector (dropdown with 3 options from PRICING_PRODUCTS labels)
+  - "Send invite email" button
+  - "Generate magic link" button → shows copyable URL on success
+  - Recent invites list (query `pending_invites` table)
+  - Success/error feedback
+
+### Invite redemption hook
+
+- A small `useRedeemInvites` hook that runs once after login
+- Calls `redeem-invite` edge function
+- Shows a toast if credits were granted ("You received X credits!")
+- Placed in AuthContext or a layout-level component so it fires on any authenticated page load
+- Runs only once per session (guard with a ref or sessionStorage flag)
+
+### Translation files
+
+- Add `settings.admin.*` keys in en.json, fr.json, it.json for invite UI labels
+
+---
+
+## Security
+
+- Admin check is server-side in both edge functions (not just client-side)
+- `has_role` is SECURITY DEFINER — no RLS recursion
+- `pending_invites` locked to service_role + admin SELECT + authenticated user can only see own email rows
+- Credit grants go through existing `add_credits` RPC (atomic)
+- Redemption uses UPDATE with WHERE `claimed = false` to prevent double-claim
+- No modification to `handle_new_user()` trigger — zero risk to signup flow
+
+## Files changed
+
+| File | Change |
+|---|---|
+| `src/pages/Settings.tsx` | Add admin invite card |
+| `supabase/functions/invite-user/index.ts` | New edge function |
+| `supabase/functions/redeem-invite/index.ts` | New edge function |
+| `src/hooks/use-redeem-invites.ts` | New hook for post-login redemption |
+| `src/contexts/AuthContext.tsx` | Wire redemption hook |
+| `src/i18n/locales/en.json` | Admin invite translations |
+| `src/i18n/locales/fr.json` | Admin invite translations |
+| `src/i18n/locales/it.json` | Admin invite translations |
+| Migration | `pending_invites` table |
+| Insert | Admin role for Fabio |
 
 ## Not modified
 
-- `CREDIT_PACKS`, `creditsForDuration`, `formatDuration`, file validation — all untouched
-- `Credits.tsx` — untouched (it continues using old `CREDIT_PACKS` for logged-in users)
-- No database changes, no edge functions, no Paddle SDK installation
+- `handle_new_user()` — untouched
+- `pricing.ts`, `paddle-pricing.ts` — untouched
+- `Profile.tsx` — untouched (date fix is separate)
 - No other pages or components
-
----
-
-## Technical notes
-
-- Currency selector is a UI-only toggle that passes `currencyCode` to the Paddle hook — it does not imply a country
-- Initial render always shows base GBP (stable, no flicker), then enhances with Paddle localized data if available
-- Skeleton loading states on price values only (not entire cards) during Paddle fetch
-- All Paddle logic isolated in `paddle-pricing.ts` — zero leakage into other components
 
