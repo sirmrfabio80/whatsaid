@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
@@ -362,6 +362,32 @@ export default function Pricing() {
         <p className="text-center text-xs text-muted-foreground mt-6 max-w-lg mx-auto">
           {t("pricing.disclaimer")}
         </p>
+        <p className="text-center text-xs text-muted-foreground mt-3 max-w-lg mx-auto">
+          {t("pricing.paddleNote")}
+        </p>
+        <p className="text-center text-xs text-muted-foreground mt-2 max-w-lg mx-auto">
+          {t("pricing.consentPrefix")}{" "}
+          <Link to="/terms" className="text-primary hover:underline">{t("footer.terms")}</Link>
+          {" "}{t("convert.and")}{" "}
+          <Link to="/refund-policy" className="text-primary hover:underline">{t("footer.refundPolicy")}</Link>.
+        </p>
+      </section>
+
+      {/* Support/trust note */}
+      <section className="container mx-auto px-4 pb-8">
+        <div className="max-w-lg mx-auto text-center space-y-1">
+          <p className="text-sm text-muted-foreground">
+            {t("pricing.supportLine")}{" "}
+            <a href="mailto:support@whatsaid.app" className="text-primary hover:underline">support@whatsaid.app</a>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            <Link to="/terms" className="hover:underline">{t("footer.terms")}</Link>
+            {" · "}
+            <Link to="/privacy" className="hover:underline">{t("footer.privacy")}</Link>
+            {" · "}
+            <Link to="/refund-policy" className="hover:underline">{t("footer.refundPolicy")}</Link>
+          </p>
+        </div>
       </section>
 
       {/* 4 — Account/trust */}
