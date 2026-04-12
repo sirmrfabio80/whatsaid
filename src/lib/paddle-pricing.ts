@@ -149,7 +149,7 @@ function hasPriceIds(): boolean {
 // ---------------------------------------------------------------------------
 
 export function usePaddlePricing(currencyOverride?: Currency): PricingState {
-  const [prices, setPrices] = useState<LocalizedPrice[]>(basePrices);
+  const [prices, setPrices] = useState<LocalizedPrice[]>(() => basePrices(currencyOverride));
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState<Currency>(currencyOverride ?? "GBP");
   const [isLocalized, setIsLocalized] = useState(false);
@@ -157,9 +157,9 @@ export function usePaddlePricing(currencyOverride?: Currency): PricingState {
   const fetchPaddlePrices = useCallback(async (cur?: Currency) => {
     const paddle = getPaddle();
     if (!paddle || !hasPriceIds()) {
-      // Paddle not available — stay on GBP base prices
-      setPrices(basePrices());
-      setCurrency("GBP");
+      // Paddle not available — use base prices in selected currency format
+      setPrices(basePrices(cur));
+      setCurrency(cur ?? "GBP");
       setIsLocalized(false);
       return;
     }
@@ -207,8 +207,8 @@ export function usePaddlePricing(currencyOverride?: Currency): PricingState {
       }
     } catch (err) {
       console.warn("[paddle-pricing] PricePreview failed, using GBP fallback", err);
-      setPrices(basePrices());
-      setCurrency("GBP");
+      setPrices(basePrices(cur));
+      setCurrency(cur ?? "GBP");
       setIsLocalized(false);
     } finally {
       setLoading(false);
