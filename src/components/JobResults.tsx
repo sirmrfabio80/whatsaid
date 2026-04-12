@@ -24,6 +24,7 @@ export interface JobMeta {
   file_name: string; created_at: string; recorded_at: string | null; recorded_at_source: string | null;
   speech_model: string | null; speaker_names: Record<string, string>; title: string | null;
   metadata_location_iso6709: string | null;
+  location_label: string | null;
 }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
@@ -51,7 +52,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
       supabase.from("job_outputs").select("id, output_type, content, custom_prompt").eq("job_id", jobId).order("created_at", { ascending: true }),
-      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709").eq("id", jobId).maybeSingle(),
+      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label").eq("id", jobId).maybeSingle(),
     ]);
     setOutputs((outputsData as JobOutput[]) ?? []);
     const m = jobData ? { ...jobData, speaker_names: (jobData.speaker_names as Record<string, string>) ?? {} } : null;
