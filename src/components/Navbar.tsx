@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Mic, LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Navbar() {
   const { user, creditBalance, signOut } = useAuth();
@@ -54,8 +53,6 @@ export default function Navbar() {
           </a>
 
           <div className="w-px h-6 bg-border mx-2" />
-
-          <LanguageSwitcher />
 
           {user ? (
             <div className="flex items-center gap-2">
@@ -130,12 +127,6 @@ export default function Navbar() {
           <a href="/#pricing" onClick={() => setMobileOpen(false)}>
             <Button variant="ghost" className="w-full justify-start rounded-lg">{t("nav.pricing")}</Button>
           </a>
-
-          <div className="h-px bg-border my-2" />
-
-          <div className="px-2 py-1">
-            <LanguageSwitcher />
-          </div>
 
           <div className="h-px bg-border my-2" />
 

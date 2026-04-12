@@ -1,18 +1,21 @@
 /**
  * Extract the recording creation date from an audio file's binary metadata.
  *
+ * Returns the raw ISO string (never parsed through `new Date()`) and the source.
+ *
  * Priority:
  * 1. com.apple.quicktime.creationdate from keys/ilst metadata (ISO 8601 with timezone)
  * 2. mvhd creation_time (Mac epoch, UTC)
  * 3. null (caller falls back to file.lastModified)
  */
 
+export interface AudioCreationDateResult {
+  isoString: string;
+  source: "apple_metadata" | "mvhd_creation" | "file_last_modified";
+}
+
 const MAC_EPOCH_OFFSET = 2082844800;
 
-/**
- * Navigate MP4 box structure to find a box by path.
- * `skipBytes` allows skipping version/flags headers (e.g. 4 bytes for `meta` atom).
- */
 function findBox(
   view: DataView,
   start: number,
@@ -71,7 +74,6 @@ function findBox(
   return null;
 }
 
-/** Read a UTF-8 string from a DataView range. */
 function readString(view: DataView, offset: number, length: number): string {
   const bytes: number[] = [];
   for (let i = 0; i < length; i++) {
@@ -84,7 +86,6 @@ async function readBlobAsArrayBuffer(file: Blob): Promise<ArrayBuffer> {
   if (typeof file.arrayBuffer === "function") {
     return file.arrayBuffer();
   }
-
   return new Promise<ArrayBuffer>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as ArrayBuffer);
@@ -94,25 +95,28 @@ async function readBlobAsArrayBuffer(file: Blob): Promise<ArrayBuffer> {
 }
 
 /**
- * Extract com.apple.quicktime.creationdate from moov > udta > meta > keys/ilst.
+ * Validate that a string looks like a plausible ISO 8601 date.
  */
-function extractAppleCreationDate(buffer: ArrayBuffer): Date | null {
+function isPlausibleIso(s: string): boolean {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return false;
+  const y = d.getUTCFullYear();
+  return y >= 2000 && y <= 2100;
+}
+
+function extractAppleCreationDate(buffer: ArrayBuffer): string | null {
   const view = new DataView(buffer);
   const byteLength = buffer.byteLength;
 
-  // Find moov > udta > meta (meta has a 4-byte version/flags header)
   const metaBox = findBox(view, 0, byteLength, ["moov", "udta", "meta"], [0, 0, 4]);
   if (!metaBox) return null;
 
-  // The meta content starts after the 4-byte version header
   const metaStart = metaBox.offset;
   const metaEnd = metaBox.offset + metaBox.size;
 
-  // Find keys atom within meta
   const keysBox = findBox(view, metaStart, metaEnd, ["keys"]);
   if (!keysBox) return null;
 
-  // Parse keys: 4 bytes version/flags, 4 bytes entry count, then entries
   const keysDataStart = keysBox.offset;
   const keyCount = view.getUint32(keysDataStart + 4);
 
@@ -122,12 +126,11 @@ function extractAppleCreationDate(buffer: ArrayBuffer): Date | null {
   for (let i = 0; i < keyCount; i++) {
     if (keyPos + 8 > keysBox.offset + keysBox.size) break;
     const keySize = view.getUint32(keyPos);
-    // key namespace is 4 bytes at keyPos+4, key value starts at keyPos+8
     const keyValueLength = keySize - 8;
     if (keyValueLength > 0 && keyPos + 8 + keyValueLength <= keysBox.offset + keysBox.size) {
       const keyName = readString(view, keyPos + 8, keyValueLength);
       if (keyName === "com.apple.quicktime.creationdate") {
-        targetKeyIndex = i + 1; // 1-based index
+        targetKeyIndex = i + 1;
         break;
       }
     }
@@ -136,12 +139,9 @@ function extractAppleCreationDate(buffer: ArrayBuffer): Date | null {
 
   if (targetKeyIndex < 0) return null;
 
-  // Find ilst atom within meta
   const ilstBox = findBox(view, metaStart, metaEnd, ["ilst"]);
   if (!ilstBox) return null;
 
-  // ilst contains child boxes keyed by index (big-endian uint32).
-  // Each child box type is the 1-based index as a 4-byte big-endian number.
   let ilstPos = ilstBox.offset;
   const ilstEnd = ilstBox.offset + ilstBox.size;
 
@@ -152,11 +152,9 @@ function extractAppleCreationDate(buffer: ArrayBuffer): Date | null {
     const itemIndex = view.getUint32(ilstPos + 4);
 
     if (itemIndex === targetKeyIndex) {
-      // Inside this item, find the "data" sub-box
       const dataBox = findBox(view, ilstPos + 8, ilstPos + itemSize, ["data"]);
       if (!dataBox) break;
 
-      // data box: 4 bytes type indicator, 4 bytes locale, then the value
       const valueOffset = dataBox.offset + 8;
       const valueLength = dataBox.size - 8;
       if (valueLength <= 0) break;
@@ -164,13 +162,10 @@ function extractAppleCreationDate(buffer: ArrayBuffer): Date | null {
       const isoString = readString(view, valueOffset, valueLength).trim();
       console.log("[audio-creation-date] Raw Apple creationdate:", isoString);
 
-      const date = new Date(isoString);
-      if (isNaN(date.getTime())) return null;
+      if (!isPlausibleIso(isoString)) return null;
 
-      console.log("[audio-creation-date] Parsed Date:", date.toISOString(), "| Local:", date.toString());
-
-      if (date.getFullYear() < 2000 || date.getFullYear() > 2100) return null;
-      return date;
+      // Return the raw ISO string — do NOT parse through new Date()
+      return isoString;
     }
 
     ilstPos += itemSize;
@@ -179,10 +174,7 @@ function extractAppleCreationDate(buffer: ArrayBuffer): Date | null {
   return null;
 }
 
-/**
- * Extract creation date from MP4/M4A/MOV container via mvhd atom.
- */
-function extractMp4CreationDate(buffer: ArrayBuffer): Date | null {
+function extractMp4CreationDate(buffer: ArrayBuffer): string | null {
   const view = new DataView(buffer);
   const result = findBox(view, 0, buffer.byteLength, ["moov", "mvhd"]);
   if (!result) return null;
@@ -204,20 +196,22 @@ function extractMp4CreationDate(buffer: ArrayBuffer): Date | null {
 
   if (creationTimeSecs === 0) return null;
 
-  const unixSeconds = creationTimeSecs - MAC_EPOCH_OFFSET;
-  const date = new Date(unixSeconds * 1000);
+  const unixMs = (creationTimeSecs - MAC_EPOCH_OFFSET) * 1000;
+  const d = new Date(unixMs);
 
-  if (date.getFullYear() < 2000 || date.getFullYear() > 2100) return null;
+  if (d.getFullYear() < 2000 || d.getFullYear() > 2100) return null;
 
-  console.log("[audio-creation-date] mvhd creation date:", date.toISOString());
-  return date;
+  // Construct explicit UTC ISO string
+  const iso = d.toISOString();
+  console.log("[audio-creation-date] mvhd creation date:", iso);
+  return iso;
 }
 
 /**
  * Extract the creation/recording date from an audio file.
- * Reads the full file so embedded metadata is available even when atoms live past the first chunk.
+ * Returns the raw ISO string and source identifier — never a Date object.
  */
-export async function extractAudioCreationDate(file: File): Promise<Date | null> {
+export async function extractAudioCreationDate(file: File): Promise<AudioCreationDateResult | null> {
   try {
     const ext = file.name.toLowerCase().split(".").pop() ?? "";
     const mp4Types = ["m4a", "mp4", "mov", "aac"];
@@ -226,17 +220,17 @@ export async function extractAudioCreationDate(file: File): Promise<Date | null>
       const buffer = await readBlobAsArrayBuffer(file);
 
       // Priority 1: Apple QuickTime metadata
-      const appleDate = extractAppleCreationDate(buffer);
-      if (appleDate) {
+      const appleIso = extractAppleCreationDate(buffer);
+      if (appleIso) {
         console.log("[audio-creation-date] Source: com.apple.quicktime.creationdate");
-        return appleDate;
+        return { isoString: appleIso, source: "apple_metadata" };
       }
 
       // Priority 2: mvhd atom
-      const mvhdDate = extractMp4CreationDate(buffer);
-      if (mvhdDate) {
+      const mvhdIso = extractMp4CreationDate(buffer);
+      if (mvhdIso) {
         console.log("[audio-creation-date] Source: mvhd");
-        return mvhdDate;
+        return { isoString: mvhdIso, source: "mvhd_creation" };
       }
     }
 
