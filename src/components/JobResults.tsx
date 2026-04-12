@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
+import ShareButton from "@/components/ShareButton";
 import { LANGUAGES } from "@/lib/languages";
 import { applySpeakerNames } from "@/lib/speaker-names";
 import { buildCanonicalPayload } from "@/lib/export-payload";
@@ -129,10 +130,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
                   <div className="flex items-center gap-2 min-w-0 flex-1">{speakers.length > 0 && <div className="hidden sm:block"><SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} /></div>}</div>
                   <div className="flex items-center gap-1.5">
-                    <ExportButton data={canonicalData} disabled={!transcript} />
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
                       {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
                     </Button>
+                    <ShareButton jobId={jobId} disabled={!transcript} />
+                    <ExportButton data={canonicalData} disabled={!transcript} />
                   </div>
                 </div>
               )}
@@ -165,12 +167,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   {regeneratingSummary && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <ExportButton data={canonicalData} disabled={!transcript} />
                   {summary && (
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}>
                       {copiedId === summary.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === summary.id ? t("common.copied") : t("common.copy")}
                     </Button>
                   )}
+                  <ShareButton jobId={jobId} disabled={!transcript} />
+                  <ExportButton data={canonicalData} disabled={!transcript} />
                 </div>
               </div>
               <div className="p-5 sm:p-6">
@@ -203,12 +206,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     : t("jobResults.noQuestions")}
                 </p>
                 <div className="flex items-center gap-1.5">
-                  <ExportButton data={canonicalData} disabled={!transcript} />
                   {questionEntries.length > 0 && (
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => { const included = questionEntries.filter((q) => !excludedQAIds.has(q.id)); const text = included.map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`).join("\n\n"); handleCopy(text, "qa-all"); }}>
                       {copiedId === "qa-all" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === "qa-all" ? t("common.copied") : t("common.copyAll")}
                     </Button>
                   )}
+                  <ShareButton jobId={jobId} disabled={!transcript} />
+                  <ExportButton data={canonicalData} disabled={!transcript} />
                 </div>
               </div>
 
