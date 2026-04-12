@@ -97,7 +97,7 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[340px] sm:w-[380px] p-0 rounded-xl shadow-lg border-border/60"
+        className="w-[calc(100vw-2rem)] sm:w-[380px] p-0 rounded-xl shadow-lg border-border/60"
       >
         {/* Header */}
         <div className="px-4 pt-4 pb-3 border-b border-border/40">
