@@ -3,10 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Upload, FileAudio, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isValidAudioFile, MAX_FILE_SIZE, ACCEPTED_EXTENSIONS, formatDuration } from "@/lib/pricing";
-import { extractAudioCreationDate } from "@/lib/audio-creation-date";
+import { extractAudioCreationDate, type AudioCreationDateResult } from "@/lib/audio-creation-date";
 
 interface AudioUploaderProps {
-  onFileSelected: (file: File, durationSeconds: number, creationDate: Date | null) => void;
+  onFileSelected: (file: File, durationSeconds: number, creationDate: AudioCreationDateResult | null) => void;
   disabled?: boolean;
 }
 

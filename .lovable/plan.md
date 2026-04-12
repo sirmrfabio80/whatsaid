@@ -1,65 +1,95 @@
 
 
-## Plan: Three urgent fixes
+## i18n Implementation Plan
 
-### 1. Remove language toggle from Navbar
+### Approach
+Use **react-i18next** + **i18next** — the standard React i18n library. It integrates cleanly with React + TypeScript, supports namespace-based translation files, and has excellent tooling.
 
-Remove `LanguageSwitcher` import and usage from `src/components/Navbar.tsx` — both the desktop section (line with `<LanguageSwitcher />` between the divider and auth buttons) and the mobile menu section. Language selection stays only in Settings.
+### New files to create
 
-**Also fix Settings page**: The current Settings "Preferences" section uses `LanguageSelector` (the audio/transcription language selector). Replace it with a proper UI language selector (EN/IT/FR radio or select) that calls `i18n.changeLanguage()` and persists to `profiles.ui_language`.
+**1. Translation files** (JSON, one per language):
+- `src/i18n/locales/en.json` — all English strings extracted from components
+- `src/i18n/locales/it.json` — complete Italian translations
+- `src/i18n/locales/fr.json` — complete French translations
 
-Files: `Navbar.tsx`, `Settings.tsx`
+**2. i18n configuration**:
+- `src/i18n/index.ts` — initializes i18next with browser language detection, fallback to `en`
 
-### 2. Fix job page layout — move Export into tab action rows
+**3. Language switcher component**:
+- `src/components/LanguageSwitcher.tsx` — small dropdown in the Navbar for switching UI language (distinct from the audio language selector)
 
-**Remove** the standalone export row (line 113: `<div className="flex justify-end"><ExportButton ... /></div>`) from `JobResults.tsx`.
+### Dependencies to install
+- `i18next`
+- `react-i18next`
+- `i18next-browser-languagedetector`
 
-**Add ExportButton** into each tab's action bar:
-- **Transcript tab**: Add `ExportButton` next to the Copy button in the existing `border-b` header row (line 126-131)
-- **Summary tab**: Add `ExportButton` next to the Copy button in the existing header row (line 144-158)
-- **Questions tab**: Add `ExportButton` next to the "Copy All" button in the existing Q&A count row (line 184-189). When no questions exist yet, show a minimal action row with just the ExportButton.
+### Translation key structure
+Organized by page/component namespace for maintainability:
 
-This uses a consistent pattern: each tab has a top action bar with Export + Copy aligned right, same spacing and button sizes.
+```json
+{
+  "common": { "signIn": "Sign in", "signOut": "Sign out", ... },
+  "nav": { "convert": "Convert", "pricing": "Pricing", "profile": "Profile", ... },
+  "home": { "heroTagline": "AI transcription + speaker labels", ... },
+  "convert": { "title": "Convert your audio", ... },
+  "login": { ... },
+  "settings": { ... },
+  "profile": { ... },
+  "history": { ... },
+  "credits": { ... },
+  "jobDetail": { ... },
+  "jobResults": { ... },
+  "audioUploader": { ... },
+  "export": { ... },
+  "privacy": { ... },
+  "terms": { ... },
+  "notFound": { ... },
+  "resetPassword": { ... }
+}
+```
 
-Files: `JobResults.tsx`
+### Files to modify
 
-### 3. Fix the recording date bug — deterministic source, no UTC shifting
+Every component/page with hardcoded strings will be updated to use `useTranslation()` hook and `t()` calls:
 
-**Root cause analysis from DB**: The stored `recorded_at` is `2026-04-12T10:34:24+00:00` with source `file_creation_date`. The actual Apple metadata should be `2026-03-13T10:49:00+01:00`. This means either:
-- The Apple metadata extraction returned null for the real file (parser couldn't find the atom), so it fell back to `file.lastModified`
-- Or the extraction returned a Date but it was the wrong value
+| File | Scope |
+|------|-------|
+| `src/App.tsx` | Wrap with I18nextProvider |
+| `src/main.tsx` | Import i18n init |
+| `src/components/Navbar.tsx` | Nav labels, menu items |
+| `src/components/AudioUploader.tsx` | Upload prompts, errors |
+| `src/components/ExportButton.tsx` | Format labels, toasts |
+| `src/components/JobResults.tsx` | Tab labels, prompts, disclaimers |
+| `src/components/SpeakerChips.tsx` | "Speakers:", "Reset names", suggestions label |
+| `src/components/LanguageSelector.tsx` | "Language" label |
+| `src/pages/Index.tsx` | All hero, features, footer text |
+| `src/pages/Convert.tsx` | Step labels, prompts, consent text |
+| `src/pages/Login.tsx` | Form labels, buttons, descriptions |
+| `src/pages/ResetPassword.tsx` | All form text |
+| `src/pages/Profile.tsx` | Stats labels, actions |
+| `src/pages/Settings.tsx` | Section headings, form labels, dialogs |
+| `src/pages/History.tsx` | Page title, empty state, delete dialog |
+| `src/pages/Credits.tsx` | Page title, pack features, pricing text |
+| `src/pages/JobDetail.tsx` | Back/new buttons, generating title text |
+| `src/pages/Privacy.tsx` | All legal text (full IT/FR translations) |
+| `src/pages/Terms.tsx` | All legal text (full IT/FR translations) |
+| `src/pages/NotFound.tsx` | 404 text |
 
-**Fix approach — store the raw ISO string, not a Date object:**
+### Language switcher placement
+A compact globe dropdown added to the Navbar (both desktop and mobile), showing EN / IT / FR flags or labels. Changes the UI language immediately via `i18n.changeLanguage()`. The selected language is persisted in localStorage by the browser language detector plugin.
 
-a) **`audio-creation-date.ts`**: Change `extractAudioCreationDate` to return `{ isoString: string; source: string } | null` instead of `Date | null`. When the Apple creationdate is found, return the raw ISO string directly — do NOT parse through `new Date()`. For mvhd, construct the ISO string explicitly from the UTC seconds. This prevents any timezone shifting.
+### Important distinctions
+- **UI language** (this feature) — controls all interface text
+- **Audio language** (existing `LanguageSelector`) — controls transcription language detection; unchanged
+- **Summary language** (existing selector in JobResults) — controls AI summary output language; unchanged
 
-b) **`Convert.tsx`**: Use the raw ISO string directly when inserting `recorded_at`. No `toISOString()` conversion. Fallback to `new Date(file.lastModified).toISOString()` only as last resort.
+### What stays untouched
+- No UI structure or styling changes
+- No business logic changes
+- No backend/database changes
+- Export content (transcript, summary, Q&A) remains in its original language — only UI chrome is translated
+- The `LANGUAGES` list in `src/lib/languages.ts` stays as-is (these are transcription languages, not UI languages)
 
-c) **`JobDetail.tsx`**: When displaying, parse the stored `recorded_at` string. For display, use a helper that extracts the local date/time components from the original ISO string (preserving the offset), rather than relying on browser-local `toLocaleDateString()`. When the user manually edits the date/time, construct the ISO string with the original offset or the local browser offset.
-
-d) **`export-payload.ts`**: Same fix — format date from the stored ISO string deterministically, not via browser locale.
-
-e) **New helper `src/lib/recorded-date.ts`**: 
-- `parseRecordedAt(iso: string)` — extracts year, month, day, hour, minute from the ISO string as originally recorded (respecting offset)
-- `formatRecordedDate(iso: string)` / `formatRecordedTime(iso: string)` — for display
-- Used by JobDetail and export-payload
-
-**Existing job data**: The stored value `2026-04-12T10:34:24+00` is wrong (it's the file's lastModified, not the recording date). Since recovery is not deterministic (the original metadata is not stored), I will NOT auto-backfill. The user can manually correct it via the date picker.
-
-**No schema migration needed** — the existing `recorded_at` (timestamptz) and `recorded_at_source` (text) columns are sufficient. The fix is about storing the correct value at upload time and displaying it correctly.
-
-### Files changed
-
-| File | Change |
-|------|--------|
-| `src/components/Navbar.tsx` | Remove LanguageSwitcher import and usage |
-| `src/pages/Settings.tsx` | Replace audio LanguageSelector with UI language picker |
-| `src/components/JobResults.tsx` | Remove standalone export row; add ExportButton to each tab's action bar |
-| `src/lib/audio-creation-date.ts` | Return raw ISO string instead of Date; no `new Date()` parsing |
-| `src/components/AudioUploader.tsx` | Update callback signature for new return type |
-| `src/pages/Convert.tsx` | Use raw ISO string for recorded_at; update types |
-| `src/pages/JobDetail.tsx` | Use deterministic date formatting from ISO string |
-| `src/lib/export-payload.ts` | Use deterministic date formatting |
-| `src/lib/recorded-date.ts` | New helper for parsing/formatting ISO date strings with offset preservation |
-| `src/test/audio-creation-date.test.ts` | Update for new return type |
+### Estimated string count
+~300-350 unique strings across all pages and components, including the full Privacy Policy and Terms of Service (which will have complete Italian and French translations).
 

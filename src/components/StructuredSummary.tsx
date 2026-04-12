@@ -1,5 +1,4 @@
 import { FileText, ListChecks, ArrowRight, BookOpen } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 
 interface StructuredSummaryProps {
@@ -8,7 +7,6 @@ interface StructuredSummaryProps {
 
 interface SummarySection {
   heading: string;
-  headingKey: string | null;
   body: string;
   icon: ReactNode;
 }
@@ -16,44 +14,18 @@ interface SummarySection {
 const SECTION_ICONS: Record<string, ReactNode> = {
   "overview": <FileText className="w-4 h-4 text-primary" />,
   "panoramica": <FileText className="w-4 h-4 text-primary" />,
-  "vue d'ensemble": <FileText className="w-4 h-4 text-primary" />,
   "key points": <ListChecks className="w-4 h-4 text-primary" />,
   "punti chiave": <ListChecks className="w-4 h-4 text-primary" />,
-  "points clés": <ListChecks className="w-4 h-4 text-primary" />,
   "decisions & next steps": <ArrowRight className="w-4 h-4 text-primary" />,
   "decisions and next steps": <ArrowRight className="w-4 h-4 text-primary" />,
   "decisioni e prossimi passi": <ArrowRight className="w-4 h-4 text-primary" />,
-  "décisions et prochaines étapes": <ArrowRight className="w-4 h-4 text-primary" />,
   "terms to know": <BookOpen className="w-4 h-4 text-primary" />,
   "termini da conoscere": <BookOpen className="w-4 h-4 text-primary" />,
-  "termes à connaître": <BookOpen className="w-4 h-4 text-primary" />,
-};
-
-// Map AI-generated heading variants to i18n keys
-const HEADING_TO_KEY: Record<string, string> = {
-  "overview": "summary.overview",
-  "panoramica": "summary.overview",
-  "vue d'ensemble": "summary.overview",
-  "key points": "summary.keyPoints",
-  "punti chiave": "summary.keyPoints",
-  "points clés": "summary.keyPoints",
-  "decisions & next steps": "summary.decisionsNextSteps",
-  "decisions and next steps": "summary.decisionsNextSteps",
-  "decisioni e prossimi passi": "summary.decisionsNextSteps",
-  "décisions et prochaines étapes": "summary.decisionsNextSteps",
-  "terms to know": "summary.termsToKnow",
-  "termini da conoscere": "summary.termsToKnow",
-  "termes à connaître": "summary.termsToKnow",
 };
 
 function getIcon(heading: string): ReactNode {
   const key = heading.toLowerCase().replace(/^#+\s*/, "").trim();
   return SECTION_ICONS[key] ?? <FileText className="w-4 h-4 text-primary" />;
-}
-
-function getHeadingKey(heading: string): string | null {
-  const key = heading.toLowerCase().replace(/^#+\s*/, "").trim();
-  return HEADING_TO_KEY[key] ?? null;
 }
 
 function parseSections(content: string): SummarySection[] {
@@ -68,7 +40,6 @@ function parseSections(content: string): SummarySection[] {
       if (currentHeading || currentLines.length > 0) {
         sections.push({
           heading: currentHeading,
-          headingKey: getHeadingKey(currentHeading),
           body: currentLines.join("\n").trim(),
           icon: getIcon(currentHeading),
         });
@@ -83,7 +54,6 @@ function parseSections(content: string): SummarySection[] {
   if (currentHeading || currentLines.length > 0) {
     sections.push({
       heading: currentHeading,
-      headingKey: getHeadingKey(currentHeading),
       body: currentLines.join("\n").trim(),
       icon: getIcon(currentHeading),
     });
@@ -93,6 +63,7 @@ function parseSections(content: string): SummarySection[] {
 }
 
 function renderLine(line: string): ReactNode {
+  // Bold: **text**
   const parts: ReactNode[] = [];
   const regex = /\*\*(.+?)\*\*/g;
   let lastIndex = 0;
@@ -165,7 +136,6 @@ export function SectionBody({ body }: { body: string }) {
 }
 
 export default function StructuredSummary({ content }: StructuredSummaryProps) {
-  const { t } = useTranslation();
   const sections = parseSections(content);
 
   // Fallback for old-format summaries without ## headings
@@ -183,30 +153,27 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
 
   return (
     <div className="space-y-5" role="region" aria-label="Summary sections">
-      {sections.map((section, i) => {
-        const displayHeading = section.headingKey ? t(section.headingKey) : section.heading;
-        return (
-          <section key={i} aria-labelledby={section.heading ? `summary-section-${i}` : undefined}>
-            {section.heading && (
-              <div className="flex items-center gap-2 mb-2">
-                {section.icon}
-                <h3
-                  id={`summary-section-${i}`}
-                  className="text-sm font-semibold tracking-tight"
-                >
-                  {displayHeading}
-                </h3>
-              </div>
-            )}
-            <div className={section.heading ? "pl-6" : ""}>
-              <SectionBody body={section.body} />
+      {sections.map((section, i) => (
+        <section key={i} aria-labelledby={section.heading ? `summary-section-${i}` : undefined}>
+          {section.heading && (
+            <div className="flex items-center gap-2 mb-2">
+              {section.icon}
+              <h3
+                id={`summary-section-${i}`}
+                className="text-sm font-semibold tracking-tight"
+              >
+                {section.heading}
+              </h3>
             </div>
-            {i < sections.length - 1 && (
-              <div className="border-b border-border/30 mt-5" />
-            )}
-          </section>
-        );
-      })}
+          )}
+          <div className={section.heading ? "pl-6" : ""}>
+            <SectionBody body={section.body} />
+          </div>
+          {i < sections.length - 1 && (
+            <div className="border-b border-border/30 mt-5" />
+          )}
+        </section>
+      ))}
     </div>
   );
 }

@@ -1,10 +1,4 @@
 {
-  "summary": {
-    "overview": "Overview",
-    "keyPoints": "Key Points",
-    "decisionsNextSteps": "Decisions & Next Steps",
-    "termsToKnow": "Terms to Know"
-  },
   "common": {
     "signIn": "Sign in",
     "signOut": "Sign out",
@@ -172,9 +166,8 @@
     "invalidEmail": "Enter a valid email address.",
     "couldNotUpdate": "Could not update profile.",
     "preferences": "Preferences",
-    "uiLanguage": "Interface language",
-    "uiLanguageDesc": "Choose the language for the app interface.",
-    "defaultLanguage": "Default language",
+    "interfaceLanguage": "Interface language",
+    "interfaceLanguageDesc": "Choose the language for the app interface. This does not affect transcription or summary languages.",
     "security": "Security",
     "changePassword": "Change password",
     "changePasswordTitle": "Change password",

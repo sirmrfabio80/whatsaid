@@ -2,30 +2,21 @@ import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { applySpeakerNames } from "@/lib/speaker-names";
 import { resolveExportBaseName } from "@/lib/export-filename";
+import { formatRecordedDate } from "@/lib/recorded-date";
 import type { CanonicalExportData, QAEntry } from "@/lib/export-types";
 
 export interface CanonicalPayloadInput {
-  /** Job title set by user or generated */
   jobTitle: string | null;
-  /** Auto-generated title (fallback) */
   generatedTitle: string | null;
-  /** Original uploaded file name */
   originalFileName: string | null;
   /** ISO timestamp: recorded_at ?? created_at */
   createdAt: string | null;
-  /** Raw duration in seconds */
   durationSeconds: number | null;
-  /** Detected language code */
   languageCode: string | null;
-  /** Speaker name overrides */
   speakerNames: Record<string, string>;
-  /** Raw transcript text */
   transcript: string | null;
-  /** Raw summary text */
   summary: string | null;
-  /** All Q&A output entries */
   questionEntries: { id: string; prompt: string | null; content: string }[];
-  /** IDs of excluded Q&A items */
   excludedQAIds: Set<string>;
 }
 
@@ -36,17 +27,10 @@ export function buildCanonicalPayload(input: CanonicalPayloadInput): CanonicalEx
     originalFileName: input.originalFileName,
   });
 
+  // Use deterministic formatting from the raw ISO string
   const createdAt = input.createdAt
-    ? new Date(input.createdAt).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : new Date().toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+    ? formatRecordedDate(input.createdAt)
+    : formatRecordedDate(new Date().toISOString());
 
   const duration =
     input.durationSeconds != null ? formatDuration(input.durationSeconds) : null;

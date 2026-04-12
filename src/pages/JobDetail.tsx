@@ -13,6 +13,7 @@ import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { supabase } from "@/integrations/supabase/client";
+import { formatRecordedDate, formatRecordedTime, toLocalDate, replaceDate, replaceTime } from "@/lib/recorded-date";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -25,18 +26,19 @@ export default function JobDetail() {
   const [editValue, setEditValue] = useState("");
   const [generatingTitle, setGeneratingTitle] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [jobDate, setJobDate] = useState<Date | null>(null);
+  /** The raw ISO string for the recording date — preserved with original offset */
+  const [recordedIso, setRecordedIso] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
 
-  const getEffectiveRecordedAt = (m: JobMeta) => new Date(m.recorded_at ?? m.created_at);
+  const getEffectiveIso = (m: JobMeta) => m.recorded_at ?? m.created_at;
 
   const handleMetaLoaded = (m: JobMeta) => {
     setMeta(m);
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
-    setJobDate(getEffectiveRecordedAt(m));
+    setRecordedIso(getEffectiveIso(m));
     if (!m.title && id) generateTitle();
   };
 
@@ -64,27 +66,26 @@ export default function JobDetail() {
   };
 
   const handleDateChange = async (date: Date | undefined) => {
-    if (!date || !id) return;
-    const existing = jobDate ?? (meta ? getEffectiveRecordedAt(meta) : new Date());
-    date.setHours(existing.getHours(), existing.getMinutes(), existing.getSeconds(), existing.getMilliseconds());
-    setJobDate(date);
+    if (!date || !id || !recordedIso) return;
+    const newIso = replaceDate(recordedIso, date.getFullYear(), date.getMonth() + 1, date.getDate());
+    setRecordedIso(newIso);
     setDatePickerOpen(false);
-    await supabase.from("jobs").update({ recorded_at: date.toISOString(), recorded_at_source: "manual" } as any).eq("id", id);
+    await supabase.from("jobs").update({ recorded_at: newIso, recorded_at_source: "manual" } as any).eq("id", id);
   };
 
   const handleTimeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!id) return;
+    if (!id || !recordedIso) return;
     const [hours, minutes] = e.target.value.split(":").map(Number);
     if (isNaN(hours) || isNaN(minutes)) return;
-    const updated = new Date(jobDate ?? (meta ? getEffectiveRecordedAt(meta) : new Date()));
-    updated.setHours(hours, minutes, updated.getSeconds(), updated.getMilliseconds());
-    setJobDate(updated);
-    await supabase.from("jobs").update({ recorded_at: updated.toISOString(), recorded_at_source: "manual" } as any).eq("id", id);
+    const newIso = replaceTime(recordedIso, hours, minutes);
+    setRecordedIso(newIso);
+    await supabase.from("jobs").update({ recorded_at: newIso, recorded_at_source: "manual" } as any).eq("id", id);
   };
 
-  const timeValue = jobDate
-    ? `${String(jobDate.getHours()).padStart(2, "0")}:${String(jobDate.getMinutes()).padStart(2, "0")}`
-    : "";
+  const displayIso = recordedIso ?? (meta ? getEffectiveIso(meta) : null);
+  const displayDate = displayIso ? formatRecordedDate(displayIso) : "";
+  const displayTime = displayIso ? formatRecordedTime(displayIso) : "";
+  const calendarDate = displayIso ? toLocalDate(displayIso) : undefined;
 
   if (!id) return null;
 
@@ -152,17 +153,17 @@ export default function JobDetail() {
                   <PopoverTrigger asChild>
                     <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-0.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
                       <Calendar className="w-3 h-3" />
-                      {(jobDate ?? getEffectiveRecordedAt(meta)).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                      {displayDate}
                       <span className="text-muted-foreground">·</span>
                       <Clock className="w-3 h-3" />
-                      {timeValue || getEffectiveRecordedAt(meta).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                      {displayTime}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarWidget mode="single" selected={jobDate ?? getEffectiveRecordedAt(meta)} onSelect={handleDateChange} initialFocus className="p-3 pointer-events-auto" />
+                    <CalendarWidget mode="single" selected={calendarDate} onSelect={handleDateChange} initialFocus className="p-3 pointer-events-auto" />
                     <div className="border-t border-border px-3 py-2.5 flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <input type="time" value={timeValue} onChange={handleTimeChange} className="bg-transparent text-sm font-medium text-foreground outline-none w-full [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:hover:opacity-100" aria-label={t("jobDetail.recordingTime")} />
+                      <input type="time" value={displayTime} onChange={handleTimeChange} className="bg-transparent text-sm font-medium text-foreground outline-none w-full [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:hover:opacity-100" aria-label={t("jobDetail.recordingTime")} />
                     </div>
                     {meta.duration_seconds != null && (
                       <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">

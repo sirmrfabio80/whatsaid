@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import LanguageSelector from "@/components/LanguageSelector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -19,6 +18,12 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe } from "lucide-react";
 
+const UI_LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "it", label: "Italiano" },
+  { code: "fr", label: "Français" },
+] as const;
+
 export default function Settings() {
   const { user, loading, signOut } = useAuth();
   const { t, i18n } = useTranslation();
@@ -26,8 +31,7 @@ export default function Settings() {
   const queryClient = useQueryClient();
 
   const [displayName, setDisplayName] = useState("");
-  const [defaultLanguage, setDefaultLanguage] = useState("auto");
-  const [uiLanguage, setUiLanguage] = useState(i18n.language?.substring(0, 2) || "en");
+  const [uiLanguage, setUiLanguage] = useState(i18n.language?.slice(0, 2) || "en");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -56,13 +60,7 @@ export default function Settings() {
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || "");
-      // Set UI language from profile if persisted
-      const stored = (profile as any).ui_language;
-      if (stored) {
-        setUiLanguage(stored);
-      } else {
-        setUiLanguage(i18n.language?.substring(0, 2) || "en");
-      }
+      if (profile.ui_language) setUiLanguage(profile.ui_language);
     }
   }, [profile]);
 
@@ -75,6 +73,14 @@ export default function Settings() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["profile"] }); setProfileSaved(true); setProfileError(null); setTimeout(() => setProfileSaved(false), 3000); },
     onError: () => { setProfileError(t("settings.couldNotUpdate")); setProfileSaved(false); },
   });
+
+  const handleLanguageChange = async (val: string) => {
+    setUiLanguage(val);
+    i18n.changeLanguage(val);
+    if (user) {
+      await supabase.from("profiles").update({ ui_language: val }).eq("user_id", user.id);
+    }
+  };
 
   const changeEmail = async () => {
     setEmailError(null); setEmailSaved(false); setEmailLoading(true);
@@ -152,37 +158,21 @@ export default function Settings() {
             <CardContent className="p-5 sm:p-6 space-y-4">
               <h2 className="font-heading font-semibold text-lg">{t("settings.preferences")}</h2>
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-muted-foreground" />
-                  {t("settings.uiLanguage")}
-                </Label>
-                <p className="text-xs text-muted-foreground">{t("settings.uiLanguageDesc")}</p>
-                <Select
-                  value={uiLanguage}
-                  onValueChange={async (val) => {
-                    setUiLanguage(val);
-                    i18n.changeLanguage(val);
-                    if (user) {
-                      await supabase
-                        .from("profiles")
-                        .update({ ui_language: val } as any)
-                        .eq("user_id", user.id);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
+                <Label htmlFor="ui-language">{t("settings.interfaceLanguage")}</Label>
+                <p className="text-xs text-muted-foreground">{t("settings.interfaceLanguageDesc")}</p>
+                <Select value={uiLanguage} onValueChange={handleLanguageChange}>
+                  <SelectTrigger id="ui-language" className="rounded-lg h-11 w-full sm:w-[240px]">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-muted-foreground" />
+                      <SelectValue />
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en">🇬🇧 English</SelectItem>
-                    <SelectItem value="it">🇮🇹 Italiano</SelectItem>
-                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                    {UI_LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code}>{lang.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("settings.defaultLanguage")}</Label>
-                <LanguageSelector value={defaultLanguage} onChange={setDefaultLanguage} />
               </div>
             </CardContent>
           </Card>

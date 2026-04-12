@@ -1,10 +1,4 @@
 {
-  "summary": {
-    "overview": "Vue d'ensemble",
-    "keyPoints": "Points clés",
-    "decisionsNextSteps": "Décisions et prochaines étapes",
-    "termsToKnow": "Termes à connaître"
-  },
   "common": {
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
@@ -172,9 +166,8 @@
     "invalidEmail": "Entrez une adresse email valide.",
     "couldNotUpdate": "Impossible de mettre à jour le profil.",
     "preferences": "Préférences",
-    "uiLanguage": "Langue de l'interface",
-    "uiLanguageDesc": "Choisissez la langue de l'interface de l'application.",
-    "defaultLanguage": "Langue par défaut",
+    "interfaceLanguage": "Langue de l'interface",
+    "interfaceLanguageDesc": "Choisissez la langue de l'interface de l'application. Cela n'affecte pas la langue de transcription ou du résumé.",
     "security": "Sécurité",
     "changePassword": "Changer le mot de passe",
     "changePasswordTitle": "Changer le mot de passe",

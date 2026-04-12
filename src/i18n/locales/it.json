@@ -1,10 +1,4 @@
 {
-  "summary": {
-    "overview": "Panoramica",
-    "keyPoints": "Punti chiave",
-    "decisionsNextSteps": "Decisioni e prossimi passi",
-    "termsToKnow": "Termini da conoscere"
-  },
   "common": {
     "signIn": "Accedi",
     "signOut": "Esci",
@@ -172,9 +166,8 @@
     "invalidEmail": "Inserisci un indirizzo email valido.",
     "couldNotUpdate": "Impossibile aggiornare il profilo.",
     "preferences": "Preferenze",
-    "uiLanguage": "Lingua dell'interfaccia",
-    "uiLanguageDesc": "Scegli la lingua dell'interfaccia dell'app.",
-    "defaultLanguage": "Lingua predefinita",
+    "interfaceLanguage": "Lingua dell'interfaccia",
+    "interfaceLanguageDesc": "Scegli la lingua dell'interfaccia dell'app. Questo non influisce sulla lingua di trascrizione o del riassunto.",
     "security": "Sicurezza",
     "changePassword": "Cambia password",
     "changePasswordTitle": "Cambia password",
