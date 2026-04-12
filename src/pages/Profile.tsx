@@ -96,17 +96,17 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
             {stats.map(({ label, value, icon: Icon }) => (
-              <Card key={label} className="rounded-xl border-border bg-card shadow-sm hover:border-primary/20 hover:shadow-md transition-all">
-                <CardContent className="p-4 text-center">
+              <Card key={label} className="rounded-xl border-border bg-card shadow-sm hover:border-primary/20 hover:shadow-md transition-all overflow-hidden">
+                <CardContent className="p-3 sm:p-4 text-center">
                   <Icon className="w-4 h-4 text-muted-foreground mx-auto mb-2" />
                   {isStatsLoading ? (
                     <Skeleton className="h-6 w-12 mx-auto mb-1 rounded-lg" />
                   ) : (
-                    <p className="font-heading font-semibold text-lg">{value}</p>
+                    <p className="font-heading font-semibold text-base sm:text-lg truncate">{value}</p>
                   )}
-                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{label}</p>
                 </CardContent>
               </Card>
             ))}
