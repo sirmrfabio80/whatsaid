@@ -20,6 +20,8 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sendingRecord, setSendingRecord] = useState(false);
+  const [sentRecord, setSentRecord] = useState(false);
 
   const isValid = EMAIL_RE.test(email.trim());
 
@@ -48,10 +50,35 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
     }
   };
 
+  const handleShareRecord = async () => {
+    if (!isValid || sendingRecord) return;
+    setSendingRecord(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("share-transcript-record", {
+        body: { job_id: jobId, recipient_email: email.trim() },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || t("share.sendFailed"));
+        return;
+      }
+      setSentRecord(true);
+      toast.success(t("share.recordSentSuccess"));
+      setTimeout(() => {
+        setOpen(false);
+        setSentRecord(false);
+        setEmail("");
+      }, 1500);
+    } catch {
+      toast.error(t("share.sendFailed"));
+    } finally {
+      setSendingRecord(false);
+    }
+  };
+
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) {
-      setTimeout(() => { setEmail(""); setSent(false); }, 200);
+      setTimeout(() => { setEmail(""); setSent(false); setSentRecord(false); }, 200);
     }
   };
 
@@ -89,7 +116,7 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
             onChange={(e) => setEmail(e.target.value)}
             className="h-10 rounded-lg text-sm"
             onKeyDown={(e) => { if (e.key === "Enter") handleSendEmail(); }}
-            disabled={sending || sent}
+            disabled={sending || sent || sendingRecord || sentRecord}
             autoFocus
           />
         </div>
@@ -97,7 +124,7 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
         {/* Action: Send by email */}
         <button
           onClick={handleSendEmail}
-          disabled={!isValid || sending || sent}
+          disabled={!isValid || sending || sent || sendingRecord || sentRecord}
           className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:pointer-events-none min-h-[56px] cursor-pointer"
         >
           <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
@@ -119,24 +146,31 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
           </div>
         </button>
 
-        {/* Action: Share as record (coming soon) */}
+        {/* Action: Share as record */}
         <div className="border-t border-border/40">
-          <div className="w-full flex items-start gap-3 px-4 py-3 opacity-50 min-h-[56px]">
-            <div className="shrink-0 w-9 h-9 rounded-lg bg-muted flex items-center justify-center mt-0.5">
-              <Link2 className="w-4 h-4 text-muted-foreground" />
+          <button
+            onClick={handleShareRecord}
+            disabled={!isValid || sending || sent || sendingRecord || sentRecord}
+            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:pointer-events-none min-h-[56px] cursor-pointer"
+          >
+            <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
+              {sentRecord ? (
+                <Check className="w-4 h-4 text-primary" />
+              ) : sendingRecord ? (
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              ) : (
+                <Link2 className="w-4 h-4 text-primary" />
+              )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                {t("share.shareRecordLabel")}
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                  {t("share.comingSoon")}
-                </span>
+              <p className="text-sm font-medium text-foreground">
+                {sentRecord ? t("share.sent") : t("share.shareRecordLabel")}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                 {t("share.shareRecordDesc")}
               </p>
             </div>
-          </div>
+          </button>
         </div>
       </PopoverContent>
     </Popover>
