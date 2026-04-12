@@ -500,7 +500,7 @@ export default function Pricing() {
             className="h-12 px-8 text-base font-medium rounded-lg"
             onClick={handleGetStarted}
           >
-            {t("pricing.finalCta")}
+            {user ? t("pricing.finalCtaLoggedIn") : t("pricing.finalCta")}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

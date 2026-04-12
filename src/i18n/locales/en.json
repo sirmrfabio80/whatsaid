@@ -60,8 +60,8 @@
     "capSpeedDesc": "Upload and get your results in minutes — no waiting, no queues.",
     "capPromptsTitle": "Custom AI prompts",
     "capPromptsDesc": "Ask anything about your transcript — extract quotes, action items, decisions, or anything else.",
-    "pricingTitle": "Pricing coming soon",
-    "pricingDesc": "WhatSaid is currently in private beta. Pricing details will be available when we launch publicly.",
+    "pricingCtaTitle": "Simple, transparent pricing",
+    "pricingCtaDesc": "One-time purchases and credit packs — no subscriptions, no hidden fees.",
     "trustStrip": "Audio files are deleted immediately after processing. Transcripts and outputs are retained in your account.",
     "footerDesc": "Premium AI transcription with speaker labels, summaries, and custom analysis. Privacy-first — audio deleted after processing.",
     "footerProduct": "Product",
@@ -277,7 +277,7 @@
     "s2AccountData": "Account data: email address, display name (when you create an account)",
     "s2AudioFiles": "Audio files: uploaded temporarily for processing only",
     "s2Transcripts": "Transcripts and outputs: generated text, summaries, and custom AI analysis",
-    "s2PaymentMeta": "Payment metadata: Stripe session and transaction references (we never see or store card numbers)",
+    "s2PaymentMeta": "Payment metadata: session and transaction references from our payment provider (we never see or store card numbers)",
     "s2UsageData": "Usage data: job history, credit balances, and language preferences",
     "s3Title": "3. How we use your data",
     "s3Item1": "To process your audio and deliver transcripts, summaries, and custom outputs",
@@ -292,7 +292,7 @@
     "s6Title": "6. Third-party processors",
     "s6Intro": "We use the following third-party services to deliver WhatSaid:",
     "s6AssemblyAI": "AssemblyAI — speech-to-text transcription (audio is transmitted securely and processed in the US)",
-    "s6Stripe": "Stripe — payment processing",
+    "s6Stripe": "Paddle — payment processing (merchant of record)",
     "s6Cloud": "Cloud hosting provider — database, authentication, and file storage",
     "s6Transfer": "Your audio may be transferred internationally for processing. We rely on appropriate safeguards as required by applicable data protection laws.",
     "s7Title": "7. Your rights",
@@ -406,6 +406,7 @@
     "faqVariationA": "Prices are localised for supported currencies and regions. The final amount, formatting, and any applicable tax are confirmed by Paddle at checkout.",
     "finalTitle": "Choose the option that fits how you work",
     "finalBody": "Start with one file or get credits for repeat use — your results stay saved in your account.",
-    "finalCta": "Create account and continue"
+    "finalCta": "Create account and continue",
+    "finalCtaLoggedIn": "Continue"
   }
 }

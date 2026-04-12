@@ -60,8 +60,8 @@
     "capSpeedDesc": "Téléchargez et obtenez vos résultats en quelques minutes — sans attente, sans file d'attente.",
     "capPromptsTitle": "Prompts IA personnalisés",
     "capPromptsDesc": "Posez n'importe quelle question sur votre transcription — extrayez des citations, des actions, des décisions ou tout autre contenu.",
-    "pricingTitle": "Tarifs à venir",
-    "pricingDesc": "WhatSaid est actuellement en bêta privée. Les détails des tarifs seront disponibles lors du lancement public.",
+    "pricingCtaTitle": "Tarification simple et transparente",
+    "pricingCtaDesc": "Achats ponctuels et packs de crédits — pas d'abonnement, pas de frais cachés.",
     "trustStrip": "Les fichiers audio sont supprimés immédiatement après le traitement. Les transcriptions et résultats sont conservés dans votre compte.",
     "footerDesc": "Transcription IA premium avec identification des intervenants, résumés et analyse personnalisée. Confidentialité d'abord — audio supprimé après traitement.",
     "footerProduct": "Produit",
@@ -277,7 +277,7 @@
     "s2AccountData": "Données du compte : adresse email, nom d'affichage (lors de la création d'un compte)",
     "s2AudioFiles": "Fichiers audio : téléchargés temporairement uniquement pour le traitement",
     "s2Transcripts": "Transcriptions et résultats : texte généré, résumés et analyse IA personnalisée",
-    "s2PaymentMeta": "Métadonnées de paiement : références de session et de transaction Stripe (nous ne voyons ni ne stockons jamais les numéros de carte)",
+    "s2PaymentMeta": "Métadonnées de paiement : références de session et de transaction de notre prestataire de paiement (nous ne voyons ni ne stockons jamais les numéros de carte)",
     "s2UsageData": "Données d'utilisation : historique des travaux, soldes de crédits et préférences linguistiques",
     "s3Title": "3. Comment nous utilisons vos données",
     "s3Item1": "Pour traiter votre audio et fournir des transcriptions, résumés et résultats personnalisés",
@@ -292,7 +292,7 @@
     "s6Title": "6. Sous-traitants tiers",
     "s6Intro": "Nous utilisons les services tiers suivants pour fournir WhatSaid :",
     "s6AssemblyAI": "AssemblyAI — transcription vocale (l'audio est transmis de manière sécurisée et traité aux États-Unis)",
-    "s6Stripe": "Stripe — traitement des paiements",
+    "s6Stripe": "Paddle — traitement des paiements (marchand officiel)",
     "s6Cloud": "Fournisseur d'hébergement cloud — base de données, authentification et stockage de fichiers",
     "s6Transfer": "Votre audio peut être transféré à l'international pour le traitement. Nous nous appuyons sur des garanties appropriées conformément aux lois applicables sur la protection des données.",
     "s7Title": "7. Vos droits",
@@ -406,6 +406,7 @@
     "faqVariationA": "Les prix sont localisés pour les devises et régions prises en charge. Le montant final, le formatage et toute taxe applicable sont confirmés par Paddle au moment du paiement.",
     "finalTitle": "Choisissez l'option qui correspond à votre utilisation",
     "finalBody": "Commencez avec un fichier ou achetez des crédits pour une utilisation répétée — vos résultats restent sauvegardés dans votre compte.",
-    "finalCta": "Créer un compte et continuer"
+    "finalCta": "Créer un compte et continuer",
+    "finalCtaLoggedIn": "Continuer"
   }
 }
