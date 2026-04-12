@@ -7,7 +7,9 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   creditBalance: number;
+  avatarUrl: string | null;
   refreshCredits: () => Promise<void>;
+  refreshAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -16,7 +18,9 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   creditBalance: 0,
+  avatarUrl: null,
   refreshCredits: async () => {},
+  refreshAvatar: async () => {},
   signOut: async () => {},
 });
 
@@ -27,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [creditBalance, setCreditBalance] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const refreshCredits = async () => {
     if (!user) return;
@@ -38,11 +43,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data) setCreditBalance(data.balance);
   };
 
+  const refreshAvatar = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("user_id", user.id)
+      .single();
+    setAvatarUrl(data?.avatar_url ?? null);
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setCreditBalance(0);
+    setAvatarUrl(null);
   };
 
   useEffect(() => {
@@ -62,11 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (user) refreshCredits();
+    if (user) {
+      refreshCredits();
+      refreshAvatar();
+    }
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, creditBalance, refreshCredits, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, creditBalance, avatarUrl, refreshCredits, refreshAvatar, signOut }}>
       {children}
     </AuthContext.Provider>
   );
