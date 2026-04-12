@@ -159,9 +159,7 @@ export default function Index() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-                  <Mic className="w-4 h-4 text-primary-foreground" />
-                </div>
+                <img src={logoImg} alt="WhatSaid" className="w-7 h-7 rounded-lg" />
                 <span className="font-heading font-semibold text-sm">WhatSaid</span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
