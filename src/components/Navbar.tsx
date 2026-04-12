@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Navbar() {
   const { user, creditBalance, avatarUrl, signOut } = useAuth();
