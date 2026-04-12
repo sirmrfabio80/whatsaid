@@ -149,7 +149,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="relative z-50 md:hidden border-t border-border/50 glass-navbar px-4 py-3 origin-top animate-slide-down">
+        <div className="relative z-50 md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-4 py-3 origin-top animate-slide-down">
           <div className="space-y-1">
             <Link to="/convert" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "0ms", animationFillMode: "forwards" }}>
               <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.convert")}</Button>
