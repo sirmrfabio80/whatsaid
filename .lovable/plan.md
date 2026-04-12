@@ -1,87 +1,102 @@
 
 
-# Plan: Fix Invite Credit Redemption + Invited User Password Setup (Revised)
+# Plan: Paddle Compliance Pages, Footer, and Trust Links
 
 ## Summary
 
-Fix three bugs in the invite redemption flow and add a smooth password-setup onboarding for invited users, using a persistent `needs_password_setup` flag on the `profiles` table.
+Rewrite Privacy and Terms content to reference Paddle correctly, create a Refund Policy page, add a global Footer component visible on all pages, enhance Pricing with trust/consent notes, and keep all legal pages in English only (no mixed-language fallbacks).
 
----
+## What exists now
 
-## Bug fixes
+- `/pricing`, `/privacy`, `/terms` pages exist with good structure
+- Privacy references "Paddle — payment processing (merchant of record)" but inconsistently; Terms say "non-refundable" without linking a refund policy
+- No `/refund-policy` page
+- Footer only exists inline in `Index.tsx` — other pages have no footer
+- No support email shown anywhere
+- Signup already has a terms checkbox linking Terms and Privacy
+- No consent line near purchase CTAs on Pricing page
 
-### 1. `redeem-invite` edge function: replace broken `getClaims()` with `getUser()`
+## Changes
 
-`getClaims(token)` is not a standard Supabase JS v2 method — it silently fails, returning 401. Credits are never granted.
+### 1. New `src/components/Footer.tsx`
 
-**Fix**: Replace with `userClient.auth.getUser()` which reliably returns `user.id` and `user.email`.
+Extract and enhance the footer from `Index.tsx` into a shared component. Add columns:
+- **Product**: Convert, Pricing, Sign in
+- **Legal**: Terms, Privacy, Refund Policy
+- **Support**: support email (`support@whatsaid.app` placeholder), operator line
+- Bottom bar: copyright + "Audio deleted after processing"
 
-### 2. `useRedeemInvites` must refresh credit balance after redemption
+### 2. Add Footer globally in `App.tsx`
 
-Currently the hook never calls `refreshCredits()`. The balance loads as 0 on initial auth, then the async redemption completes but the UI never updates.
+Render `<Footer />` after `<Routes>` so it appears on every page. Remove inline footer from `Index.tsx`.
 
-**Fix**: Accept an `onCreditsRedeemed` callback. AuthContext passes `refreshCredits` to it.
+### 3. New `/refund-policy` route and page
 
-### 3. Edge function also sets `needs_password_setup = true` on profile
+`src/pages/RefundPolicy.tsx` — same layout pattern as Privacy/Terms. Sections:
+- Refund approach summary
+- How to request a refund (contact support email)
+- Refund window and criteria
+- When refunds may not apply (e.g. processing already started)
+- Duplicate/technical failure handling
+- Statutory consumer rights preserved
+- "Payments are processed securely by Paddle, our merchant of record."
 
-When credits are successfully redeemed (meaning this is an invited user's first login), the edge function sets `profiles.needs_password_setup = true` using the admin client. This provides the persistent signal for onboarding routing.
+### 4. Rewrite Privacy content (`en.json` keys)
 
----
+Update `privacy.*` keys to:
+- Replace "Stripe" with Paddle using the approved wording: "Payments are processed securely by Paddle, our merchant of record."
+- Add clearer data categories, legal basis section, retention details
+- Add support email for privacy requests
+- Add governing jurisdiction placeholder
 
-## Password setup onboarding
+### 5. Rewrite Terms content (`en.json` keys)
 
-### Persistent flag: `needs_password_setup` on `profiles`
+Expand from 11 to ~14 sections:
+- Add operator identity with `[OPERATOR_NAME]` placeholder
+- Add digital delivery / fulfilment section
+- Add refund section that links to `/refund-policy`
+- Add Paddle merchant of record statement
+- Add intellectual property section
+- Add service availability / changes
+- Add governing law (England and Wales)
+- Update contact section with support email
+- Use approved Paddle wording throughout
 
-**Migration**: Add column `needs_password_setup boolean NOT NULL DEFAULT false` to `profiles`.
+### 6. Enhance Pricing page
 
-This flag is:
-- Set to `true` by the `redeem-invite` edge function after successful credit redemption
-- Checked by the client on every auth state change (via profile query that AuthContext already does)
-- Cleared to `false` after the user successfully sets a password
+Add after the pricing cards disclaimer:
+- Trust/support line: "Need help? Contact support@whatsaid.app" with links to Terms and Refund Policy
+- Consent line near CTAs: "By purchasing, you agree to our Terms and Refund Policy." (linked, elegant, not intrusive)
+- Subtle note: "Payments are processed securely by Paddle, our merchant of record."
 
-This survives page refreshes, app reopens, and mobile browser restarts — no reliance on URL hash or session state.
+### 7. Language handling for legal pages
 
-### New page: `/set-password` (`SetPassword.tsx`)
-
-A clean, branded welcome page:
-- Heading: "Welcome to WhatSaid"
-- Subtext: "You're all set! Set a password so you can sign in anytime."
-- Two password fields + "Set password" button
-- "Skip for now" link — clearly communicates the user can continue using the app and set a password later from Settings
-- On success: clears `needs_password_setup` flag, redirects to home, shows success toast
-- On skip: redirects to home (flag remains true, Settings will show the prompt)
-
-### Routing logic in `AuthContext`
-
-After user loads and profile is fetched:
-- If `profile.needs_password_setup === true` and current path is not `/set-password`, redirect to `/set-password`
-- This works on fresh page loads, reopens, and across sessions — no URL hash dependency
-
-### "Set password" in Settings
-
-When `needs_password_setup` is true, show a prominent card in Settings: "Set your password" with the same form inline. On success, clear the flag. This ensures users who skipped the initial prompt always have a clear path.
-
-The existing "Change password" dialog in Settings remains for users who already have a password.
-
----
+Legal pages will use English-only content. The `en.json` keys will be comprehensive. For `fr.json` and `it.json`, add only the new structural keys (footer, nav labels) — legal content keys will fall back to English via i18next's `fallbackLng: "en"` which is already configured. No mixed-language pages.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `supabase/functions/redeem-invite/index.ts` | Fix `getClaims` → `getUser()`, set `needs_password_setup = true` on profile after redemption |
-| `src/hooks/use-redeem-invites.ts` | Add `onCreditsRedeemed` callback, call it after success |
-| `src/contexts/AuthContext.tsx` | Pass `refreshCredits` to hook, add redirect logic based on `needs_password_setup` from profile |
-| `src/pages/SetPassword.tsx` | New — welcome + set password page |
-| `src/pages/Settings.tsx` | Show "Set password" card when `needs_password_setup` is true |
-| `src/App.tsx` | Add `/set-password` route |
-| `src/i18n/locales/en.json` | New keys for set-password page |
-| `src/i18n/locales/fr.json` | New keys |
-| `src/i18n/locales/it.json` | New keys |
-| Migration | Add `needs_password_setup` column to `profiles` |
+| `src/components/Footer.tsx` | New — shared footer with compliance links |
+| `src/pages/Index.tsx` | Remove inline footer, use shared Footer |
+| `src/pages/RefundPolicy.tsx` | New — refund policy page |
+| `src/pages/Privacy.tsx` | Restructure sections for expanded content |
+| `src/pages/Terms.tsx` | Restructure sections for expanded content |
+| `src/pages/Pricing.tsx` | Add trust/support section and consent line |
+| `src/App.tsx` | Add `/refund-policy` route, render Footer globally |
+| `src/i18n/locales/en.json` | Rewrite privacy/terms keys, add refund/footer/support keys |
+| `src/i18n/locales/fr.json` | Add footer/nav keys only (legal content falls back to EN) |
+| `src/i18n/locales/it.json` | Add footer/nav keys only (legal content falls back to EN) |
 
 ## Not modified
 
-- `invite-user/index.ts`, `AdminInviteCard.tsx`, `handle_new_user()` — untouched
-- Pricing, export, transcript editing — untouched
+- Payment/checkout logic, edge functions, database, auth — untouched
+- Pricing card structure and Paddle integration code — untouched
+- Navbar — untouched
+
+## Placeholders to replace before Paddle submission
+
+- `[OPERATOR_NAME]` — your legal name or business name (appears in Terms and Footer)
+- `support@whatsaid.app` — confirm or replace with real support email
+- Governing law jurisdiction — defaults to England and Wales
 
