@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Mic, LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
+import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { useState } from "react";
 
 export default function Navbar() {
