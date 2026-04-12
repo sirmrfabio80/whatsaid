@@ -6,6 +6,40 @@ import { Button } from "@/components/ui/button";
 export default function Privacy() {
   const { t } = useTranslation();
 
+  const sections = [
+    { title: "privacy.s1Title", type: "p", content: "privacy.s1Body" },
+    {
+      title: "privacy.s2Title", type: "ul", items: [
+        "privacy.s2AccountData", "privacy.s2AudioFiles", "privacy.s2Transcripts",
+        "privacy.s2PaymentMeta", "privacy.s2UsageData", "privacy.s2TechnicalData",
+      ],
+    },
+    {
+      title: "privacy.s3Title", type: "ul", items: [
+        "privacy.s3Item1", "privacy.s3Item2", "privacy.s3Item3",
+      ],
+    },
+    {
+      title: "privacy.s4Title", type: "ul", items: [
+        "privacy.s4Item1", "privacy.s4Item2", "privacy.s4Item3", "privacy.s4Item4",
+      ],
+    },
+    { title: "privacy.s5Title", type: "multi", paragraphs: ["privacy.s5Body1", "privacy.s5Body2", "privacy.s5Body3"] },
+    {
+      title: "privacy.s6Title", type: "intro-ul",
+      intro: "privacy.s6Intro",
+      items: ["privacy.s6AssemblyAI", "privacy.s6Paddle", "privacy.s6Cloud"],
+      outro: "privacy.s6Transfer",
+    },
+    { title: "privacy.s7Title", type: "p", content: "privacy.s7Body" },
+    { title: "privacy.s8Title", type: "p", content: "privacy.s8Body" },
+    { title: "privacy.s9Title", type: "p", content: "privacy.s9Body" },
+    { title: "privacy.s10Title", type: "p", content: "privacy.s10Body" },
+    { title: "privacy.s11Title", type: "p", content: "privacy.s11Body" },
+    { title: "privacy.s12Title", type: "p", content: "privacy.s12Body" },
+    { title: "privacy.s13Title", type: "p", content: "privacy.s13Body" },
+  ];
+
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-12 sm:py-16">
@@ -18,68 +52,31 @@ export default function Privacy() {
           <p className="text-sm text-muted-foreground mb-8">{t("privacy.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s1Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s1Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s2Title")}</h2>
-              <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
-                <li><strong>{t("privacy.s2AccountData")}</strong></li>
-                <li><strong>{t("privacy.s2AudioFiles")}</strong></li>
-                <li><strong>{t("privacy.s2Transcripts")}</strong></li>
-                <li><strong>{t("privacy.s2PaymentMeta")}</strong></li>
-                <li><strong>{t("privacy.s2UsageData")}</strong></li>
-              </ul>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s3Title")}</h2>
-              <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
-                <li>{t("privacy.s3Item1")}</li>
-                <li>{t("privacy.s3Item2")}</li>
-                <li>{t("privacy.s3Item3")}</li>
-              </ul>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s4Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed"><strong>{t("privacy.s4Body")}</strong></p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s5Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s5Body1")}</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s5Body2")}</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s5Body3")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s6Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s6Intro")}</p>
-              <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
-                <li><strong>{t("privacy.s6AssemblyAI")}</strong></li>
-                <li><strong>{t("privacy.s6Stripe")}</strong></li>
-                <li><strong>{t("privacy.s6Cloud")}</strong></li>
-              </ul>
-              <p className="text-sm text-muted-foreground leading-relaxed mt-2">{t("privacy.s6Transfer")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s7Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s7Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s8Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s8Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s9Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s9Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s10Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s10Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("privacy.s11Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("privacy.s11Body")}</p>
-            </section>
+            {sections.map((s, i) => (
+              <section key={i}>
+                <h2 className="font-heading text-lg font-semibold mb-2">{t(s.title)}</h2>
+                {s.type === "p" && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{t(s.content!)}</p>
+                )}
+                {s.type === "ul" && (
+                  <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                    {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
+                  </ul>
+                )}
+                {s.type === "multi" && s.paragraphs!.map((p) => (
+                  <p key={p} className="text-sm text-muted-foreground leading-relaxed">{t(p)}</p>
+                ))}
+                {s.type === "intro-ul" && (
+                  <>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{t(s.intro!)}</p>
+                    <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                      {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
+                    </ul>
+                    {s.outro && <p className="text-sm text-muted-foreground leading-relaxed mt-2">{t(s.outro)}</p>}
+                  </>
+                )}
+              </section>
+            ))}
           </div>
         </div>
       </div>
