@@ -17,3 +17,14 @@ export interface ExportPayload {
   customOutput: string | null;
   questions?: QAEntry[];
 }
+
+/** Canonical export data — all values are display-rendered, not raw. */
+export interface CanonicalExportData {
+  title: string;
+  createdAt: string;
+  duration: string | null;
+  language: string | null;
+  summary: string | null;
+  questions: QAEntry[] | null;
+  transcript: string | null;
+}
