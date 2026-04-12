@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import LanguageSelector from "@/components/LanguageSelector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -16,16 +17,17 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, Check, AlertCircle, Mail } from "lucide-react";
+import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe } from "lucide-react";
 
 export default function Settings() {
   const { user, loading, signOut } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [displayName, setDisplayName] = useState("");
   const [defaultLanguage, setDefaultLanguage] = useState("auto");
+  const [uiLanguage, setUiLanguage] = useState(i18n.language?.substring(0, 2) || "en");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -51,7 +53,18 @@ export default function Settings() {
     enabled: !!user,
   });
 
-  useEffect(() => { if (profile) setDisplayName(profile.display_name || ""); }, [profile]);
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name || "");
+      // Set UI language from profile if persisted
+      const stored = (profile as any).ui_language;
+      if (stored) {
+        setUiLanguage(stored);
+      } else {
+        setUiLanguage(i18n.language?.substring(0, 2) || "en");
+      }
+    }
+  }, [profile]);
 
   const updateProfile = useMutation({
     mutationFn: async () => {
@@ -138,6 +151,35 @@ export default function Settings() {
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
               <h2 className="font-heading font-semibold text-lg">{t("settings.preferences")}</h2>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  {t("settings.uiLanguage")}
+                </Label>
+                <p className="text-xs text-muted-foreground">{t("settings.uiLanguageDesc")}</p>
+                <Select
+                  value={uiLanguage}
+                  onValueChange={async (val) => {
+                    setUiLanguage(val);
+                    i18n.changeLanguage(val);
+                    if (user) {
+                      await supabase
+                        .from("profiles")
+                        .update({ ui_language: val } as any)
+                        .eq("user_id", user.id);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">🇬🇧 English</SelectItem>
+                    <SelectItem value="it">🇮🇹 Italiano</SelectItem>
+                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>{t("settings.defaultLanguage")}</Label>
                 <LanguageSelector value={defaultLanguage} onChange={setDefaultLanguage} />

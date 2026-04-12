@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN ui_language text DEFAULT NULL;

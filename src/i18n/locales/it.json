@@ -172,6 +172,8 @@
     "invalidEmail": "Inserisci un indirizzo email valido.",
     "couldNotUpdate": "Impossibile aggiornare il profilo.",
     "preferences": "Preferenze",
+    "uiLanguage": "Lingua dell'interfaccia",
+    "uiLanguageDesc": "Scegli la lingua dell'interfaccia dell'app.",
     "defaultLanguage": "Lingua predefinita",
     "security": "Sicurezza",
     "changePassword": "Cambia password",
