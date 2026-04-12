@@ -40,7 +40,7 @@ export default function Profile() {
         .order("created_at", { ascending: false });
       const totalJobs = count ?? 0;
       const totalMinutes = Math.round((data ?? []).reduce((sum, j) => sum + (j.duration_seconds ?? 0), 0) / 60);
-      const lastJob = data?.[0]?.created_at ? new Date(data[0].created_at).toLocaleDateString() : "—";
+      const lastJob = data?.[0]?.created_at ? data[0].created_at : null;
       return { totalJobs, totalMinutes, lastJob };
     },
     enabled: !!user,
