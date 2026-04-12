@@ -9,10 +9,14 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+
+const LOGO_URL = 'https://gidjkdtmagxuzhlntlbt.supabase.co/storage/v1/object/public/email-assets/logo.png'
+const SITE_NAME = 'WhatSaid'
 
 interface InviteEmailProps {
   siteName: string
@@ -27,14 +31,15 @@ export const InviteEmail = ({
 }: InviteEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>You've been invited to join {siteName}</Preview>
+    <Preview>You've been invited to join {SITE_NAME}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={logo} />
         <Heading style={h1}>You've been invited</Heading>
         <Text style={text}>
           You've been invited to join{' '}
           <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
+            <strong>{SITE_NAME}</strong>
           </Link>
           . Click the button below to accept the invitation and create your
           account.
@@ -53,27 +58,30 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'Inter', Arial, sans-serif" }
+const container = { padding: '32px 28px' }
+const logo = { borderRadius: '12px', marginBottom: '24px' }
 const h1 = {
-  fontSize: '22px',
+  fontFamily: "'Space Grotesk', Arial, sans-serif",
+  fontSize: '24px',
   fontWeight: 'bold' as const,
-  color: '#000000',
+  color: 'hsl(220, 25%, 10%)',
   margin: '0 0 20px',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: 'hsl(220, 10%, 45%)',
+  lineHeight: '1.6',
+  margin: '0 0 24px',
 }
-const link = { color: 'inherit', textDecoration: 'underline' }
+const link = { color: 'hsl(245, 50%, 48%)', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: 'hsl(245, 50%, 48%)',
   color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontSize: '15px',
+  fontWeight: '600' as const,
+  borderRadius: '12px',
+  padding: '12px 24px',
   textDecoration: 'none',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = { fontSize: '13px', color: '#999999', margin: '32px 0 0' }
