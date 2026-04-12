@@ -1,4 +1,10 @@
 {
+  "summary": {
+    "overview": "Overview",
+    "keyPoints": "Key Points",
+    "decisionsNextSteps": "Decisions & Next Steps",
+    "termsToKnow": "Terms to Know"
+  },
   "common": {
     "signIn": "Sign in",
     "signOut": "Sign out",
