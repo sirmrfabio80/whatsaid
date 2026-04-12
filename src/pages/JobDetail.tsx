@@ -14,7 +14,7 @@ import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRecordedDate, formatRecordedTime, toLocalDate, replaceDate, replaceTime } from "@/lib/recorded-date";
-import { parseISO6709, formatCoordinates, mapsUrl } from "@/lib/location";
+import { parseISO6709, formatCoordinates, mapsUrl, reverseGeocode } from "@/lib/location";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -29,18 +29,33 @@ export default function JobDetail() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   /** The raw ISO string for the recording date — preserved with original offset */
   const [recordedIso, setRecordedIso] = useState<string | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
 
   const getEffectiveIso = (m: JobMeta) => m.recorded_at ?? m.created_at;
 
-  const handleMetaLoaded = (m: JobMeta) => {
+  const handleMetaLoaded = async (m: JobMeta) => {
     setMeta(m);
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
     setRecordedIso(getEffectiveIso(m));
     if (!m.title && id) generateTitle();
+
+    // Lazy reverse geocoding: resolve label if we have coordinates but no cached label
+    if (m.metadata_location_iso6709 && !m.location_label) {
+      const loc = parseISO6709(m.metadata_location_iso6709);
+      if (loc) {
+        const label = await reverseGeocode(loc);
+        if (label && id) {
+          setLocationLabel(label);
+          await supabase.from("jobs").update({ location_label: label } as any).eq("id", id);
+        }
+      }
+    } else if (m.location_label) {
+      setLocationLabel(m.location_label);
+    }
   };
 
   const generateTitle = async () => {
