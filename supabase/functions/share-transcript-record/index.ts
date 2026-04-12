@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/constants.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,15 +7,12 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type',
 }
 
-const SITE_NAME = 'WhatSaid'
-const SITE_URL = 'https://whatsaid.lovable.app'
-
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function buildShareRecordEmail(opts: { title: string; senderEmail: string; claimUrl: string }): string {
-  const { title, senderEmail, claimUrl } = opts
+function buildShareRecordEmail(opts: { title: string; senderLabel: string; claimUrl: string }): string {
+  const { title, senderLabel, claimUrl } = opts
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
@@ -24,7 +22,7 @@ function buildShareRecordEmail(opts: { title: string; senderEmail: string; claim
       <div style="padding:32px 28px 24px;text-align:center;">
         <p style="font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:hsl(245,50%,48%);margin:0 0 16px;">${SITE_NAME}</p>
         <h1 style="font-family:'Space Grotesk',Arial,sans-serif;font-size:22px;font-weight:700;color:hsl(220,25%,10%);margin:0 0 12px;line-height:1.3;">A transcript has been shared with you</h1>
-        <p style="font-size:15px;color:hsl(220,10%,40%);margin:0 0 8px;line-height:1.5;"><strong>${escapeHtml(senderEmail)}</strong> shared a transcript with you:</p>
+        <p style="font-size:15px;color:hsl(220,10%,40%);margin:0 0 8px;line-height:1.5;"><strong>${escapeHtml(senderLabel)}</strong> shared a transcript with you:</p>
         <p style="font-size:16px;font-weight:600;color:hsl(220,25%,15%);margin:16px 0 24px;padding:12px 20px;background:hsl(220,20%,97%);border-radius:10px;display:inline-block;">${escapeHtml(title)}</p>
       </div>
       <div style="padding:0 28px 32px;text-align:center;">
@@ -74,6 +72,17 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Fetch sender profile for display name / email
+    const { data: senderProfile } = await serviceClient
+      .from('profiles')
+      .select('display_name, email')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const senderDisplayName = senderProfile?.display_name || null
+    const senderEmail = senderProfile?.email || user.email || 'someone'
+    const senderLabel = senderDisplayName || senderEmail
+
     // Verify job ownership
     const { data: job } = await serviceClient
       .from('jobs')
@@ -110,8 +119,6 @@ Deno.serve(async (req) => {
 
     // Send email
     const messageId = crypto.randomUUID()
-    const SENDER_DOMAIN = 'notify.whatsaid.app'
-    const FROM_DOMAIN = 'whatsaid.app'
 
     // Get or create unsubscribe token for recipient
     const recipientLower = recipient_email.toLowerCase().trim()
@@ -137,6 +144,10 @@ Deno.serve(async (req) => {
       status: 'pending',
     })
 
+    const subjectLine = senderDisplayName
+      ? `${senderDisplayName} shared a transcript with you: ${title}`
+      : `${senderEmail} shared a transcript with you: ${title}`
+
     await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
       payload: {
@@ -145,9 +156,9 @@ Deno.serve(async (req) => {
         to: recipient_email,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
-        subject: `${user.email} shared a transcript with you: ${title}`,
-        html: buildShareRecordEmail({ title, senderEmail: user.email || 'someone', claimUrl }),
-        text: `${user.email} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy.`,
+        subject: subjectLine,
+        html: buildShareRecordEmail({ title, senderLabel, claimUrl }),
+        text: `${senderLabel} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy.`,
         purpose: 'transactional',
         label: 'share-transcript-record',
         unsubscribe_token: unsubscribeToken,

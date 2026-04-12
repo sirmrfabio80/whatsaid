@@ -23,6 +23,7 @@ export default function Signup() {
   const [searchParams] = useSearchParams();
   const purchaseIntent = searchParams.get("intent") === "purchase";
   const productParam = searchParams.get("product");
+  const redirectParam = searchParams.get("redirect");
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +35,9 @@ export default function Signup() {
       password,
       options: {
         data: { full_name: displayName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectParam
+          ? `${window.location.origin}${redirectParam}`
+          : window.location.origin,
       },
     });
 
@@ -56,7 +59,7 @@ export default function Signup() {
             <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
             <h2 className="font-heading text-xl font-bold">{t("signup.accountCreated")}</h2>
             <p className="text-sm text-muted-foreground">{t("signup.checkEmail")}</p>
-            <Button className="rounded-xl" onClick={() => navigate("/login")}>{t("signup.goToSignIn")}</Button>
+            <Button className="rounded-xl" onClick={() => navigate(redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : "/login")}>{t("signup.goToSignIn")}</Button>
           </CardContent>
         </Card>
       </div>
