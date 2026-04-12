@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN metadata_location_iso6709 text DEFAULT NULL;
