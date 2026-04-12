@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, Clock, FileText, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import AvatarUpload from "@/components/AvatarUpload";
 
 export default function Profile() {
-  const { user, loading, creditBalance } = useAuth();
+  const { user, loading, creditBalance, avatarUrl, refreshAvatar } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
 

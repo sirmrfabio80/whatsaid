@@ -14,7 +14,7 @@ import logoImg from "@/assets/logo.webp";
 import { useState } from "react";
 
 export default function Navbar() {
-  const { user, creditBalance, signOut } = useAuth();
+  const { user, creditBalance, avatarUrl, signOut } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
