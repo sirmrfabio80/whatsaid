@@ -379,6 +379,48 @@ export type Database = {
         }
         Relationships: []
       }
+      transcript_shares: {
+        Row: {
+          claimed: boolean
+          claimed_at: string | null
+          claimed_by: string | null
+          claimed_job_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          job_id: string
+          recipient_email: string
+          shared_by: string
+          token: string
+        }
+        Insert: {
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_job_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          job_id: string
+          recipient_email: string
+          shared_by: string
+          token?: string
+        }
+        Update: {
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_job_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          job_id?: string
+          recipient_email?: string
+          shared_by?: string
+          token?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
