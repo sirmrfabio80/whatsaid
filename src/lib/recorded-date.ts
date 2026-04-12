@@ -16,7 +16,7 @@ interface ParsedRecordedAt {
 }
 
 const ISO_RE =
-  /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:([+-])(\d{2}):?(\d{2})|Z)?/;
+  /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:([+-])(\d{2}):?(\d{2})?|Z)?/;
 
 /**
  * Parse an ISO 8601 string and return the wall-clock components
@@ -40,10 +40,11 @@ export function parseRecordedAt(iso: string): ParsedRecordedAt | null {
     second: Number(m[6] ?? 0),
     offsetMinutes:
       m[7] != null
-        ? (m[7] === "+" ? 1 : -1) * (Number(m[8]) * 60 + Number(m[9]))
+        ? (m[7] === "+" ? 1 : -1) * (Number(m[8]) * 60 + Number(m[9] ?? 0))
         : m[0].endsWith("Z")
           ? 0
           : null,
+    // Note: m[9] may be undefined for short offsets like "+00" — default to 0
   };
 }
 
