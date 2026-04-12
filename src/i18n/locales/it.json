@@ -254,7 +254,19 @@
     "noQuestionsDesc": "Le tue domande salvate e le risposte AI appariranno qui",
     "includeInExport": "Includi nell'esportazione",
     "aiDisclaimer": "Contenuto generato dall'AI",
-    "aiDisclaimerDesc": "Questa trascrizione, il riassunto e qualsiasi output AI possono contenere errori tra cui relatori identificati erroneamente, termini medici o tecnici imprecisi e dettagli omessi o inventati. Non fare affidamento su questo come verbale per decisioni mediche, legali o finanziarie. Verifica sempre le informazioni critiche con la fonte originale."
+    "aiDisclaimerDesc": "Questa trascrizione, il riassunto e qualsiasi output AI possono contenere errori tra cui relatori identificati erroneamente, termini medici o tecnici imprecisi e dettagli omessi o inventati. Non fare affidamento su questo come verbale per decisioni mediche, legali o finanziarie. Verifica sempre le informazioni critiche con la fonte originale.",
+    "editTranscript": "Modifica trascrizione",
+    "doneEditing": "Fine modifica",
+    "saveSegment": "Salva",
+    "cancelEdit": "Annulla",
+    "unsavedChanges": "Modifiche non salvate",
+    "unsavedChangesDesc": "Hai modifiche non salvate per questo segmento. Vuoi scartarle?",
+    "discardChanges": "Scarta",
+    "transcriptUpdated": "Trascrizione aggiornata manualmente",
+    "saveFailed": "Impossibile salvare le modifiche alla trascrizione.",
+    "reportIssue": "Segnala problema di trascrizione",
+    "reportIssuePlaceholder": "Questa funzionalità arriverà presto. Per ora puoi modificare la trascrizione direttamente.",
+    "changeSpeaker": "Relatore"
   },
   "audioUploader": {
     "dropTitle": "Trascina qui il tuo file audio",

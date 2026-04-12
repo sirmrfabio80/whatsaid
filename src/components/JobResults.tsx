@@ -135,9 +135,16 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               {speakers.length > 0 && <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} /></div>}
-              <div className="p-5 sm:p-6">
-                {transcript ? <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">{renderTranscriptWithBoldSpeakers(applySpeakerNames(transcript.content, speakerNames))}</div> : <p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p>}
-              </div>
+              {transcript ? (
+                <TranscriptEditor
+                  content={transcript.content}
+                  speakerNames={speakerNames}
+                  onSave={handleTranscriptSave}
+                  transcriptEdited={transcriptEdited}
+                />
+              ) : (
+                <div className="p-5 sm:p-6"><p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p></div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
