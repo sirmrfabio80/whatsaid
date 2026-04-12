@@ -114,10 +114,10 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   return (
     <div className="space-y-4 animate-page-enter">
       <Tabs defaultValue="transcript" className="w-full">
-        <TabsList className="w-full justify-start rounded-xl bg-muted/50 p-1 h-auto gap-1">
-          <TabsTrigger value="transcript" className="rounded-lg gap-1.5 px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-3.5 h-3.5" />{t("jobResults.transcript")}</TabsTrigger>
-          <TabsTrigger value="summary" className="rounded-lg gap-1.5 px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><Sparkles className="w-3.5 h-3.5" />{t("jobResults.summary")}</TabsTrigger>
-          <TabsTrigger value="questions" className="rounded-lg gap-1.5 px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><HelpCircle className="w-3.5 h-3.5" />{t("jobResults.questions")}</TabsTrigger>
+        <TabsList className="w-full justify-start rounded-xl bg-muted/50 p-1 h-auto gap-1 flex-wrap">
+          <TabsTrigger value="transcript" className="rounded-lg gap-1.5 px-3 sm:px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-3.5 h-3.5" />{t("jobResults.transcript")}</TabsTrigger>
+          <TabsTrigger value="summary" className="rounded-lg gap-1.5 px-3 sm:px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><Sparkles className="w-3.5 h-3.5" />{t("jobResults.summary")}</TabsTrigger>
+          <TabsTrigger value="questions" className="rounded-lg gap-1.5 px-3 sm:px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><HelpCircle className="w-3.5 h-3.5" />{t("jobResults.questions")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="transcript" className="mt-4">
