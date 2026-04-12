@@ -187,7 +187,26 @@
     "deleteAccount": "Elimina account",
     "deleteConfirmTitle": "Sei assolutamente sicuro?",
     "deleteConfirmDesc": "Questo eliminerà permanentemente il tuo account, i crediti e tutta la cronologia delle conversioni. Non è possibile annullare.",
-    "deleteMyAccount": "Elimina il mio account"
+    "deleteMyAccount": "Elimina il mio account",
+    "admin": {
+      "title": "Invita utenti",
+      "desc": "Invita utenti su WhatSaid e regala loro un pacchetto di crediti.",
+      "emailLabel": "Indirizzo email",
+      "packageLabel": "Pacchetto crediti",
+      "pkg_one-time": "Trascrizione singola",
+      "pkg_5-pack": "Pacchetto 5 crediti",
+      "pkg_20-pack": "Pacchetto 20 crediti",
+      "sendEmail": "Invia email di invito",
+      "generateLink": "Genera link magico",
+      "invalidEmail": "Inserisci un indirizzo email valido.",
+      "creditsGranted": "{{credits}} crediti assegnati a {{email}}",
+      "linkGenerated": "Link magico generato — copialo e condividilo.",
+      "inviteSent": "Email di invito inviata a {{email}}",
+      "recentInvites": "Inviti recenti",
+      "claimed": "Riscattato",
+      "pending": "In attesa",
+      "creditsReceived": "Hai ricevuto {{count}} crediti!"
+    }
   },
   "history": {
     "title": "Cronologia trascrizioni",

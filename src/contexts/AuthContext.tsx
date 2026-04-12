@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { useRedeemInvites } from "@/hooks/use-redeem-invites";
 
 interface AuthContextType {
   user: User | null;
@@ -83,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshAvatar();
     }
   }, [user]);
+
+  // Redeem any pending invites after login
+  useRedeemInvites(user?.id, user?.email ?? undefined);
 
   return (
     <AuthContext.Provider value={{ user, session, loading, creditBalance, avatarUrl, refreshCredits, refreshAvatar, signOut }}>
