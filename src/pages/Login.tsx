@@ -24,7 +24,8 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const purchaseIntent = searchParams.get("intent") === "purchase";
   const productParam = searchParams.get("product");
-  const redirectAfterAuth = purchaseIntent ? "/pricing" : "/";
+  const redirectParam = searchParams.get("redirect");
+  const redirectAfterAuth = redirectParam || (purchaseIntent ? "/pricing" : "/");
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
