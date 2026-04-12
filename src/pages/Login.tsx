@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Mic, AlertCircle, Check, ArrowLeft } from "lucide-react";
+import { AlertCircle, Check, ArrowLeft } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { lovable } from "@/integrations/lovable/index";
 
 export default function Login() {

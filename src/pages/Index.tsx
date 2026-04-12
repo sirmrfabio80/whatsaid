@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 import {
-  Mic, Sparkles, FileText, Users, ArrowRight, Shield, Clock,
+  Sparkles, FileText, Users, ArrowRight, Shield, Clock,
   Upload, Cpu, Download, Globe, MessageSquareText
 } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 
 export default function Index() {
   const { user, creditBalance } = useAuth();
