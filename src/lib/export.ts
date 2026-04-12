@@ -183,6 +183,7 @@ function buildSections(data: CanonicalExportData): Paragraph[] {
         const rest = line.slice(speakerMatch[0].length);
         children.push(
           new Paragraph({
+            keepLines: true,
             spacing: { after: 100 },
             children: [
               new TextRun({ text: label + " ", bold: true }),
@@ -191,7 +192,7 @@ function buildSections(data: CanonicalExportData): Paragraph[] {
           }),
         );
       } else {
-        children.push(new Paragraph({ spacing: { after: 100 }, children: [new TextRun(line)] }));
+        children.push(new Paragraph({ keepLines: true, spacing: { after: 100 }, children: [new TextRun(line)] }));
       }
     });
   }
