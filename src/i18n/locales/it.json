@@ -406,6 +406,7 @@
     "faqVariationA": "I prezzi sono localizzati per le valute e le regioni supportate. L'importo finale, la formattazione e qualsiasi tassa applicabile vengono confermati da Paddle al momento del pagamento.",
     "finalTitle": "Scegli l'opzione adatta al tuo modo di lavorare",
     "finalBody": "Inizia con un file o acquista crediti per un uso ripetuto — i tuoi risultati restano salvati nel tuo account.",
-    "finalCta": "Crea account e continua"
+    "finalCta": "Crea account e continua",
+    "finalCtaLoggedIn": "Continua"
   }
 }
