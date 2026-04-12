@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
@@ -164,8 +165,8 @@ export default function Pricing() {
 
   function handleCta(productId: PricingProduct["id"]) {
     if (user) {
-      // Authenticated → placeholder for Paddle checkout
-      navigate("/credits");
+      toast.info(t("pricing.comingSoon"));
+      return;
     } else {
       navigate(`/signup?intent=purchase&product=${productId}`);
     }

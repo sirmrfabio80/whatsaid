@@ -42,9 +42,3 @@ export function isValidAudioFile(file: File): boolean {
   return ACCEPTED_EXTENSIONS.includes(ext) || ACCEPTED_AUDIO_TYPES.includes(file.type);
 }
 
-/** Credit pack definitions */
-export const CREDIT_PACKS = [
-  { credits: 5, price: 11.99, perCredit: 2.40, label: "Starter" },
-  { credits: 15, price: 29.99, perCredit: 2.00, label: "Pro" },
-  { credits: 40, price: 59.99, perCredit: 1.50, label: "Power" },
-] as const;

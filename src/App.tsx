@@ -14,7 +14,7 @@ import SetPassword from "./pages/SetPassword";
 import Pricing from "./pages/Pricing";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
-import Credits from "./pages/Credits";
+
 import History from "./pages/History";
 import JobDetail from "./pages/JobDetail";
 import NotFound from "./pages/NotFound";
@@ -43,7 +43,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/credits" element={<Credits />} />
+            
             <Route path="/history" element={<History />} />
             <Route path="/job/:id" element={<JobDetail />} />
             <Route path="/privacy" element={<Privacy />} />

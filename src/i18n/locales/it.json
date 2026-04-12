@@ -24,7 +24,6 @@
     "pricing": "Prezzi",
     "profile": "Profilo",
     "history": "Cronologia",
-    "credits": "Crediti",
     "settings": "Impostazioni"
   },
   "home": {
@@ -236,18 +235,6 @@
     "deleteDesc": "Questo eliminerà permanentemente <strong>{{fileName}}</strong> e tutti i suoi output inclusi riassunto, trascrizione e domande salvate. Questa azione non può essere annullata.",
     "deleting": "Eliminazione…"
   },
-  "creditsPage": {
-    "title": "I tuoi crediti",
-    "remaining": "crediti rimanenti",
-    "oneTime": "una tantum",
-    "perCredit": "per credito",
-    "popular": "Popolare",
-    "noExpiry": "Nessuna scadenza",
-    "jobHistory": "Cronologia lavori",
-    "extraRegenerations": "Rigenerazioni extra",
-    "buyCredits": "Acquista {{count}} crediti",
-    "creditExplainer": "1 credito = fino a 15 min di audio · 2 crediti = 15-30 min · 3 crediti = 30-45 min · 4 crediti = 45-60 min"
-  },
   "jobDetail": {
     "backToHistory": "Torna alla cronologia",
     "newTranscription": "Nuova trascrizione",
@@ -458,6 +445,7 @@
     "finalBody": "Inizia con un file o acquista crediti per un uso ripetuto — i tuoi risultati restano salvati nel tuo account.",
     "finalCta": "Crea account e continua",
     "finalCtaLoggedIn": "Continua",
+    "comingSoon": "Il sistema di pagamento è in fase di finalizzazione — torna presto.",
     "paddleNote": "I pagamenti sono elaborati in modo sicuro da Paddle, il nostro rivenditore ufficiale.",
     "consentPrefix": "Acquistando, accetti i nostri",
     "supportLine": "Hai bisogno di aiuto?"
