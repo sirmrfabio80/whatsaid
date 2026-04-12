@@ -23,6 +23,7 @@ export default function Signup() {
   const [searchParams] = useSearchParams();
   const purchaseIntent = searchParams.get("intent") === "purchase";
   const productParam = searchParams.get("product");
+  const redirectParam = searchParams.get("redirect");
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();

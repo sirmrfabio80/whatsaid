@@ -1,13 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/constants.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
-
-const SITE_NAME = 'WhatSaid'
-const SITE_URL = 'https://whatsaid.app'
 
 function escapeHtml(str: string): string {
   return str
@@ -18,7 +16,6 @@ function escapeHtml(str: string): string {
 }
 
 function markdownSectionsToHtml(content: string): string {
-  // Convert markdown-style sections (## Heading, **bold**, - bullets) to HTML
   const lines = content.split('\n')
   const html: string[] = []
   let inList = false
@@ -54,7 +51,6 @@ function formatTranscript(content: string): string {
   for (const line of lines) {
     const trimmed = line.trim()
     if (!trimmed) { html.push('<br/>'); continue }
-    // Speaker label pattern: "Speaker A:" or custom name
     const match = trimmed.match(/^(.+?):(.+)$/)
     if (match && match[1].length < 40) {
       html.push(`<p style="font-size:14px;color:hsl(220,10%,30%);line-height:1.6;margin:0 0 6px;"><strong style="color:hsl(245,50%,48%);">${escapeHtml(match[1])}:</strong>${escapeHtml(match[2])}</p>`)
@@ -67,12 +63,12 @@ function formatTranscript(content: string): string {
 
 function buildEmailHtml(opts: {
   title: string
-  senderEmail: string
+  senderLabel: string
   summary: string | null
   questions: { prompt: string | null; answer: string }[]
   transcript: string
 }): string {
-  const { title, senderEmail, summary, questions, transcript } = opts
+  const { title, senderLabel, summary, questions, transcript } = opts
 
   const summarySection = summary
     ? `<div style="margin-bottom:32px;">
@@ -119,7 +115,7 @@ function buildEmailHtml(opts: {
       <!-- Footer -->
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
         <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
-          Shared by ${escapeHtml(senderEmail)} via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>
+          Shared by ${escapeHtml(senderLabel)} via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>
         </p>
       </div>
     </div>
@@ -130,7 +126,7 @@ function buildEmailHtml(opts: {
 
 function buildPlainText(opts: {
   title: string
-  senderEmail: string
+  senderLabel: string
   summary: string | null
   questions: { prompt: string | null; answer: string }[]
   transcript: string
@@ -146,7 +142,7 @@ function buildPlainText(opts: {
     }
   }
   parts.push('--- Transcript ---', '', opts.transcript, '')
-  parts.push(`—`, `Shared by ${opts.senderEmail} via ${SITE_NAME}`)
+  parts.push(`—`, `Shared by ${opts.senderLabel} via ${SITE_NAME}`)
   return parts.join('\n')
 }
 
@@ -156,7 +152,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate user
     const authHeader = req.headers.get('Authorization') ?? ''
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -180,6 +175,17 @@ Deno.serve(async (req) => {
     }
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Fetch sender profile for display name / email
+    const { data: senderProfile } = await serviceClient
+      .from('profiles')
+      .select('display_name, email')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const senderDisplayName = senderProfile?.display_name || null
+    const senderEmail = senderProfile?.email || user.email || 'someone'
+    const senderLabel = senderDisplayName || senderEmail
 
     // Fetch job (ensure it belongs to the user)
     const { data: job, error: jobError } = await serviceClient
@@ -222,7 +228,7 @@ Deno.serve(async (req) => {
 
     const html = buildEmailHtml({
       title,
-      senderEmail: user.email || 'someone',
+      senderLabel,
       summary: summary?.content || null,
       questions,
       transcript: transcript.content,
@@ -230,29 +236,27 @@ Deno.serve(async (req) => {
 
     const text = buildPlainText({
       title,
-      senderEmail: user.email || 'someone',
+      senderLabel,
       summary: summary?.content || null,
       questions,
       transcript: transcript.content,
     })
 
-    // Enqueue email via the existing queue system
+    // Enqueue email
     const messageId = crypto.randomUUID()
-    const SENDER_DOMAIN = 'notify.whatsaid.app'
-    const FROM_DOMAIN = 'whatsaid.app'
 
-    // Get or create unsubscribe token for recipient
+    const recipientLower = recipient_email.toLowerCase().trim()
     const { data: existingToken } = await serviceClient
       .from('email_unsubscribe_tokens')
       .select('token')
-      .eq('email', recipient_email.toLowerCase())
+      .eq('email', recipientLower)
       .maybeSingle()
 
     let unsubscribeToken = existingToken?.token
     if (!unsubscribeToken) {
       unsubscribeToken = crypto.randomUUID()
       await serviceClient.from('email_unsubscribe_tokens').insert({
-        email: recipient_email.toLowerCase(),
+        email: recipientLower,
         token: unsubscribeToken,
       })
     }
@@ -264,6 +268,10 @@ Deno.serve(async (req) => {
       status: 'pending',
     })
 
+    const subjectLine = senderDisplayName
+      ? `${senderDisplayName} shared a transcript: ${title}`
+      : `${senderEmail} shared a transcript: ${title}`
+
     const { error: enqueueError } = await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
       payload: {
@@ -272,7 +280,7 @@ Deno.serve(async (req) => {
         to: recipient_email,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
-        subject: title,
+        subject: subjectLine,
         html,
         text,
         purpose: 'transactional',
