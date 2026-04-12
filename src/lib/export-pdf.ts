@@ -109,22 +109,21 @@ interface PdfBlock {
 export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   const blocks: PdfBlock[] = [];
 
-  // --- Header ---
+  // --- Header + Summary (combined so they always appear together on page 1) ---
   const meta: string[] = [];
   meta.push(`Date: ${data.createdAt}`);
   if (data.duration) meta.push(`Duration: ${data.duration}`);
   if (data.language) meta.push(`Language: ${data.language}`);
 
-  let header = `<header><h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
-  header += `<p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
-  header += "</header>";
-  blocks.push({ html: header, forceNewPage: false, gapAfterMm: SECTION_GAP_MM });
+  let headerAndSummary = `<header><h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
+  headerAndSummary += `<p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
+  headerAndSummary += "</header>";
 
-  // --- Summary (single block — usually fits one page) ---
   if (data.summary) {
-    const summaryHtml = `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
-    blocks.push({ html: summaryHtml, forceNewPage: false, gapAfterMm: SECTION_GAP_MM });
+    headerAndSummary += `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
   }
+
+  blocks.push({ html: headerAndSummary, forceNewPage: false, gapAfterMm: SECTION_GAP_MM });
 
   // --- Questions & Answers (heading + each Q/A as its own block) ---
   if (data.questions && data.questions.length > 0) {
