@@ -206,7 +206,26 @@
       "claimed": "Utilisé",
       "pending": "En attente",
       "creditsReceived": "Vous avez reçu {{count}} crédits !"
+    },
+    "setPasswordCard": {
+      "title": "Définir votre mot de passe",
+      "desc": "Définissez un mot de passe pour pouvoir vous connecter à tout moment.",
+      "setPasswordBtn": "Définir le mot de passe"
     }
+  },
+  "setPassword": {
+    "title": "Bienvenue sur WhatSaid",
+    "subtitle": "Tout est prêt ! Définissez un mot de passe pour pouvoir vous connecter à tout moment.",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Au moins 6 caractères",
+    "confirmLabel": "Confirmer le mot de passe",
+    "setPasswordBtn": "Définir le mot de passe",
+    "saving": "Enregistrement...",
+    "skipForNow": "Passer pour l'instant",
+    "skipHint": "Vous pourrez toujours définir un mot de passe plus tard depuis les Paramètres.",
+    "success": "Mot de passe défini ! Vous pouvez maintenant vous connecter avec votre email et mot de passe.",
+    "minLength": "Le mot de passe doit comporter au moins 6 caractères.",
+    "mismatch": "Les mots de passe ne correspondent pas."
   },
   "history": {
     "title": "Historique des transcriptions",

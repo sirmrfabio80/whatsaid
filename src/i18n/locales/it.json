@@ -206,7 +206,26 @@
       "claimed": "Riscattato",
       "pending": "In attesa",
       "creditsReceived": "Hai ricevuto {{count}} crediti!"
+    },
+    "setPasswordCard": {
+      "title": "Imposta la tua password",
+      "desc": "Imposta una password per poter accedere in qualsiasi momento.",
+      "setPasswordBtn": "Imposta password"
     }
+  },
+  "setPassword": {
+    "title": "Benvenuto su WhatSaid",
+    "subtitle": "Tutto pronto! Imposta una password per poter accedere in qualsiasi momento.",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Almeno 6 caratteri",
+    "confirmLabel": "Conferma password",
+    "setPasswordBtn": "Imposta password",
+    "saving": "Impostazione...",
+    "skipForNow": "Salta per ora",
+    "skipHint": "Potrai sempre impostare una password più tardi dalle Impostazioni.",
+    "success": "Password impostata! Ora puoi accedere con la tua email e password.",
+    "minLength": "La password deve essere di almeno 6 caratteri.",
+    "mismatch": "Le password non corrispondono."
   },
   "history": {
     "title": "Cronologia trascrizioni",

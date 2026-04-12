@@ -1,5 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -19,21 +24,24 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller
+    // Verify caller using getUser (reliable, standard method)
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const {
+      data: { user },
+      error: userError,
+    } = await userClient.auth.getUser();
+
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
-    const userEmail = claimsData.claims.email as string;
+    const userId = user.id;
+    const userEmail = user.email;
 
     if (!userEmail) {
       return new Response(JSON.stringify({ error: "No email in token" }), {
@@ -44,7 +52,7 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Atomically claim unclaimed invites: UPDATE ... WHERE claimed = false RETURNING
+    // Atomically claim unclaimed invites
     const { data: claimed, error: claimError } = await adminClient
       .from("pending_invites")
       .update({ claimed: true, claimed_at: new Date().toISOString() })
@@ -80,6 +88,12 @@ Deno.serve(async (req) => {
       totalCredits += invite.credits;
     }
 
+    // Set needs_password_setup flag on the user's profile
+    await adminClient
+      .from("profiles")
+      .update({ needs_password_setup: true })
+      .eq("user_id", userId);
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -93,7 +107,9 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }),
+      JSON.stringify({
+        error: err instanceof Error ? err.message : "Internal error",
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

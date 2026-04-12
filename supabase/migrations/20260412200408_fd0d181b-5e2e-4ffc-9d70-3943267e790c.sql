@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN needs_password_setup boolean NOT NULL DEFAULT false;

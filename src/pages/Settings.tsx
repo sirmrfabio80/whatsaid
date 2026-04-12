@@ -26,7 +26,7 @@ const UI_LANGUAGES = [
 ] as const;
 
 export default function Settings() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, needsPasswordSetup } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -45,6 +45,10 @@ export default function Settings() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [setupPassword, setSetupPassword] = useState("");
+  const [setupConfirmPassword, setSetupConfirmPassword] = useState("");
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [setupSaving, setSetupSaving] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
 
@@ -112,6 +116,21 @@ export default function Settings() {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) { setPasswordError(error.message); }
     else { setPasswordSaved(true); setNewPassword(""); setConfirmPassword(""); setTimeout(() => { setPasswordOpen(false); setPasswordSaved(false); }, 1500); }
+  };
+
+  const handleSetupPassword = async () => {
+    setSetupError(null);
+    if (setupPassword.length < 6) { setSetupError(t("settings.minLength")); return; }
+    if (setupPassword !== setupConfirmPassword) { setSetupError(t("settings.mismatch")); return; }
+    setSetupSaving(true);
+    const { error } = await supabase.auth.updateUser({ password: setupPassword });
+    if (error) { setSetupError(error.message); setSetupSaving(false); return; }
+    await supabase.from("profiles").update({ needs_password_setup: false } as any).eq("user_id", user!.id);
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    setSetupSaving(false);
+    setSetupPassword(""); setSetupConfirmPassword("");
+    // Force a page reload to clear the needsPasswordSetup state
+    window.location.reload();
   };
 
   if (loading || !user) return null;
@@ -187,6 +206,29 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+
+          {needsPasswordSetup && (
+            <Card className="rounded-xl border-primary/30 bg-card shadow-sm">
+              <CardContent className="p-5 sm:p-6 space-y-4">
+                <h2 className="font-heading font-semibold text-lg">{t("settings.setPasswordCard.title")}</h2>
+                <p className="text-sm text-muted-foreground">{t("settings.setPasswordCard.desc")}</p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="setup-pw">{t("settings.newPasswordLabel")}</Label>
+                    <Input id="setup-pw" type="password" value={setupPassword} onChange={(e) => { setSetupPassword(e.target.value); setSetupError(null); }} className="rounded-lg h-11" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="setup-confirm-pw">{t("settings.confirmPasswordLabel")}</Label>
+                    <Input id="setup-confirm-pw" type="password" value={setupConfirmPassword} onChange={(e) => { setSetupConfirmPassword(e.target.value); setSetupError(null); }} className="rounded-lg h-11" />
+                  </div>
+                  {setupError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{setupError}</span></div>}
+                  <Button onClick={handleSetupPassword} disabled={setupSaving} className="rounded-lg" size="sm">
+                    <Lock className="w-4 h-4 mr-1.5" />{setupSaving ? t("setPassword.saving") : t("settings.setPasswordCard.setPasswordBtn")}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">

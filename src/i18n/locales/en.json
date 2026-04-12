@@ -206,7 +206,26 @@
       "claimed": "Claimed",
       "pending": "Pending",
       "creditsReceived": "You received {{count}} credits!"
+    },
+    "setPasswordCard": {
+      "title": "Set your password",
+      "desc": "Set a password so you can sign in anytime.",
+      "setPasswordBtn": "Set password"
     }
+  },
+  "setPassword": {
+    "title": "Welcome to WhatSaid",
+    "subtitle": "You're all set! Set a password so you can sign in anytime.",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "confirmLabel": "Confirm password",
+    "setPasswordBtn": "Set password",
+    "saving": "Setting password...",
+    "skipForNow": "Skip for now",
+    "skipHint": "You can always set a password later from Settings.",
+    "success": "Password set! You can now sign in with your email and password.",
+    "minLength": "Password must be at least 6 characters.",
+    "mismatch": "Passwords don't match."
   },
   "history": {
     "title": "Transcription History",
