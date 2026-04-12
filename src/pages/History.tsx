@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileAudio, Clock, Globe, ArrowRight, Inbox, Cpu, Trash2 } from "lucide-react";
+import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2 } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
@@ -129,7 +129,7 @@ export default function History() {
                           {job.duration_seconds && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>}
                           <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
                           <span>{new Date(job.created_at).toLocaleDateString()}</span>
-                          {job.speech_model && <span className="hidden sm:flex items-center gap-1"><Cpu className="w-3 h-3" />{job.speech_model}</span>}
+                          
                         </div>
                       </div>
                     </div>
