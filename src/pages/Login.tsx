@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,10 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const purchaseIntent = searchParams.get("intent") === "purchase";
+  const productParam = searchParams.get("product");
+  const redirectAfterAuth = purchaseIntent ? "/credits" : "/";
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -34,7 +38,7 @@ export default function Login() {
       return;
     }
     if (result.redirected) return;
-    navigate("/");
+    navigate(redirectAfterAuth);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -121,8 +125,12 @@ export default function Login() {
       <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
         <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-          <CardTitle className="font-heading text-2xl">{t("login.title")}</CardTitle>
-          <CardDescription>{t("login.subtitle")}</CardDescription>
+          <CardTitle className="font-heading text-2xl">
+            {purchaseIntent ? t("login.purchaseTitle") : t("login.title")}
+          </CardTitle>
+          <CardDescription>
+            {purchaseIntent ? t("login.purchaseSubtitle") : t("login.subtitle")}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">

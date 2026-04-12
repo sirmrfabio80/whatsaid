@@ -7,13 +7,6 @@ export function creditsForDuration(durationSeconds: number): number {
   return 4;
 }
 
-/** Get guest price based on duration */
-export function guestPriceForDuration(durationSeconds: number): { price: number; label: string } {
-  const minutes = durationSeconds / 60;
-  if (minutes <= 15) return { price: 2.99, label: "$2.99" };
-  if (minutes <= 30) return { price: 4.99, label: "$4.99" };
-  return { price: 7.99, label: "$7.99" };
-}
 
 /** Format seconds to mm:ss */
 export function formatDuration(seconds: number): string {
