@@ -127,49 +127,52 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-card p-4 space-y-1 animate-page-enter">
-          <Link to="/convert" onClick={() => setMobileOpen(false)}>
-            <Button variant="ghost" className="w-full justify-start rounded-lg">{t("nav.convert")}</Button>
-          </Link>
-          <a href="/#pricing" onClick={() => setMobileOpen(false)}>
-            <Button variant="ghost" className="w-full justify-start rounded-lg">{t("nav.pricing")}</Button>
-          </a>
+        <div className="md:hidden border-t border-border bg-card px-4 py-3 animate-page-enter">
+          <div className="space-y-1">
+            <Link to="/convert" onClick={() => setMobileOpen(false)} className="block">
+              <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.convert")}</Button>
+            </Link>
+            <a href="/#pricing" onClick={() => setMobileOpen(false)} className="block">
+              <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.pricing")}</Button>
+            </a>
+          </div>
 
-          <div className="h-px bg-border my-2" />
+          <div className="h-px bg-border my-3" />
 
           {user ? (
-            <>
-              <Link to="/profile" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <User className="w-4 h-4 mr-2" />{t("nav.profile")}
+            <div className="space-y-1">
+              <Link to="/profile" onClick={() => setMobileOpen(false)} className="block">
+                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
+                  <User className="w-5 h-5" />{t("nav.profile")}
                 </Button>
               </Link>
-              <Link to="/history" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <History className="w-4 h-4 mr-2" />{t("nav.history")}
+              <Link to="/history" onClick={() => setMobileOpen(false)} className="block">
+                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
+                  <History className="w-5 h-5" />{t("nav.history")}
                 </Button>
               </Link>
-              <Link to="/credits" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <CreditCard className="w-4 h-4 mr-2" />{t("nav.credits")}
+              <Link to="/credits" onClick={() => setMobileOpen(false)} className="block">
+                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
+                  <CreditCard className="w-5 h-5" />{t("nav.credits")}
                 </Button>
               </Link>
-              <Link to="/settings" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <Settings className="w-4 h-4 mr-2" />{t("nav.settings")}
+              <Link to="/settings" onClick={() => setMobileOpen(false)} className="block">
+                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
+                  <Settings className="w-5 h-5" />{t("nav.settings")}
                 </Button>
               </Link>
-              <Button variant="ghost" className="w-full justify-start rounded-lg" onClick={() => { signOut(); setMobileOpen(false); }}>
-                <LogOut className="w-4 h-4 mr-2" />{t("common.signOut")}
+              <div className="h-px bg-border my-3" />
+              <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3" onClick={() => { signOut(); setMobileOpen(false); }}>
+                <LogOut className="w-5 h-5" />{t("common.signOut")}
               </Button>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="flex items-center justify-between gap-3">
               <LanguageSwitcher />
-              <Link to="/login" onClick={() => setMobileOpen(false)}>
-                <Button className="w-full rounded-lg">{t("common.signIn")}</Button>
+              <Link to="/login" onClick={() => setMobileOpen(false)} className="flex-1">
+                <Button className="w-full rounded-lg h-12 text-base">{t("common.signIn")}</Button>
               </Link>
-            </>
+            </div>
           )}
         </div>
       )}
