@@ -1,18 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FileAudio, Clock, Globe, ArrowRight, Inbox, Cpu, Trash2 } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
@@ -34,6 +29,7 @@ interface Job {
 
 export default function History() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,22 +38,16 @@ export default function History() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
+    if (!user) { navigate("/login"); return; }
     const fetchJobs = async () => {
       const { data } = await supabase
         .from("jobs")
         .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      
       setJobs((data as Job[]) ?? []);
       setLoading(false);
     };
-
     fetchJobs();
   }, [user, navigate]);
 
@@ -69,12 +59,7 @@ export default function History() {
       const { error } = await supabase.from("jobs").delete().eq("id", deleteTarget.id);
       if (error) throw error;
       setJobs((prev) => prev.filter((j) => j.id !== deleteTarget.id));
-    } catch {
-      // Silently handle — the item stays in the list
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
-    }
+    } catch {} finally { setDeleting(false); setDeleteTarget(null); }
   };
 
   const statusColor = (status: string) => {
@@ -92,9 +77,7 @@ export default function History() {
         <div className="container mx-auto px-4 py-10 sm:py-14">
           <div className="max-w-3xl mx-auto space-y-3">
             <div className="h-8 w-64 bg-muted rounded-lg animate-pulse mb-8" />
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
-            ))}
+            {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}
           </div>
         </div>
       </div>
@@ -105,17 +88,16 @@ export default function History() {
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-10 sm:py-14">
         <div className="max-w-3xl mx-auto">
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold mb-8">Transcription History</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold mb-8">{t("history.title")}</h1>
 
           {jobs.length === 0 ? (
             <Card className="border-dashed rounded-xl shadow-sm">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Inbox className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                <p className="font-medium text-lg mb-1">No transcriptions yet</p>
-                <p className="text-muted-foreground text-sm mb-6">Upload your first audio file to get started.</p>
+                <p className="font-medium text-lg mb-1">{t("history.empty")}</p>
+                <p className="text-muted-foreground text-sm mb-6">{t("history.emptyDesc")}</p>
                 <Button className="rounded-xl" onClick={() => navigate("/convert")}>
-                  <FileAudio className="w-4 h-4 mr-2" />
-                  Start transcribing
+                  <FileAudio className="w-4 h-4 mr-2" />{t("history.startTranscribing")}
                 </Button>
               </CardContent>
             </Card>
@@ -138,40 +120,25 @@ export default function History() {
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
                           <div className="flex items-center gap-2 shrink-0">
-                            <Badge variant="outline" className={`${statusColor(job.status)} text-[11px]`}>
-                              {job.status}
-                            </Badge>
+                            <Badge variant="outline" className={`${statusColor(job.status)} text-[11px]`}>{job.status}</Badge>
                             <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
                           </div>
                         </div>
-                        {job.title && (
-                          <p className="text-xs text-muted-foreground/60 truncate">{job.file_name}</p>
-                        )}
+                        {job.title && <p className="text-xs text-muted-foreground/60 truncate">{job.file_name}</p>}
                         <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                          {job.duration_seconds && (
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Globe className="w-3 h-3" />
-                            {getLanguageLabel(job.language_selected ?? job.language_detected)}
-                          </span>
+                          {job.duration_seconds && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>}
+                          <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
                           <span>{new Date(job.created_at).toLocaleDateString()}</span>
-                          {job.speech_model && (
-                            <span className="hidden sm:flex items-center gap-1"><Cpu className="w-3 h-3" />{job.speech_model}</span>
-                          )}
+                          {job.speech_model && <span className="hidden sm:flex items-center gap-1"><Cpu className="w-3 h-3" />{job.speech_model}</span>}
                         </div>
                       </div>
                     </div>
                     <div className="flex justify-end mt-2 sm:mt-0">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="ghost" size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteTarget(job);
-                        }}
-                        aria-label={`Delete ${job.file_name}`}
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(job); }}
+                        aria-label={`${t("common.delete")} ${job.file_name}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -187,19 +154,19 @@ export default function History() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete transcription?</AlertDialogTitle>
+            <AlertDialogTitle>{t("history.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <span className="font-medium text-foreground">{deleteTarget?.file_name}</span> and all its outputs including summary, transcript, and saved questions. This action cannot be undone.
+              <span dangerouslySetInnerHTML={{ __html: t("history.deleteDesc", { fileName: deleteTarget?.file_name ?? "" }) }} />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "Deleting…" : "Delete"}
+              {deleting ? t("history.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
