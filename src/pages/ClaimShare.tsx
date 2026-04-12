@@ -43,15 +43,7 @@ export default function ClaimShare() {
 
     const validate = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("claim-transcript-share", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          body: undefined,
-        });
-
-        // supabase.functions.invoke doesn't support GET with query params easily,
-        // so we use a direct fetch instead
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-transcript-share?token=${token}`;
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-transcript-share?token=${encodeURIComponent(token)}`;
         const res = await fetch(url, {
           headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
         });
