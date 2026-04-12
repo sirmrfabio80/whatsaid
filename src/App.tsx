@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 
 import Convert from "./pages/Convert";
+import SetPassword from "./pages/SetPassword";
 import Pricing from "./pages/Pricing";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
