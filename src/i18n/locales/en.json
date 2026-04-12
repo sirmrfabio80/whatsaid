@@ -187,7 +187,26 @@
     "deleteAccount": "Delete account",
     "deleteConfirmTitle": "Are you absolutely sure?",
     "deleteConfirmDesc": "This will permanently delete your account, credits, and all conversion history. This cannot be undone.",
-    "deleteMyAccount": "Delete my account"
+    "deleteMyAccount": "Delete my account",
+    "admin": {
+      "title": "Invite Users",
+      "desc": "Invite users to WhatSaid and gift them a credit package.",
+      "emailLabel": "Email address",
+      "packageLabel": "Credit package",
+      "pkg_one-time": "One-time transcript",
+      "pkg_5-pack": "5-credit pack",
+      "pkg_20-pack": "20-credit pack",
+      "sendEmail": "Send invite email",
+      "generateLink": "Generate magic link",
+      "invalidEmail": "Enter a valid email address.",
+      "creditsGranted": "{{credits}} credits granted to {{email}}",
+      "linkGenerated": "Magic link generated — copy and share it.",
+      "inviteSent": "Invite email sent to {{email}}",
+      "recentInvites": "Recent invites",
+      "claimed": "Claimed",
+      "pending": "Pending",
+      "creditsReceived": "You received {{count}} credits!"
+    }
   },
   "history": {
     "title": "Transcription History",
