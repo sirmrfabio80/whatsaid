@@ -254,7 +254,19 @@
     "noQuestionsDesc": "Your saved questions and AI answers will appear here",
     "includeInExport": "Include in export",
     "aiDisclaimer": "AI-generated content",
-    "aiDisclaimerDesc": "This transcript, summary, and any AI outputs may contain errors including misidentified speakers, inaccurate medical or technical terms, and omitted or fabricated details. Do not rely on this as a verbatim record for medical, legal, or financial decisions. Always verify critical information with the original source."
+    "aiDisclaimerDesc": "This transcript, summary, and any AI outputs may contain errors including misidentified speakers, inaccurate medical or technical terms, and omitted or fabricated details. Do not rely on this as a verbatim record for medical, legal, or financial decisions. Always verify critical information with the original source.",
+    "editTranscript": "Edit transcript",
+    "doneEditing": "Done editing",
+    "saveSegment": "Save",
+    "cancelEdit": "Cancel",
+    "unsavedChanges": "Unsaved changes",
+    "unsavedChangesDesc": "You have unsaved changes to this segment. Discard them?",
+    "discardChanges": "Discard",
+    "transcriptUpdated": "Transcript manually updated",
+    "saveFailed": "Could not save transcript changes.",
+    "reportIssue": "Report transcription issue",
+    "reportIssuePlaceholder": "This feature is coming soon. For now, you can edit the transcript directly.",
+    "changeSpeaker": "Speaker"
   },
   "audioUploader": {
     "dropTitle": "Drop your audio file here",

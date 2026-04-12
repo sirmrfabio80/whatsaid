@@ -14,6 +14,8 @@ import { buildCanonicalPayload } from "@/lib/export-payload";
 import ExportButton from "@/components/ExportButton";
 import SpeakerChips from "@/components/SpeakerChips";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
+import TranscriptEditor from "@/components/TranscriptEditor";
+import { toast } from "sonner";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
@@ -31,15 +33,6 @@ function parseSpeakers(text: string): string[] {
   return [...new Set(matches.map((m) => m.replace(":", "")))];
 }
 
-function renderTranscriptWithBoldSpeakers(text: string): React.ReactNode[] {
-  const lines = text.split("\n");
-  return lines.map((line, i) => {
-    const match = line.match(/^(.+?):\s/);
-    if (match) { const label = match[1] + ":"; const rest = line.slice(match[0].length); return <p key={i} className="mb-3"><strong className="font-semibold">{label}</strong> {rest}</p>; }
-    return line.trim() ? <p key={i} className="mb-3">{line}</p> : <div key={i} className="h-2" />;
-  });
-}
-
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
   const { t } = useTranslation();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
@@ -52,6 +45,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
+  const [transcriptEdited, setTranscriptEdited] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -77,6 +71,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   };
 
   const handleCopy = async (content: string, id: string) => { await navigator.clipboard.writeText(content); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
+
+  const handleTranscriptSave = async (newContent: string) => {
+    if (!transcript) return;
+    const { error } = await supabase.from("job_outputs").update({ content: newContent }).eq("id", transcript.id);
+    if (error) { toast.error(t("jobResults.saveFailed")); throw error; }
+    setOutputs((prev) => prev.map((o) => o.id === transcript.id ? { ...o, content: newContent } : o));
+    setTranscriptEdited(true);
+    toast.success(t("jobResults.transcriptUpdated"));
+  };
 
   const handleAskQuestion = async () => {
     const prompt = questionPrompt.trim(); if (!prompt) return;
@@ -132,9 +135,16 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               {speakers.length > 0 && <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} /></div>}
-              <div className="p-5 sm:p-6">
-                {transcript ? <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">{renderTranscriptWithBoldSpeakers(applySpeakerNames(transcript.content, speakerNames))}</div> : <p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p>}
-              </div>
+              {transcript ? (
+                <TranscriptEditor
+                  content={transcript.content}
+                  speakerNames={speakerNames}
+                  onSave={handleTranscriptSave}
+                  transcriptEdited={transcriptEdited}
+                />
+              ) : (
+                <div className="p-5 sm:p-6"><p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p></div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

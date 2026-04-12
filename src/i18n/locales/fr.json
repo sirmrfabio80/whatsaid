@@ -254,7 +254,19 @@
     "noQuestionsDesc": "Vos questions enregistrées et les réponses IA apparaîtront ici",
     "includeInExport": "Inclure dans l'export",
     "aiDisclaimer": "Contenu généré par l'IA",
-    "aiDisclaimerDesc": "Cette transcription, ce résumé et tout résultat IA peuvent contenir des erreurs, y compris des intervenants mal identifiés, des termes médicaux ou techniques inexacts et des détails omis ou inventés. Ne vous fiez pas à cela comme procès-verbal pour des décisions médicales, juridiques ou financières. Vérifiez toujours les informations critiques auprès de la source originale."
+    "aiDisclaimerDesc": "Cette transcription, ce résumé et tout résultat IA peuvent contenir des erreurs, y compris des intervenants mal identifiés, des termes médicaux ou techniques inexacts et des détails omis ou inventés. Ne vous fiez pas à cela comme procès-verbal pour des décisions médicales, juridiques ou financières. Vérifiez toujours les informations critiques auprès de la source originale.",
+    "editTranscript": "Modifier la transcription",
+    "doneEditing": "Terminer la modification",
+    "saveSegment": "Enregistrer",
+    "cancelEdit": "Annuler",
+    "unsavedChanges": "Modifications non enregistrées",
+    "unsavedChangesDesc": "Vous avez des modifications non enregistrées pour ce segment. Les abandonner ?",
+    "discardChanges": "Abandonner",
+    "transcriptUpdated": "Transcription mise à jour manuellement",
+    "saveFailed": "Impossible d'enregistrer les modifications de la transcription.",
+    "reportIssue": "Signaler un problème de transcription",
+    "reportIssuePlaceholder": "Cette fonctionnalité arrive bientôt. En attendant, vous pouvez modifier la transcription directement.",
+    "changeSpeaker": "Intervenant"
   },
   "audioUploader": {
     "dropTitle": "Déposez votre fichier audio ici",
