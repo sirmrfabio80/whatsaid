@@ -152,6 +152,35 @@ export default function Settings() {
             <CardContent className="p-5 sm:p-6 space-y-4">
               <h2 className="font-heading font-semibold text-lg">{t("settings.preferences")}</h2>
               <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  {t("settings.uiLanguage")}
+                </Label>
+                <p className="text-xs text-muted-foreground">{t("settings.uiLanguageDesc")}</p>
+                <Select
+                  value={uiLanguage}
+                  onValueChange={async (val) => {
+                    setUiLanguage(val);
+                    i18n.changeLanguage(val);
+                    if (user) {
+                      await supabase
+                        .from("profiles")
+                        .update({ ui_language: val } as any)
+                        .eq("user_id", user.id);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">🇬🇧 English</SelectItem>
+                    <SelectItem value="it">🇮🇹 Italiano</SelectItem>
+                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>{t("settings.defaultLanguage")}</Label>
                 <LanguageSelector value={defaultLanguage} onChange={setDefaultLanguage} />
               </div>
