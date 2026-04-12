@@ -1,141 +1,96 @@
 
 
-# Plan: Admin Invite Feature for WhatSaid
+# Plan: Inline Transcript Correction on Job Page (Revised)
 
 ## Summary
 
-Add an owner-only invite panel to the Settings page. The platform owner (Fabio) can invite users by email and gift them a credit package. Invitations are fulfilled via a `pending_invites` table with atomic, one-time-only redemption after the invited user authenticates.
+Add segment-level inline editing to the transcript tab on the Job page. Users can correct text and speaker labels one line at a time, with safe line-based parsing that preserves original formatting exactly.
 
----
+## Current state
 
-## Architecture
+Transcript is a single text blob in `job_outputs.content`. Rendered by `renderTranscriptWithBoldSpeakers()` which splits by `\n` and pattern-matches `SpeakerLabel: text`. Users cannot UPDATE `job_outputs` (no RLS policy exists).
 
-```text
-Settings page (admin-only card)
-  ├─ Email input
-  ├─ Package selector: One-time (1 credit) / 5-pack / 20-pack
-  ├─ "Send invite email" → edge function → Supabase auth.admin.inviteUserByEmail
-  └─ "Generate magic link" → edge function → returns URL to copy
+## Key constraints (v1)
 
-invite-user edge function (service role)
-  ├─ Validates caller is admin (has_role check)
-  ├─ Creates pending_invites row
-  ├─ If user already exists: adds credits immediately via add_credits RPC
-  └─ If new user: leaves pending_invites unclaimed for later redemption
+1. **Line-based parsing only** — each `\n`-delimited line is one segment. No grouping of consecutive same-speaker lines. Reconstruction = `segments.join("\n")` — guaranteed lossless.
+2. **No per-segment "Edited" badges** — after a successful save, show a single transcript-level indicator: "Transcript manually updated". No session diffing or first-load snapshot logic.
+3. **Speaker edit is segment-scoped** — changing a speaker label on one line changes only that line. No global rename propagation.
 
-Redemption (client-side, after login/signup)
-  └─ Settings/Profile/Convert page checks pending_invites by email
-      → calls redeem-invite edge function → atomically marks claimed + adds credits
+## Database change
+
+One migration: UPDATE policy on `job_outputs`.
+
+```sql
+CREATE POLICY "Users can update outputs of own jobs"
+ON public.job_outputs FOR UPDATE
+USING (EXISTS (SELECT 1 FROM jobs WHERE jobs.id = job_outputs.job_id AND jobs.user_id = auth.uid()))
+WITH CHECK (EXISTS (SELECT 1 FROM jobs WHERE jobs.id = job_outputs.job_id AND jobs.user_id = auth.uid()));
 ```
 
----
+## New component: `TranscriptEditor.tsx`
 
-## Database changes
+**Segment model** (line-based):
+```ts
+interface Segment {
+  index: number;        // line index in the array
+  speaker: string | null;
+  text: string;         // everything after "Speaker: "
+  raw: string;          // original line preserved for non-speaker lines
+}
+```
 
-### 1. `pending_invites` table (migration)
+**Parsing**: `content.split("\n")` → for each line, try `match(/^(.+?):\s(.*)/)`. If matched: `{ speaker, text }`. Otherwise: `{ speaker: null, text: line, raw: line }`.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | default gen_random_uuid() |
-| email | text NOT NULL | invited user's email |
-| credits | integer NOT NULL | number of credits to grant |
-| package_id | text NOT NULL | 'one-time', '5-pack', '20-pack' |
-| invited_by | uuid NOT NULL | admin user_id |
-| claimed | boolean NOT NULL DEFAULT false | |
-| claimed_at | timestamptz | null until claimed |
-| created_at | timestamptz DEFAULT now() | |
+**Reconstruction**: For speaker lines: `${speaker}: ${text}`. For non-speaker lines: `raw` (or `text` if edited). Join with `"\n"`.
 
-RLS:
-- Service role: full access
-- Admin SELECT: `has_role(auth.uid(), 'admin')`
-- Authenticated SELECT on own email: `auth.jwt()->>'email' = email` (for redemption check)
+**Behaviour**:
+- Default: read-only, identical to current view
+- "Edit transcript" button toggles correction mode
+- In correction mode: each line gets a subtle pencil icon on hover/tap
+- Tapping a line opens inline editing: `<Textarea>` for text, `<Select>` for speaker (populated from existing speakers in this transcript only)
+- Only one line editable at a time
+- Switching away from unsaved edits shows lightweight confirm
+- Save reconstructs full text, calls `onSave(newContent)`
+- After successful save: transcript-level banner "Transcript manually updated" (dismissible)
+- Cancel reverts that line
 
-### 2. Assign admin role to Fabio
+**Speaker dropdown**: Lists all unique speakers found in the current transcript. Changing speaker on a segment only affects that one line.
 
-A one-time data INSERT into `user_roles` using the insert tool (not a migration). Fabio's user ID will be needed — can be looked up by email from profiles table.
+**Mobile**: Textarea fills width, Save/Cancel stack, all targets ≥ 44px. Sticky "Done editing" at top of card.
 
----
+**"Report transcription issue"**: Ghost button below transcript, opens a toast placeholder for now.
 
-## Edge functions
+## Changes to `JobResults.tsx`
 
-### `invite-user/index.ts` (new)
+- Replace `renderTranscriptWithBoldSpeakers()` with `<TranscriptEditor>` in transcript tab
+- Add `handleTranscriptSave`: updates `job_outputs.content` via supabase, refreshes local state
+- Pass `onSave` callback to `TranscriptEditor`
+- After save success, set a `transcriptEdited` boolean to show the banner
 
-- Accepts: `{ email, packageId, method: 'email' | 'magic-link' }`
-- Validates JWT, checks `has_role(caller, 'admin')` via service-role client
-- Maps packageId to credits: one-time=1, 5-pack=5, 20-pack=20
-- Inserts into `pending_invites`
-- Checks if user already exists (lookup by email in auth.admin)
-  - If exists: immediately call `add_credits` RPC and mark invite as claimed
-  - If not exists and method='email': `auth.admin.inviteUserByEmail(email)`
-  - If not exists and method='magic-link': `auth.admin.generateLink({ type: 'magiclink', email })` and return URL
-- Returns success + optional magic link URL
+## Translation keys
 
-### `redeem-invite/index.ts` (new)
-
-- Called by client after user authenticates
-- Validates JWT (gets user email from token)
-- Finds unclaimed `pending_invites` rows for that email
-- Atomically: calls `add_credits` for each, sets `claimed=true, claimed_at=now()`
-- Uses a SELECT ... FOR UPDATE or single UPDATE ... RETURNING to prevent double-claim
-- Returns total credits granted
-
----
-
-## Client changes
-
-### `src/pages/Settings.tsx`
-
-- Add admin role check: `supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })`
-- If admin: render "Invite Users" card with:
-  - Email input
-  - Package selector (dropdown with 3 options from PRICING_PRODUCTS labels)
-  - "Send invite email" button
-  - "Generate magic link" button → shows copyable URL on success
-  - Recent invites list (query `pending_invites` table)
-  - Success/error feedback
-
-### Invite redemption hook
-
-- A small `useRedeemInvites` hook that runs once after login
-- Calls `redeem-invite` edge function
-- Shows a toast if credits were granted ("You received X credits!")
-- Placed in AuthContext or a layout-level component so it fires on any authenticated page load
-- Runs only once per session (guard with a ref or sessionStorage flag)
-
-### Translation files
-
-- Add `settings.admin.*` keys in en.json, fr.json, it.json for invite UI labels
-
----
-
-## Security
-
-- Admin check is server-side in both edge functions (not just client-side)
-- `has_role` is SECURITY DEFINER — no RLS recursion
-- `pending_invites` locked to service_role + admin SELECT + authenticated user can only see own email rows
-- Credit grants go through existing `add_credits` RPC (atomic)
-- Redemption uses UPDATE with WHERE `claimed = false` to prevent double-claim
-- No modification to `handle_new_user()` trigger — zero risk to signup flow
+Add to en/fr/it:
+- `jobResults.editTranscript` / `jobResults.doneEditing`
+- `jobResults.saveSegment` / `jobResults.cancelEdit`
+- `jobResults.unsavedChanges`
+- `jobResults.transcriptUpdated` (banner text)
+- `jobResults.reportIssue`
+- `jobResults.changeSpeaker`
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/pages/Settings.tsx` | Add admin invite card |
-| `supabase/functions/invite-user/index.ts` | New edge function |
-| `supabase/functions/redeem-invite/index.ts` | New edge function |
-| `src/hooks/use-redeem-invites.ts` | New hook for post-login redemption |
-| `src/contexts/AuthContext.tsx` | Wire redemption hook |
-| `src/i18n/locales/en.json` | Admin invite translations |
-| `src/i18n/locales/fr.json` | Admin invite translations |
-| `src/i18n/locales/it.json` | Admin invite translations |
-| Migration | `pending_invites` table |
-| Insert | Admin role for Fabio |
+| `src/components/TranscriptEditor.tsx` | New — line-based parsing, inline editing, speaker select |
+| `src/components/JobResults.tsx` | Use TranscriptEditor, add save handler, edited banner |
+| `src/i18n/locales/en.json` | New keys |
+| `src/i18n/locales/fr.json` | New keys |
+| `src/i18n/locales/it.json` | New keys |
+| Migration | UPDATE RLS policy on job_outputs |
 
 ## Not modified
 
+- `JobDetail.tsx`, `SpeakerChips.tsx`, export/copy logic, summary, questions, auth, pricing — untouched
 - `handle_new_user()` — untouched
-- `pricing.ts`, `paddle-pricing.ts` — untouched
-- `Profile.tsx` — untouched (date fix is separate)
-- No other pages or components
+- No new tables or edge functions
 
