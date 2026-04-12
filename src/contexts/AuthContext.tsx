@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { useRedeemInvites } from "@/hooks/use-redeem-invites";
@@ -9,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   creditBalance: number;
   avatarUrl: string | null;
+  needsPasswordSetup: boolean;
   refreshCredits: () => Promise<void>;
   refreshAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -20,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   creditBalance: 0,
   avatarUrl: null,
+  needsPasswordSetup: false,
   refreshCredits: async () => {},
   refreshAvatar: async () => {},
   signOut: async () => {},
@@ -33,26 +36,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [creditBalance, setCreditBalance] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const refreshCredits = async () => {
-    if (!user) return;
+  const refreshCredits = useCallback(async () => {
+    const currentUser = user;
+    if (!currentUser) return;
     const { data } = await supabase
       .from("credit_balances")
       .select("balance")
-      .eq("user_id", user.id)
+      .eq("user_id", currentUser.id)
       .single();
     if (data) setCreditBalance(data.balance);
-  };
+  }, [user]);
 
-  const refreshAvatar = async () => {
-    if (!user) return;
+  const refreshAvatar = useCallback(async () => {
+    const currentUser = user;
+    if (!currentUser) return;
     const { data } = await supabase
       .from("profiles")
       .select("avatar_url")
-      .eq("user_id", user.id)
+      .eq("user_id", currentUser.id)
       .single();
     setAvatarUrl(data?.avatar_url ?? null);
-  };
+  }, [user]);
+
+  const refreshProfile = useCallback(async (uid: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("avatar_url, needs_password_setup")
+      .eq("user_id", uid)
+      .single();
+    setAvatarUrl(data?.avatar_url ?? null);
+    setNeedsPasswordSetup(data?.needs_password_setup ?? false);
+  }, []);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -60,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setCreditBalance(0);
     setAvatarUrl(null);
+    setNeedsPasswordSetup(false);
   };
 
   useEffect(() => {
@@ -81,15 +100,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       refreshCredits();
-      refreshAvatar();
+      refreshProfile(user.id);
     }
-  }, [user]);
+  }, [user, refreshCredits, refreshProfile]);
+
+  // Redirect to /set-password if the flag is set
+  useEffect(() => {
+    if (!loading && user && needsPasswordSetup && location.pathname !== "/set-password") {
+      navigate("/set-password", { replace: true });
+    }
+  }, [loading, user, needsPasswordSetup, location.pathname, navigate]);
 
   // Redeem any pending invites after login
-  useRedeemInvites(user?.id, user?.email ?? undefined);
+  const handleCreditsRedeemed = useCallback(() => {
+    refreshCredits();
+    if (user) refreshProfile(user.id);
+  }, [refreshCredits, refreshProfile, user]);
+
+  useRedeemInvites(user?.id, user?.email ?? undefined, handleCreditsRedeemed);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, creditBalance, avatarUrl, refreshCredits, refreshAvatar, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, creditBalance, avatarUrl, needsPasswordSetup, refreshCredits, refreshAvatar, signOut }}>
       {children}
     </AuthContext.Provider>
   );
