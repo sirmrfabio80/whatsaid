@@ -45,6 +45,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
+  const [transcriptEdited, setTranscriptEdited] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -70,6 +71,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   };
 
   const handleCopy = async (content: string, id: string) => { await navigator.clipboard.writeText(content); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
+
+  const handleTranscriptSave = async (newContent: string) => {
+    if (!transcript) return;
+    const { error } = await supabase.from("job_outputs").update({ content: newContent }).eq("id", transcript.id);
+    if (error) { toast.error(t("jobResults.saveFailed")); throw error; }
+    setOutputs((prev) => prev.map((o) => o.id === transcript.id ? { ...o, content: newContent } : o));
+    setTranscriptEdited(true);
+    toast.success(t("jobResults.transcriptUpdated"));
+  };
 
   const handleAskQuestion = async () => {
     const prompt = questionPrompt.trim(); if (!prompt) return;
