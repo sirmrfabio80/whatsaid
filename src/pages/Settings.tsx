@@ -220,6 +220,8 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {isAdmin && <AdminInviteCard />}
+
           <Card className="rounded-xl border-destructive/30 bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
               <h2 className="font-heading font-semibold text-lg text-destructive">{t("settings.dangerZone")}</h2>
