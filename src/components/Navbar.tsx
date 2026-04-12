@@ -99,10 +99,6 @@ export default function Navbar() {
                     <History className="w-4 h-4 mr-2" />
                     {t("nav.history")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/credits")} className="rounded-lg">
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    {t("nav.credits")}
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/settings")} className="rounded-lg">
                     <Settings className="w-4 h-4 mr-2" />
                     {t("nav.settings")}
@@ -171,11 +167,6 @@ export default function Navbar() {
               <Link to="/history" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "210ms", animationFillMode: "forwards" }}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
                   <History className="w-5 h-5" />{t("nav.history")}
-                </Button>
-              </Link>
-              <Link to="/credits" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "270ms", animationFillMode: "forwards" }}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
-                  <CreditCard className="w-5 h-5" />{t("nav.credits")}
                 </Button>
               </Link>
               <Link to="/settings" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "330ms", animationFillMode: "forwards" }}>
