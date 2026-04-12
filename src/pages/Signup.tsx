@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,9 @@ export default function Signup() {
   const [success, setSuccess] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const purchaseIntent = searchParams.get("intent") === "purchase";
+  const productParam = searchParams.get("product");
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +68,12 @@ export default function Signup() {
       <Card className="w-full max-w-md rounded-xl border-border/50">
         <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-          <CardTitle className="font-heading text-2xl">{t("signup.title")}</CardTitle>
-          <CardDescription>{t("signup.subtitle")}</CardDescription>
+          <CardTitle className="font-heading text-2xl">
+            {purchaseIntent ? t("signup.purchaseTitle") : t("signup.title")}
+          </CardTitle>
+          <CardDescription>
+            {purchaseIntent ? t("signup.purchaseSubtitle") : t("signup.subtitle")}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">

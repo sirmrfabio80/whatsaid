@@ -58,8 +58,8 @@ export default function Index() {
                 {t("home.ctaPrimary")}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-              <Button variant="outline" size="lg" className="h-12 px-8 text-base rounded-lg" asChild>
-                <a href="#pricing">{t("home.ctaPricing")}</a>
+              <Button variant="outline" size="lg" className="h-12 px-8 text-base rounded-lg" onClick={() => navigate("/pricing")}>
+                {t("home.ctaPricing")}
               </Button>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function Index() {
               <h4 className="font-heading font-semibold text-sm mb-3">{t("home.footerProduct")}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/convert" className="hover:text-foreground transition-colors">{t("home.footerConvertAudio")}</Link></li>
-                <li><a href="#pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</a></li>
+                <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link></li>
                 <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>
               </ul>
             </div>

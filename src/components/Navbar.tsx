@@ -61,11 +61,11 @@ export default function Navbar() {
               {t("nav.convert")}
             </Button>
           </Link>
-          <a href="/#pricing">
-            <Button variant="ghost" size="sm" className="rounded-lg">
+          <Link to="/pricing">
+            <Button variant={location.pathname === "/pricing" ? "secondary" : "ghost"} size="sm" className="rounded-lg">
               {t("nav.pricing")}
             </Button>
-          </a>
+          </Link>
 
           <div className="w-px h-6 bg-border mx-2" />
 
@@ -154,9 +154,9 @@ export default function Navbar() {
             <Link to="/convert" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "0ms", animationFillMode: "forwards" }}>
               <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.convert")}</Button>
             </Link>
-            <a href="/#pricing" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "60ms", animationFillMode: "forwards" }}>
+            <Link to="/pricing" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "60ms", animationFillMode: "forwards" }}>
               <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.pricing")}</Button>
-            </a>
+            </Link>
           </div>
 
           <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "120ms", animationFillMode: "forwards" }} />
