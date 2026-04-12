@@ -56,7 +56,7 @@ function getUniqueSpeakers(segments: Segment[]): string[] {
 function applySpeakerNamesToText(text: string, speakerNames: Record<string, string>): string {
   let result = text;
   for (const [original, renamed] of Object.entries(speakerNames)) {
-    if (renamed) result = result.replaceAll(original, renamed);
+    if (renamed) result = result.split(original).join(renamed);
   }
   return result;
 }

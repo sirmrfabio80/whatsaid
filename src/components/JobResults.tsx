@@ -33,15 +33,6 @@ function parseSpeakers(text: string): string[] {
   return [...new Set(matches.map((m) => m.replace(":", "")))];
 }
 
-function renderTranscriptWithBoldSpeakers(text: string): React.ReactNode[] {
-  const lines = text.split("\n");
-  return lines.map((line, i) => {
-    const match = line.match(/^(.+?):\s/);
-    if (match) { const label = match[1] + ":"; const rest = line.slice(match[0].length); return <p key={i} className="mb-3"><strong className="font-semibold">{label}</strong> {rest}</p>; }
-    return line.trim() ? <p key={i} className="mb-3">{line}</p> : <div key={i} className="h-2" />;
-  });
-}
-
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
   const { t } = useTranslation();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
