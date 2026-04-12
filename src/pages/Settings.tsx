@@ -26,7 +26,7 @@ const UI_LANGUAGES = [
 ] as const;
 
 export default function Settings() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, needsPasswordSetup } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
