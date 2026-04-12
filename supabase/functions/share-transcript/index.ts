@@ -241,6 +241,22 @@ Deno.serve(async (req) => {
     const SENDER_DOMAIN = 'notify.whatsaid.app'
     const FROM_DOMAIN = 'whatsaid.app'
 
+    // Get or create unsubscribe token for recipient
+    const { data: existingToken } = await serviceClient
+      .from('email_unsubscribe_tokens')
+      .select('token')
+      .eq('email', recipient_email.toLowerCase())
+      .maybeSingle()
+
+    let unsubscribeToken = existingToken?.token
+    if (!unsubscribeToken) {
+      unsubscribeToken = crypto.randomUUID()
+      await serviceClient.from('email_unsubscribe_tokens').insert({
+        email: recipient_email.toLowerCase(),
+        token: unsubscribeToken,
+      })
+    }
+
     await serviceClient.from('email_send_log').insert({
       message_id: messageId,
       template_name: 'share-transcript',
@@ -261,6 +277,7 @@ Deno.serve(async (req) => {
         text,
         purpose: 'transactional',
         label: 'share-transcript',
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     })

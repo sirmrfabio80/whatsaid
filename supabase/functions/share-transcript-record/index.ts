@@ -113,6 +113,23 @@ Deno.serve(async (req) => {
     const SENDER_DOMAIN = 'notify.whatsaid.app'
     const FROM_DOMAIN = 'whatsaid.app'
 
+    // Get or create unsubscribe token for recipient
+    const recipientLower = recipient_email.toLowerCase().trim()
+    const { data: existingToken } = await serviceClient
+      .from('email_unsubscribe_tokens')
+      .select('token')
+      .eq('email', recipientLower)
+      .maybeSingle()
+
+    let unsubscribeToken = existingToken?.token
+    if (!unsubscribeToken) {
+      unsubscribeToken = crypto.randomUUID()
+      await serviceClient.from('email_unsubscribe_tokens').insert({
+        email: recipientLower,
+        token: unsubscribeToken,
+      })
+    }
+
     await serviceClient.from('email_send_log').insert({
       message_id: messageId,
       template_name: 'share-transcript-record',
@@ -133,6 +150,7 @@ Deno.serve(async (req) => {
         text: `${user.email} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy.`,
         purpose: 'transactional',
         label: 'share-transcript-record',
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     })
