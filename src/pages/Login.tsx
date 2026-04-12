@@ -52,7 +52,7 @@ export default function Login() {
       setLoading(false);
       return;
     }
-    navigate("/");
+    navigate(redirectAfterAuth);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
