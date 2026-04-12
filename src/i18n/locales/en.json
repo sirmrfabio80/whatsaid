@@ -107,7 +107,9 @@
     "resetLinkSent": "Reset link sent to",
     "backToSignIn": "Back to sign in",
     "sending": "Sending...",
-    "sendResetLink": "Send reset link"
+    "sendResetLink": "Send reset link",
+    "purchaseTitle": "Sign in to complete your purchase",
+    "purchaseSubtitle": "Sign in to access checkout and keep your results saved"
   },
   "signup": {
     "title": "Create your account",
@@ -125,7 +127,9 @@
     "alreadyHaveAccount": "Already have an account?",
     "accountCreated": "Account created!",
     "checkEmail": "Check your email to confirm your account, then sign in.",
-    "goToSignIn": "Go to sign in"
+    "goToSignIn": "Go to sign in",
+    "purchaseTitle": "Create your account to continue",
+    "purchaseSubtitle": "Your transcript, summary, and downloads will be saved in your account"
   },
   "resetPassword": {
     "invalidTitle": "Invalid reset link",
