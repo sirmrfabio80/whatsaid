@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Mic, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Signup() {
@@ -63,9 +64,7 @@ export default function Signup() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md rounded-xl border-border/50">
         <CardHeader className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Mic className="w-6 h-6 text-primary" />
-          </div>
+            <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
           <CardTitle className="font-heading text-2xl">{t("signup.title")}</CardTitle>
           <CardDescription>{t("signup.subtitle")}</CardDescription>
         </CardHeader>

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Mic, AlertCircle, Check, ArrowLeft } from "lucide-react";
+import { AlertCircle, Check, ArrowLeft } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { lovable } from "@/integrations/lovable/index";
 
 export default function Login() {
@@ -70,9 +71,7 @@ export default function Login() {
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12 animate-page-enter">
         <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
           <CardHeader className="text-center">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Mic className="w-6 h-6 text-primary" />
-            </div>
+            <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
             <CardTitle className="font-heading text-2xl">{t("login.resetTitle")}</CardTitle>
             <CardDescription>
               {resetSent ? t("login.resetDescSent") : t("login.resetDescDefault")}
@@ -121,9 +120,7 @@ export default function Login() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12 animate-page-enter">
       <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
         <CardHeader className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Mic className="w-6 h-6 text-primary" />
-          </div>
+            <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
           <CardTitle className="font-heading text-2xl">{t("login.title")}</CardTitle>
           <CardDescription>{t("login.subtitle")}</CardDescription>
         </CardHeader>
