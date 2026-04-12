@@ -7,13 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2, Timer } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2, Timer, MapPin } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRecordedDate, formatRecordedTime, toLocalDate, replaceDate, replaceTime } from "@/lib/recorded-date";
+import { parseISO6709, formatCoordinates, mapsUrl } from "@/lib/location";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -183,6 +184,22 @@ export default function JobDetail() {
                     <Globe className="w-3 h-3" />{getLanguageLabel(meta.language_detected)}
                   </Badge>
                 )}
+                {(() => {
+                  const loc = meta.metadata_location_iso6709 ? parseISO6709(meta.metadata_location_iso6709) : null;
+                  if (!loc) return null;
+                  return (
+                    <a
+                      href={mapsUrl(loc)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex"
+                    >
+                      <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
+                        <MapPin className="w-3 h-3" />{formatCoordinates(loc)}
+                      </Badge>
+                    </a>
+                  );
+                })()}
               </div>
             </div>
           )}
