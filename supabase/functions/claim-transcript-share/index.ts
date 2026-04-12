@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
       const { data: share, error } = await serviceClient
         .from('transcript_shares')
-        .select('id, recipient_email, claimed, expires_at, job_id')
+        .select('id, recipient_email, claimed, expires_at, job_id, shared_by')
         .eq('token', token)
         .maybeSingle()
 
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       const { data: sharerProfile } = await serviceClient
         .from('profiles')
         .select('display_name')
-        .eq('user_id', (await serviceClient.from('transcript_shares').select('shared_by').eq('id', share.id).single()).data?.shared_by ?? '')
+        .eq('user_id', share.shared_by)
         .maybeSingle()
 
       return new Response(JSON.stringify({
