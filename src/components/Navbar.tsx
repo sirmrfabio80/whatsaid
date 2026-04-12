@@ -141,47 +141,49 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-card px-4 py-3 animate-page-enter">
+        <div className="md:hidden border-t border-border bg-card px-4 py-3">
           <div className="space-y-1">
-            <Link to="/convert" onClick={() => setMobileOpen(false)} className="block">
+            <Link to="/convert" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "0ms", animationFillMode: "forwards" }}>
               <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.convert")}</Button>
             </Link>
-            <a href="/#pricing" onClick={() => setMobileOpen(false)} className="block">
+            <a href="/#pricing" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "60ms", animationFillMode: "forwards" }}>
               <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.pricing")}</Button>
             </a>
           </div>
 
-          <div className="h-px bg-border my-3" />
+          <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "120ms", animationFillMode: "forwards" }} />
 
           {user ? (
             <div className="space-y-1">
-              <Link to="/profile" onClick={() => setMobileOpen(false)} className="block">
+              <Link to="/profile" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "150ms", animationFillMode: "forwards" }}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
                   <User className="w-5 h-5" />{t("nav.profile")}
                 </Button>
               </Link>
-              <Link to="/history" onClick={() => setMobileOpen(false)} className="block">
+              <Link to="/history" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "210ms", animationFillMode: "forwards" }}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
                   <History className="w-5 h-5" />{t("nav.history")}
                 </Button>
               </Link>
-              <Link to="/credits" onClick={() => setMobileOpen(false)} className="block">
+              <Link to="/credits" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "270ms", animationFillMode: "forwards" }}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
                   <CreditCard className="w-5 h-5" />{t("nav.credits")}
                 </Button>
               </Link>
-              <Link to="/settings" onClick={() => setMobileOpen(false)} className="block">
+              <Link to="/settings" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "330ms", animationFillMode: "forwards" }}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
                   <Settings className="w-5 h-5" />{t("nav.settings")}
                 </Button>
               </Link>
-              <div className="h-px bg-border my-3" />
-              <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3" onClick={() => { signOut(); setMobileOpen(false); }}>
-                <LogOut className="w-5 h-5" />{t("common.signOut")}
-              </Button>
+              <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "370ms", animationFillMode: "forwards" }} />
+              <div className="opacity-0 animate-fade-in" style={{ animationDelay: "400ms", animationFillMode: "forwards" }}>
+                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3" onClick={() => { signOut(); setMobileOpen(false); }}>
+                  <LogOut className="w-5 h-5" />{t("common.signOut")}
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 opacity-0 animate-fade-in" style={{ animationDelay: "150ms", animationFillMode: "forwards" }}>
               <LanguageSwitcher />
               <Link to="/login" onClick={() => setMobileOpen(false)} className="flex-1">
                 <Button className="w-full rounded-lg h-12 text-base">{t("common.signIn")}</Button>
