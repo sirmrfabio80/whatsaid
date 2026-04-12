@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Mic, AlertCircle, Check } from "lucide-react";
 
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,44 +19,22 @@ export default function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Listen for the PASSWORD_RECOVERY event from the auth redirect
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecovery(true);
-      }
+      if (event === "PASSWORD_RECOVERY") setIsRecovery(true);
     });
-
-    // Also check the URL hash for recovery type
     const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setIsRecovery(true);
-    }
-
+    if (hash.includes("type=recovery")) setIsRecovery(true);
     return () => subscription.unsubscribe();
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords don't match.");
-      return;
-    }
-
+    if (password.length < 6) { setError(t("resetPassword.minLength")); return; }
+    if (password !== confirmPassword) { setError(t("resetPassword.mismatch")); return; }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
+    if (error) { setError(error.message); setLoading(false); return; }
     setSuccess(true);
     setLoading(false);
     setTimeout(() => navigate("/"), 2000);
@@ -68,12 +48,12 @@ export default function ResetPassword() {
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Mic className="w-6 h-6 text-primary" />
             </div>
-            <CardTitle className="font-heading text-2xl">Invalid reset link</CardTitle>
-            <CardDescription>This link is invalid or has expired. Please request a new password reset.</CardDescription>
+            <CardTitle className="font-heading text-2xl">{t("resetPassword.invalidTitle")}</CardTitle>
+            <CardDescription>{t("resetPassword.invalidDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button className="w-full h-11 rounded-xl" onClick={() => navigate("/login")}>
-              Back to sign in
+              {t("login.backToSignIn")}
             </Button>
           </CardContent>
         </Card>
@@ -88,37 +68,35 @@ export default function ResetPassword() {
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Mic className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="font-heading text-2xl">Set new password</CardTitle>
-          <CardDescription>Choose a new password for your account</CardDescription>
+          <CardTitle className="font-heading text-2xl">{t("resetPassword.title")}</CardTitle>
+          <CardDescription>{t("resetPassword.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           {success ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-primary text-sm">
                 <Check className="w-4 h-4" />
-                <span>Password updated — redirecting…</span>
+                <span>{t("resetPassword.passwordUpdated")}</span>
               </div>
             </div>
           ) : (
             <form onSubmit={handleReset} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-password">New password</Label>
+                <Label htmlFor="new-password">{t("resetPassword.newPassword")}</Label>
                 <Input id="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="rounded-xl h-11" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm password</Label>
+                <Label htmlFor="confirm-password">{t("resetPassword.confirmPassword")}</Label>
                 <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required placeholder="••••••••" className="rounded-xl h-11" />
               </div>
-
               {error && (
                 <div className="flex items-center gap-2 text-destructive text-sm">
                   <AlertCircle className="w-4 h-4" />
                   <span>{error}</span>
                 </div>
               )}
-
               <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading}>
-                {loading ? "Updating..." : "Update password"}
+                {loading ? t("resetPassword.updating") : t("resetPassword.updatePassword")}
               </Button>
             </form>
           )}

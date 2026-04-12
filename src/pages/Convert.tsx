@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
@@ -17,16 +18,9 @@ import { Link } from "react-router-dom";
 
 type ProcessingStep = "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 
-const STEP_LABELS: Record<ProcessingStep, string> = {
-  uploading: "Uploading audio...",
-  transcribing: "Transcribing with speaker labels...",
-  summarising: "Generating summary & analysis...",
-  completed: "Processing complete",
-  failed: "Processing failed",
-};
-
 export default function Convert() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
@@ -42,13 +36,20 @@ export default function Convert() {
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
 
+  const STEP_LABELS: Record<ProcessingStep, string> = {
+    uploading: t("convert.stepUploading"),
+    transcribing: t("convert.stepTranscribing"),
+    summarising: t("convert.stepSummarising"),
+    completed: t("convert.stepCompleted"),
+    failed: t("convert.stepFailed"),
+  };
+
   const handleFileSelected = useCallback((f: File, dur: number, creationDate: Date | null) => {
     setFile(f);
     setDuration(dur);
     setFileCreationDate(creationDate);
   }, []);
 
-  // Poll job status
   useEffect(() => {
     if (!jobId || !processing) return;
 
@@ -108,12 +109,10 @@ export default function Convert() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // Determine the best recording timestamp: prefer file creation date, fall back to lastModified
       const recordedAt = fileCreationDate
         ? fileCreationDate.toISOString()
         : new Date(file.lastModified).toISOString();
       const recordedAtSource = fileCreationDate ? "file_creation_date" : "file_last_modified";
-      console.log("[upload-metadata] recorded_at source:", recordedAtSource, "value:", recordedAt);
 
       const { error: jobError } = await supabase
         .from("jobs")
@@ -171,8 +170,8 @@ export default function Convert() {
       <div className="container mx-auto px-4 py-10 sm:py-14">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-2">Convert your audio</h1>
-            <p className="text-muted-foreground">Upload a file to get a transcript, summary, and custom AI analysis.</p>
+            <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("convert.title")}</h1>
+            <p className="text-muted-foreground">{t("convert.subtitle")}</p>
           </div>
 
           {processing || step === "failed" ? (
@@ -232,7 +231,7 @@ export default function Convert() {
 
                   {step === "failed" && (
                     <Button className="rounded-xl" onClick={handleReset}>
-                      Try again
+                      {t("common.tryAgain")}
                     </Button>
                   )}
                 </div>
@@ -252,7 +251,7 @@ export default function Convert() {
                         <p className="text-xs text-muted-foreground">{formatDuration(duration)} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
                       </div>
                       <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={handleReset}>
-                        Change
+                        {t("common.change")}
                       </Button>
                     </div>
 
@@ -261,11 +260,11 @@ export default function Convert() {
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium" htmlFor="custom-prompt">
-                          Custom AI prompt <span className="text-muted-foreground font-normal">(optional)</span>
+                          {t("convert.customPromptLabel")} <span className="text-muted-foreground font-normal">{t("convert.customPromptOptional")}</span>
                         </label>
                         <Textarea
                           id="custom-prompt"
-                          placeholder="e.g. Extract all action items and who is responsible for each..."
+                          placeholder={t("convert.customPromptPlaceholder")}
                           value={customPrompt}
                           onChange={(e) => setCustomPrompt(e.target.value)}
                           className="rounded-xl resize-none min-h-[80px]"
@@ -277,7 +276,7 @@ export default function Convert() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="w-4 h-4" />
-                          Duration
+                          {t("convert.duration")}
                         </div>
                         <span className="text-sm font-medium">{formatDuration(duration)}</span>
                       </div>
@@ -291,15 +290,15 @@ export default function Convert() {
                         className="mt-0.5"
                       />
                       <label htmlFor="recording-consent" className="text-sm text-muted-foreground leading-snug cursor-pointer">
-                        I confirm that I have the right to upload and process this recording, and that all applicable consent requirements have been met.
+                        {t("convert.consentLabel")}
                       </label>
                     </div>
 
                     <p className="text-xs text-muted-foreground flex items-start gap-1.5">
                       <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                      Audio is processed using third-party AI services and deleted immediately after. By converting, you agree to our{" "}
-                      <Link to="/terms" className="text-primary hover:underline" target="_blank">Terms</Link>{" "}and{" "}
-                      <Link to="/privacy" className="text-primary hover:underline" target="_blank">Privacy Policy</Link>.
+                      {t("convert.thirdPartyNotice")}{" "}
+                      <Link to="/terms" className="text-primary hover:underline" target="_blank">{t("convert.terms")}</Link>{" "}{t("convert.and")}{" "}
+                      <Link to="/privacy" className="text-primary hover:underline" target="_blank">{t("convert.privacyPolicy")}</Link>.
                     </p>
 
                     {user ? (
@@ -309,15 +308,15 @@ export default function Convert() {
                         onClick={handleConvert}
                         disabled={processing || !consentChecked}
                       >
-                        Convert now<ArrowRight className="w-4 h-4 ml-2" />
+                        {t("convert.convertNow")}<ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     ) : (
                       <div className="text-center space-y-3">
                         <p className="text-sm text-muted-foreground">
-                          Sign in to convert your audio.
+                          {t("convert.signInToConvert")}
                         </p>
                         <Button className="w-full rounded-xl" onClick={() => navigate("/login")}>
-                          Sign in
+                          {t("common.signIn")}
                         </Button>
                       </div>
                     )}
