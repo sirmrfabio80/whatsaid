@@ -135,6 +135,7 @@ export default function Convert() {
           metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
           metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
           metadata_file_lastmodified: fileLastModifiedIso,
+          metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
         } as any);
 
       if (jobError) {
