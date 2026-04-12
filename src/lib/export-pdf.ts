@@ -1,8 +1,7 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
-import { resolveExportBaseName } from "./export-filename";
-import type { ExportPayload } from "./export-types";
+import type { CanonicalExportData } from "./export-types";
 
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
@@ -91,62 +90,36 @@ function transcriptToHtml(text: string): string {
     .join("");
 }
 
-function formatMeta(payload: ExportPayload): string[] {
-  const parts: string[] = [];
-  if (payload.createdAt) parts.push(`Date: ${new Date(payload.createdAt).toLocaleDateString()}`);
-  if (payload.language) parts.push(`Language: ${payload.language}`);
-  if (payload.durationSeconds != null) {
-    const minutes = Math.floor(payload.durationSeconds / 60);
-    const seconds = Math.floor(payload.durationSeconds % 60);
-    parts.push(`Duration: ${minutes}:${seconds.toString().padStart(2, "0")}`);
-  }
-  return parts;
-}
+export function buildPdfDocumentHtml(data: CanonicalExportData): string {
+  const meta: string[] = [];
+  meta.push(`Date: ${data.createdAt}`);
+  if (data.duration) meta.push(`Duration: ${data.duration}`);
+  if (data.language) meta.push(`Language: ${data.language}`);
 
-export function resolvePdfBaseName(payload: ExportPayload): string {
-  return resolveExportBaseName({
-    jobTitle: payload.jobTitle,
-    generatedTitle: payload.generatedTitle,
-    originalFileName: payload.originalFileName ?? payload.fileName,
-  });
-}
-
-export function buildPdfDocumentHtml(payload: ExportPayload): string {
-  const title = resolvePdfBaseName(payload);
-  const meta = formatMeta(payload);
-  let body = `<header style="margin-bottom:24px"><h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(title)}</h1>`;
-
-  if (meta.length > 0) {
-    body += `<p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
-  }
-
+  let body = `<header style="margin-bottom:24px"><h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
+  body += `<p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
   body += "</header>";
 
-  if (payload.transcript) {
-    body += `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>${transcriptToHtml(payload.transcript)}</section>`;
+  // Summary
+  if (data.summary) {
+    body += `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
   }
 
-  if (payload.summary) {
-    body += `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(payload.summary)}</section>`;
-  }
-
-  if (payload.customOutput) {
-    body += `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">AI Output</h2>`;
-    if (payload.customPrompt) {
-      body += `<p style="margin:0 0 10px;color:#6b7280;font-size:12px;line-height:1.5"><strong>Prompt:</strong> ${escapeHtml(payload.customPrompt)}</p>`;
-    }
-    body += `${markdownToHtml(payload.customOutput)}</section>`;
-  }
-
-  if (payload.questions?.length) {
-    body += `<section style="margin-top:30px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`;
-    payload.questions.forEach((entry) => {
+  // Questions & Answers (page break via CSS)
+  if (data.questions && data.questions.length > 0) {
+    body += `<section style="margin-top:30px;page-break-before:always"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`;
+    data.questions.forEach((entry) => {
       if (entry.prompt) {
         body += `<p style="margin:16px 0 6px;font-size:14px;line-height:1.5;font-weight:700;color:#111827">Q: ${escapeHtml(entry.prompt)}</p>`;
       }
       body += `<div style="margin:0 0 14px">${markdownToHtml(entry.answer)}</div>`;
     });
     body += "</section>";
+  }
+
+  // Transcript (page break via CSS)
+  if (data.transcript) {
+    body += `<section style="margin-top:26px;page-break-before:always"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>${transcriptToHtml(data.transcript)}</section>`;
   }
 
   return body;
@@ -193,9 +166,8 @@ async function waitForLayout(): Promise<void> {
   }
 }
 
-export async function exportPdf(payload: ExportPayload): Promise<void> {
-  const fileBaseName = resolvePdfBaseName(payload);
-  const host = createRenderRoot(buildPdfDocumentHtml(payload));
+export async function exportPdf(data: CanonicalExportData): Promise<void> {
+  const host = createRenderRoot(buildPdfDocumentHtml(data));
   const content = host.firstElementChild as HTMLElement | null;
 
   if (!content) {
@@ -225,7 +197,7 @@ export async function exportPdf(payload: ExportPayload): Promise<void> {
     });
 
     pdf.setProperties({
-      title: fileBaseName,
+      title: data.title,
       subject: "WhatSaid export",
       creator: "WhatSaid",
       author: "WhatSaid",
@@ -248,17 +220,7 @@ export async function exportPdf(payload: ExportPayload): Promise<void> {
 
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-      context.drawImage(
-        canvas,
-        0,
-        offsetY,
-        canvas.width,
-        sliceHeight,
-        0,
-        0,
-        pageCanvas.width,
-        pageCanvas.height,
-      );
+      context.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, pageCanvas.width, pageCanvas.height);
 
       const imageHeightMm = (sliceHeight * PAGE_WIDTH_MM) / canvas.width;
       if (pageIndex > 0) {
@@ -271,10 +233,8 @@ export async function exportPdf(payload: ExportPayload): Promise<void> {
       pageIndex += 1;
     }
 
-    // Use explicit blob + anchor download (same pattern as DOCX export)
-    // jsPDF's built-in save() can be blocked in sandboxed iframes
     const blob = pdf.output("blob");
-    downloadBlob(blob, `${fileBaseName}.pdf`);
+    downloadBlob(blob, `${data.title}.pdf`);
   } finally {
     host.remove();
   }
