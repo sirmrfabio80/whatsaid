@@ -284,10 +284,26 @@
     "sendEmailDesc": "Sends a readable email with the title, summary, questions and answers, and full transcript.",
     "shareRecordLabel": "Share as transcript record",
     "shareRecordDesc": "Lets the recipient open their own copy of this transcript in WhatSaid.",
-    "comingSoon": "Coming soon",
     "sent": "Email sent",
     "sentSuccess": "Transcript shared successfully",
+    "recordSentSuccess": "Share link sent successfully",
     "sendFailed": "Could not send email. Please try again."
+  },
+  "claim": {
+    "validating": "Validating share link…",
+    "sharedWithYou": "A transcript was shared with you",
+    "sharedByDesc": "{{sender}} shared a transcript with you.",
+    "signInToClaim": "Sign in or create an account to get your own copy.",
+    "createAccount": "Create account",
+    "claiming": "Creating your copy…",
+    "success": "Transcript added!",
+    "successDesc": "Your copy is ready. Redirecting…",
+    "errorTitle": "Something went wrong",
+    "invalidLink": "This link is not valid or has expired.",
+    "alreadyClaimed": "This transcript has already been claimed.",
+    "expired": "This share link has expired.",
+    "claimFailed": "Could not claim the transcript. Please try again.",
+    "genericError": "Something went wrong. Please try again."
   },
   "audioUploader": {
     "dropTitle": "Drop your audio file here",
