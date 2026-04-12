@@ -19,6 +19,8 @@ export interface AudioCreationDateResult {
     apple_metadata: string | null;
     mvhd_creation: string | null;
   };
+  /** ISO 6709 location string if found (e.g. "+45.4642+009.1900+100.000/") */
+  locationISO6709: string | null;
 }
 
 const MAC_EPOCH_OFFSET = 2082844800;
@@ -111,7 +113,7 @@ function isPlausibleIso(s: string): boolean {
   return y >= 2000 && y <= 2100;
 }
 
-function extractAppleCreationDate(buffer: ArrayBuffer): string | null {
+function extractAppleMetadataKey(buffer: ArrayBuffer, targetKey: string): string | null {
   const view = new DataView(buffer);
   const byteLength = buffer.byteLength;
 
@@ -136,7 +138,7 @@ function extractAppleCreationDate(buffer: ArrayBuffer): string | null {
     const keyValueLength = keySize - 8;
     if (keyValueLength > 0 && keyPos + 8 + keyValueLength <= keysBox.offset + keysBox.size) {
       const keyName = readString(view, keyPos + 8, keyValueLength);
-      if (keyName === "com.apple.quicktime.creationdate") {
+      if (keyName === targetKey) {
         targetKeyIndex = i + 1;
         break;
       }
@@ -166,19 +168,30 @@ function extractAppleCreationDate(buffer: ArrayBuffer): string | null {
       const valueLength = dataBox.size - 8;
       if (valueLength <= 0) break;
 
-      const isoString = readString(view, valueOffset, valueLength).trim();
-      console.log("[audio-creation-date] Raw Apple creationdate:", isoString);
-
-      if (!isPlausibleIso(isoString)) return null;
-
-      // Return the raw ISO string — do NOT parse through new Date()
-      return isoString;
+      return readString(view, valueOffset, valueLength).trim();
     }
 
     ilstPos += itemSize;
   }
 
   return null;
+}
+
+function extractAppleCreationDate(buffer: ArrayBuffer): string | null {
+  const raw = extractAppleMetadataKey(buffer, "com.apple.quicktime.creationdate");
+  if (!raw) return null;
+  console.log("[audio-creation-date] Raw Apple creationdate:", raw);
+  if (!isPlausibleIso(raw)) return null;
+  return raw;
+}
+
+function extractAppleLocation(buffer: ArrayBuffer): string | null {
+  const raw = extractAppleMetadataKey(buffer, "com.apple.quicktime.location.ISO6709");
+  if (!raw) return null;
+  console.log("[audio-creation-date] Raw Apple location:", raw);
+  // Basic validation: should start with + or -
+  if (!/^[+-]/.test(raw)) return null;
+  return raw;
 }
 
 function extractMp4CreationDate(buffer: ArrayBuffer): string | null {
@@ -229,24 +242,31 @@ export async function extractAudioCreationDate(file: File): Promise<AudioCreatio
       // Extract all available sources
       const appleIso = extractAppleCreationDate(buffer);
       const mvhdIso = extractMp4CreationDate(buffer);
+      const locationISO6709 = extractAppleLocation(buffer);
 
       const allSources = {
         apple_metadata: appleIso,
         mvhd_creation: mvhdIso,
       };
 
-      console.log("[audio-creation-date] All sources:", allSources);
+      console.log("[audio-creation-date] All sources:", allSources, "location:", locationISO6709);
 
       // Priority 1: Apple QuickTime metadata
       if (appleIso) {
         console.log("[audio-creation-date] Chosen source: com.apple.quicktime.creationdate");
-        return { isoString: appleIso, source: "apple_metadata", allSources };
+        return { isoString: appleIso, source: "apple_metadata", allSources, locationISO6709 };
       }
 
       // Priority 2: mvhd atom
       if (mvhdIso) {
         console.log("[audio-creation-date] Chosen source: mvhd");
-        return { isoString: mvhdIso, source: "mvhd_creation", allSources };
+        return { isoString: mvhdIso, source: "mvhd_creation", allSources, locationISO6709 };
+      }
+
+      // No date found but maybe location was found — return null for date
+      // Location will still be accessible via the full extraction in Convert page
+      if (locationISO6709) {
+        return { isoString: new Date(file.lastModified).toISOString(), source: "file_last_modified", allSources, locationISO6709 };
       }
     }
 
