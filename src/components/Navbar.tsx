@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +15,7 @@ import logoImg from "@/assets/logo.webp";
 import { useState } from "react";
 
 export default function Navbar() {
-  const { user, creditBalance, signOut } = useAuth();
+  const { user, creditBalance, avatarUrl, signOut } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,9 +66,12 @@ export default function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 pl-2 pr-2">
-                    <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                      {initials}
-                    </div>
+                    <Avatar className="w-7 h-7 rounded-lg">
+                      {avatarUrl && <AvatarImage src={avatarUrl} alt="Avatar" />}
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
                     <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
