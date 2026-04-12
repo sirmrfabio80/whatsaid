@@ -150,45 +150,6 @@ export default function Index() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="container mx-auto px-4 py-10">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <img src={logoImg} alt="WhatSaid" className="w-7 h-7 rounded-lg" />
-                <span className="font-heading font-semibold text-sm">WhatSaid</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
-                {t("home.footerDesc")}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-heading font-semibold text-sm mb-3">{t("home.footerProduct")}</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/convert" className="hover:text-foreground transition-colors">{t("home.footerConvertAudio")}</Link></li>
-                <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link></li>
-                <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-heading font-semibold text-sm mb-3">{t("home.footerLegal")}</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/privacy" className="hover:text-foreground transition-colors">{t("home.footerPrivacy")}</Link></li>
-                <li><Link to="/terms" className="hover:text-foreground transition-colors">{t("home.footerTerms")}</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground">{t("home.footerCopyright", { year: new Date().getFullYear() })}</p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Shield className="w-3 h-3" />
-              <span>{t("home.footerAudioDeleted")}</span>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

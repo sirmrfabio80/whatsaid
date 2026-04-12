@@ -101,7 +101,7 @@ export default function Signup() {
                 {t("signup.termsAgree")}{" "}
                 <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank">{t("signup.termsOfService")}</Link>
                 {" "}{t("signup.and")}{" "}
-                <Link to="/privacy" className="text-primary hover:underline font-medium" target="_blank">{t("home.footerPrivacy")}</Link>
+                <Link to="/privacy" className="text-primary hover:underline font-medium" target="_blank">{t("footer.privacy")}</Link>
               </label>
             </div>
 

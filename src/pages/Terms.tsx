@@ -3,8 +3,51 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+function PrivacyLinkedText({ text }: { text: string }) {
+  if (!text.includes("<privacyLink>")) return <>{text}</>;
+  return (
+    <>
+      {text.split("<privacyLink>").map((part, i) => {
+        if (i === 0) return part;
+        const [linkText, rest] = part.split("</privacyLink>");
+        return <span key={i}><Link to="/privacy" className="text-primary hover:underline">{linkText}</Link>{rest}</span>;
+      })}
+    </>
+  );
+}
+
+function RefundLinkedText({ text }: { text: string }) {
+  if (!text.includes("<refundLink>")) return <PrivacyLinkedText text={text} />;
+  return (
+    <>
+      {text.split("<refundLink>").map((part, i) => {
+        if (i === 0) return <PrivacyLinkedText key={i} text={part} />;
+        const [linkText, rest] = part.split("</refundLink>");
+        return <span key={i}><Link to="/refund-policy" className="text-primary hover:underline">{linkText}</Link><PrivacyLinkedText text={rest} /></span>;
+      })}
+    </>
+  );
+}
+
 export default function Terms() {
   const { t } = useTranslation();
+
+  const sections = [
+    { key: "s1", type: "p" },
+    { key: "s2", type: "p" },
+    { key: "s3", type: "p" },
+    { key: "s4", type: "intro-ul-outro", items: ["s4Item1", "s4Item2", "s4Item3", "s4Item4"] },
+    { key: "s5", type: "ul", items: ["s5Item1", "s5Item2", "s5Item3", "s5Item4"] },
+    { key: "s6", type: "p" },
+    { key: "s7", type: "p" },
+    { key: "s8", type: "p" },
+    { key: "s9", type: "p" },
+    { key: "s10", type: "p" },
+    { key: "s11", type: "p" },
+    { key: "s12", type: "p" },
+    { key: "s13", type: "p" },
+    { key: "s14", type: "p" },
+  ];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
@@ -18,74 +61,33 @@ export default function Terms() {
           <p className="text-sm text-muted-foreground mb-8">{t("terms.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s1Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("terms.s1Body").split("<privacyLink>").map((part, i) => {
-                  if (i === 0) return part;
-                  const [linkText, rest] = part.split("</privacyLink>");
-                  return <span key={i}><Link to="/privacy" className="text-primary hover:underline">{linkText}</Link>{rest}</span>;
-                })}
-              </p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s2Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s2Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s3Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s3Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s4Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s4Intro")}</p>
-              <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
-                <li>{t("terms.s4Item1")}</li>
-                <li>{t("terms.s4Item2")}</li>
-                <li>{t("terms.s4Item3")}</li>
-                <li>{t("terms.s4Item4")}</li>
-              </ul>
-              <p className="text-sm text-muted-foreground leading-relaxed mt-2">{t("terms.s4Outro")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s5Title")}</h2>
-              <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
-                <li>{t("terms.s5Item1")}</li>
-                <li>{t("terms.s5Item2")}</li>
-                <li>{t("terms.s5Item3")}</li>
-                <li>{t("terms.s5Item4")}</li>
-              </ul>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s6Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s6Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s7Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("terms.s7Body").split("<privacyLink>").map((part, i) => {
-                  if (i === 0) return part;
-                  const [linkText, rest] = part.split("</privacyLink>");
-                  return <span key={i}><Link to="/privacy" className="text-primary hover:underline">{linkText}</Link>{rest}</span>;
-                })}
-              </p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s8Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s8Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s9Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s9Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s10Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s10Body")}</p>
-            </section>
-            <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("terms.s11Title")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.s11Body")}</p>
-            </section>
+            {sections.map(({ key, type, items }) => (
+              <section key={key}>
+                <h2 className="font-heading text-lg font-semibold mb-2">{t(`terms.${key}Title`)}</h2>
+
+                {type === "p" && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    <RefundLinkedText text={t(`terms.${key}Body`)} />
+                  </p>
+                )}
+
+                {type === "ul" && (
+                  <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                    {items!.map((item) => <li key={item}>{t(`terms.${item}`)}</li>)}
+                  </ul>
+                )}
+
+                {type === "intro-ul-outro" && (
+                  <>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{t(`terms.${key}Intro`)}</p>
+                    <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                      {items!.map((item) => <li key={item}>{t(`terms.${item}`)}</li>)}
+                    </ul>
+                    <p className="text-sm text-muted-foreground leading-relaxed mt-2">{t(`terms.${key}Outro`)}</p>
+                  </>
+                )}
+              </section>
+            ))}
           </div>
         </div>
       </div>

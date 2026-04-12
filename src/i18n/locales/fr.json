@@ -457,6 +457,22 @@
     "finalTitle": "Choisissez l'option qui correspond à votre utilisation",
     "finalBody": "Commencez avec un fichier ou achetez des crédits pour une utilisation répétée — vos résultats restent sauvegardés dans votre compte.",
     "finalCta": "Créer un compte et continuer",
-    "finalCtaLoggedIn": "Continuer"
+    "finalCtaLoggedIn": "Continuer",
+    "paddleNote": "Les paiements sont traités de manière sécurisée par Paddle, notre revendeur officiel.",
+    "consentPrefix": "En achetant, vous acceptez nos",
+    "supportLine": "Besoin d'aide ?"
+  },
+  "footer": {
+    "desc": "Transcription IA premium avec identification des intervenants, résumés et analyse personnalisée. Audio supprimé après traitement.",
+    "product": "Produit",
+    "convertAudio": "Convertir l'audio",
+    "legal": "Légal",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "refundPolicy": "Politique de remboursement",
+    "support": "Support",
+    "operator": "Exploité par [OPERATOR_NAME]",
+    "copyright": "© {{year}} WhatSaid. Tous droits réservés.",
+    "audioDeleted": "Audio supprimé après traitement"
   }
 }

@@ -457,6 +457,22 @@
     "finalTitle": "Scegli l'opzione adatta al tuo modo di lavorare",
     "finalBody": "Inizia con un file o acquista crediti per un uso ripetuto — i tuoi risultati restano salvati nel tuo account.",
     "finalCta": "Crea account e continua",
-    "finalCtaLoggedIn": "Continua"
+    "finalCtaLoggedIn": "Continua",
+    "paddleNote": "I pagamenti sono elaborati in modo sicuro da Paddle, il nostro rivenditore ufficiale.",
+    "consentPrefix": "Acquistando, accetti i nostri",
+    "supportLine": "Hai bisogno di aiuto?"
+  },
+  "footer": {
+    "desc": "Trascrizione IA premium con identificazione degli speaker, riassunti e analisi personalizzata. Audio eliminato dopo l'elaborazione.",
+    "product": "Prodotto",
+    "convertAudio": "Converti audio",
+    "legal": "Legale",
+    "terms": "Termini di servizio",
+    "privacy": "Informativa sulla privacy",
+    "refundPolicy": "Politica di rimborso",
+    "support": "Supporto",
+    "operator": "Gestito da [OPERATOR_NAME]",
+    "copyright": "© {{year}} WhatSaid. Tutti i diritti riservati.",
+    "audioDeleted": "Audio eliminato dopo l'elaborazione"
   }
 }
