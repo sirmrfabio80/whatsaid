@@ -25,6 +25,7 @@ interface Job {
   credits_charged: number;
   created_at: string;
   speech_model: string | null;
+  short_summary: string | null;
 }
 
 export default function History() {
