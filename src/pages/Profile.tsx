@@ -99,7 +99,7 @@ export default function Profile() {
                   <span className="text-sm text-muted-foreground ml-1.5">{t("common.credits")}</span>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => navigate("/credits")}>
+              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => navigate("/pricing")}>
                 <CreditCard className="w-4 h-4 mr-1.5" />
                 {t("profile.buyMore")}
               </Button>
