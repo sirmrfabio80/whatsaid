@@ -52,7 +52,18 @@ export default function Settings() {
     enabled: !!user,
   });
 
-  useEffect(() => { if (profile) setDisplayName(profile.display_name || ""); }, [profile]);
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name || "");
+      // Set UI language from profile if persisted
+      const stored = (profile as any).ui_language;
+      if (stored) {
+        setUiLanguage(stored);
+      } else {
+        setUiLanguage(i18n.language?.substring(0, 2) || "en");
+      }
+    }
+  }, [profile]);
 
   const updateProfile = useMutation({
     mutationFn: async () => {
