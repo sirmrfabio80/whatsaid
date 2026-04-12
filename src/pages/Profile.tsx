@@ -40,7 +40,7 @@ export default function Profile() {
         .order("created_at", { ascending: false });
       const totalJobs = count ?? 0;
       const totalMinutes = Math.round((data ?? []).reduce((sum, j) => sum + (j.duration_seconds ?? 0), 0) / 60);
-      const lastJob = data?.[0]?.created_at ? new Date(data[0].created_at).toLocaleDateString() : "—";
+      const lastJob = data?.[0]?.created_at ? data[0].created_at : null;
       return { totalJobs, totalMinutes, lastJob };
     },
     enabled: !!user,
@@ -56,10 +56,20 @@ export default function Profile() {
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "";
 
+  const formatLastJob = (dateStr: string | null) => {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    const dayMonth = d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    const year = d.getFullYear();
+    return { dayMonth, year };
+  };
+
+  const lastJobFormatted = formatLastJob(jobStats?.lastJob ?? null);
+
   const stats = [
-    { label: t("profile.totalJobs"), value: jobStats?.totalJobs ?? 0, icon: FileText },
-    { label: t("profile.minutesProcessed"), value: jobStats?.totalMinutes ?? 0, icon: Clock },
-    { label: t("profile.lastConversion"), value: jobStats?.lastJob ?? "—", icon: Clock },
+    { label: t("profile.totalJobs"), value: String(jobStats?.totalJobs ?? 0), icon: FileText },
+    { label: t("profile.minutesProcessed"), value: String(jobStats?.totalMinutes ?? 0), icon: Clock },
+    { label: t("profile.lastConversion"), value: typeof lastJobFormatted === "string" ? lastJobFormatted : null, dateValue: typeof lastJobFormatted === "object" ? lastJobFormatted : null, icon: Clock },
   ];
 
   return (
@@ -97,14 +107,20 @@ export default function Profile() {
           </Card>
 
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {stats.map(({ label, value, icon: Icon }) => (
+            {stats.map(({ label, value, dateValue, icon: Icon }) => (
               <Card key={label} className="rounded-xl border-border bg-card shadow-sm hover:border-primary/20 hover:shadow-md transition-all overflow-hidden">
                 <CardContent className="p-3 sm:p-4 text-center">
                   <Icon className="w-4 h-4 text-muted-foreground mx-auto mb-2" />
                   {isStatsLoading ? (
                     <Skeleton className="h-6 w-12 mx-auto mb-1 rounded-lg" />
+                  ) : dateValue ? (
+                    <p className="font-heading font-semibold text-base sm:text-lg leading-tight">
+                      <span>{dateValue.dayMonth}</span>
+                      <br className="sm:hidden" />
+                      <span className="sm:ml-1">{dateValue.year}</span>
+                    </p>
                   ) : (
-                    <p className="font-heading font-semibold text-base sm:text-lg truncate">{value}</p>
+                    <p className="font-heading font-semibold text-base sm:text-lg">{value}</p>
                   )}
                   <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{label}</p>
                 </CardContent>
