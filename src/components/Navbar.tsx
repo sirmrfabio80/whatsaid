@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,9 +11,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Mic, LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Navbar() {
   const { user, creditBalance, signOut } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -41,20 +44,22 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-1">
           <Link to="/convert">
             <Button variant={location.pathname === "/convert" ? "secondary" : "ghost"} size="sm" className="rounded-lg">
-              Convert
+              {t("nav.convert")}
             </Button>
           </Link>
           <a href="/#pricing">
             <Button variant="ghost" size="sm" className="rounded-lg">
-              Pricing
+              {t("nav.pricing")}
             </Button>
           </a>
 
           <div className="w-px h-6 bg-border mx-2" />
 
+          <LanguageSwitcher />
+
           {user ? (
             <div className="flex items-center gap-2">
-              {/* Credit badge — solid bg, no glass */}
+              {/* Credit badge */}
               <div className="bg-muted border border-border px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm">
                 <CreditCard className="w-3.5 h-3.5 text-primary" />
                 <span className="font-medium">{creditBalance}</span>
@@ -73,31 +78,31 @@ export default function Navbar() {
                 <DropdownMenuContent align="end" className="w-48 rounded-xl">
                   <DropdownMenuItem onClick={() => navigate("/profile")} className="rounded-lg">
                     <User className="w-4 h-4 mr-2" />
-                    Profile
+                    {t("nav.profile")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/history")} className="rounded-lg">
                     <History className="w-4 h-4 mr-2" />
-                    History
+                    {t("nav.history")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/credits")} className="rounded-lg">
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Credits
+                    {t("nav.credits")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/settings")} className="rounded-lg">
                     <Settings className="w-4 h-4 mr-2" />
-                    Settings
+                    {t("nav.settings")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="rounded-lg">
                     <LogOut className="w-4 h-4 mr-2" />
-                    Sign out
+                    {t("common.signOut")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           ) : (
             <Link to="/login">
-              <Button size="sm" className="rounded-lg">Sign in</Button>
+              <Button size="sm" className="rounded-lg">{t("common.signIn")}</Button>
             </Link>
           )}
         </div>
@@ -120,11 +125,17 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-card p-4 space-y-1 animate-page-enter">
           <Link to="/convert" onClick={() => setMobileOpen(false)}>
-            <Button variant="ghost" className="w-full justify-start rounded-lg">Convert</Button>
+            <Button variant="ghost" className="w-full justify-start rounded-lg">{t("nav.convert")}</Button>
           </Link>
           <a href="/#pricing" onClick={() => setMobileOpen(false)}>
-            <Button variant="ghost" className="w-full justify-start rounded-lg">Pricing</Button>
+            <Button variant="ghost" className="w-full justify-start rounded-lg">{t("nav.pricing")}</Button>
           </a>
+
+          <div className="h-px bg-border my-2" />
+
+          <div className="px-2 py-1">
+            <LanguageSwitcher />
+          </div>
 
           <div className="h-px bg-border my-2" />
 
@@ -132,31 +143,31 @@ export default function Navbar() {
             <>
               <Link to="/profile" onClick={() => setMobileOpen(false)}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <User className="w-4 h-4 mr-2" />Profile
+                  <User className="w-4 h-4 mr-2" />{t("nav.profile")}
                 </Button>
               </Link>
               <Link to="/history" onClick={() => setMobileOpen(false)}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <History className="w-4 h-4 mr-2" />History
+                  <History className="w-4 h-4 mr-2" />{t("nav.history")}
                 </Button>
               </Link>
               <Link to="/credits" onClick={() => setMobileOpen(false)}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <CreditCard className="w-4 h-4 mr-2" />Credits
+                  <CreditCard className="w-4 h-4 mr-2" />{t("nav.credits")}
                 </Button>
               </Link>
               <Link to="/settings" onClick={() => setMobileOpen(false)}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg">
-                  <Settings className="w-4 h-4 mr-2" />Settings
+                  <Settings className="w-4 h-4 mr-2" />{t("nav.settings")}
                 </Button>
               </Link>
               <Button variant="ghost" className="w-full justify-start rounded-lg" onClick={() => { signOut(); setMobileOpen(false); }}>
-                <LogOut className="w-4 h-4 mr-2" />Sign out
+                <LogOut className="w-4 h-4 mr-2" />{t("common.signOut")}
               </Button>
             </>
           ) : (
             <Link to="/login" onClick={() => setMobileOpen(false)}>
-              <Button className="w-full rounded-lg">Sign in</Button>
+              <Button className="w-full rounded-lg">{t("common.signIn")}</Button>
             </Link>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [meta, setMeta] = useState<JobMeta | null>(null);
-
-  // Title editing state
   const [title, setTitle] = useState<string>("");
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -28,39 +28,25 @@ export default function JobDetail() {
   const [jobDate, setJobDate] = useState<Date | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!authLoading && !user) navigate("/login");
-  }, [user, authLoading, navigate]);
+  useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
 
   const getEffectiveRecordedAt = (m: JobMeta) => new Date(m.recorded_at ?? m.created_at);
 
-  // When meta loads, set title and default to the recording/import time if available
   const handleMetaLoaded = (m: JobMeta) => {
     setMeta(m);
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
     setJobDate(getEffectiveRecordedAt(m));
-
-    if (!m.title && id) {
-      generateTitle();
-    }
+    if (!m.title && id) generateTitle();
   };
 
   const generateTitle = async () => {
     if (!id) return;
     setGeneratingTitle(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-title", {
-        body: { job_id: id },
-      });
-      if (!error && data?.title) {
-        setTitle(data.title);
-      }
-    } catch {
-      // Silently fail — user can still rename manually
-    } finally {
-      setGeneratingTitle(false);
-    }
+      const { data, error } = await supabase.functions.invoke("generate-title", { body: { job_id: id } });
+      if (!error && data?.title) setTitle(data.title);
+    } catch {} finally { setGeneratingTitle(false); }
   };
 
   const startEditing = () => {
@@ -71,10 +57,7 @@ export default function JobDetail() {
 
   const saveTitle = async () => {
     const trimmed = editValue.trim();
-    if (!trimmed || !id) {
-      setEditing(false);
-      return;
-    }
+    if (!trimmed || !id) { setEditing(false); return; }
     setTitle(trimmed);
     setEditing(false);
     await supabase.from("jobs").update({ title: trimmed } as any).eq("id", id);
@@ -110,26 +93,14 @@ export default function JobDetail() {
       <div className="container mx-auto px-4 py-10 sm:py-14">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-ml-2 gap-1.5 text-muted-foreground"
-              onClick={() => navigate("/history")}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to history
+            <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground" onClick={() => navigate("/history")}>
+              <ArrowLeft className="w-4 h-4" />{t("jobDetail.backToHistory")}
             </Button>
-            <Button
-              size="sm"
-              className="rounded-xl gap-1.5"
-              onClick={() => navigate("/convert")}
-            >
-              <Plus className="w-4 h-4" />
-              New transcription
+            <Button size="sm" className="rounded-xl gap-1.5" onClick={() => navigate("/convert")}>
+              <Plus className="w-4 h-4" />{t("jobDetail.newTranscription")}
             </Button>
           </div>
 
-          {/* Job heading with editable title */}
           {meta && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2 group">
@@ -139,22 +110,13 @@ export default function JobDetail() {
                       ref={inputRef}
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveTitle();
-                        if (e.key === "Escape") setEditing(false);
-                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditing(false); }}
                       onBlur={saveTitle}
                       className="font-heading text-xl sm:text-2xl font-bold h-auto py-0.5 px-1.5 rounded-lg border-primary/30"
                       aria-label="Job title"
                       maxLength={100}
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0 h-7 w-7 p-0 rounded-lg"
-                      onClick={saveTitle}
-                      aria-label="Save title"
-                    >
+                    <Button variant="ghost" size="sm" className="shrink-0 h-7 w-7 p-0 rounded-lg" onClick={saveTitle} aria-label={t("common.save")}>
                       <Check className="w-4 h-4 text-primary" />
                     </Button>
                   </div>
@@ -163,7 +125,7 @@ export default function JobDetail() {
                     <h1
                       className="font-heading text-xl sm:text-2xl font-bold truncate cursor-pointer hover:text-primary/80 transition-colors"
                       onClick={startEditing}
-                      title="Click to rename"
+                      title={t("jobDetail.clickToRename")}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => { if (e.key === "Enter") startEditing(); }}
@@ -171,20 +133,14 @@ export default function JobDetail() {
                       {generatingTitle ? (
                         <span className="flex items-center gap-2 text-muted-foreground">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-lg">Generating title…</span>
+                          <span className="text-lg">{t("jobDetail.generatingTitle")}</span>
                         </span>
                       ) : (
                         title || meta.file_name
                       )}
                     </h1>
                     {!generatingTitle && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0 h-7 w-7 p-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={startEditing}
-                        aria-label="Rename recording"
-                      >
+                      <Button variant="ghost" size="sm" className="shrink-0 h-7 w-7 p-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={startEditing} aria-label={t("jobDetail.clickToRename")}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                     )}
@@ -196,55 +152,34 @@ export default function JobDetail() {
                   <PopoverTrigger asChild>
                     <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-0.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
                       <Calendar className="w-3 h-3" />
-                      {(jobDate ?? getEffectiveRecordedAt(meta)).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {(jobDate ?? getEffectiveRecordedAt(meta)).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
                       <span className="text-muted-foreground">·</span>
                       <Clock className="w-3 h-3" />
-                      {timeValue || getEffectiveRecordedAt(meta).toLocaleTimeString(undefined, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {timeValue || getEffectiveRecordedAt(meta).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarWidget
-                      mode="single"
-                      selected={jobDate ?? getEffectiveRecordedAt(meta)}
-                      onSelect={handleDateChange}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
+                    <CalendarWidget mode="single" selected={jobDate ?? getEffectiveRecordedAt(meta)} onSelect={handleDateChange} initialFocus className="p-3 pointer-events-auto" />
                     <div className="border-t border-border px-3 py-2.5 flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <input
-                        type="time"
-                        value={timeValue}
-                        onChange={handleTimeChange}
-                        className="bg-transparent text-sm font-medium text-foreground outline-none w-full [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
-                        aria-label="Recording time"
-                      />
+                      <input type="time" value={timeValue} onChange={handleTimeChange} className="bg-transparent text-sm font-medium text-foreground outline-none w-full [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:hover:opacity-100" aria-label={t("jobDetail.recordingTime")} />
                     </div>
                     {meta.duration_seconds != null && (
                       <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
                         <Timer className="w-3.5 h-3.5 shrink-0" />
-                        <span>Duration: {formatDuration(meta.duration_seconds)}</span>
+                        <span>{t("jobDetail.durationLabel", { duration: formatDuration(meta.duration_seconds) })}</span>
                       </div>
                     )}
                   </PopoverContent>
                 </Popover>
                 {meta.duration_seconds != null && (
                   <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
-                    <Timer className="w-3 h-3" />
-                    {formatDuration(meta.duration_seconds)}
+                    <Timer className="w-3 h-3" />{formatDuration(meta.duration_seconds)}
                   </Badge>
                 )}
                 {meta.language_detected && (
                   <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
-                    <Globe className="w-3 h-3" />
-                    {getLanguageLabel(meta.language_detected)}
+                    <Globe className="w-3 h-3" />{getLanguageLabel(meta.language_detected)}
                   </Badge>
                 )}
               </div>
