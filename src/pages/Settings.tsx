@@ -21,12 +21,13 @@ import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe } from "lucide-reac
 
 export default function Settings() {
   const { user, loading, signOut } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [displayName, setDisplayName] = useState("");
   const [defaultLanguage, setDefaultLanguage] = useState("auto");
+  const [uiLanguage, setUiLanguage] = useState(i18n.language?.substring(0, 2) || "en");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
