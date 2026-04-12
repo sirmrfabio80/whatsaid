@@ -201,6 +201,7 @@ export type Database = {
           id: string
           language_detected: string | null
           language_selected: string | null
+          location_label: string | null
           metadata_apple_creationdate: string | null
           metadata_file_lastmodified: string | null
           metadata_location_iso6709: string | null
@@ -232,6 +233,7 @@ export type Database = {
           id?: string
           language_detected?: string | null
           language_selected?: string | null
+          location_label?: string | null
           metadata_apple_creationdate?: string | null
           metadata_file_lastmodified?: string | null
           metadata_location_iso6709?: string | null
@@ -263,6 +265,7 @@ export type Database = {
           id?: string
           language_detected?: string | null
           language_selected?: string | null
+          location_label?: string | null
           metadata_apple_creationdate?: string | null
           metadata_file_lastmodified?: string | null
           metadata_location_iso6709?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN location_label text DEFAULT NULL;
