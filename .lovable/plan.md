@@ -1,96 +1,87 @@
 
 
-# Plan: Inline Transcript Correction on Job Page (Revised)
+# Plan: Fix Invite Credit Redemption + Invited User Password Setup (Revised)
 
 ## Summary
 
-Add segment-level inline editing to the transcript tab on the Job page. Users can correct text and speaker labels one line at a time, with safe line-based parsing that preserves original formatting exactly.
+Fix three bugs in the invite redemption flow and add a smooth password-setup onboarding for invited users, using a persistent `needs_password_setup` flag on the `profiles` table.
 
-## Current state
+---
 
-Transcript is a single text blob in `job_outputs.content`. Rendered by `renderTranscriptWithBoldSpeakers()` which splits by `\n` and pattern-matches `SpeakerLabel: text`. Users cannot UPDATE `job_outputs` (no RLS policy exists).
+## Bug fixes
 
-## Key constraints (v1)
+### 1. `redeem-invite` edge function: replace broken `getClaims()` with `getUser()`
 
-1. **Line-based parsing only** — each `\n`-delimited line is one segment. No grouping of consecutive same-speaker lines. Reconstruction = `segments.join("\n")` — guaranteed lossless.
-2. **No per-segment "Edited" badges** — after a successful save, show a single transcript-level indicator: "Transcript manually updated". No session diffing or first-load snapshot logic.
-3. **Speaker edit is segment-scoped** — changing a speaker label on one line changes only that line. No global rename propagation.
+`getClaims(token)` is not a standard Supabase JS v2 method — it silently fails, returning 401. Credits are never granted.
 
-## Database change
+**Fix**: Replace with `userClient.auth.getUser()` which reliably returns `user.id` and `user.email`.
 
-One migration: UPDATE policy on `job_outputs`.
+### 2. `useRedeemInvites` must refresh credit balance after redemption
 
-```sql
-CREATE POLICY "Users can update outputs of own jobs"
-ON public.job_outputs FOR UPDATE
-USING (EXISTS (SELECT 1 FROM jobs WHERE jobs.id = job_outputs.job_id AND jobs.user_id = auth.uid()))
-WITH CHECK (EXISTS (SELECT 1 FROM jobs WHERE jobs.id = job_outputs.job_id AND jobs.user_id = auth.uid()));
-```
+Currently the hook never calls `refreshCredits()`. The balance loads as 0 on initial auth, then the async redemption completes but the UI never updates.
 
-## New component: `TranscriptEditor.tsx`
+**Fix**: Accept an `onCreditsRedeemed` callback. AuthContext passes `refreshCredits` to it.
 
-**Segment model** (line-based):
-```ts
-interface Segment {
-  index: number;        // line index in the array
-  speaker: string | null;
-  text: string;         // everything after "Speaker: "
-  raw: string;          // original line preserved for non-speaker lines
-}
-```
+### 3. Edge function also sets `needs_password_setup = true` on profile
 
-**Parsing**: `content.split("\n")` → for each line, try `match(/^(.+?):\s(.*)/)`. If matched: `{ speaker, text }`. Otherwise: `{ speaker: null, text: line, raw: line }`.
+When credits are successfully redeemed (meaning this is an invited user's first login), the edge function sets `profiles.needs_password_setup = true` using the admin client. This provides the persistent signal for onboarding routing.
 
-**Reconstruction**: For speaker lines: `${speaker}: ${text}`. For non-speaker lines: `raw` (or `text` if edited). Join with `"\n"`.
+---
 
-**Behaviour**:
-- Default: read-only, identical to current view
-- "Edit transcript" button toggles correction mode
-- In correction mode: each line gets a subtle pencil icon on hover/tap
-- Tapping a line opens inline editing: `<Textarea>` for text, `<Select>` for speaker (populated from existing speakers in this transcript only)
-- Only one line editable at a time
-- Switching away from unsaved edits shows lightweight confirm
-- Save reconstructs full text, calls `onSave(newContent)`
-- After successful save: transcript-level banner "Transcript manually updated" (dismissible)
-- Cancel reverts that line
+## Password setup onboarding
 
-**Speaker dropdown**: Lists all unique speakers found in the current transcript. Changing speaker on a segment only affects that one line.
+### Persistent flag: `needs_password_setup` on `profiles`
 
-**Mobile**: Textarea fills width, Save/Cancel stack, all targets ≥ 44px. Sticky "Done editing" at top of card.
+**Migration**: Add column `needs_password_setup boolean NOT NULL DEFAULT false` to `profiles`.
 
-**"Report transcription issue"**: Ghost button below transcript, opens a toast placeholder for now.
+This flag is:
+- Set to `true` by the `redeem-invite` edge function after successful credit redemption
+- Checked by the client on every auth state change (via profile query that AuthContext already does)
+- Cleared to `false` after the user successfully sets a password
 
-## Changes to `JobResults.tsx`
+This survives page refreshes, app reopens, and mobile browser restarts — no reliance on URL hash or session state.
 
-- Replace `renderTranscriptWithBoldSpeakers()` with `<TranscriptEditor>` in transcript tab
-- Add `handleTranscriptSave`: updates `job_outputs.content` via supabase, refreshes local state
-- Pass `onSave` callback to `TranscriptEditor`
-- After save success, set a `transcriptEdited` boolean to show the banner
+### New page: `/set-password` (`SetPassword.tsx`)
 
-## Translation keys
+A clean, branded welcome page:
+- Heading: "Welcome to WhatSaid"
+- Subtext: "You're all set! Set a password so you can sign in anytime."
+- Two password fields + "Set password" button
+- "Skip for now" link — clearly communicates the user can continue using the app and set a password later from Settings
+- On success: clears `needs_password_setup` flag, redirects to home, shows success toast
+- On skip: redirects to home (flag remains true, Settings will show the prompt)
 
-Add to en/fr/it:
-- `jobResults.editTranscript` / `jobResults.doneEditing`
-- `jobResults.saveSegment` / `jobResults.cancelEdit`
-- `jobResults.unsavedChanges`
-- `jobResults.transcriptUpdated` (banner text)
-- `jobResults.reportIssue`
-- `jobResults.changeSpeaker`
+### Routing logic in `AuthContext`
+
+After user loads and profile is fetched:
+- If `profile.needs_password_setup === true` and current path is not `/set-password`, redirect to `/set-password`
+- This works on fresh page loads, reopens, and across sessions — no URL hash dependency
+
+### "Set password" in Settings
+
+When `needs_password_setup` is true, show a prominent card in Settings: "Set your password" with the same form inline. On success, clear the flag. This ensures users who skipped the initial prompt always have a clear path.
+
+The existing "Change password" dialog in Settings remains for users who already have a password.
+
+---
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/TranscriptEditor.tsx` | New — line-based parsing, inline editing, speaker select |
-| `src/components/JobResults.tsx` | Use TranscriptEditor, add save handler, edited banner |
-| `src/i18n/locales/en.json` | New keys |
+| `supabase/functions/redeem-invite/index.ts` | Fix `getClaims` → `getUser()`, set `needs_password_setup = true` on profile after redemption |
+| `src/hooks/use-redeem-invites.ts` | Add `onCreditsRedeemed` callback, call it after success |
+| `src/contexts/AuthContext.tsx` | Pass `refreshCredits` to hook, add redirect logic based on `needs_password_setup` from profile |
+| `src/pages/SetPassword.tsx` | New — welcome + set password page |
+| `src/pages/Settings.tsx` | Show "Set password" card when `needs_password_setup` is true |
+| `src/App.tsx` | Add `/set-password` route |
+| `src/i18n/locales/en.json` | New keys for set-password page |
 | `src/i18n/locales/fr.json` | New keys |
 | `src/i18n/locales/it.json` | New keys |
-| Migration | UPDATE RLS policy on job_outputs |
+| Migration | Add `needs_password_setup` column to `profiles` |
 
 ## Not modified
 
-- `JobDetail.tsx`, `SpeakerChips.tsx`, export/copy logic, summary, questions, auth, pricing — untouched
-- `handle_new_user()` — untouched
-- No new tables or edge functions
+- `invite-user/index.ts`, `AdminInviteCard.tsx`, `handle_new_user()` — untouched
+- Pricing, export, transcript editing — untouched
 
