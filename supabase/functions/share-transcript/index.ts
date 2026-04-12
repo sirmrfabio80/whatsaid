@@ -252,6 +252,7 @@ Deno.serve(async (req) => {
       queue_name: 'transactional_emails',
       payload: {
         message_id: messageId,
+        idempotency_key: `share-transcript-${messageId}`,
         to: recipient_email,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
