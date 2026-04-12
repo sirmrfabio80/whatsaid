@@ -280,6 +280,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_invites: {
+        Row: {
+          claimed: boolean
+          claimed_at: string | null
+          created_at: string
+          credits: number
+          email: string
+          id: string
+          invited_by: string
+          package_id: string
+        }
+        Insert: {
+          claimed?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          credits: number
+          email: string
+          id?: string
+          invited_by: string
+          package_id: string
+        }
+        Update: {
+          claimed?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          credits?: number
+          email?: string
+          id?: string
+          invited_by?: string
+          package_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
