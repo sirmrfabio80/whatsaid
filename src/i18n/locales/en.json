@@ -345,6 +345,16 @@
     "suggestions": "Suggestions",
     "addSpeaker": "Speaker"
   },
+  "speakerSuggestions": {
+    "suggest": "Suggest segments for this speaker",
+    "previewLabel": "{{count}} segments suggested for {{speaker}}",
+    "acceptAll": "Accept all ({{count}})",
+    "dismiss": "Dismiss",
+    "rejectOne": "Reject this suggestion",
+    "noSuggestions": "No segments could be confidently attributed to this speaker.",
+    "error": "Could not generate suggestions. Please try again.",
+    "accepted": "{{count}} segments reassigned successfully."
+  },
   "languageSelector": {
     "language": "Language",
     "detected": "(detected: {{lang}})",

@@ -329,6 +329,16 @@
     "suggestions": "Suggerimenti",
     "addSpeaker": "Relatore"
   },
+  "speakerSuggestions": {
+    "suggest": "Suggerisci segmenti per questo relatore",
+    "previewLabel": "{{count}} segmenti suggeriti per {{speaker}}",
+    "acceptAll": "Accetta tutti ({{count}})",
+    "dismiss": "Ignora",
+    "rejectOne": "Rifiuta questo suggerimento",
+    "noSuggestions": "Nessun segmento è stato attribuito con sicurezza a questo relatore.",
+    "error": "Impossibile generare suggerimenti. Riprova.",
+    "accepted": "{{count}} segmenti riassegnati con successo."
+  },
   "languageSelector": {
     "language": "Lingua",
     "detected": "(rilevata: {{lang}})",
