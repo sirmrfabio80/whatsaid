@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Pencil, Check, X, Plus, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ROLE_SUGGESTIONS = ["Doctor", "Nurse", "Me", "Mum", "Dad", "Receptionist", "Specialist", "Therapist"];
 
@@ -126,15 +127,21 @@ function SpeakerChip({
         <Pencil className="w-3 h-3 text-muted-foreground" />
       </button>
       {showSuggest && (
-        <button
-          onClick={onSuggest}
-          disabled={isSuggesting}
-          className="inline-flex items-center justify-center w-7 h-7 ml-0.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={t("speakerSuggestions.suggest")}
-          title={t("speakerSuggestions.suggest")}
-        >
-          {isSuggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onSuggest}
+              disabled={isSuggesting}
+              className="inline-flex items-center justify-center w-7 h-7 ml-0.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={t("speakerSuggestions.suggest")}
+            >
+              {isSuggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            {t("speakerSuggestions.suggest")}
+          </TooltipContent>
+        </Tooltip>
       )}
       {isDeletable && (
         <button
