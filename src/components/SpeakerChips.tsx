@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Pencil, Check, X, Plus, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ROLE_SUGGESTIONS = ["Doctor", "Nurse", "Me", "Mum", "Dad", "Receptionist", "Specialist", "Therapist"];
 
