@@ -16,7 +16,7 @@ interface SpeakerChipsProps {
   onRename: (original: string, newName: string) => void;
   onReset?: () => void;
   onAddSpeaker?: () => void;
-  onDeleteSpeaker?: (speaker: string) => void;
+  onDeleteSpeaker?: (speaker: string, reassignTo?: string) => void;
   onSuggestSpeaker?: (speaker: string) => void;
   suggestingForSpeaker?: string | null;
   enableDrag?: boolean;
@@ -38,6 +38,7 @@ export default function SpeakerChips({
         const isZeroSegments = segCount === 0;
         const isSuggesting = suggestingForSpeaker === speaker;
         const isDeletable = deletableSpeakers?.has(speaker) ?? false;
+        const otherSpeakers = speakers.filter((s) => s !== speaker);
         return (
           <SpeakerChip
             key={speaker}
@@ -49,7 +50,10 @@ export default function SpeakerChips({
             onSuggest={() => onSuggestSpeaker?.(speaker)}
             isSuggesting={isSuggesting}
             isDeletable={isDeletable}
-            onDelete={() => onDeleteSpeaker?.(speaker)}
+            segmentCount={segCount}
+            otherSpeakers={otherSpeakers}
+            otherSpeakerNames={speakerNames}
+            onDelete={(reassignTo) => onDeleteSpeaker?.(speaker, reassignTo)}
             enableDrag={enableDrag}
           />
         );
@@ -75,11 +79,13 @@ export default function SpeakerChips({
 
 function SpeakerChip({
   original, displayName, isRenamed, onRename, showSuggest, onSuggest, isSuggesting,
-  isDeletable, onDelete, enableDrag,
+  isDeletable, segmentCount, otherSpeakers, otherSpeakerNames, onDelete, enableDrag,
 }: {
   original: string; displayName: string; isRenamed: boolean; onRename: (name: string) => void;
   showSuggest?: boolean; onSuggest?: () => void; isSuggesting?: boolean;
-  isDeletable?: boolean; onDelete?: () => void; enableDrag?: boolean;
+  isDeletable?: boolean; segmentCount: number; otherSpeakers: string[];
+  otherSpeakerNames: Record<string, string>;
+  onDelete?: (reassignTo?: string) => void; enableDrag?: boolean;
 }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -91,6 +97,7 @@ function SpeakerChip({
 
   const save = () => { const trimmed = value.trim(); if (trimmed && trimmed !== original) onRename(trimmed); setEditing(false); };
   const cancel = () => setEditing(false);
+  const hasSegments = segmentCount > 0;
 
   if (editing) {
     return (
@@ -113,6 +120,32 @@ function SpeakerChip({
   }
 
   if (confirmDelete) {
+    // Speaker with segments → show reassignment picker
+    if (hasSegments && otherSpeakers.length > 0) {
+      return (
+        <div className="inline-flex flex-col gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs font-medium animate-in fade-in-0 zoom-in-95 duration-150">
+          <div className="flex items-center gap-1.5">
+            <span className="text-destructive-foreground">
+              {t("speakerSuggestions.deleteReassign", { speaker: displayName, count: segmentCount })}
+            </span>
+            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setConfirmDelete(false)} aria-label={t("common.cancel")}><X className="w-3 h-3" /></Button>
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {otherSpeakers.map((s) => (
+              <button
+                key={s}
+                onClick={() => { setConfirmDelete(false); onDelete?.(s); }}
+                className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
+              >
+                {otherSpeakerNames[s] || s}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Speaker with no segments → simple confirm
     return (
       <div className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium min-h-[36px] animate-in fade-in-0 zoom-in-95 duration-150">
         <span className="text-destructive-foreground">{t("speakerSuggestions.deleteSpeakerConfirm", { speaker: displayName })}</span>

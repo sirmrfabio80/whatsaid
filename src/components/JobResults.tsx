@@ -86,7 +86,17 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     }
   };
 
-  const handleDeleteSpeaker = async (speaker: string) => {
+  const handleDeleteSpeaker = async (speaker: string, reassignTo?: string) => {
+    // If reassigning segments to another speaker, update transcript content
+    if (reassignTo && transcript) {
+      const segs = parseSegments(transcript.content);
+      const updated = segs.map((seg) => {
+        if (seg.speaker !== speaker) return seg;
+        return { ...seg, speaker: reassignTo, raw: `${reassignTo}: ${seg.text}` };
+      });
+      const newContent = updated.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.raw)).join("\n");
+      await handleTranscriptSave(newContent);
+    }
     setExtraSpeakers((prev) => prev.filter((s) => s !== speaker));
     setSuggestions((prev) => prev.filter((s) => s.speaker !== speaker));
     if (suggestionTarget === speaker) setSuggestionTarget(null);
@@ -226,11 +236,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.content, allSpeakers.join(",")]);
 
-  // Speakers that can be deleted: any speaker with zero segments
+  // Speakers that can be deleted: any speaker (as long as there's at least one other to reassign to, or it has 0 segments)
   const deletableSpeakers = useMemo(() => {
     const set = new Set<string>();
     allSpeakers.forEach((s) => {
-      if ((speakerSegmentCounts[s] ?? 0) === 0) set.add(s);
+      const count = speakerSegmentCounts[s] ?? 0;
+      if (count === 0 || allSpeakers.length > 1) set.add(s);
     });
     return set;
   // eslint-disable-next-line react-hooks/exhaustive-deps
