@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { buildCanonicalPayload } from "@/lib/export-payload";
 import ExportButton from "@/components/ExportButton";
 import SpeakerChips from "@/components/SpeakerChips";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
-import TranscriptEditor from "@/components/TranscriptEditor";
+import TranscriptEditor, { parseSegments, type SpeakerSuggestion } from "@/components/TranscriptEditor";
 import { toast } from "sonner";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
@@ -50,6 +50,9 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
   const [transcriptEdited, setTranscriptEdited] = useState(false);
   const [extraSpeakers, setExtraSpeakers] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<SpeakerSuggestion[]>([]);
+  const [suggestingForSpeaker, setSuggestingForSpeaker] = useState<string | null>(null);
+  const editedIdsRef = useRef<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
