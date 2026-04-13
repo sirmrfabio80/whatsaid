@@ -224,7 +224,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               {transcript && (
                 <div className="flex flex-col sm:flex-row items-center justify-end gap-2 p-3 border-b border-border/50">
-                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} /></div>
+                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
                   <div className="flex items-center gap-1.5 ml-auto">
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
                       {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
@@ -234,7 +234,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 </div>
               )}
-              <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} /></div>
+              <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
               {transcript ? (
                 <TranscriptEditor
                   content={transcript.content}
@@ -242,6 +242,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   allSpeakers={allSpeakers}
                   onSave={handleTranscriptSave}
                   transcriptEdited={transcriptEdited}
+                  suggestions={suggestions}
+                  suggestingTarget={suggestingForSpeaker}
+                  onAcceptSuggestions={handleAcceptSuggestions}
+                  onDismissSuggestions={handleDismissSuggestions}
+                  onEditedIdsChange={(ids) => { editedIdsRef.current = ids; }}
                 />
               ) : (
                 <div className="p-5 sm:p-6"><p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p></div>
