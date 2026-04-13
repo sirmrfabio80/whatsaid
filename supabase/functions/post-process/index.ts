@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
+import { autoTag } from "../_shared/auto-tag.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
