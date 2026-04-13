@@ -86,13 +86,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     }
   };
 
-  const handleDeleteSpeaker = (speaker: string) => {
+  const handleDeleteSpeaker = async (speaker: string) => {
     setExtraSpeakers((prev) => prev.filter((s) => s !== speaker));
     setSuggestions((prev) => prev.filter((s) => s.speaker !== speaker));
     if (suggestionTarget === speaker) setSuggestionTarget(null);
     const updated = { ...speakerNames };
     delete updated[speaker];
     setSpeakerNames(updated);
+    await supabase.from("jobs").update({ speaker_names: updated }).eq("id", jobId);
   };
 
   // Create a new speaker — returns the name
@@ -225,15 +226,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.content, allSpeakers.join(",")]);
 
-  // Speakers that can be deleted: manually added + zero segments
+  // Speakers that can be deleted: any speaker with zero segments
   const deletableSpeakers = useMemo(() => {
     const set = new Set<string>();
-    extraSpeakers.forEach((s) => {
+    allSpeakers.forEach((s) => {
       if ((speakerSegmentCounts[s] ?? 0) === 0) set.add(s);
     });
     return set;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraSpeakers.join(","), speakerSegmentCounts]);
+  }, [allSpeakers.join(","), speakerSegmentCounts]);
 
   if (loading) return <div className="space-y-4 py-8"><div className="animate-pulse space-y-3"><div className="h-10 bg-muted rounded-xl w-full" /><div className="h-64 bg-muted rounded-xl w-full" /></div></div>;
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
