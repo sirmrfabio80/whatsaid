@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       .update({ claimed: true, claimed_at: new Date().toISOString() })
       .eq("email", userEmail.toLowerCase())
       .eq("claimed", false)
-      .select("id, credits, package_id");
+      .select("id, credits, package_id, language");
 
     if (claimError) {
       return new Response(JSON.stringify({ error: claimError.message }), {
@@ -88,10 +88,11 @@ Deno.serve(async (req) => {
       totalCredits += invite.credits;
     }
 
-    // Set needs_password_setup flag on the user's profile
+    // Set needs_password_setup flag and ui_language from invite
+    const inviteLanguage = claimed[0]?.language || "en";
     await adminClient
       .from("profiles")
-      .update({ needs_password_setup: true })
+      .update({ needs_password_setup: true, ui_language: inviteLanguage })
       .eq("user_id", userId);
 
     return new Response(

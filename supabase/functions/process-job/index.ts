@@ -24,7 +24,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Update job status to processing
+    // 0. Fetch job to get user_id and credits_charged
+    const { data: jobRow, error: jobFetchError } = await supabase
+      .from("jobs")
+      .select("user_id, credits_charged")
+      .eq("id", job_id)
+      .maybeSingle();
+
+    if (jobFetchError || !jobRow) {
+      throw new Error("Job not found");
+    }
+
+    // 1. Deduct credits BEFORE processing — reject if insufficient
+    if (jobRow.user_id && jobRow.credits_charged > 0) {
+      const { data: deducted } = await supabase.rpc("deduct_credits", {
+        p_user_id: jobRow.user_id,
+        p_amount: jobRow.credits_charged,
+        p_reason: `Transcription job`,
+        p_job_id: job_id,
+      });
+
+      if (!deducted) {
+        await supabase
+          .from("jobs")
+          .update({ status: "failed", error_message: "Insufficient credits" })
+          .eq("id", job_id);
+
+        return new Response(
+          JSON.stringify({ error: "Insufficient credits" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // 2. Update job status to processing
     await supabase
       .from("jobs")
       .update({ status: "processing" })

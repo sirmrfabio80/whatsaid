@@ -89,7 +89,10 @@
     "privacyPolicy": "Informativa sulla privacy",
     "convertNow": "Converti ora",
     "signInToConvert": "Accedi per convertire il tuo audio.",
-    "and": "e"
+    "and": "e",
+    "noCreditsTitle": "Crediti insufficienti",
+    "noCreditsDesc": "Questo file richiede {{required}} credito/i ma ne hai {{balance}}. Acquista crediti per continuare.",
+    "buyCredits": "Acquista crediti"
   },
   "login": {
     "title": "Accedi a WhatSaid",
@@ -192,6 +195,7 @@
       "desc": "Invita utenti su WhatSaid e regala loro un pacchetto di crediti.",
       "emailLabel": "Indirizzo email",
       "packageLabel": "Pacchetto crediti",
+      "languageLabel": "Lingua del destinatario",
       "pkg_one-time": "Trascrizione singola",
       "pkg_5-pack": "Pacchetto 5 crediti",
       "pkg_20-pack": "Pacchetto 20 crediti",

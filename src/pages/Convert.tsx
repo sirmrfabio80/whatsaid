@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info
+  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
@@ -23,6 +24,21 @@ export default function Convert() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Fetch credit balance for logged-in users
+  const { data: creditBalance } = useQuery({
+    queryKey: ["credit-balance", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("credit_balances")
+        .select("balance")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data?.balance ?? 0;
+    },
+    enabled: !!user,
+  });
+
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [fileCreationDate, setFileCreationDate] = useState<AudioCreationDateResult | null>(null);
@@ -37,6 +53,7 @@ export default function Convert() {
 
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
+  const hasEnoughCredits = creditBalance !== undefined ? creditBalance >= credits : true;
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
     uploading: t("convert.stepUploading"),
@@ -318,14 +335,33 @@ export default function Convert() {
                     </p>
 
                     {user ? (
-                      <Button
-                        className="w-full h-12 text-base font-medium rounded-xl"
-                        size="lg"
-                        onClick={handleConvert}
-                        disabled={processing || !consentChecked}
-                      >
-                        {t("convert.convertNow")}<ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
+                      <>
+                        {!hasEnoughCredits && file && (
+                          <div className="flex items-start gap-2.5 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                            <CreditCard className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                            <div className="space-y-1.5">
+                              <p className="text-sm font-medium text-destructive">{t("convert.noCreditsTitle")}</p>
+                              <p className="text-xs text-destructive/80">{t("convert.noCreditsDesc", { required: credits, balance: creditBalance ?? 0 })}</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-lg mt-1 border-destructive/30 text-destructive hover:bg-destructive/10"
+                                onClick={() => navigate("/pricing")}
+                              >
+                                {t("convert.buyCredits")}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        <Button
+                          className="w-full h-12 text-base font-medium rounded-xl"
+                          size="lg"
+                          onClick={handleConvert}
+                          disabled={processing || !consentChecked || !hasEnoughCredits}
+                        >
+                          {t("convert.convertNow")}<ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </>
                     ) : (
                       <div className="text-center space-y-3">
                         <p className="text-sm text-muted-foreground">

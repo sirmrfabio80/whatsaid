@@ -334,6 +334,7 @@ export type Database = {
           email: string
           id: string
           invited_by: string
+          language: string | null
           package_id: string
         }
         Insert: {
@@ -344,6 +345,7 @@ export type Database = {
           email: string
           id?: string
           invited_by: string
+          language?: string | null
           package_id: string
         }
         Update: {
@@ -354,6 +356,7 @@ export type Database = {
           email?: string
           id?: string
           invited_by?: string
+          language?: string | null
           package_id?: string
         }
         Relationships: []
