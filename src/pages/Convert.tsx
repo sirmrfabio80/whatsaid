@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info
+  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
