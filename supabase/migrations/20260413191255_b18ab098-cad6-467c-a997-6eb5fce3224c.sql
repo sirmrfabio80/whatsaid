@@ -1,0 +1,1 @@
+ALTER TABLE public.transcript_shares ALTER COLUMN expires_at SET DEFAULT (now() + interval '2 days');
