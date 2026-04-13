@@ -89,7 +89,10 @@
     "privacyPolicy": "Informativa sulla privacy",
     "convertNow": "Converti ora",
     "signInToConvert": "Accedi per convertire il tuo audio.",
-    "and": "e"
+    "and": "e",
+    "noCreditsTitle": "Crediti insufficienti",
+    "noCreditsDesc": "Questo file richiede {{required}} credito/i ma ne hai {{balance}}. Acquista crediti per continuare.",
+    "buyCredits": "Acquista crediti"
   },
   "login": {
     "title": "Accedi a WhatSaid",
