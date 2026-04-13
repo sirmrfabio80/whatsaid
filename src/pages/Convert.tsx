@@ -24,6 +24,21 @@ export default function Convert() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Fetch credit balance for logged-in users
+  const { data: creditBalance } = useQuery({
+    queryKey: ["credit-balance", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("credit_balances")
+        .select("balance")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data?.balance ?? 0;
+    },
+    enabled: !!user,
+  });
+
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [fileCreationDate, setFileCreationDate] = useState<AudioCreationDateResult | null>(null);
@@ -38,6 +53,7 @@ export default function Convert() {
 
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
+  const hasEnoughCredits = creditBalance !== undefined ? creditBalance >= credits : true;
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
     uploading: t("convert.stepUploading"),
