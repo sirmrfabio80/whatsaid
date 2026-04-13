@@ -121,8 +121,14 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     if (!isValid || sending) return;
     setSending(true);
     try {
+      // Generate and upload PDF if export data is available
+      let pdfPath: string | null = null;
+      if (exportData) {
+        pdfPath = await uploadPdfForShare(jobId, exportData);
+      }
+
       const { data, error } = await supabase.functions.invoke("share-transcript", {
-        body: { job_id: jobId, recipient_email: email.trim() },
+        body: { job_id: jobId, recipient_email: email.trim(), pdf_storage_path: pdfPath },
       });
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSent(true);

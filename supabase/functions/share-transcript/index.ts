@@ -86,8 +86,9 @@ function buildEmailHtml(opts: {
   summary: string | null
   questions: { prompt: string | null; answer: string }[]
   transcript: string
+  downloadUrl: string | null
 }): string {
-  const { title, senderLabel, summary, questions, transcript } = opts
+  const { title, senderLabel, summary, questions, transcript, downloadUrl } = opts
 
   const summarySection = summary
     ? `<div style="margin-bottom:32px;">
@@ -117,6 +118,7 @@ function buildEmailHtml(opts: {
       <div style="padding:28px 28px 20px;border-bottom:1px solid hsl(220,15%,92%);">
         <p style="font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:hsl(245,50%,48%);margin:0 0 8px;">${SITE_NAME}</p>
         <h1 style="font-family:'Space Grotesk',Arial,sans-serif;font-size:22px;font-weight:700;color:hsl(220,25%,10%);margin:0;line-height:1.3;">${escapeHtml(title)}</h1>
+        ${downloadUrl ? `<div style="margin-top:16px;"><a href="${downloadUrl}" style="display:inline-block;padding:12px 28px;background:hsl(220,25%,10%);color:#fff;font-size:14px;font-weight:600;border-radius:10px;text-decoration:none;letter-spacing:0.01em;">Download PDF</a><p style="font-size:12px;color:hsl(220,10%,55%);margin:8px 0 0;">Sign in or create a free ${SITE_NAME} account to download. Link expires in 2 days.</p></div>` : ''}
       </div>
 
       <div style="padding:24px 28px 32px;">
@@ -146,8 +148,12 @@ function buildPlainText(opts: {
   summary: string | null
   questions: { prompt: string | null; answer: string }[]
   transcript: string
+  downloadUrl: string | null
 }): string {
   const parts: string[] = [opts.title, '']
+  if (opts.downloadUrl) {
+    parts.push(`Download PDF (login required): ${opts.downloadUrl}`, '')
+  }
   if (opts.summary) {
     parts.push('--- Summary ---', '', opts.summary, '')
   }
@@ -183,9 +189,21 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { job_id, recipient_email } = await req.json()
+    const body = await req.json()
+    const job_id = typeof body?.job_id === 'string' ? body.job_id : ''
+    const recipient_email = typeof body?.recipient_email === 'string' ? body.recipient_email : ''
+    const pdf_storage_path = typeof body?.pdf_storage_path === 'string' && body.pdf_storage_path.trim()
+      ? body.pdf_storage_path.trim()
+      : null
+
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (pdf_storage_path && (!pdf_storage_path.startsWith(`${job_id}/`) || pdf_storage_path.includes('..'))) {
+      return new Response(JSON.stringify({ error: 'Invalid PDF path' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -247,12 +265,31 @@ Deno.serve(async (req) => {
 
     const title = job.title || job.file_name?.replace(/\.[^.]+$/, '') || 'Transcript'
 
+    // Create a share record for the PDF download link if we have a PDF
+    let downloadUrl: string | null = null
+    if (pdf_storage_path) {
+      const { data: share, error: shareError } = await serviceClient
+        .from('transcript_shares')
+        .insert({
+          job_id,
+          recipient_email: recipient_email.toLowerCase().trim(),
+          shared_by: user.id,
+        })
+        .select('token')
+        .single()
+
+      if (!shareError && share) {
+        downloadUrl = `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
+      }
+    }
+
     const html = buildEmailHtml({
       title,
       senderLabel,
       summary: transformedSummary,
       questions: transformedQuestions,
       transcript: transformedTranscript,
+      downloadUrl,
     })
 
     const text = buildPlainText({
@@ -261,6 +298,7 @@ Deno.serve(async (req) => {
       summary: transformedSummary,
       questions: transformedQuestions,
       transcript: transformedTranscript,
+      downloadUrl,
     })
 
     const messageId = crypto.randomUUID()
