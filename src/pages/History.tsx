@@ -194,7 +194,7 @@ export default function History() {
                               {jobTags.map((tag) => (
                                 <span
                                   key={tag.id}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent/40 text-accent-foreground/80 border border-accent/30"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground border border-border/40"
                                 >
                                   {tag.color && (
                                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
