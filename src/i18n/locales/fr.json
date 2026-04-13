@@ -290,7 +290,16 @@
     "saveFailed": "Impossible d'enregistrer les modifications de la transcription.",
     "reportIssue": "Signaler un problème de transcription",
     "reportIssuePlaceholder": "Cette fonctionnalité arrive bientôt. En attendant, vous pouvez modifier la transcription directement.",
-    "changeSpeaker": "Intervenant"
+    "changeSpeaker": "Intervenant",
+    "splitHere": "Diviser ici",
+    "splitSuccess": "Segment divisé",
+    "splitInvalidPosition": "Placez votre curseur à l'endroit où vous souhaitez diviser",
+    "mergeUp": "Fusionner",
+    "mergeSuccess": "Segments fusionnés",
+    "mergeConfirmTitle": "Quel intervenant le segment fusionné doit-il garder ?",
+    "mergeKeepSpeaker": "Garder {{speaker}}",
+    "unassigned": "Non attribué",
+    "newSpeakerInline": "Nouvel intervenant"
   },
   "share": {
     "share": "Partager",

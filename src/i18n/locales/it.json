@@ -290,7 +290,16 @@
     "saveFailed": "Impossibile salvare le modifiche alla trascrizione.",
     "reportIssue": "Segnala problema di trascrizione",
     "reportIssuePlaceholder": "Questa funzionalità arriverà presto. Per ora puoi modificare la trascrizione direttamente.",
-    "changeSpeaker": "Relatore"
+    "changeSpeaker": "Relatore",
+    "splitHere": "Dividi qui",
+    "splitSuccess": "Segmento diviso",
+    "splitInvalidPosition": "Posiziona il cursore dove vuoi dividere",
+    "mergeUp": "Unisci",
+    "mergeSuccess": "Segmenti uniti",
+    "mergeConfirmTitle": "Quale relatore deve mantenere il segmento unito?",
+    "mergeKeepSpeaker": "Mantieni {{speaker}}",
+    "unassigned": "Non assegnato",
+    "newSpeakerInline": "Nuovo relatore"
   },
   "share": {
     "share": "Condividi",

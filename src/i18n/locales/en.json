@@ -290,7 +290,16 @@
     "saveFailed": "Could not save transcript changes.",
     "reportIssue": "Report transcription issue",
     "reportIssuePlaceholder": "This feature is coming soon. For now, you can edit the transcript directly.",
-    "changeSpeaker": "Speaker"
+    "changeSpeaker": "Speaker",
+    "splitHere": "Split here",
+    "splitSuccess": "Segment split",
+    "splitInvalidPosition": "Place your cursor where you want to split",
+    "mergeUp": "Merge up",
+    "mergeSuccess": "Segments merged",
+    "mergeConfirmTitle": "Which speaker should the merged segment keep?",
+    "mergeKeepSpeaker": "Keep {{speaker}}",
+    "unassigned": "Unassigned",
+    "newSpeakerInline": "New speaker"
   },
   "share": {
     "share": "Share",
