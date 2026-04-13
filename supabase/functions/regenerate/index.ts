@@ -6,7 +6,15 @@ const corsHeaders = {
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL_SUMMARY = "google/gemini-2.5-flash";
+const MODEL_CUSTOM = "google/gemini-3-flash-preview";
+
+function extractShortSummary(summaryContent: string): string {
+  const overviewMatch = summaryContent.match(/##\s*Overview\s*\n+([\s\S]*?)(?=\n##|\n*$)/i);
+  const text = overviewMatch?.[1]?.trim() || summaryContent.split("\n").filter(l => l.trim()).slice(0, 2).join(" ");
+  const plain = text.replace(/[*#_`>\-]/g, "").replace(/\s+/g, " ").trim();
+  return plain.slice(0, 200);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -124,6 +132,8 @@ Rules:
       console.log(`[regenerate] Processing job ${job_id}, prompt: "${custom_prompt.slice(0, 80)}..."`);
     }
 
+    const activeModel = regenerateType === "summary" ? MODEL_SUMMARY : MODEL_CUSTOM;
+
     const res = await fetch(AI_GATEWAY, {
       method: "POST",
       headers: {
@@ -131,7 +141,7 @@ Rules:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: activeModel,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
