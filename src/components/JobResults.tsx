@@ -128,7 +128,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       }));
 
       if (sug.length === 0) {
-        toast.info(t("speakerSuggestions.noSuggestions"));
+        toast.info(t("speakerSuggestions.noSuggestionsHint"));
         setSuggestionTarget(null);
       }
       setSuggestions(sug);
@@ -260,6 +260,19 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
+              {/* Zero-segment speaker hint */}
+              {(() => {
+                const zeroSegSpeakers = allSpeakers.filter((s) => (speakerSegmentCounts[s] ?? 0) === 0);
+                if (zeroSegSpeakers.length === 0) return null;
+                const names = zeroSegSpeakers.map((s) => speakerNames[s] || s);
+                return (
+                  <div className="px-4 py-2.5 border-b border-border/50 bg-muted/30">
+                    <p className="text-xs text-muted-foreground">
+                      {t("speakerSuggestions.assignHint", { speaker: names.join(", ") })}
+                    </p>
+                  </div>
+                );
+              })()}
               {transcript ? (
                 <TranscriptEditor
                   content={transcript.content}

@@ -338,6 +338,8 @@
     "dismiss": "Ignora",
     "rejectOne": "Rifiuta questo suggerimento",
     "noSuggestions": "Nessun segmento è stato attribuito con sicurezza a questo relatore.",
+    "noSuggestionsHint": "Nessun segmento è stato suggerito con sicurezza. Puoi riassegnare i blocchi manualmente — entra in modalità modifica e clicca su un badge relatore.",
+    "assignHint": "Per assegnare blocchi a {{speaker}}, entra in modalità modifica e clicca su un badge relatore nella trascrizione.",
     "error": "Impossibile generare suggerimenti. Riprova.",
     "accepted_one": "{{count}} segmento riassegnato con successo.",
     "accepted_other": "{{count}} segmenti riassegnati con successo.",
