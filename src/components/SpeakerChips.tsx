@@ -125,7 +125,7 @@ function SpeakerChip({
       return (
         <div className="inline-flex flex-col gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs font-medium animate-in fade-in-0 zoom-in-95 duration-150">
           <div className="flex items-center gap-1.5">
-            <span className="text-destructive-foreground">
+            <span className="text-foreground">
               {t("speakerSuggestions.deleteReassign", { speaker: displayName, count: segmentCount })}
             </span>
             <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setConfirmDelete(false)} aria-label={t("common.cancel")}><X className="w-3 h-3" /></Button>
@@ -148,7 +148,7 @@ function SpeakerChip({
     // Speaker with no segments → simple confirm
     return (
       <div className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium min-h-[36px] animate-in fade-in-0 zoom-in-95 duration-150">
-        <span className="text-destructive-foreground">{t("speakerSuggestions.deleteSpeakerConfirm", { speaker: displayName })}</span>
+        <span className="text-foreground">{t("speakerSuggestions.deleteSpeakerConfirm", { speaker: displayName })}</span>
         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { setConfirmDelete(false); onDelete?.(); }} aria-label={t("common.delete")}><Check className="w-3 h-3" /></Button>
         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setConfirmDelete(false)} aria-label={t("common.cancel")}><X className="w-3 h-3" /></Button>
       </div>
