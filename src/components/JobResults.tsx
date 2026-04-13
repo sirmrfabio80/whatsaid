@@ -155,6 +155,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     const newContent = updated.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.raw)).join("\n");
     await handleTranscriptSave(newContent);
     setSuggestions([]);
+    setSuggestionTarget(null);
     toast.success(t("speakerSuggestions.accepted", { count: accepted.length }));
   };
 
