@@ -69,7 +69,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Update job status to processing
+    // 2b. If keyterms_prompt provided, save to transcription_config for the transcribe function
+    if (keyterms_prompt) {
+      // Validate: keyterms_prompt and custom_prompt are mutually exclusive for AssemblyAI
+      await supabase
+        .from("jobs")
+        .update({
+          transcription_config: { keyterms_prompt },
+        })
+        .eq("id", job_id);
+    }
+
+    // 3. Update job status to processing
     await supabase
       .from("jobs")
       .update({ status: "processing" })
