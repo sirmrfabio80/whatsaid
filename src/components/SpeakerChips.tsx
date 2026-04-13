@@ -50,6 +50,7 @@ export default function SpeakerChips({
             isSuggesting={isSuggesting}
             isDeletable={isDeletable}
             onDelete={() => onDeleteSpeaker?.(speaker)}
+            enableDrag={enableDrag}
           />
         );
       })}
@@ -74,11 +75,11 @@ export default function SpeakerChips({
 
 function SpeakerChip({
   original, displayName, isRenamed, onRename, showSuggest, onSuggest, isSuggesting,
-  isDeletable, onDelete,
+  isDeletable, onDelete, enableDrag,
 }: {
   original: string; displayName: string; isRenamed: boolean; onRename: (name: string) => void;
   showSuggest?: boolean; onSuggest?: () => void; isSuggesting?: boolean;
-  isDeletable?: boolean; onDelete?: () => void;
+  isDeletable?: boolean; onDelete?: () => void; enableDrag?: boolean;
 }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
