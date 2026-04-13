@@ -432,7 +432,7 @@ export default function TranscriptEditor({
         <Button
           variant={editing ? "default" : "outline"}
           size="sm"
-          className="rounded-lg gap-1.5 text-xs h-8"
+          className="rounded-full gap-1.5 text-xs h-8"
           onClick={toggleEditing}
         >
           <Pencil className="w-3.5 h-3.5" />
