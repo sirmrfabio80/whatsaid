@@ -1,90 +1,69 @@
 
 
-# Transcript Editing UX Redesign — Implementation Plan
+# Job Detail Page — Premium Redesign (Adjusted Plan)
 
-## Overview
-Six phases implementing segment cards with split, merge, structured state, inline speaker creation, and desktop drag-and-drop. All scoped to `TranscriptEditor.tsx`, `SpeakerChips.tsx`, `JobResults.tsx`, and i18n files.
+## Adjustments Applied
 
-## Phase 1 — Segment Card Visuals + Unassigned State + i18n Keys
+1. **Desktop text size**: `text-[15px] leading-[1.7]` on both mobile and desktop — no reduction to `text-sm` anywhere
+2. **Action bar mobile**: Icon + compact label by default, not icon-only
+3. **Tags**: Solve with `mt-5` spacing + quieter styling first, no border separator unless proven insufficient
+4. **Tabs**: All styling via className overrides in `JobResults.tsx`, no changes to shared `tabs.tsx`
 
-**TranscriptEditor.tsx — Read-mode segments (lines 378-452):**
-- Wrap each segment in a subtle card: `border border-border/30 rounded-xl bg-card/50` with `p-3` padding
-- Speaker badge always visible, not hover-gated
-- For `speaker: null` segments, render an "Unassigned" dashed-border badge (`border-dashed text-muted-foreground`) that is clickable in edit mode to open the speaker popover
-- Remove the hover-only pencil icon on text — replace with a subtle cursor change only
+## Implementation Split: 3 Prompts
 
-**i18n — all three locale files:**
-- Add keys: `splitHere`, `mergeUp`, `mergeConfirmTitle`, `mergeKeepSpeaker`, `unassigned`, `newSpeakerInline`, `splitSuccess`, `mergeSuccess`
+### Prompt 1 — Transcript Blocks + Header (Phases 1+2)
 
-## Phase 2 — Structured Editing State
+**TranscriptEditor.tsx — read-mode segments:**
+- Replace inline `borderLeft` style with Tailwind `border-l-[3px]` + CSS variable `style={{ '--seg-color': color.border } as React.CSSProperties}`
+- Add `rounded-xl bg-card/40 p-3` card wrapper to each segment
+- Speaker badge: `rounded-full bg-[var(--seg-bg)] px-2 py-0.5 text-xs` pill above text
+- Body text: `text-[15px] leading-[1.7]` on all breakpoints
+- Segment gap: `space-y-2`
 
-**TranscriptEditor.tsx — state management (lines 96-116, 161-214):**
-- On entering edit mode, `parseSegments` runs once → `segments` becomes the sole working state
-- `saveSegment` and `reassignSpeaker` mutate the `segments` array directly; `reconstructContent` called only on save
-- Remove the `useEffect` that re-parses on `content` change while `editing === true` (line 112-116 already does this correctly)
-- All new operations (split, merge) will operate on the segments array
+**JobDetail.tsx — header:**
+- Title: `text-2xl sm:text-3xl font-bold font-heading`
+- Back button: icon-only on mobile, text on desktop
+- "New transcription" button: `rounded-full`
+- Metadata pills: `rounded-full bg-muted/40 text-muted-foreground text-xs px-2.5 py-1` — no border
+- Tags: increase `mt-5` spacing, quieter weight — no separator line
 
-## Phase 3 — Split at Cursor
+### Prompt 2 — Tabs + Actions + Speaker Chips + Edit Mode (Phases 3+4)
 
-**TranscriptEditor.tsx — active segment block (lines 322-370):**
-- Add a `Scissors` icon button in the active segment toolbar (next to Save/Cancel): "Split here"
-- On click: read `textareaRef.current.selectionStart`, split text at cursor position
-- Create new segment with `id: seg-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, inheriting original speaker
-- Splice into segments array at `activeIndex + 1`
-- Auto-save via `onSave(reconstructContent(updatedSegments))`
-- **Focus behavior**: after split, set `activeIndex` to the new (second) segment, place cursor at position 0 in its textarea. Use `requestAnimationFrame` to ensure the new textarea is mounted before focusing
-- **Mobile scroll**: after split, `scrollIntoView({ behavior: 'smooth', block: 'nearest' })` on the new segment card
-- Clear AI suggestions on split (they reference stale IDs)
+**JobResults.tsx — tabs:**
+- `TabsList` className: `rounded-full bg-muted/40 p-1`
+- `TabsTrigger` className: `rounded-full`
+- No modification to shared `tabs.tsx`
 
-## Phase 4 — Merge Adjacent Segments
+**JobResults.tsx — action bar:**
+- Wrap Copy/Share/Export in `rounded-full bg-muted/30 border border-border/30 px-1 py-0.5 inline-flex gap-0.5`
+- Mobile: icon + compact label (not icon-only)
+- Move above card content, between tabs and card
 
-**TranscriptEditor.tsx — segment toolbar:**
-- Non-first segments show a "Merge up" button (icon: `Combine` or `ArrowUpToLine`) in toolbar when that segment is active
-- **Same speaker**: merge silently — concatenate text with a space, remove current segment from array, auto-save
-- **Different speakers**: show an inline confirmation UI (not a dialog — render it inside the segment card). Two buttons: "Keep [Speaker A]" and "Keep [Speaker B]". Selecting one merges text into the previous segment using that speaker
-- After merge, focus the previous segment with cursor at the join point
-- Clear AI suggestions on merge
+**JobResults.tsx — card surface:** `rounded-2xl border-border/40`
 
-## Phase 5 — Inline "+ New Speaker" in Popover
+**SpeakerChips.tsx:** chip buttons `rounded-full`
 
-**SpeakerBadge popover (lines 527-571):**
-- Add a separator + "+ New speaker" button at the bottom of the speaker list in the popover
-- On click: call a new `onCreateAndAssign` prop that creates the next available `Speaker X` letter and immediately reassigns this segment
-- Close popover after creation
+**TranscriptEditor.tsx — edit mode:**
+- Segment card: `rounded-xl`, softer `border-primary/20`, remove `shadow-sm`
+- Toolbar buttons: `rounded-full`
 
-**JobResults.tsx:**
-- Pass a new `onCreateAndAssign` callback to `TranscriptEditor` that calls `handleAddSpeaker` logic + immediately reassigns the segment
+### Prompt 3 — Summary/Questions + QA (Phases 5+6)
 
-## Phase 6 — Desktop Drag-and-Drop
+**StructuredSummary.tsx:** `rounded-2xl` surfaces, consistent spacing
+**JobResults.tsx:** Q&A section polish
+**All files:** spacing rhythm audit (8px base), dark mode contrast check, 375px/390px/414px viewport QA
 
-**SpeakerChips.tsx — SpeakerChip component:**
-- Add `draggable` attribute to the chip button, gated by CSS `@media (pointer: fine)` via a `useMediaQuery` check or `window.matchMedia`
-- `onDragStart`: set `e.dataTransfer.setData("text/plain", speaker)`, add `opacity-60` class
-- `onDragEnd`: remove opacity class
+## Files Affected
 
-**TranscriptEditor.tsx — segment cards in edit mode:**
-- Add `onDragOver` (preventDefault to allow drop) and `onDrop` handlers on each segment card
-- On drag over: add `ring-2 ring-primary/50` highlight class
-- On drag leave: remove highlight
-- On drop: read speaker from `dataTransfer`, call `reassignSpeaker(segIndex, droppedSpeaker)`, flash a brief `ring-2 ring-green-500/50` success state (300ms timeout)
-- Desktop only — no drag handles or touch-drag on mobile
-
-## Files Modified
-
-| File | Changes |
+| File | Prompts |
 |---|---|
-| `src/components/TranscriptEditor.tsx` | Card styling, unassigned badge, split/merge logic, structured state, toolbar, drop targets, focus management, "+ New speaker" in popover |
-| `src/components/SpeakerChips.tsx` | `draggable` + `onDragStart`/`onDragEnd` on chips (desktop only) |
-| `src/components/JobResults.tsx` | Pass `onCreateAndAssign` callback to TranscriptEditor |
-| `src/i18n/locales/en.json` | New transcript editing keys |
-| `src/i18n/locales/fr.json` | Same keys translated |
-| `src/i18n/locales/it.json` | Same keys translated |
+| `TranscriptEditor.tsx` | 1, 2 |
+| `JobDetail.tsx` | 1 |
+| `JobResults.tsx` | 2, 3 |
+| `SpeakerChips.tsx` | 2 |
+| `JobDetailTags.tsx` | 1 (spacing only) |
+| `StructuredSummary.tsx` | 3 |
 
-## Regression Risks
-
-- **Content corruption**: mitigated by operating on structured array, serializing only on save
-- **Stale AI suggestions**: cleared on any split/merge
-- **Export**: unaffected — `reconstructContent` produces same `Speaker X: text\n` format
-- **Drag vs text selection**: drag only on chip elements, not textarea; gated to `pointer: fine`
-- **Focus after split**: `requestAnimationFrame` + `scrollIntoView` ensures stable behavior on mobile
+## Design System Update After Implementation
+Update `mem://design/system-rules.md` to reflect: `rounded-2xl` main surfaces, `rounded-full` pills/chips, `text-[15px] leading-[1.7]` transcript body.
 
