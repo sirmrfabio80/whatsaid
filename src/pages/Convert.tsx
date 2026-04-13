@@ -26,6 +26,7 @@ export default function Convert() {
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [fileCreationDate, setFileCreationDate] = useState<AudioCreationDateResult | null>(null);
+  const [audioChannels, setAudioChannels] = useState<number | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -45,10 +46,11 @@ export default function Convert() {
     failed: t("convert.stepFailed"),
   };
 
-  const handleFileSelected = useCallback((f: File, dur: number, creationDate: AudioCreationDateResult | null) => {
+  const handleFileSelected = useCallback((f: File, dur: number, creationDate: AudioCreationDateResult | null, channels: number | null) => {
     setFile(f);
     setDuration(dur);
     setFileCreationDate(creationDate);
+    setAudioChannels(channels);
   }, []);
 
   useEffect(() => {
@@ -136,6 +138,7 @@ export default function Convert() {
           metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
           metadata_file_lastmodified: fileLastModifiedIso,
           metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
+          audio_channels: audioChannels,
         } as any);
 
       if (jobError) {
@@ -164,6 +167,7 @@ export default function Convert() {
     setFile(null);
     setDuration(0);
     setFileCreationDate(null);
+    setAudioChannels(null);
     setLanguage("auto");
     setCustomPrompt("");
     setProcessing(false);

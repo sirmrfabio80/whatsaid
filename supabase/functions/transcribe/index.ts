@@ -58,10 +58,19 @@ Deno.serve(async (req) => {
     console.log(`[transcribe] Starting transcription for job ${job_id}, file: ${job.file_name}`);
 
     // 3. Submit to AssemblyAI
+    // Route based on detected audio channels:
+    // - multichannel (2+): uses AssemblyAI multichannel mode (one transcript per channel)
+    // - mono (1) or unknown (null): uses speaker diarization (best-effort for same-mic audio)
+    // Note: Stereo files with identical/mixed channels may produce duplicate output under multichannel mode.
+    const isMultichannel = typeof job.audio_channels === "number" && job.audio_channels >= 2;
+    console.log(`[transcribe] audio_channels=${job.audio_channels}, multichannel=${isMultichannel}`);
+
     const transcriptPayload: Record<string, unknown> = {
       audio_url: signedUrlData.signedUrl,
       speech_models: ["universal-3-pro"],
-      speaker_labels: true,
+      ...(isMultichannel
+        ? { multichannel: true }
+        : { speaker_labels: true }),
     };
 
     // If language is manually selected and not "auto", pass it
@@ -126,16 +135,29 @@ Deno.serve(async (req) => {
 
     console.log(`[transcribe] Transcription completed for job ${job_id}`);
 
-    // 5. Build transcript text with speaker labels
-    const utterances = (transcript.utterances as Array<{ speaker: string; text: string }>) ?? [];
+    // 5. Build transcript text
     let transcriptText: string;
 
-    if (utterances.length > 0) {
-      transcriptText = utterances
-        .map((u) => `Speaker ${u.speaker}: ${u.text}`)
-        .join("\n\n");
+    if (isMultichannel) {
+      // Multichannel mode: each utterance has a `channel` property
+      const utterances = (transcript.utterances as Array<{ channel: string; text: string }>) ?? [];
+      if (utterances.length > 0) {
+        transcriptText = utterances
+          .map((u) => `Channel ${u.channel}: ${u.text}`)
+          .join("\n\n");
+      } else {
+        transcriptText = (transcript.text as string) ?? "";
+      }
     } else {
-      transcriptText = (transcript.text as string) ?? "";
+      // Speaker diarization mode: each utterance has a `speaker` label
+      const utterances = (transcript.utterances as Array<{ speaker: string; text: string }>) ?? [];
+      if (utterances.length > 0) {
+        transcriptText = utterances
+          .map((u) => `Speaker ${u.speaker}: ${u.text}`)
+          .join("\n\n");
+      } else {
+        transcriptText = (transcript.text as string) ?? "";
+      }
     }
 
     const detectedLanguage = (transcript.language_code as string) ?? null;
