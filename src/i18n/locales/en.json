@@ -369,7 +369,8 @@
     "accepted_one": "{{count}} segment reassigned successfully.",
     "accepted_other": "{{count}} segments reassigned successfully.",
     "deleteSpeaker": "Remove speaker",
-    "deleteSpeakerConfirm": "Remove {{speaker}}?"
+    "deleteSpeakerConfirm": "Remove {{speaker}}?",
+    "deleteReassign": "Remove {{speaker}}? Reassign {{count}} segment(s) to:"
   },
   "languageSelector": {
     "language": "Language",

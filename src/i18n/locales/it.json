@@ -353,7 +353,8 @@
     "accepted_one": "{{count}} segmento riassegnato con successo.",
     "accepted_other": "{{count}} segmenti riassegnati con successo.",
     "deleteSpeaker": "Rimuovi relatore",
-    "deleteSpeakerConfirm": "Rimuovere {{speaker}}?"
+    "deleteSpeakerConfirm": "Rimuovere {{speaker}}?",
+    "deleteReassign": "Rimuovere {{speaker}}? Riassegna {{count}} segmento/i a:"
   },
   "languageSelector": {
     "language": "Lingua",
