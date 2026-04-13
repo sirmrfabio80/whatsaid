@@ -47,13 +47,13 @@ function SpeakerChip({ original, displayName, isRenamed, onRename }: { original:
 
   if (editing) {
     return (
-      <div className="inline-flex items-center gap-1 rounded-lg border border-primary/50 bg-background px-2 py-1">
-        <Input ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }} className="h-6 w-24 sm:w-28 text-xs border-0 p-0 focus-visible:ring-0 bg-transparent" aria-label={`New name for ${original}`} maxLength={30} />
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={save} aria-label={t("common.save")}><Check className="w-3 h-3" /></Button>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancel} aria-label={t("common.cancel")}><X className="w-3 h-3" /></Button>
+      <div className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-background px-2 py-1 shadow-sm ring-1 ring-primary/10">
+        <Input ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }} className="h-6 w-24 sm:w-28 text-xs border-none shadow-none p-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" aria-label={`New name for ${original}`} maxLength={30} />
+        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={save} aria-label={t("common.save")}><Check className="w-3 h-3" /></Button>
+        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={cancel} aria-label={t("common.cancel")}><X className="w-3 h-3" /></Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-muted-foreground">{t("speakerChips.suggestions")}</Button>
+            <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-muted-foreground shrink-0">{t("speakerChips.suggestions")}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[120px]">
             {ROLE_SUGGESTIONS.map((role) => (
