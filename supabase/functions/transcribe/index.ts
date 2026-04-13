@@ -145,7 +145,22 @@ Deno.serve(async (req) => {
       throw new Error("Transcription timed out after 10 minutes");
     }
 
-    console.log(`[transcribe] Transcription completed for job ${job_id}`);
+    // Structured completion log for routing analysis
+    const utterances = (transcript.utterances as Array<Record<string, unknown>>) ?? [];
+    const uniqueSpeakers = isMultichannel
+      ? new Set(utterances.map((u) => String(u.channel ?? ""))).size
+      : new Set(utterances.map((u) => String(u.speaker ?? ""))).size;
+
+    console.log(JSON.stringify({
+      event: "transcription_completed",
+      job_id,
+      route: isMultichannel ? "multichannel" : "diarization",
+      audio_channels: job.audio_channels ?? null,
+      utterance_count: utterances.length,
+      unique_speakers_or_channels: uniqueSpeakers,
+      duration_seconds: Math.round((transcript.audio_duration as number) ?? 0),
+      language_detected: (transcript.language_code as string) ?? null,
+    }));
 
     // 5. Build transcript text
     let transcriptText: string;
