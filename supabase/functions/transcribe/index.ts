@@ -89,13 +89,46 @@ Deno.serve(async (req) => {
       transcriptPayload.language_detection = true;
     }
 
-    // Optional tuning: keyterms_prompt (mutually exclusive with custom_prompt/prompt)
-    if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
-      transcriptPayload.keyterms_prompt = tuningConfig.keyterms_prompt;
-      // Never send both prompt and keyterms_prompt
+    // --- Strategy-based prompt routing ---
+    // prompt and keyterms_prompt are mutually exclusive at the AssemblyAI API level.
+    const strategy = (tuningConfig.strategy as string) ?? "balanced";
+
+    const STRATEGY_PROMPTS: Record<string, string> = {
+      recovery: [
+        "Required: Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.",
+        "",
+        "Mandatory: Preserve linguistic speech patterns including disfluencies, filler words, hesitations, repetitions, stutters, false starts, and colloquialisms in the spoken language.",
+        "",
+        "Always: Transcribe speech with your best guess based on context in all possible scenarios where speech is present in the audio.",
+      ].join("\n"),
+      review: [
+        "Always: Transcribe speech exactly as heard. If uncertain or audio is unclear, mark as [unclear].",
+        "After the first output, review the transcript again.",
+        "Pay close attention to hallucinations, misspellings, or errors, and revise them like a computer performing spell and grammar checks.",
+        "Ensure words and phrases make grammatical sense in sentences.",
+      ].join(" "),
+    };
+
+    if (strategy === "keyterms") {
+      // Keyterms mode: send keyterms_prompt only, no prompt
+      const keyterms = tuningConfig.keyterms;
+      if (Array.isArray(keyterms) && keyterms.length > 0) {
+        transcriptPayload.keyterms_prompt = keyterms;
+      }
+    } else if (strategy in STRATEGY_PROMPTS) {
+      // Recovery or review: send prompt, no keyterms_prompt
+      transcriptPayload.prompt = STRATEGY_PROMPTS[strategy];
+    }
+    // balanced: no prompt, no keyterms_prompt — AssemblyAI default system prompt applies
+
+    // Legacy fallback: old jobs with keyterms_prompt string (pre-strategy era)
+    if (!transcriptPayload.prompt && !transcriptPayload.keyterms_prompt) {
+      if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
+        transcriptPayload.keyterms_prompt = tuningConfig.keyterms_prompt;
+      }
     }
 
-    // Profile-based tuning presets
+    // Profile-based tuning presets (legacy, kept for backward compatibility)
     const PROFILES: Record<string, Record<string, unknown>> = {
       phone_call: { speakers_expected: 2 },
       meeting: {},
@@ -103,7 +136,6 @@ Deno.serve(async (req) => {
 
     if (tuningConfig.profile && typeof tuningConfig.profile === "string" && PROFILES[tuningConfig.profile]) {
       const profileDefaults = PROFILES[tuningConfig.profile];
-      // Profile defaults are applied under explicit overrides
       for (const [key, value] of Object.entries(profileDefaults)) {
         if (!(key in tuningConfig)) {
           tuningConfig[key] = value;
@@ -125,9 +157,11 @@ Deno.serve(async (req) => {
       file_size_bytes: job.file_size_bytes ?? null,
       audio_channels: job.audio_channels ?? null,
       route: isMultichannel ? "multichannel" : "diarization",
+      strategy,
+      has_prompt: !!transcriptPayload.prompt,
+      has_keyterms: !!transcriptPayload.keyterms_prompt,
       speech_models: transcriptPayload.speech_models,
       temperature: transcriptPayload.temperature,
-      has_keyterms: !!transcriptPayload.keyterms_prompt,
       speakers_expected: transcriptPayload.speakers_expected ?? null,
       profile: tuningConfig.profile ?? null,
     }));
