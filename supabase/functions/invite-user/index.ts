@@ -48,11 +48,13 @@ Deno.serve(async (req) => {
 
     // Parse & validate input
     const body = await req.json();
-    const { email, packageId, method } = body as {
+    const { email, packageId, method, language } = body as {
       email: string;
       packageId: string;
       method: "email" | "magic-link";
+      language?: string;
     };
+    const inviteLanguage = language || "en";
 
     if (!email || !email.includes("@")) {
       return new Response(JSON.stringify({ error: "Invalid email" }), {
@@ -108,6 +110,7 @@ Deno.serve(async (req) => {
         invited_by: callerId,
         claimed: true,
         claimed_at: new Date().toISOString(),
+        language: inviteLanguage,
       });
     } else {
       // Store pending invite
@@ -116,6 +119,7 @@ Deno.serve(async (req) => {
         credits,
         package_id: packageId,
         invited_by: callerId,
+        language: inviteLanguage,
       });
 
       if (method === "email") {
