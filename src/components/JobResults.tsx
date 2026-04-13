@@ -127,9 +127,9 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
               {transcript && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 border-b border-border/50">
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-2 p-3 border-b border-border/50">
                   <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex">{speakers.length > 0 && <SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} />}</div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 ml-auto">
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
                       {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
                     </Button>
@@ -166,7 +166,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </Select>
                   {regeneratingSummary && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 ml-auto">
                   {summary && (
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}>
                       {copiedId === summary.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === summary.id ? t("common.copied") : t("common.copy")}
@@ -188,7 +188,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-4">
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-2 p-3 border-b border-border/50">
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-2 p-3 border-b border-border/50">
                 <div className="flex items-center gap-1.5">
                   {questionEntries.length > 0 && (
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => { const included = questionEntries.filter((q) => !excludedQAIds.has(q.id)); const text = included.map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`).join("\n\n"); handleCopy(text, "qa-all"); }}>
