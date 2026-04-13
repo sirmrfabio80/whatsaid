@@ -267,7 +267,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   onSave={handleTranscriptSave}
                   transcriptEdited={transcriptEdited}
                   suggestions={suggestions}
-                  suggestingTarget={suggestingForSpeaker}
+                  suggestingTarget={suggestionTarget}
                   onAcceptSuggestions={handleAcceptSuggestions}
                   onDismissSuggestions={handleDismissSuggestions}
                   onEditedIdsChange={(ids) => { editedIdsRef.current = ids; }}
