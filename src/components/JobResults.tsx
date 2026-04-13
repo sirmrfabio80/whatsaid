@@ -31,9 +31,8 @@ export interface JobMeta {
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
 
 function parseSpeakers(text: string): string[] {
-  const matches = text.match(/^(Speaker [A-Z]):/gm);
-  if (!matches) return [];
-  return [...new Set(matches.map((m) => m.replace(":", "")))];
+  const segments = parseSegments(text);
+  return [...new Set(segments.map((segment) => segment.speaker).filter((speaker): speaker is string => Boolean(speaker)))];
 }
 
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
