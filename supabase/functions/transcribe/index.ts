@@ -59,11 +59,26 @@ Deno.serve(async (req) => {
     console.log(`[transcribe] Starting transcription for job ${job_id}, file: ${job.file_name}`);
 
     // 3. Submit to AssemblyAI
-    // Route based on detected audio channels:
-    // - multichannel (2+): uses AssemblyAI multichannel mode (one transcript per channel)
-    // - mono (1) or unknown (null): uses speaker diarization (best-effort for same-mic audio)
-    // Note: Stereo files with identical/mixed channels may produce duplicate output under multichannel mode.
-    const isMultichannel = typeof job.audio_channels === "number" && job.audio_channels >= 2;
+    //
+    // MULTICHANNEL ROUTING DISABLED — diarization-first is the safe default.
+    //
+    // Automatic channel-count-based routing (audio_channels >= 2 → multichannel mode)
+    // caused regressions on real uploads: stereo files where both channels contain the
+    // same mixed audio lost speaker separation entirely, because AssemblyAI collapsed
+    // all speech into a single channel output ("Speaker A" only, no Speaker B).
+    //
+    // Diarization (speaker_labels: true) works correctly for both mono AND stereo files
+    // with mixed/identical channels, which is the vast majority of real-world uploads.
+    //
+    // Multichannel mode should only be re-enabled behind explicit user opt-in
+    // (e.g. an "Advanced" UI toggle), never automatically based on channel count alone.
+    //
+    // All groundwork is preserved and dormant:
+    //   - audio_channels detection and storage still runs
+    //   - structured logging still records channel count and chosen route
+    //   - multichannel transcript-building code (Speaker A/B mapping) remains below
+    //
+    const isMultichannel = false;
 
     // Structured routing log for future analysis of real uploads
     console.log(JSON.stringify({
