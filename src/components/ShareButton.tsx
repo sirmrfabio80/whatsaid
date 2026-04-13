@@ -12,6 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface ShareButtonProps {
   jobId: string;
   disabled?: boolean;
+  exportData?: CanonicalExportData | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
