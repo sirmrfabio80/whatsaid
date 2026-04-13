@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
+import TranscriptionSettings, { type TranscriptionConfig } from "@/components/TranscriptionSettings";
 import LanguageSelector from "@/components/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
