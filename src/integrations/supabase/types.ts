@@ -225,6 +225,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          audio_channels: number | null
           audio_deleted_at: string | null
           created_at: string
           credits_charged: number
@@ -257,6 +258,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          audio_channels?: number | null
           audio_deleted_at?: string | null
           created_at?: string
           credits_charged?: number
@@ -289,6 +291,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          audio_channels?: number | null
           audio_deleted_at?: string | null
           created_at?: string
           credits_charged?: number

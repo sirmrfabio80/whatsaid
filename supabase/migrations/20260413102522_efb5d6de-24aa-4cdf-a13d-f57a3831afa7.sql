@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN audio_channels integer DEFAULT NULL;
