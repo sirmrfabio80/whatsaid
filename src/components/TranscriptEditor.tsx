@@ -45,7 +45,9 @@ interface TranscriptEditorProps {
 
 export function parseSegments(content: string): Segment[] {
   return content.split("\n").map((line, index) => {
-    const id = crypto.randomUUID();
+    // Deterministic ID: stable across calls for the same content
+    const snippet = line.slice(0, 40).replace(/[^a-zA-Z0-9]/g, "");
+    const id = `seg-${index}-${line.length}-${snippet}`;
     const match = line.match(/^(.+?):\s(.*)/);
     if (match) {
       return { id, index, speaker: match[1], text: match[2], raw: line };
