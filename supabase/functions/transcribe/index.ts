@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -203,9 +204,9 @@ Deno.serve(async (req) => {
       if (job_id) {
         await supabase
           .from("jobs")
-          .update({
+           .update({
             status: "failed",
-            error_message: error instanceof Error ? error.message : "Unknown error",
+            error_message: sanitizeErrorForClient(error),
           })
           .eq("id", job_id);
       }
