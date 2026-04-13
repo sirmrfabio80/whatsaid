@@ -187,6 +187,42 @@ export type Database = {
           },
         ]
       }
+      job_tags: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_tags_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           audio_deleted_at: string | null
@@ -376,6 +412,36 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          normalized_name: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          normalized_name: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          normalized_name?: string
+          source?: string
+          user_id?: string
         }
         Relationships: []
       }
