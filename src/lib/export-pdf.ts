@@ -249,7 +249,7 @@ function canvasHeightMm(canvas: HTMLCanvasElement): number {
 /*  PDF export                                                         */
 /* ------------------------------------------------------------------ */
 
-export async function exportPdf(data: CanonicalExportData): Promise<void> {
+export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> {
   const blocks = buildPdfBlocks(data);
   const elements = blocks.map((b) => createBlockElement(b.html));
 
@@ -277,22 +277,18 @@ export async function exportPdf(data: CanonicalExportData): Promise<void> {
       const canvas = await renderCanvas(elements[i]);
       const heightMm = canvasHeightMm(canvas);
 
-      // Force new page (section breaks for Q&A / Transcript headings)
       if (block.forceNewPage && currentY > MARGIN_MM) {
         pdf.addPage();
         currentY = MARGIN_MM;
       }
 
-      // Check if block fits on current page
       const remainingMm = MAX_CONTENT_Y_MM - currentY;
 
       if (heightMm > remainingMm && currentY > MARGIN_MM) {
-        // Doesn't fit — start a new page (never split a block)
         pdf.addPage();
         currentY = MARGIN_MM;
       }
 
-      // Place the block (it's atomic — always placed whole)
       pdf.addImage(
         canvas.toDataURL("image/png"),
         "PNG",
@@ -307,11 +303,15 @@ export async function exportPdf(data: CanonicalExportData): Promise<void> {
       currentY += heightMm + block.gapAfterMm;
     }
 
-    const blob = pdf.output("blob");
-    downloadBlob(blob, `${data.title}.pdf`);
+    return pdf.output("blob");
   } finally {
     elements.forEach((el) => el.remove());
   }
+}
+
+export async function exportPdf(data: CanonicalExportData): Promise<void> {
+  const blob = await generatePdfBlob(data);
+  downloadBlob(blob, `${data.title}.pdf`);
 }
 
 function downloadBlob(blob: Blob, filename: string) {

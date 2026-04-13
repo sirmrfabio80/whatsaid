@@ -282,7 +282,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
                       {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
                     </Button>
-                    <ShareButton jobId={jobId} disabled={!transcript} />
+                    <ShareButton jobId={jobId} disabled={!transcript} exportData={canonicalData} />
                     <ExportButton data={canonicalData} disabled={!transcript} />
                   </div>
                 </div>
@@ -332,7 +332,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       {copiedId === summary.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === summary.id ? t("common.copied") : t("common.copy")}
                     </Button>
                   )}
-                  <ShareButton jobId={jobId} disabled={!transcript} />
+                  <ShareButton jobId={jobId} disabled={!transcript} exportData={canonicalData} />
                   <ExportButton data={canonicalData} disabled={!transcript} />
                 </div>
                 <div className="flex items-center gap-2">
@@ -364,7 +364,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       {copiedId === "qa-all" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === "qa-all" ? t("common.copied") : t("common.copyAll")}
                     </Button>
                   )}
-                  <ShareButton jobId={jobId} disabled={!transcript} />
+                  <ShareButton jobId={jobId} disabled={!transcript} exportData={canonicalData} />
                   <ExportButton data={canonicalData} disabled={!transcript} />
                 </div>
               </div>
