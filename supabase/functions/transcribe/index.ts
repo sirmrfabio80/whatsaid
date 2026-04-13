@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
     // Profile-based tuning presets
     const PROFILES: Record<string, Record<string, unknown>> = {
       phone_call: { speakers_expected: 2 },
+      meeting: {},
     };
 
     if (tuningConfig.profile && typeof tuningConfig.profile === "string" && PROFILES[tuningConfig.profile]) {
