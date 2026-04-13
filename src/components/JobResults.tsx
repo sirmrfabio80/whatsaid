@@ -173,11 +173,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     try { const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: prompt } }); if (error || data?.error) return; if (data?.output) setOutputs((prev) => [...prev, data.output as JobOutput]); else await fetchData(); setQuestionPrompt(""); } catch { return; } finally { setAskingQuestion(false); }
   };
 
-  if (loading) return <div className="space-y-4 py-8"><div className="animate-pulse space-y-3"><div className="h-10 bg-muted rounded-xl w-full" /><div className="h-64 bg-muted rounded-xl w-full" /></div></div>;
-
   const transcript = outputs.find((o) => o.output_type === "transcript");
   const summary = outputs.find((o) => o.output_type === "summary");
-  const getQuestionEntries = () => outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
   const speakers = transcript ? parseSpeakers(transcript.content) : [];
   const allSpeakers = [...new Set([...speakers, ...extraSpeakers])];
 
@@ -190,9 +187,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       segs.forEach((s) => { if (s.speaker && counts[s.speaker] !== undefined) counts[s.speaker]++; });
     }
     return counts;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.content, allSpeakers.join(",")]);
 
+  if (loading) return <div className="space-y-4 py-8"><div className="animate-pulse space-y-3"><div className="h-10 bg-muted rounded-xl w-full" /><div className="h-64 bg-muted rounded-xl w-full" /></div></div>;
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
+
+  const getQuestionEntries = () => outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
 
   const questionEntries = getQuestionEntries();
   const persistedJobTitle = meta?.title?.trim() || null;
