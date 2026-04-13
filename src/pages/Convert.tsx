@@ -100,6 +100,10 @@ export default function Convert() {
     setStep("uploading");
     setErrorMessage(null);
 
+    // Smooth scroll up so the user sees the progress stepper
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "instant" : "smooth" });
+
     try {
       const newJobId = crypto.randomUUID();
       const filePath = `${user.id}/${newJobId}/${file.name}`;
