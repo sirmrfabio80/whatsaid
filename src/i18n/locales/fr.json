@@ -233,7 +233,17 @@
     "startTranscribing": "Commencer à transcrire",
     "deleteTitle": "Supprimer la transcription ?",
     "deleteDesc": "Cela supprimera définitivement <strong>{{fileName}}</strong> et tous ses résultats, y compris le résumé, la transcription et les questions enregistrées. Cette action est irréversible.",
-    "deleting": "Suppression…"
+    "deleting": "Suppression…",
+    "searchPlaceholder": "Rechercher des transcriptions…",
+    "clearSearch": "Effacer la recherche",
+    "filterByTag": "Filtrer par tag",
+    "tags": "Tags",
+    "searchTags": "Rechercher des tags…",
+    "noMatchingTags": "Aucun tag correspondant",
+    "removeTag": "Supprimer le tag",
+    "clearAll": "Tout effacer",
+    "noResults": "Aucune transcription correspondante",
+    "noResultsDesc": "Essayez d'ajuster votre recherche ou de supprimer certains filtres."
   },
   "jobDetail": {
     "backToHistory": "Retour à l'historique",
