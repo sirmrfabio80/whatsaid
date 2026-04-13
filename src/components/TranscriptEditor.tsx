@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Check, X, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import { Pencil, Check, X, AlertTriangle, MessageSquareWarning, Scissors, ArrowUpToLine, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 
 export interface Segment {
   id: string;
@@ -41,6 +42,7 @@ interface TranscriptEditorProps {
   onAcceptSuggestions?: (accepted: SpeakerSuggestion[]) => void;
   onDismissSuggestions?: () => void;
   onEditedIdsChange?: (ids: Set<string>) => void;
+  onCreateAndAssign?: (segIndex: number) => void;
 }
 
 export function parseSegments(content: string): Segment[] {
@@ -58,7 +60,7 @@ export function parseSegments(content: string): Segment[] {
 function reconstructContent(segments: Segment[]): string {
   return segments.map((s) => {
     if (s.speaker) return `${s.speaker}: ${s.text}`;
-    return s.raw;
+    return s.text || s.raw;
   }).join("\n");
 }
 
@@ -93,9 +95,26 @@ function getSpeakerColor(speaker: string, allSpeakers: string[]) {
   return SPEAKER_COLORS[(idx >= 0 ? idx : 0) % SPEAKER_COLORS.length];
 }
 
+function generateSegId(): string {
+  return `seg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function usePointerFine() {
+  const [fine, setFine] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: fine)");
+    setFine(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setFine(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return fine;
+}
+
 export default function TranscriptEditor({
   content, speakerNames, allSpeakers: allSpeakersProp, onSave, transcriptEdited,
   suggestions, suggestingTarget, onAcceptSuggestions, onDismissSuggestions, onEditedIdsChange,
+  onCreateAndAssign,
 }: TranscriptEditorProps) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -107,7 +126,13 @@ export default function TranscriptEditor({
   const [dirty, setDirty] = useState(false);
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set());
   const [rejectedSuggestionIds, setRejectedSuggestionIds] = useState<Set<string>>(new Set());
+  const [mergeConfirm, setMergeConfirm] = useState<{ index: number; prevSpeaker: string; currSpeaker: string } | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dropSuccessIndex, setDropSuccessIndex] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const pendingFocusRef = useRef<{ index: number; cursorPos: number } | null>(null);
+  const isPointerFine = usePointerFine();
 
   useEffect(() => {
     if (!editing) {
@@ -189,7 +214,7 @@ export default function TranscriptEditor({
   // Speaker-only reassignment — auto-saves immediately
   const reassignSpeaker = useCallback(async (segIndex: number, newSpeaker: string) => {
     const seg = segments[segIndex];
-    if (!seg.speaker || seg.speaker === newSpeaker) return;
+    if (seg.speaker === newSpeaker) return;
     setSaving(true);
     const updated = segments.map((s, i) => {
       if (i !== segIndex) return s;
@@ -212,6 +237,115 @@ export default function TranscriptEditor({
       setSaving(false);
     }
   }, [segments, onSave, content, editedIds, onEditedIdsChange]);
+
+  // Split segment at cursor position
+  const splitSegment = useCallback(async () => {
+    if (activeIndex === null || !textareaRef.current) return;
+    const cursorPos = textareaRef.current.selectionStart;
+    const seg = segments[activeIndex];
+    const textToUse = dirty ? editText : seg.text;
+    
+    if (cursorPos <= 0 || cursorPos >= textToUse.length) {
+      toast.error(t("jobResults.splitInvalidPosition"));
+      return;
+    }
+
+    const textBefore = textToUse.slice(0, cursorPos).trimEnd();
+    const textAfter = textToUse.slice(cursorPos).trimStart();
+
+    if (!textBefore || !textAfter) {
+      toast.error(t("jobResults.splitInvalidPosition"));
+      return;
+    }
+
+    setSaving(true);
+    const newId = generateSegId();
+    const updated = [...segments];
+    updated[activeIndex] = {
+      ...seg,
+      text: textBefore,
+      raw: seg.speaker ? `${seg.speaker}: ${textBefore}` : textBefore,
+    };
+    updated.splice(activeIndex + 1, 0, {
+      id: newId,
+      index: activeIndex + 1,
+      speaker: seg.speaker,
+      text: textAfter,
+      raw: seg.speaker ? `${seg.speaker}: ${textAfter}` : textAfter,
+    });
+    // Re-index
+    updated.forEach((s, i) => { s.index = i; });
+
+    setSegments(updated);
+    // Clear suggestions (stale IDs)
+    if (suggestions?.length) {
+      onDismissSuggestions?.();
+    }
+
+    try {
+      await onSave(reconstructContent(updated));
+      // Focus new segment
+      pendingFocusRef.current = { index: activeIndex + 1, cursorPos: 0 };
+      setActiveIndex(activeIndex + 1);
+      setEditText(textAfter);
+      setDirty(false);
+      toast.success(t("jobResults.splitSuccess"));
+    } catch {
+      setSegments(parseSegments(content));
+    } finally {
+      setSaving(false);
+    }
+  }, [activeIndex, editText, segments, onSave, content, dirty, suggestions, onDismissSuggestions, t]);
+
+  // Merge current segment into previous
+  const mergeUp = useCallback(async (index: number, keepSpeaker?: string) => {
+    if (index <= 0) return;
+    const prev = segments[index - 1];
+    const curr = segments[index];
+
+    // If different speakers and no explicit choice yet, show confirmation
+    if (prev.speaker && curr.speaker && prev.speaker !== curr.speaker && !keepSpeaker) {
+      setMergeConfirm({ index, prevSpeaker: prev.speaker, currSpeaker: curr.speaker });
+      return;
+    }
+
+    setSaving(true);
+    const speaker = keepSpeaker || prev.speaker || curr.speaker;
+    const mergedText = `${prev.text} ${curr.text}`.trim();
+    const joinPoint = prev.text.length + 1; // +1 for space
+
+    const updated = segments.filter((_, i) => i !== index).map((s, i) => {
+      if (i === index - 1) {
+        return {
+          ...s,
+          speaker,
+          text: mergedText,
+          raw: speaker ? `${speaker}: ${mergedText}` : mergedText,
+        };
+      }
+      return { ...s, index: i };
+    });
+    updated.forEach((s, i) => { s.index = i; });
+
+    setSegments(updated);
+    setMergeConfirm(null);
+    if (suggestions?.length) {
+      onDismissSuggestions?.();
+    }
+
+    try {
+      await onSave(reconstructContent(updated));
+      pendingFocusRef.current = { index: index - 1, cursorPos: joinPoint };
+      setActiveIndex(index - 1);
+      setEditText(mergedText);
+      setDirty(false);
+      toast.success(t("jobResults.mergeSuccess"));
+    } catch {
+      setSegments(parseSegments(content));
+    } finally {
+      setSaving(false);
+    }
+  }, [segments, onSave, content, suggestions, onDismissSuggestions, t]);
 
   const toggleEditing = useCallback(() => {
     if (editing && activeIndex !== null && dirty) {
@@ -248,12 +382,38 @@ export default function TranscriptEditor({
     onAcceptSuggestions(accepted);
   }, [activeSuggestions, onAcceptSuggestions]);
 
+  // Auto-resize textarea + handle pending focus
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+
+      if (pendingFocusRef.current && activeIndex === pendingFocusRef.current.index) {
+        const { cursorPos } = pendingFocusRef.current;
+        requestAnimationFrame(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+            textareaRef.current.setSelectionRange(cursorPos, cursorPos);
+          }
+          // Scroll new segment into view
+          const el = segmentRefs.current.get(activeIndex!);
+          el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+        pendingFocusRef.current = null;
+      }
     }
   }, [editText, activeIndex]);
+
+  // Drop handler for drag-and-drop
+  const handleDrop = useCallback((e: React.DragEvent, segIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    const speaker = e.dataTransfer.getData("text/plain");
+    if (!speaker || !editing) return;
+    reassignSpeaker(segIndex, speaker);
+    setDropSuccessIndex(segIndex);
+    setTimeout(() => setDropSuccessIndex(null), 400);
+  }, [editing, reassignSpeaker]);
 
   const displaySpeaker = (speaker: string) => speakerNames[speaker] || speaker;
 
@@ -308,36 +468,58 @@ export default function TranscriptEditor({
         </div>
       )}
 
-      {/* Transcript lines */}
-      <div className="p-5 sm:p-6">
-        <div className="space-y-2">
+      {/* Transcript segments */}
+      <div className="p-4 sm:p-5">
+        <div className="space-y-1.5">
           {segments.map((seg, i) => {
             const isActive = activeIndex === i;
             const isEmpty = !seg.text.trim() && !seg.speaker;
             const suggestion = activeSuggestions.get(seg.id);
 
-            if (isEmpty) return <div key={seg.id} className="h-2" />;
+            if (isEmpty) return <div key={seg.id} className="h-1.5" />;
 
-            // Active text editing
+            const hasSuggestionHighlight = !!suggestion;
+            const color = seg.speaker ? getSpeakerColor(seg.speaker, speakers) : null;
+            const isDragOver = dragOverIndex === i;
+            const isDropSuccess = dropSuccessIndex === i;
+
+            // Active text editing — segment card
             if (isActive && editing) {
-              const color = seg.speaker ? getSpeakerColor(seg.speaker, speakers) : null;
               return (
                 <div
                   key={seg.id}
-                  className="rounded-xl border border-primary/30 bg-primary/5 p-3 sm:p-4 space-y-3"
+                  ref={(el) => { if (el) segmentRefs.current.set(i, el); }}
+                  className="rounded-xl border border-primary/30 bg-card p-3 sm:p-4 space-y-3 shadow-sm"
                   style={color ? { borderLeftWidth: 3, borderLeftColor: color.border } : undefined}
                 >
-                  {seg.speaker && (
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md"
-                        style={{ backgroundColor: color?.bg, color: color?.border }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color?.dot }} />
-                        {displaySpeaker(seg.speaker)}
-                      </span>
-                    </div>
-                  )}
+                  {/* Badge row */}
+                  <div className="flex items-center gap-2">
+                    {seg.speaker ? (
+                      <SpeakerBadge
+                        speaker={seg.speaker}
+                        displayName={displaySpeaker(seg.speaker)}
+                        color={color!}
+                        editing={editing}
+                        speakers={speakers}
+                        speakerNames={speakerNames}
+                        displaySpeaker={displaySpeaker}
+                        onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
+                        onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                        disabled={saving}
+                      />
+                    ) : (
+                      <UnassignedBadge
+                        editing={editing}
+                        speakers={speakers}
+                        speakerNames={speakerNames}
+                        displaySpeaker={displaySpeaker}
+                        onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
+                        onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                        disabled={saving}
+                      />
+                    )}
+                  </div>
+
                   <Textarea
                     ref={textareaRef}
                     value={editText}
@@ -345,6 +527,8 @@ export default function TranscriptEditor({
                     className="rounded-xl text-sm min-h-[44px] resize-none"
                     disabled={saving}
                   />
+
+                  {/* Toolbar: Save, Cancel, Split, Merge */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       size="sm"
@@ -365,35 +549,106 @@ export default function TranscriptEditor({
                       <X className="w-3.5 h-3.5" />
                       {t("jobResults.cancelEdit")}
                     </Button>
+
+                    <div className="flex-1" />
+
+                    {/* Split at cursor */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg gap-1.5 h-9 min-w-[44px] px-3 text-xs"
+                      onClick={splitSegment}
+                      disabled={saving}
+                      title={t("jobResults.splitHere")}
+                    >
+                      <Scissors className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{t("jobResults.splitHere")}</span>
+                    </Button>
+
+                    {/* Merge up */}
+                    {i > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg gap-1.5 h-9 min-w-[44px] px-3 text-xs"
+                        onClick={() => mergeUp(i)}
+                        disabled={saving}
+                        title={t("jobResults.mergeUp")}
+                      >
+                        <ArrowUpToLine className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">{t("jobResults.mergeUp")}</span>
+                      </Button>
+                    )}
                   </div>
+
+                  {/* Merge confirmation inline */}
+                  {mergeConfirm?.index === i && (
+                    <div className="rounded-lg border border-border/60 bg-muted/50 p-3 space-y-2 animate-in fade-in-0 zoom-in-95 duration-150">
+                      <p className="text-xs font-medium text-foreground">
+                        {t("jobResults.mergeConfirmTitle")}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-lg h-8 text-xs gap-1.5"
+                          onClick={() => mergeUp(i, mergeConfirm.prevSpeaker)}
+                        >
+                          {t("jobResults.mergeKeepSpeaker", { speaker: displaySpeaker(mergeConfirm.prevSpeaker) })}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-lg h-8 text-xs gap-1.5"
+                          onClick={() => mergeUp(i, mergeConfirm.currSpeaker)}
+                        >
+                          {t("jobResults.mergeKeepSpeaker", { speaker: displaySpeaker(mergeConfirm.currSpeaker) })}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="rounded-lg h-8 text-xs"
+                          onClick={() => setMergeConfirm(null)}
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             }
 
-            // Read-only line with speaker badge
+            // Read-only segment card
             const displayedText = applySpeakerNamesToText(seg.text, speakerNames);
-            const hasSuggestionHighlight = !!suggestion;
-            const color = seg.speaker ? getSpeakerColor(seg.speaker, speakers) : null;
 
             return (
               <div
                 key={seg.id}
-                className={`rounded-lg transition-colors ${
+                ref={(el) => { if (el) segmentRefs.current.set(i, el); }}
+                className={`rounded-xl transition-all duration-150 ${
+                  editing ? "border bg-card/50 " : ""
+                }${
                   hasSuggestionHighlight
                     ? suggestion.confidence >= 0.8
-                      ? "bg-primary/5"
-                      : "bg-primary/[0.03]"
-                    : ""
-                } ${
-                  editing && !hasSuggestionHighlight
-                    ? "hover:bg-muted/60 group"
-                    : ""
+                      ? "bg-primary/5 border-primary/20"
+                      : "bg-primary/[0.03] border-border/30"
+                    : editing
+                      ? "border-border/30 hover:border-border/60 hover:bg-muted/40"
+                      : ""
+                }${
+                  isDragOver ? " ring-2 ring-primary/50 border-primary/40" : ""
+                }${
+                  isDropSuccess ? " ring-2 ring-green-500/40" : ""
                 }`}
-                style={color ? { borderLeft: `3px solid ${hasSuggestionHighlight ? color.border : color.border + "60"}` } : undefined}
+                style={color ? { borderLeft: `3px solid ${hasSuggestionHighlight ? color.border : color.border + (editing ? "80" : "60")}` } : undefined}
+                onDragOver={editing ? (e) => { e.preventDefault(); setDragOverIndex(i); } : undefined}
+                onDragLeave={editing ? () => setDragOverIndex(null) : undefined}
+                onDrop={editing ? (e) => handleDrop(e, i) : undefined}
               >
-                {/* Speaker badge — stacked above text */}
-                {seg.speaker && (
-                  <div className="pl-2.5 pt-1.5">
+                {/* Speaker badge */}
+                <div className={`pl-2.5 pt-1.5 ${editing ? "pl-3 pt-2" : ""}`}>
+                  {seg.speaker ? (
                     <SpeakerBadge
                       speaker={seg.speaker}
                       displayName={displaySpeaker(seg.speaker)}
@@ -403,15 +658,26 @@ export default function TranscriptEditor({
                       speakerNames={speakerNames}
                       displaySpeaker={displaySpeaker}
                       onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
+                      onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
                       disabled={saving}
                     />
-                  </div>
-                )}
+                  ) : editing ? (
+                    <UnassignedBadge
+                      editing={editing}
+                      speakers={speakers}
+                      speakerNames={speakerNames}
+                      displaySpeaker={displaySpeaker}
+                      onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
+                      onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                      disabled={saving}
+                    />
+                  ) : null}
+                </div>
 
-                {/* Text content — full width */}
+                {/* Text content */}
                 <div
-                  className={`min-w-0 px-3 ${seg.speaker ? "pt-0.5 pb-2" : "py-2"} ${
-                    editing ? "cursor-pointer" : ""
+                  className={`min-w-0 px-3 ${seg.speaker || editing ? "pt-0.5 pb-2" : "py-2"} ${
+                    editing ? "cursor-pointer pb-3" : ""
                   }`}
                   role={editing ? "button" : undefined}
                   tabIndex={editing ? 0 : undefined}
@@ -428,9 +694,6 @@ export default function TranscriptEditor({
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm leading-relaxed flex-1">
                       {displayedText}
-                      {editing && !hasSuggestionHighlight && (
-                        <Pencil className="w-3 h-3 text-muted-foreground/40 inline-block ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      )}
                     </p>
                     {hasSuggestionHighlight && (
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
@@ -495,7 +758,7 @@ export default function TranscriptEditor({
 
 function SpeakerBadge({
   speaker, displayName, color, editing, speakers, speakerNames, displaySpeaker,
-  onReassign, disabled,
+  onReassign, onCreateAndAssign, disabled,
 }: {
   speaker: string;
   displayName: string;
@@ -505,6 +768,7 @@ function SpeakerBadge({
   speakerNames: Record<string, string>;
   displaySpeaker: (s: string) => string;
   onReassign: (newSpeaker: string) => void;
+  onCreateAndAssign?: () => void;
   disabled: boolean;
 }) {
   const { t } = useTranslation();
@@ -567,6 +831,103 @@ function SpeakerBadge({
             </button>
           );
         })}
+        {onCreateAndAssign && (
+          <>
+            <Separator className="my-1" />
+            <button
+              onClick={() => {
+                onCreateAndAssign();
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-md transition-colors hover:bg-muted/60 text-muted-foreground"
+            >
+              <Plus className="w-3 h-3" />
+              <span>{t("jobResults.newSpeakerInline")}</span>
+            </button>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/* ─── Unassigned Badge with Popover ─── */
+
+function UnassignedBadge({
+  editing, speakers, speakerNames, displaySpeaker,
+  onReassign, onCreateAndAssign, disabled,
+}: {
+  editing: boolean;
+  speakers: string[];
+  speakerNames: Record<string, string>;
+  displaySpeaker: (s: string) => string;
+  onReassign: (newSpeaker: string) => void;
+  onCreateAndAssign?: () => void;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+
+  const badge = (
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 select-none whitespace-nowrap border border-dashed border-muted-foreground/40 rounded-md text-muted-foreground cursor-pointer hover:border-muted-foreground/60 hover:text-foreground transition-colors">
+      {t("jobResults.unassigned")}
+    </span>
+  );
+
+  if (!editing) return null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
+          onClick={(e) => e.stopPropagation()}
+          disabled={disabled}
+          aria-label={t("jobResults.changeSpeaker")}
+        >
+          {badge}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        className="w-44 p-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-[10px] font-medium text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
+          {t("jobResults.changeSpeaker")}
+        </div>
+        {speakers.filter((s) => s !== null).map((sp) => {
+          const spColor = getSpeakerColor(sp, speakers);
+          return (
+            <button
+              key={sp}
+              onClick={() => {
+                onReassign(sp);
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-md transition-colors hover:bg-muted/60"
+            >
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: spColor.dot }} />
+              <span className="flex-1 text-left truncate">{displaySpeaker(sp)}</span>
+            </button>
+          );
+        })}
+        {onCreateAndAssign && (
+          <>
+            <Separator className="my-1" />
+            <button
+              onClick={() => {
+                onCreateAndAssign();
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-md transition-colors hover:bg-muted/60 text-muted-foreground"
+            >
+              <Plus className="w-3 h-3" />
+              <span>{t("jobResults.newSpeakerInline")}</span>
+            </button>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );

@@ -19,11 +19,12 @@ interface SpeakerChipsProps {
   onDeleteSpeaker?: (speaker: string) => void;
   onSuggestSpeaker?: (speaker: string) => void;
   suggestingForSpeaker?: string | null;
+  enableDrag?: boolean;
 }
 
 export default function SpeakerChips({
   speakers, speakerNames, speakerSegmentCounts, deletableSpeakers, onRename, onReset, onAddSpeaker,
-  onDeleteSpeaker, onSuggestSpeaker, suggestingForSpeaker,
+  onDeleteSpeaker, onSuggestSpeaker, suggestingForSpeaker, enableDrag,
 }: SpeakerChipsProps) {
   const { t } = useTranslation();
   if (speakers.length === 0 && !onAddSpeaker) return null;
@@ -49,6 +50,7 @@ export default function SpeakerChips({
             isSuggesting={isSuggesting}
             isDeletable={isDeletable}
             onDelete={() => onDeleteSpeaker?.(speaker)}
+            enableDrag={enableDrag}
           />
         );
       })}
@@ -73,11 +75,11 @@ export default function SpeakerChips({
 
 function SpeakerChip({
   original, displayName, isRenamed, onRename, showSuggest, onSuggest, isSuggesting,
-  isDeletable, onDelete,
+  isDeletable, onDelete, enableDrag,
 }: {
   original: string; displayName: string; isRenamed: boolean; onRename: (name: string) => void;
   showSuggest?: boolean; onSuggest?: () => void; isSuggesting?: boolean;
-  isDeletable?: boolean; onDelete?: () => void;
+  isDeletable?: boolean; onDelete?: () => void; enableDrag?: boolean;
 }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -122,7 +124,20 @@ function SpeakerChip({
 
   return (
     <div className="inline-flex items-center gap-0">
-      <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/50 px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors min-h-[36px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label={`Rename ${displayName}`}>
+      <button
+        onClick={() => setEditing(true)}
+        draggable={enableDrag}
+        onDragStart={enableDrag ? (e) => {
+          e.dataTransfer.setData("text/plain", original);
+          e.dataTransfer.effectAllowed = "copy";
+          (e.currentTarget as HTMLElement).style.opacity = "0.5";
+        } : undefined}
+        onDragEnd={enableDrag ? (e) => {
+          (e.currentTarget as HTMLElement).style.opacity = "1";
+        } : undefined}
+        className={`inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/50 px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors min-h-[36px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${enableDrag ? "cursor-grab active:cursor-grabbing" : ""}`}
+        aria-label={`Rename ${displayName}`}
+      >
         <span>{displayName}</span>
         <Pencil className="w-3 h-3 text-muted-foreground" />
       </button>
