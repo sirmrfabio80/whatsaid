@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Send, Link2, Check, AlertCircle, Copy, Gift } from "lucide-react";
+import { UserPlus, Send, Link2, Check, AlertCircle, Copy, Gift, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 const PACKAGES = [
@@ -17,10 +17,17 @@ const PACKAGES = [
   { id: "20-pack", credits: 20 },
 ] as const;
 
+const UI_LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "it", label: "Italiano" },
+  { code: "fr", label: "Français" },
+] as const;
+
 export default function AdminInviteCard() {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [packageId, setPackageId] = useState<string>("one-time");
+  const [inviteLanguage, setInviteLanguage] = useState<string>("en");
   const [loading, setLoading] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
 
@@ -45,7 +52,7 @@ export default function AdminInviteCard() {
     setMagicLink(null);
     try {
       const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: { email: email.trim().toLowerCase(), packageId, method },
+        body: { email: email.trim().toLowerCase(), packageId, method, language: inviteLanguage },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
