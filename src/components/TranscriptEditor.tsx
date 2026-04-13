@@ -378,7 +378,7 @@ export default function TranscriptEditor({
             return (
               <div
                 key={seg.id}
-                className={`flex items-start gap-0 rounded-lg transition-colors ${
+                className={`rounded-lg transition-colors ${
                   hasSuggestionHighlight
                     ? suggestion.confidence >= 0.8
                       ? "bg-primary/5"
@@ -389,26 +389,28 @@ export default function TranscriptEditor({
                     ? "hover:bg-muted/60 group"
                     : ""
                 }`}
-                style={color ? { borderLeft: `3px solid ${hasSuggestionHighlight ? color.border : color.border + "60"}`, paddingLeft: 0 } : undefined}
+                style={color ? { borderLeft: `3px solid ${hasSuggestionHighlight ? color.border : color.border + "60"}` } : undefined}
               >
-                {/* Speaker badge */}
+                {/* Speaker badge — stacked above text */}
                 {seg.speaker && (
-                  <SpeakerBadge
-                    speaker={seg.speaker}
-                    displayName={displaySpeaker(seg.speaker)}
-                    color={color!}
-                    editing={editing}
-                    speakers={speakers}
-                    speakerNames={speakerNames}
-                    displaySpeaker={displaySpeaker}
-                    onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                    disabled={saving}
-                  />
+                  <div className="pl-2.5 pt-1.5">
+                    <SpeakerBadge
+                      speaker={seg.speaker}
+                      displayName={displaySpeaker(seg.speaker)}
+                      color={color!}
+                      editing={editing}
+                      speakers={speakers}
+                      speakerNames={speakerNames}
+                      displaySpeaker={displaySpeaker}
+                      onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
+                      disabled={saving}
+                    />
+                  </div>
                 )}
 
-                {/* Text content */}
+                {/* Text content — full width */}
                 <div
-                  className={`flex-1 min-w-0 py-2 pr-3 ${!seg.speaker ? "pl-3" : ""} ${
+                  className={`min-w-0 px-3 ${seg.speaker ? "pt-0.5 pb-2" : "py-2"} ${
                     editing ? "cursor-pointer" : ""
                   }`}
                   role={editing ? "button" : undefined}
@@ -510,7 +512,7 @@ function SpeakerBadge({
 
   const badge = (
     <span
-      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold pl-2.5 pr-2 py-2 shrink-0 select-none whitespace-nowrap ${
+      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-1.5 py-0.5 select-none whitespace-nowrap ${
         editing ? "cursor-pointer hover:opacity-80" : ""
       }`}
       style={{ color: color.border }}
@@ -526,7 +528,7 @@ function SpeakerBadge({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-l-lg"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
           onClick={(e) => e.stopPropagation()}
           disabled={disabled}
           aria-label={t("jobResults.changeSpeaker")}
