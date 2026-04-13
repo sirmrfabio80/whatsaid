@@ -527,5 +527,19 @@
     "operator": "Gestito da Fabio Petito, trading as WhatSaid",
     "copyright": "© {{year}} WhatSaid. Tutti i diritti riservati.",
     "audioDeleted": "Audio eliminato dopo l'elaborazione"
+  },
+  "transcriptionSettings": {
+    "title": "Impostazioni di trascrizione",
+    "presetLabel": "Tipo di registrazione",
+    "presetHelp": "Scegli l'opzione più adatta al tuo audio per migliorare la separazione degli interlocutori.",
+    "presetAutomatic": "Automatico",
+    "presetPhoneCall": "Registrazione chiamata telefonica",
+    "presetMeeting": "Riunione / conversazione",
+    "speakersLabel": "Interlocutori previsti",
+    "speakersHelp": "Lascia su rilevamento automatico se non conosci il numero di persone che parlano.",
+    "speakersAuto": "Rilevamento automatico",
+    "speakers2": "2 interlocutori",
+    "speakers3": "3 interlocutori",
+    "speakers4": "4 interlocutori"
   }
 }
