@@ -163,14 +163,27 @@ Deno.serve(async (req) => {
     }));
 
     // 5. Build transcript text
+    // Normalise all labels to "Speaker A / B / C …" regardless of source,
+    // so the UI never shows raw technical labels like "Channel 1".
     let transcriptText: string;
 
     if (isMultichannel) {
-      // Multichannel mode: each utterance has a `channel` property
-      const utterances = (transcript.utterances as Array<{ channel: string; text: string }>) ?? [];
-      if (utterances.length > 0) {
-        transcriptText = utterances
-          .map((u) => `Channel ${u.channel}: ${u.text}`)
+      // Multichannel mode: each utterance has a `channel` property (string, e.g. "1", "2").
+      // Map channel identifiers to sequential "Speaker A", "Speaker B", …
+      const mcUtterances = (transcript.utterances as Array<{ channel: string; text: string }>) ?? [];
+      if (mcUtterances.length > 0) {
+        const channelToSpeaker: Record<string, string> = {};
+        let nextLetter = 0;
+        for (const u of mcUtterances) {
+          const ch = String(u.channel);
+          if (!(ch in channelToSpeaker)) {
+            // A=65
+            channelToSpeaker[ch] = `Speaker ${String.fromCharCode(65 + nextLetter)}`;
+            nextLetter++;
+          }
+        }
+        transcriptText = mcUtterances
+          .map((u) => `${channelToSpeaker[String(u.channel)]}: ${u.text}`)
           .join("\n\n");
       } else {
         transcriptText = (transcript.text as string) ?? "";
