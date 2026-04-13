@@ -72,7 +72,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleResetSpeakerNames = async () => { setSpeakerNames({}); await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId); };
 
   const handleAddSpeaker = () => {
-    // Determine next Speaker letter based on existing speakers + extras
     const allExisting = [...(transcript ? parseSpeakers(transcript.content) : []), ...extraSpeakers];
     const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
     let next = "A";
@@ -84,6 +83,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (!allExisting.includes(newSpeaker)) {
       setExtraSpeakers((prev) => [...prev, newSpeaker]);
     }
+  };
+
+  const handleDeleteSpeaker = (speaker: string) => {
+    setExtraSpeakers((prev) => prev.filter((s) => s !== speaker));
+    setSuggestions((prev) => prev.filter((s) => s.speaker !== speaker));
+    const updated = { ...speakerNames };
+    delete updated[speaker];
+    setSpeakerNames(updated);
   };
 
   const handleSuggestSpeaker = async (targetSpeaker: string) => {
