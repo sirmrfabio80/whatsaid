@@ -28,7 +28,7 @@ function buildShareRecordEmail(opts: { title: string; senderLabel: string; claim
       <div style="padding:0 28px 32px;text-align:center;">
         <a href="${claimUrl}" style="display:inline-block;padding:14px 40px;background:hsl(245,50%,48%);color:#fff;font-size:15px;font-weight:600;border-radius:12px;text-decoration:none;letter-spacing:0.01em;">Open your copy</a>
         <p style="font-size:13px;color:hsl(220,10%,55%);margin:20px 0 0;line-height:1.5;">
-          Click the button to sign in (or create a free account) and get your own copy of this transcript in ${SITE_NAME}.
+          Click the button to sign in (or create a free account) and get your own copy of this transcript in ${SITE_NAME}. This link expires in 2 days.
         </p>
       </div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
         sender_domain: SENDER_DOMAIN,
         subject: subjectLine,
         html: buildShareRecordEmail({ title, senderLabel, claimUrl }),
-        text: `${senderLabel} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy.`,
+        text: `${senderLabel} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy. This link expires in 2 days.`,
         purpose: 'transactional',
         label: 'share-transcript-record',
         unsubscribe_token: unsubscribeToken,
