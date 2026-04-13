@@ -11,9 +11,10 @@ export function applySpeakerNames(
   let result = text;
   for (const [original, renamed] of Object.entries(names)) {
     if (renamed) {
-      // Replace "Speaker A:" at the start of lines
-      const regex = new RegExp(`^${escapeRegex(original)}:`, "gm");
-      result = result.replace(regex, `${renamed}:`);
+      // Replace "Speaker A:" or "[HH:MM:SS] Speaker A:" at the start of lines
+      // Capture optional timestamp prefix and preserve it
+      const regex = new RegExp(`^((?:\\[\\d{2}:\\d{2}:\\d{2}\\]\\s)?)${escapeRegex(original)}:`, "gm");
+      result = result.replace(regex, `$1${renamed}:`);
       // Replace inline references
       const inlineRegex = new RegExp(`\\b${escapeRegex(original)}\\b`, "g");
       result = result.replace(inlineRegex, renamed);

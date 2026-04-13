@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { job_id, custom_prompt } = await req.json();
+    const { job_id, custom_prompt, keyterms_prompt } = await req.json();
     if (!job_id) {
       return new Response(JSON.stringify({ error: "job_id is required" }), {
         status: 400,
