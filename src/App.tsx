@@ -23,6 +23,7 @@ import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
 import Signup from "./pages/Signup";
 import ClaimShare from "./pages/ClaimShare";
+import SharedPdfDownload from "./pages/SharedPdfDownload";
 import Footer from "@/components/Footer";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/claim/:token" element={<ClaimShare />} />
+            <Route path="/shared-pdf/:token" element={<SharedPdfDownload />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
