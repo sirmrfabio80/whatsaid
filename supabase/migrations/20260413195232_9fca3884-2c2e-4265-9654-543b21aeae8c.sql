@@ -1,0 +1,1 @@
+ALTER TABLE public.pending_invites ADD COLUMN language text DEFAULT 'en';
