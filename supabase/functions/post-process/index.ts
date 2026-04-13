@@ -173,9 +173,9 @@ Rules:
       if (body.job_id) {
         await supabase
           .from("jobs")
-          .update({
+           .update({
             status: "failed",
-            error_message: error instanceof Error ? error.message : "Unknown error",
+            error_message: sanitizeErrorForClient(error),
           })
           .eq("id", body.job_id);
       }

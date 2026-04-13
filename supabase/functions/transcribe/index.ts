@@ -203,9 +203,9 @@ Deno.serve(async (req) => {
       if (job_id) {
         await supabase
           .from("jobs")
-          .update({
+           .update({
             status: "failed",
-            error_message: error instanceof Error ? error.message : "Unknown error",
+            error_message: sanitizeErrorForClient(error),
           })
           .eq("id", job_id);
       }
