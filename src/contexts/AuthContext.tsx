@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   creditBalance: number;
+  isAdmin: boolean;
   avatarUrl: string | null;
   displayName: string | null;
   needsPasswordSetup: boolean;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   creditBalance: 0,
+  isAdmin: false,
   avatarUrl: null,
   displayName: null,
   needsPasswordSetup: false,
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [creditBalance, setCreditBalance] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
@@ -76,11 +79,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setNeedsPasswordSetup(data?.needs_password_setup ?? false);
   }, []);
 
+  const refreshAdminStatus = useCallback(async (uid: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid)
+      .eq("role", "admin")
+      .maybeSingle();
+    setIsAdmin(!!data);
+  }, []);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setCreditBalance(0);
+    setIsAdmin(false);
     setAvatarUrl(null);
     setDisplayName(null);
     setNeedsPasswordSetup(false);
@@ -106,8 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       refreshCredits();
       refreshProfile(user.id);
+      refreshAdminStatus(user.id);
     }
-  }, [user, refreshCredits, refreshProfile]);
+  }, [user, refreshCredits, refreshProfile, refreshAdminStatus]);
 
   // Redirect to /set-password if the flag is set
   useEffect(() => {
@@ -125,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useRedeemInvites(user?.id, user?.email ?? undefined, handleCreditsRedeemed);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, creditBalance, avatarUrl, displayName, needsPasswordSetup, refreshCredits, refreshAvatar, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, creditBalance, isAdmin, avatarUrl, displayName, needsPasswordSetup, refreshCredits, refreshAvatar, signOut }}>
       {children}
     </AuthContext.Provider>
   );
