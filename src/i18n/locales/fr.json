@@ -331,13 +331,18 @@
   },
   "speakerSuggestions": {
     "suggest": "Suggérer des segments pour cet intervenant",
-    "previewLabel": "{{count}} segments suggérés pour {{speaker}}",
-    "acceptAll": "Tout accepter ({{count}})",
+    "previewLabel_one": "{{count}} segment suggéré pour {{speaker}}",
+    "previewLabel_other": "{{count}} segments suggérés pour {{speaker}}",
+    "acceptAll_one": "Accepter ({{count}})",
+    "acceptAll_other": "Tout accepter ({{count}})",
     "dismiss": "Ignorer",
     "rejectOne": "Rejeter cette suggestion",
     "noSuggestions": "Aucun segment n'a pu être attribué avec confiance à cet intervenant.",
     "error": "Impossible de générer des suggestions. Veuillez réessayer.",
-    "accepted": "{{count}} segments réattribués avec succès."
+    "accepted_one": "{{count}} segment réattribué avec succès.",
+    "accepted_other": "{{count}} segments réattribués avec succès.",
+    "deleteSpeaker": "Supprimer l'intervenant",
+    "deleteSpeakerConfirm": "Supprimer {{speaker}} ?"
   },
   "languageSelector": {
     "language": "Langue",

@@ -72,7 +72,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleResetSpeakerNames = async () => { setSpeakerNames({}); await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId); };
 
   const handleAddSpeaker = () => {
-    // Determine next Speaker letter based on existing speakers + extras
     const allExisting = [...(transcript ? parseSpeakers(transcript.content) : []), ...extraSpeakers];
     const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
     let next = "A";
@@ -84,6 +83,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (!allExisting.includes(newSpeaker)) {
       setExtraSpeakers((prev) => [...prev, newSpeaker]);
     }
+  };
+
+  const handleDeleteSpeaker = (speaker: string) => {
+    setExtraSpeakers((prev) => prev.filter((s) => s !== speaker));
+    setSuggestions((prev) => prev.filter((s) => s.speaker !== speaker));
+    const updated = { ...speakerNames };
+    delete updated[speaker];
+    setSpeakerNames(updated);
   };
 
   const handleSuggestSpeaker = async (targetSpeaker: string) => {
@@ -190,6 +197,16 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.content, allSpeakers.join(",")]);
 
+  // Speakers that can be deleted: manually added + zero segments
+  const deletableSpeakers = useMemo(() => {
+    const set = new Set<string>();
+    extraSpeakers.forEach((s) => {
+      if ((speakerSegmentCounts[s] ?? 0) === 0) set.add(s);
+    });
+    return set;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extraSpeakers.join(","), speakerSegmentCounts]);
+
   if (loading) return <div className="space-y-4 py-8"><div className="animate-pulse space-y-3"><div className="h-10 bg-muted rounded-xl w-full" /><div className="h-64 bg-muted rounded-xl w-full" /></div></div>;
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
 
@@ -224,7 +241,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               {transcript && (
                 <div className="flex flex-col sm:flex-row items-center justify-end gap-2 p-3 border-b border-border/50">
-                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
+                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
                   <div className="flex items-center gap-1.5 ml-auto">
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
                       {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
@@ -234,7 +251,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 </div>
               )}
-              <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
+              <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
               {transcript ? (
                 <TranscriptEditor
                   content={transcript.content}

@@ -331,13 +331,18 @@
   },
   "speakerSuggestions": {
     "suggest": "Suggerisci segmenti per questo relatore",
-    "previewLabel": "{{count}} segmenti suggeriti per {{speaker}}",
-    "acceptAll": "Accetta tutti ({{count}})",
+    "previewLabel_one": "{{count}} segmento suggerito per {{speaker}}",
+    "previewLabel_other": "{{count}} segmenti suggeriti per {{speaker}}",
+    "acceptAll_one": "Accetta ({{count}})",
+    "acceptAll_other": "Accetta tutti ({{count}})",
     "dismiss": "Ignora",
     "rejectOne": "Rifiuta questo suggerimento",
     "noSuggestions": "Nessun segmento è stato attribuito con sicurezza a questo relatore.",
     "error": "Impossibile generare suggerimenti. Riprova.",
-    "accepted": "{{count}} segmenti riassegnati con successo."
+    "accepted_one": "{{count}} segmento riassegnato con successo.",
+    "accepted_other": "{{count}} segmenti riassegnati con successo.",
+    "deleteSpeaker": "Rimuovi relatore",
+    "deleteSpeakerConfirm": "Rimuovere {{speaker}}?"
   },
   "languageSelector": {
     "language": "Lingua",
