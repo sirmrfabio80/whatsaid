@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   creditBalance: number;
   avatarUrl: string | null;
+  displayName: string | null;
   needsPasswordSetup: boolean;
   refreshCredits: () => Promise<void>;
   refreshAvatar: () => Promise<void>;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   creditBalance: 0,
   avatarUrl: null,
+  displayName: null,
   needsPasswordSetup: false,
   refreshCredits: async () => {},
   refreshAvatar: async () => {},
@@ -36,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [creditBalance, setCreditBalance] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,10 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("avatar_url, needs_password_setup")
+      .select("avatar_url, needs_password_setup, display_name")
       .eq("user_id", uid)
       .single();
     setAvatarUrl(data?.avatar_url ?? null);
+    setDisplayName(data?.display_name ?? null);
     setNeedsPasswordSetup(data?.needs_password_setup ?? false);
   }, []);
 
@@ -78,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setCreditBalance(0);
     setAvatarUrl(null);
+    setDisplayName(null);
     setNeedsPasswordSetup(false);
   };
 
@@ -120,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useRedeemInvites(user?.id, user?.email ?? undefined, handleCreditsRedeemed);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, creditBalance, avatarUrl, needsPasswordSetup, refreshCredits, refreshAvatar, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, creditBalance, avatarUrl, displayName, needsPasswordSetup, refreshCredits, refreshAvatar, signOut }}>
       {children}
     </AuthContext.Provider>
   );

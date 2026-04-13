@@ -16,7 +16,7 @@ import logoImg from "@/assets/logo.webp";
 import { useState, useEffect, useRef } from "react";
 
 export default function Navbar() {
-  const { user, creditBalance, avatarUrl, signOut } = useAuth();
+  const { user, creditBalance, avatarUrl, displayName, signOut } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   const initials = user
-    ? (user.user_metadata?.full_name || user.email || "U")
+    ? (displayName || user.user_metadata?.full_name || user.email || "U")
         .split(" ")
         .map((w: string) => w[0])
         .join("")
