@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
       const { data: share } = await serviceClient
         .from('transcript_shares')
-        .select('*, jobs(title, file_name)')
+        .select('*')
         .eq('token', token)
         .maybeSingle()
 
@@ -38,6 +38,13 @@ Deno.serve(async (req) => {
         })
       }
 
+      // Fetch job info separately (no FK relationship)
+      const { data: job } = await serviceClient
+        .from('jobs')
+        .select('title, file_name')
+        .eq('id', share.job_id)
+        .maybeSingle()
+
       // Get sender email
       const { data: senderProfile } = await serviceClient
         .from('profiles')
@@ -45,7 +52,6 @@ Deno.serve(async (req) => {
         .eq('user_id', share.shared_by)
         .maybeSingle()
 
-      const job = share.jobs as any
       return new Response(JSON.stringify({
         title: job?.title || job?.file_name?.replace(/\.[^.]+$/, '') || 'Transcript',
         senderEmail: senderProfile?.email || 'someone',
