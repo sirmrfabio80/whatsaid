@@ -95,6 +95,32 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setSpeakerNames(updated);
   };
 
+  // Create a new speaker and immediately assign it to a segment via TranscriptEditor
+  const handleCreateAndAssign = useCallback(async (segIndex: number) => {
+    if (!transcript) return;
+    const allExisting = [...parseSpeakers(transcript.content), ...extraSpeakers];
+    const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
+    let next = "A";
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(65 + i);
+      if (!usedLetters.has(letter)) { next = letter; break; }
+    }
+    const newSpeaker = `Speaker ${next}`;
+    if (!allExisting.includes(newSpeaker)) {
+      setExtraSpeakers((prev) => [...prev, newSpeaker]);
+    }
+    // Reassign the segment — we need to update the transcript content
+    const segs = parseSegments(transcript.content);
+    if (segIndex < 0 || segIndex >= segs.length) return;
+    const seg = segs[segIndex];
+    const updatedSegs = segs.map((s, i) => {
+      if (i !== segIndex) return s;
+      return { ...s, speaker: newSpeaker, raw: `${newSpeaker}: ${s.text}` };
+    });
+    const newContent = updatedSegs.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.raw)).join("\n");
+    await handleTranscriptSave(newContent);
+  }, [transcript, extraSpeakers]);
+
   const handleSuggestSpeaker = async (targetSpeaker: string) => {
     if (!transcript || suggestingForSpeaker) return;
     setSuggestingForSpeaker(targetSpeaker);
