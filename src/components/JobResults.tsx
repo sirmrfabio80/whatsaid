@@ -235,16 +235,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.content, allSpeakers.join(",")]);
 
-  // Speakers that can be deleted: any speaker (as long as there's at least one other to reassign to, or it has 0 segments)
+  // Speakers that can be deleted: only manually added (extra) speakers
   const deletableSpeakers = useMemo(() => {
     const set = new Set<string>();
-    allSpeakers.forEach((s) => {
-      const count = speakerSegmentCounts[s] ?? 0;
-      if (count === 0 || allSpeakers.length > 1) set.add(s);
-    });
+    extraSpeakers.forEach((s) => set.add(s));
     return set;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSpeakers.join(","), speakerSegmentCounts]);
+  }, [extraSpeakers.join(",")]);
 
   if (loading) return <div className="space-y-4 py-8"><div className="animate-pulse space-y-3"><div className="h-10 bg-muted rounded-xl w-full" /><div className="h-64 bg-muted rounded-xl w-full" /></div></div>;
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
