@@ -49,6 +49,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
   const [transcriptEdited, setTranscriptEdited] = useState(false);
+  const [extraSpeakers, setExtraSpeakers] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -66,6 +67,21 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   const handleRenameSpeaker = async (original: string, newName: string) => { const updated = { ...speakerNames, [original]: newName }; setSpeakerNames(updated); await supabase.from("jobs").update({ speaker_names: updated }).eq("id", jobId); };
   const handleResetSpeakerNames = async () => { setSpeakerNames({}); await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId); };
+
+  const handleAddSpeaker = () => {
+    // Determine next Speaker letter based on existing speakers + extras
+    const allExisting = [...(transcript ? parseSpeakers(transcript.content) : []), ...extraSpeakers];
+    const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
+    let next = "A";
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(65 + i);
+      if (!usedLetters.has(letter)) { next = letter; break; }
+    }
+    const newSpeaker = `Speaker ${next}`;
+    if (!allExisting.includes(newSpeaker)) {
+      setExtraSpeakers((prev) => [...prev, newSpeaker]);
+    }
+  };
 
   const handleSummaryLanguageChange = async (langCode: string) => {
     if (langCode === summaryLang) return;
