@@ -196,6 +196,30 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const speakers = transcript ? parseSpeakers(transcript.content) : [];
   const allSpeakers = [...new Set([...speakers, ...extraSpeakers])];
 
+  // Wire up createAndAssign now that transcript is available
+  createAndAssignRef.current = async (segIndex: number) => {
+    if (!transcript) return;
+    const allExisting = [...parseSpeakers(transcript.content), ...extraSpeakers];
+    const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
+    let next = "A";
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(65 + i);
+      if (!usedLetters.has(letter)) { next = letter; break; }
+    }
+    const newSpeaker = `Speaker ${next}`;
+    if (!allExisting.includes(newSpeaker)) {
+      setExtraSpeakers((prev) => [...prev, newSpeaker]);
+    }
+    const segs = parseSegments(transcript.content);
+    if (segIndex < 0 || segIndex >= segs.length) return;
+    const updatedSegs = segs.map((s, i) => {
+      if (i !== segIndex) return s;
+      return { ...s, speaker: newSpeaker, raw: `${newSpeaker}: ${s.text}` };
+    });
+    const newContent = updatedSegs.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.raw)).join("\n");
+    await handleTranscriptSave(newContent);
+  };
+
   // Count segments per speaker for showing suggest button
   const speakerSegmentCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -252,7 +276,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               {transcript && (
                 <div className="flex flex-col sm:flex-row items-center justify-end gap-2 p-3 border-b border-border/50">
-                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
+                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} enableDrag /></div>
                   <div className="flex items-center gap-1.5 ml-auto">
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
                       {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
@@ -288,6 +312,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   onAcceptSuggestions={handleAcceptSuggestions}
                   onDismissSuggestions={handleDismissSuggestions}
                   onEditedIdsChange={(ids) => { editedIdsRef.current = ids; }}
+                  onCreateAndAssign={(segIndex) => createAndAssignRef.current(segIndex)}
                 />
               ) : (
                 <div className="p-5 sm:p-6"><p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p></div>
