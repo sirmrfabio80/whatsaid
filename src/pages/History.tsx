@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +9,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2 } from "lucide-react";
+import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2, SearchX } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
+import { useHistoryFilters } from "@/hooks/use-history-filters";
+import HistoryFilters from "@/components/HistoryFilters";
 
 interface Job {
   id: string;
@@ -37,6 +39,8 @@ export default function History() {
   const [deleteTarget, setDeleteTarget] = useState<Job | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const filters = useHistoryFilters(user?.id);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) { navigate("/login"); return; }
@@ -51,6 +55,28 @@ export default function History() {
     };
     fetchJobs();
   }, [user, navigate]);
+
+  // Apply combined filters
+  const filteredJobs = useMemo(() => {
+    let result = jobs;
+
+    // Tag filter
+    if (filters.tagFilteredJobIds !== null) {
+      result = result.filter((j) => filters.tagFilteredJobIds!.has(j.id));
+    }
+
+    // Search filter
+    if (filters.debouncedSearch) {
+      const q = filters.debouncedSearch.toLowerCase();
+      result = result.filter((j) => {
+        const title = (j.title || j.file_name).toLowerCase();
+        const summary = (j.short_summary || "").toLowerCase();
+        return title.includes(q) || summary.includes(q);
+      });
+    }
+
+    return result;
+  }, [jobs, filters.tagFilteredJobIds, filters.debouncedSearch]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -89,7 +115,21 @@ export default function History() {
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-4 py-10 sm:py-14">
         <div className="max-w-3xl mx-auto">
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold mb-8">{t("history.title")}</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold mb-6">{t("history.title")}</h1>
+
+          {/* Filters — show when there are jobs */}
+          {jobs.length > 0 && (
+            <HistoryFilters
+              searchQuery={filters.searchQuery}
+              onSearchChange={filters.setSearchQuery}
+              tagSuggestions={filters.tagSuggestions}
+              selectedTags={filters.selectedTags}
+              onToggleTag={filters.toggleTag}
+              onClearAll={filters.clearAll}
+              hasActiveFilters={filters.hasActiveFilters}
+              hasAnyTags={filters.userTags.length > 0}
+            />
+          )}
 
           {jobs.length === 0 ? (
             <Card className="border-dashed rounded-xl shadow-sm">
@@ -102,53 +142,83 @@ export default function History() {
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredJobs.length === 0 ? (
+            <Card className="border-dashed rounded-xl shadow-sm">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <SearchX className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                <p className="font-medium text-lg mb-1">{t("history.noResults")}</p>
+                <p className="text-muted-foreground text-sm mb-6">{t("history.noResultsDesc")}</p>
+                <Button variant="outline" className="rounded-xl" onClick={filters.clearAll}>
+                  {t("history.clearAll")}
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
-              {jobs.map((job) => (
-                <Card key={job.id} className="rounded-xl border-border shadow-sm hover:border-primary/20 hover:shadow-md transition-all group">
-                  <CardContent className="p-4 sm:p-5">
-                    <div
-                      className="flex items-start sm:items-center gap-3 sm:gap-4 cursor-pointer"
-                      onClick={() => navigate(`/job/${job.id}`)}
-                      role="link"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === "Enter") navigate(`/job/${job.id}`); }}
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <FileAudio className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Badge variant="outline" className={`${statusColor(job.status)} text-[11px]`}>{job.status}</Badge>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
-                          </div>
-                        </div>
-                        {job.title && <p className="text-xs text-muted-foreground/60 truncate">{job.file_name}</p>}
-                        <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                          {job.duration_seconds && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>}
-                          <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
-                          <span>{new Date(job.created_at).toLocaleDateString()}</span>
-                        </div>
-                        {job.short_summary && (
-                          <p className="text-xs text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex justify-end mt-2 sm:mt-0">
-                      <Button
-                        variant="ghost" size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(job); }}
-                        aria-label={`${t("common.delete")} ${job.file_name}`}
+              {filteredJobs.map((job) => {
+                const jobTags = filters.getJobTags(job.id);
+                return (
+                  <Card key={job.id} className="rounded-xl border-border shadow-sm hover:border-primary/20 hover:shadow-md transition-all group">
+                    <CardContent className="p-4 sm:p-5">
+                      <div
+                        className="flex items-start sm:items-center gap-3 sm:gap-4 cursor-pointer"
+                        onClick={() => navigate(`/job/${job.id}`)}
+                        role="link"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter") navigate(`/job/${job.id}`); }}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <FileAudio className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Badge variant="outline" className={`${statusColor(job.status)} text-[11px]`}>{job.status}</Badge>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+                            </div>
+                          </div>
+                          {job.title && <p className="text-xs text-muted-foreground/60 truncate">{job.file_name}</p>}
+                          <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                            {job.duration_seconds && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>}
+                            <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
+                            <span>{new Date(job.created_at).toLocaleDateString()}</span>
+                          </div>
+                          {job.short_summary && (
+                            <p className="text-xs text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
+                          )}
+                          {/* Tag chips */}
+                          {jobTags.length > 0 && (
+                            <div className="flex items-center gap-1 mt-2 flex-wrap">
+                              {jobTags.map((tag) => (
+                                <span
+                                  key={tag.id}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent/40 text-accent-foreground/80 border border-accent/30"
+                                >
+                                  {tag.color && (
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                                  )}
+                                  {tag.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-end mt-2 sm:mt-0">
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(job); }}
+                          aria-label={`${t("common.delete")} ${job.file_name}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
