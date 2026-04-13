@@ -89,6 +89,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleDeleteSpeaker = (speaker: string) => {
     setExtraSpeakers((prev) => prev.filter((s) => s !== speaker));
     setSuggestions((prev) => prev.filter((s) => s.speaker !== speaker));
+    if (suggestionTarget === speaker) setSuggestionTarget(null);
     const updated = { ...speakerNames };
     delete updated[speaker];
     setSpeakerNames(updated);
