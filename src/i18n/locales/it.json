@@ -233,7 +233,17 @@
     "startTranscribing": "Inizia a trascrivere",
     "deleteTitle": "Eliminare la trascrizione?",
     "deleteDesc": "Questo eliminerà permanentemente <strong>{{fileName}}</strong> e tutti i suoi output inclusi riassunto, trascrizione e domande salvate. Questa azione non può essere annullata.",
-    "deleting": "Eliminazione…"
+    "deleting": "Eliminazione…",
+    "searchPlaceholder": "Cerca trascrizioni…",
+    "clearSearch": "Cancella ricerca",
+    "filterByTag": "Filtra per tag",
+    "tags": "Tag",
+    "searchTags": "Cerca tag…",
+    "noMatchingTags": "Nessun tag corrispondente",
+    "removeTag": "Rimuovi tag",
+    "clearAll": "Cancella tutto",
+    "noResults": "Nessuna trascrizione corrispondente",
+    "noResultsDesc": "Prova a modificare la ricerca o a rimuovere alcuni filtri."
   },
   "jobDetail": {
     "backToHistory": "Torna alla cronologia",

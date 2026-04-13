@@ -233,7 +233,17 @@
     "startTranscribing": "Start transcribing",
     "deleteTitle": "Delete transcription?",
     "deleteDesc": "This will permanently delete <strong>{{fileName}}</strong> and all its outputs including summary, transcript, and saved questions. This action cannot be undone.",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "searchPlaceholder": "Search transcriptions…",
+    "clearSearch": "Clear search",
+    "filterByTag": "Filter by tag",
+    "tags": "Tags",
+    "searchTags": "Search tags…",
+    "noMatchingTags": "No matching tags",
+    "removeTag": "Remove tag",
+    "clearAll": "Clear all",
+    "noResults": "No matching transcriptions",
+    "noResultsDesc": "Try adjusting your search or removing some filters."
   },
   "jobDetail": {
     "backToHistory": "Back to history",
