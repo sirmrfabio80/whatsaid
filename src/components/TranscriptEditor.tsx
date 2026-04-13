@@ -42,7 +42,7 @@ interface TranscriptEditorProps {
   onAcceptSuggestions?: (accepted: SpeakerSuggestion[]) => void;
   onDismissSuggestions?: () => void;
   onEditedIdsChange?: (ids: Set<string>) => void;
-  onCreateAndAssign?: (segIndex: number) => void;
+  onCreateSpeaker?: () => string | null;
 }
 
 export function parseSegments(content: string): Segment[] {
@@ -114,7 +114,7 @@ function usePointerFine() {
 export default function TranscriptEditor({
   content, speakerNames, allSpeakers: allSpeakersProp, onSave, transcriptEdited,
   suggestions, suggestingTarget, onAcceptSuggestions, onDismissSuggestions, onEditedIdsChange,
-  onCreateAndAssign,
+  onCreateSpeaker,
 }: TranscriptEditorProps) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -504,7 +504,7 @@ export default function TranscriptEditor({
                         speakerNames={speakerNames}
                         displaySpeaker={displaySpeaker}
                         onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                        onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                        onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                         disabled={saving}
                       />
                     ) : (
@@ -514,7 +514,7 @@ export default function TranscriptEditor({
                         speakerNames={speakerNames}
                         displaySpeaker={displaySpeaker}
                         onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                        onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                        onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                         disabled={saving}
                       />
                     )}
@@ -658,7 +658,7 @@ export default function TranscriptEditor({
                       speakerNames={speakerNames}
                       displaySpeaker={displaySpeaker}
                       onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                      onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                      onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                       disabled={saving}
                     />
                   ) : editing ? (
@@ -668,7 +668,7 @@ export default function TranscriptEditor({
                       speakerNames={speakerNames}
                       displaySpeaker={displaySpeaker}
                       onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                      onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                      onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                       disabled={saving}
                     />
                   ) : null}

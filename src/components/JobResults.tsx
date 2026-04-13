@@ -95,8 +95,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setSpeakerNames(updated);
   };
 
-  // Create a new speaker and immediately assign it to a segment — defined after transcript is available
-  const createAndAssignRef = useRef<(segIndex: number) => void>(() => {});
+  // Create a new speaker — returns the name
+  const createSpeakerRef = useRef<() => string | null>(() => null);
 
   const handleSuggestSpeaker = async (targetSpeaker: string) => {
     if (!transcript || suggestingForSpeaker) return;
@@ -197,8 +197,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const allSpeakers = [...new Set([...speakers, ...extraSpeakers])];
 
   // Wire up createAndAssign now that transcript is available
-  createAndAssignRef.current = async (segIndex: number) => {
-    if (!transcript) return;
+  createSpeakerRef.current = () => {
+    if (!transcript) return null;
     const allExisting = [...parseSpeakers(transcript.content), ...extraSpeakers];
     const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
     let next = "A";
@@ -210,14 +210,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (!allExisting.includes(newSpeaker)) {
       setExtraSpeakers((prev) => [...prev, newSpeaker]);
     }
-    const segs = parseSegments(transcript.content);
-    if (segIndex < 0 || segIndex >= segs.length) return;
-    const updatedSegs = segs.map((s, i) => {
-      if (i !== segIndex) return s;
-      return { ...s, speaker: newSpeaker, raw: `${newSpeaker}: ${s.text}` };
-    });
-    const newContent = updatedSegs.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.raw)).join("\n");
-    await handleTranscriptSave(newContent);
+    return newSpeaker;
   };
 
   // Count segments per speaker for showing suggest button
@@ -312,7 +305,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   onAcceptSuggestions={handleAcceptSuggestions}
                   onDismissSuggestions={handleDismissSuggestions}
                   onEditedIdsChange={(ids) => { editedIdsRef.current = ids; }}
-                  onCreateAndAssign={(segIndex) => createAndAssignRef.current(segIndex)}
+                  onCreateSpeaker={() => createSpeakerRef.current()}
                 />
               ) : (
                 <div className="p-5 sm:p-6"><p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p></div>
