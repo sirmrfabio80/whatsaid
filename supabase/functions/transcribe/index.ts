@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
       audio_url: signedUrlData.signedUrl,
       speech_models: ["universal-3-pro"],
       speaker_labels: true,
+      speakers_expected: 2,
     };
 
     // If language is manually selected and not "auto", pass it
