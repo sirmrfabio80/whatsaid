@@ -251,7 +251,7 @@ export default function TranscriptEditor({
       {hasSuggestions && (
         <div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b border-border/50 bg-primary/5">
           <span className="text-xs font-medium text-primary shrink-0">
-            {t("speakerSuggestions.previewLabel", { count: activeSuggestions.size, speaker: speakerNames[suggestingTarget ?? ""] || suggestingTarget ?? "" })}
+            {t("speakerSuggestions.previewLabel", { count: activeSuggestions.size, speaker: speakerNames[suggestingTarget ?? ""] || (suggestingTarget ?? "") })}
           </span>
           <div className="ml-auto flex items-center gap-2">
             <Button
