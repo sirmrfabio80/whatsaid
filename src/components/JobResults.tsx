@@ -49,6 +49,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
   const [transcriptEdited, setTranscriptEdited] = useState(false);
+  const [extraSpeakers, setExtraSpeakers] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -66,6 +67,21 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   const handleRenameSpeaker = async (original: string, newName: string) => { const updated = { ...speakerNames, [original]: newName }; setSpeakerNames(updated); await supabase.from("jobs").update({ speaker_names: updated }).eq("id", jobId); };
   const handleResetSpeakerNames = async () => { setSpeakerNames({}); await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId); };
+
+  const handleAddSpeaker = () => {
+    // Determine next Speaker letter based on existing speakers + extras
+    const allExisting = [...(transcript ? parseSpeakers(transcript.content) : []), ...extraSpeakers];
+    const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
+    let next = "A";
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(65 + i);
+      if (!usedLetters.has(letter)) { next = letter; break; }
+    }
+    const newSpeaker = `Speaker ${next}`;
+    if (!allExisting.includes(newSpeaker)) {
+      setExtraSpeakers((prev) => [...prev, newSpeaker]);
+    }
+  };
 
   const handleSummaryLanguageChange = async (langCode: string) => {
     if (langCode === summaryLang) return;
@@ -96,6 +112,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const summary = outputs.find((o) => o.output_type === "summary");
   const getQuestionEntries = () => outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
   const speakers = transcript ? parseSpeakers(transcript.content) : [];
+  const allSpeakers = [...new Set([...speakers, ...extraSpeakers])];
 
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
 
@@ -128,7 +145,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               {transcript && (
                 <div className="flex flex-col sm:flex-row items-center justify-end gap-2 p-3 border-b border-border/50">
-                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex">{speakers.length > 0 && <SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} />}</div>
+                  <div className="flex items-center gap-2 min-w-0 flex-1 hidden sm:flex"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} /></div>
                   <div className="flex items-center gap-1.5 ml-auto">
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id)}>
                       {copiedId === transcript.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === transcript.id ? t("common.copied") : t("common.copy")}
@@ -138,11 +155,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 </div>
               )}
-              {speakers.length > 0 && <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={speakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} /></div>}
+              <div className="px-4 py-3 border-b border-border/50 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} /></div>
               {transcript ? (
                 <TranscriptEditor
                   content={transcript.content}
                   speakerNames={speakerNames}
+                  allSpeakers={allSpeakers}
                   onSave={handleTranscriptSave}
                   transcriptEdited={transcriptEdited}
                 />

@@ -26,6 +26,7 @@ interface Segment {
 interface TranscriptEditorProps {
   content: string;
   speakerNames: Record<string, string>;
+  allSpeakers?: string[];
   onSave: (newContent: string) => Promise<void>;
   transcriptEdited: boolean;
 }
@@ -61,7 +62,7 @@ function applySpeakerNamesToText(text: string, speakerNames: Record<string, stri
   return result;
 }
 
-export default function TranscriptEditor({ content, speakerNames, onSave, transcriptEdited }: TranscriptEditorProps) {
+export default function TranscriptEditor({ content, speakerNames, allSpeakers: allSpeakersProp, onSave, transcriptEdited }: TranscriptEditorProps) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [segments, setSegments] = useState<Segment[]>(() => parseSegments(content));
@@ -80,7 +81,11 @@ export default function TranscriptEditor({ content, speakerNames, onSave, transc
     }
   }, [content, editing]);
 
-  const speakers = getUniqueSpeakers(segments);
+  const contentSpeakers = getUniqueSpeakers(segments);
+  // Merge speakers from transcript content with any extra speakers (e.g. manually added)
+  const speakers = allSpeakersProp
+    ? [...new Set([...contentSpeakers, ...allSpeakersProp])]
+    : contentSpeakers;
 
   const startEdit = useCallback((index: number) => {
     const seg = segments[index];
