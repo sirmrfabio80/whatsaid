@@ -19,6 +19,24 @@ interface ShareButtonProps {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Promise<string | null> {
+  try {
+    const blob = await generatePdfBlob(data);
+    const path = `${jobId}/${crypto.randomUUID()}.pdf`;
+    const { error } = await supabase.storage
+      .from("shared-pdfs")
+      .upload(path, blob, { contentType: "application/pdf", upsert: false });
+    if (error) {
+      console.error("PDF upload failed:", error);
+      return null;
+    }
+    return path;
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+    return null;
+  }
+}
+
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
   handleSendEmail, handleShareRecord, t, autoFocusInput = true,
