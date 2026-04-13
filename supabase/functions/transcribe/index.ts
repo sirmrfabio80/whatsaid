@@ -171,12 +171,14 @@ Deno.serve(async (req) => {
       .from("jobs")
       .update({
         transcription_config: {
+          strategy,
           speech_models: transcriptPayload.speech_models,
           temperature: transcriptPayload.temperature,
           speaker_labels: transcriptPayload.speaker_labels ?? false,
           multichannel: transcriptPayload.multichannel ?? false,
           language_code: transcriptPayload.language_code ?? null,
           language_detection: transcriptPayload.language_detection ?? false,
+          prompt: transcriptPayload.prompt ?? null,
           keyterms_prompt: transcriptPayload.keyterms_prompt ?? null,
           speakers_expected: transcriptPayload.speakers_expected ?? null,
           profile: tuningConfig.profile ?? null,
