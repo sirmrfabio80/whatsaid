@@ -195,6 +195,7 @@
       "desc": "Invite users to WhatSaid and gift them a credit package.",
       "emailLabel": "Email address",
       "packageLabel": "Credit package",
+      "languageLabel": "Recipient language",
       "pkg_one-time": "One-time transcript",
       "pkg_5-pack": "5-credit pack",
       "pkg_20-pack": "20-credit pack",
