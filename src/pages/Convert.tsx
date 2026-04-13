@@ -46,6 +46,7 @@ export default function Convert() {
   const [audioChannels, setAudioChannels] = useState<number | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
+  const [transcriptionConfig, setTranscriptionConfig] = useState<TranscriptionConfig>({});
   const [processing, setProcessing] = useState(false);
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -142,6 +143,12 @@ export default function Convert() {
         ? fileCreationDate.source
         : "file_last_modified";
 
+      // Build transcription_config from UI settings
+      const txConfig: Record<string, unknown> = {};
+      if (transcriptionConfig.profile) txConfig.profile = transcriptionConfig.profile;
+      if (transcriptionConfig.speakers_expected) txConfig.speakers_expected = transcriptionConfig.speakers_expected;
+      const hasConfig = Object.keys(txConfig).length > 0;
+
       const { error: jobError } = await supabase
         .from("jobs")
         .insert({
@@ -161,6 +168,7 @@ export default function Convert() {
           metadata_file_lastmodified: fileLastModifiedIso,
           metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
           audio_channels: audioChannels,
+          transcription_config: hasConfig ? txConfig : null,
         } as any);
 
       if (jobError) {
@@ -192,6 +200,7 @@ export default function Convert() {
     setAudioChannels(null);
     setLanguage("auto");
     setCustomPrompt("");
+    setTranscriptionConfig({});
     setProcessing(false);
     setStep(null);
     setErrorMessage(null);
@@ -291,6 +300,12 @@ export default function Convert() {
 
                     <div className="space-y-4">
                       <LanguageSelector value={language} onChange={setLanguage} />
+
+                      <TranscriptionSettings
+                        value={transcriptionConfig}
+                        onChange={setTranscriptionConfig}
+                        disabled={processing}
+                      />
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium" htmlFor="custom-prompt">
