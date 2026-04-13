@@ -16,7 +16,7 @@ import logoImg from "@/assets/logo.webp";
 import { useState, useEffect, useRef } from "react";
 
 export default function Navbar() {
-  const { user, creditBalance, avatarUrl, displayName, signOut } = useAuth();
+  const { user, creditBalance, isAdmin, avatarUrl, displayName, signOut } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ export default function Navbar() {
               {/* Credit badge */}
               <div className="bg-muted border border-border px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm">
                 <CreditCard className="w-3.5 h-3.5 text-primary" />
-                <span className="font-medium">{creditBalance}</span>
+                <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
               </div>
 
               {/* Avatar dropdown */}
@@ -126,7 +126,7 @@ export default function Navbar() {
           {user && (
             <div className="bg-muted border border-border px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs">
               <CreditCard className="w-3 h-3 text-primary" />
-              <span className="font-medium">{creditBalance}</span>
+              <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
             </div>
           )}
           <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setMobileOpen(!mobileOpen)}>

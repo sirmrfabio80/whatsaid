@@ -35,8 +35,20 @@ Deno.serve(async (req) => {
       throw new Error("Job not found");
     }
 
-    // 1. Deduct credits BEFORE processing — reject if insufficient
-    if (jobRow.user_id && jobRow.credits_charged > 0) {
+    // 1. Check if user is admin (unlimited credits)
+    let userIsAdmin = false;
+    if (jobRow.user_id) {
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", jobRow.user_id)
+        .eq("role", "admin")
+        .maybeSingle();
+      userIsAdmin = !!adminRole;
+    }
+
+    // 2. Deduct credits BEFORE processing — skip for admins, reject if insufficient
+    if (jobRow.user_id && jobRow.credits_charged > 0 && !userIsAdmin) {
       const { data: deducted } = await supabase.rpc("deduct_credits", {
         p_user_id: jobRow.user_id,
         p_amount: jobRow.credits_charged,

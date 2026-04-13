@@ -21,7 +21,7 @@ import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 type ProcessingStep = "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 
 export default function Convert() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -53,7 +53,7 @@ export default function Convert() {
 
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
-  const hasEnoughCredits = creditBalance !== undefined ? creditBalance >= credits : true;
+  const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
     uploading: t("convert.stepUploading"),
