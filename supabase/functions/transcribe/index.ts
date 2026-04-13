@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
       throw new Error(`Could not create signed URL: ${signedUrlError?.message}`);
     }
 
+    const fileExt = (job.file_name ?? "").split(".").pop()?.toLowerCase() ?? "unknown";
     console.log(`[transcribe] Starting transcription for job ${job_id}, file: ${job.file_name}`);
 
     // 3. Submit to AssemblyAI
@@ -63,7 +64,18 @@ Deno.serve(async (req) => {
     // - mono (1) or unknown (null): uses speaker diarization (best-effort for same-mic audio)
     // Note: Stereo files with identical/mixed channels may produce duplicate output under multichannel mode.
     const isMultichannel = typeof job.audio_channels === "number" && job.audio_channels >= 2;
-    console.log(`[transcribe] audio_channels=${job.audio_channels}, multichannel=${isMultichannel}`);
+
+    // Structured routing log for future analysis of real uploads
+    console.log(JSON.stringify({
+      event: "transcription_routing",
+      job_id,
+      file_name: job.file_name,
+      file_ext: fileExt,
+      file_size_bytes: job.file_size_bytes ?? null,
+      audio_channels: job.audio_channels ?? null,
+      route: isMultichannel ? "multichannel" : "diarization",
+      // Future: add duplicate_channel_suspect flag here once detection is implemented
+    }));
 
     const transcriptPayload: Record<string, unknown> = {
       audio_url: signedUrlData.signedUrl,
