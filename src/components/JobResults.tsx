@@ -156,7 +156,16 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-4">
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50 flex-wrap">
+              <div className="flex flex-col gap-2 p-3 border-b border-border/50">
+                <div className="flex items-center justify-end gap-1.5">
+                  {summary && (
+                    <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}>
+                      {copiedId === summary.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === summary.id ? t("common.copied") : t("common.copy")}
+                    </Button>
+                  )}
+                  <ShareButton jobId={jobId} disabled={!transcript} />
+                  <ExportButton data={canonicalData} disabled={!transcript} />
+                </div>
                 <div className="flex items-center gap-2">
                   <Globe className="w-3.5 h-3.5 text-muted-foreground" />
                   <label htmlFor="summary-lang" className="text-xs text-muted-foreground font-medium whitespace-nowrap">{t("jobResults.summaryLanguage")}</label>
@@ -165,15 +174,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
                   </Select>
                   {regeneratingSummary && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
-                </div>
-                <div className="flex items-center gap-1.5 ml-auto">
-                  {summary && (
-                    <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => handleCopy(applySpeakerNames(summary.content, speakerNames), summary.id)}>
-                      {copiedId === summary.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}{copiedId === summary.id ? t("common.copied") : t("common.copy")}
-                    </Button>
-                  )}
-                  <ShareButton jobId={jobId} disabled={!transcript} />
-                  <ExportButton data={canonicalData} disabled={!transcript} />
                 </div>
               </div>
               <div className="p-5 sm:p-6">
@@ -188,7 +188,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-4">
           <Card className="rounded-xl border-border/50 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex flex-col sm:flex-row items-center justify-end gap-2 p-3 border-b border-border/50">
+              <div className="flex items-center justify-end gap-2 p-3 border-b border-border/50">
                 <div className="flex items-center gap-1.5">
                   {questionEntries.length > 0 && (
                     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" onClick={() => { const included = questionEntries.filter((q) => !excludedQAIds.has(q.id)); const text = included.map((q) => `Q: ${q.custom_prompt ?? "—"}\nA: ${applySpeakerNames(q.content, speakerNames)}`).join("\n\n"); handleCopy(text, "qa-all"); }}>
