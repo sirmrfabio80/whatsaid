@@ -259,12 +259,31 @@ Deno.serve(async (req) => {
 
     const title = job.title || job.file_name?.replace(/\.[^.]+$/, '') || 'Transcript'
 
+    // Create a share record for the PDF download link if we have a PDF
+    let downloadUrl: string | null = null
+    if (pdf_storage_path) {
+      const { data: share, error: shareError } = await serviceClient
+        .from('transcript_shares')
+        .insert({
+          job_id,
+          recipient_email: recipient_email.toLowerCase().trim(),
+          shared_by: user.id,
+        })
+        .select('token')
+        .single()
+
+      if (!shareError && share) {
+        downloadUrl = `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
+      }
+    }
+
     const html = buildEmailHtml({
       title,
       senderLabel,
       summary: transformedSummary,
       questions: transformedQuestions,
       transcript: transformedTranscript,
+      downloadUrl,
     })
 
     const text = buildPlainText({
@@ -273,6 +292,7 @@ Deno.serve(async (req) => {
       summary: transformedSummary,
       questions: transformedQuestions,
       transcript: transformedTranscript,
+      downloadUrl,
     })
 
     const messageId = crypto.randomUUID()
