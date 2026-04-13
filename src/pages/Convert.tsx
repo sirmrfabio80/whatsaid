@@ -335,14 +335,33 @@ export default function Convert() {
                     </p>
 
                     {user ? (
-                      <Button
-                        className="w-full h-12 text-base font-medium rounded-xl"
-                        size="lg"
-                        onClick={handleConvert}
-                        disabled={processing || !consentChecked}
-                      >
-                        {t("convert.convertNow")}<ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
+                      <>
+                        {!hasEnoughCredits && file && (
+                          <div className="flex items-start gap-2.5 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                            <CreditCard className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                            <div className="space-y-1.5">
+                              <p className="text-sm font-medium text-destructive">{t("convert.noCreditsTitle")}</p>
+                              <p className="text-xs text-destructive/80">{t("convert.noCreditsDesc", { required: credits, balance: creditBalance ?? 0 })}</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-lg mt-1 border-destructive/30 text-destructive hover:bg-destructive/10"
+                                onClick={() => navigate("/pricing")}
+                              >
+                                {t("convert.buyCredits")}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        <Button
+                          className="w-full h-12 text-base font-medium rounded-xl"
+                          size="lg"
+                          onClick={handleConvert}
+                          disabled={processing || !consentChecked || !hasEnoughCredits}
+                        >
+                          {t("convert.convertNow")}<ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </>
                     ) : (
                       <div className="text-center space-y-3">
                         <p className="text-sm text-muted-foreground">
