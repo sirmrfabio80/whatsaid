@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, Plus } from "lucide-react";
 
 const ROLE_SUGGESTIONS = ["Doctor", "Nurse", "Me", "Mum", "Dad", "Receptionist", "Specialist", "Therapist"];
 
@@ -12,11 +12,12 @@ interface SpeakerChipsProps {
   speakerNames: Record<string, string>;
   onRename: (original: string, newName: string) => void;
   onReset?: () => void;
+  onAddSpeaker?: () => void;
 }
 
-export default function SpeakerChips({ speakers, speakerNames, onRename, onReset }: SpeakerChipsProps) {
+export default function SpeakerChips({ speakers, speakerNames, onRename, onReset, onAddSpeaker }: SpeakerChipsProps) {
   const { t } = useTranslation();
-  if (speakers.length === 0) return null;
+  if (speakers.length === 0 && !onAddSpeaker) return null;
   const hasRenames = Object.values(speakerNames).some((v) => !!v);
 
   return (
@@ -25,6 +26,16 @@ export default function SpeakerChips({ speakers, speakerNames, onRename, onReset
       {speakers.map((speaker) => (
         <SpeakerChip key={speaker} original={speaker} displayName={speakerNames[speaker] || speaker} isRenamed={!!speakerNames[speaker]} onRename={(newName) => onRename(speaker, newName)} />
       ))}
+      {onAddSpeaker && (
+        <button
+          onClick={onAddSpeaker}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border/60 bg-transparent px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors min-h-[36px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label={t("speakerChips.addSpeaker")}
+        >
+          <Plus className="w-3 h-3" />
+          <span>{t("speakerChips.addSpeaker")}</span>
+        </button>
+      )}
       {hasRenames && onReset && (
         <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-lg" onClick={onReset} aria-label={t("speakerChips.resetNames")}>
           {t("speakerChips.resetNames")}
