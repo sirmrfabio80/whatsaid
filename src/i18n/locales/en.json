@@ -347,13 +347,18 @@
   },
   "speakerSuggestions": {
     "suggest": "Suggest segments for this speaker",
-    "previewLabel": "{{count}} segments suggested for {{speaker}}",
-    "acceptAll": "Accept all ({{count}})",
+    "previewLabel_one": "{{count}} segment suggested for {{speaker}}",
+    "previewLabel_other": "{{count}} segments suggested for {{speaker}}",
+    "acceptAll_one": "Accept ({{count}})",
+    "acceptAll_other": "Accept all ({{count}})",
     "dismiss": "Dismiss",
     "rejectOne": "Reject this suggestion",
     "noSuggestions": "No segments could be confidently attributed to this speaker.",
     "error": "Could not generate suggestions. Please try again.",
-    "accepted": "{{count}} segments reassigned successfully."
+    "accepted_one": "{{count}} segment reassigned successfully.",
+    "accepted_other": "{{count}} segments reassigned successfully.",
+    "deleteSpeaker": "Remove speaker",
+    "deleteSpeakerConfirm": "Remove {{speaker}}?"
   },
   "languageSelector": {
     "language": "Language",
