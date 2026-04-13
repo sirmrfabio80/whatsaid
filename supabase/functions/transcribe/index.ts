@@ -95,6 +95,26 @@ Deno.serve(async (req) => {
       // Never send both prompt and keyterms_prompt
     }
 
+    // Profile-based tuning presets
+    const PROFILES: Record<string, Record<string, unknown>> = {
+      phone_call: { speakers_expected: 2 },
+    };
+
+    if (tuningConfig.profile && typeof tuningConfig.profile === "string" && PROFILES[tuningConfig.profile]) {
+      const profileDefaults = PROFILES[tuningConfig.profile];
+      // Profile defaults are applied under explicit overrides
+      for (const [key, value] of Object.entries(profileDefaults)) {
+        if (!(key in tuningConfig)) {
+          tuningConfig[key] = value;
+        }
+      }
+    }
+
+    // Diarization constraints: speakers_expected
+    if (tuningConfig.speakers_expected && typeof tuningConfig.speakers_expected === "number") {
+      transcriptPayload.speakers_expected = tuningConfig.speakers_expected;
+    }
+
     // Structured routing log
     console.log(JSON.stringify({
       event: "transcription_routing",
@@ -107,6 +127,8 @@ Deno.serve(async (req) => {
       speech_models: transcriptPayload.speech_models,
       temperature: transcriptPayload.temperature,
       has_keyterms: !!transcriptPayload.keyterms_prompt,
+      speakers_expected: transcriptPayload.speakers_expected ?? null,
+      profile: tuningConfig.profile ?? null,
     }));
 
     // 4. Save transcription config to jobs table for evaluation
@@ -121,6 +143,8 @@ Deno.serve(async (req) => {
           language_code: transcriptPayload.language_code ?? null,
           language_detection: transcriptPayload.language_detection ?? false,
           keyterms_prompt: transcriptPayload.keyterms_prompt ?? null,
+          speakers_expected: transcriptPayload.speakers_expected ?? null,
+          profile: tuningConfig.profile ?? null,
         },
       })
       .eq("id", job_id);
@@ -188,6 +212,26 @@ Deno.serve(async (req) => {
       ? utterances.reduce((sum, u) => sum + (Number(u.confidence) || 0), 0) / utterances.length
       : null;
 
+    // Compute enhanced evaluation metrics
+    const allConfidences = utterances
+      .map((u) => Number(u.confidence) || 0)
+      .filter((c) => c > 0)
+      .sort((a, b) => a - b);
+
+    const confidenceMin = allConfidences.length > 0 ? allConfidences[0] : null;
+    const confidenceP25 = allConfidences.length >= 4
+      ? allConfidences[Math.floor(allConfidences.length * 0.25)]
+      : confidenceMin;
+
+    const totalWords = utterances.reduce((sum, u) => {
+      const words = (u.words as unknown[]);
+      return sum + (Array.isArray(words) ? words.length : (String(u.text ?? "").split(/\s+/).filter(Boolean).length));
+    }, 0);
+
+    const wordsPerUtteranceAvg = utterances.length > 0
+      ? Math.round((totalWords / utterances.length) * 10) / 10
+      : null;
+
     // Structured completion log with evaluation signals
     console.log(JSON.stringify({
       event: "transcription_completed",
@@ -199,9 +243,15 @@ Deno.serve(async (req) => {
       duration_seconds: Math.round((transcript.audio_duration as number) ?? 0),
       language_detected: (transcript.language_code as string) ?? null,
       avg_confidence: avgConfidence ? Math.round(avgConfidence * 1000) / 1000 : null,
+      confidence_min: confidenceMin ? Math.round(confidenceMin * 1000) / 1000 : null,
+      confidence_p25: confidenceP25 ? Math.round(confidenceP25 * 1000) / 1000 : null,
+      word_count: totalWords,
+      words_per_utterance_avg: wordsPerUtteranceAvg,
       speech_models: transcriptPayload.speech_models,
       temperature: transcriptPayload.temperature,
       has_keyterms: !!transcriptPayload.keyterms_prompt,
+      speakers_expected: transcriptPayload.speakers_expected ?? null,
+      profile: tuningConfig.profile ?? null,
     }));
 
     // 8. Build rendered transcript text with timestamps

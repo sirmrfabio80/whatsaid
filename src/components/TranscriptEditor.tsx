@@ -23,6 +23,7 @@ export interface Segment {
   speaker: string | null;
   text: string;
   raw: string;
+  timestamp: string | null;
 }
 
 export interface SpeakerSuggestion {
@@ -50,17 +51,21 @@ export function parseSegments(content: string): Segment[] {
     const snippet = line.slice(0, 40).replace(/[^a-zA-Z0-9]/g, "");
     const id = `seg-${index}-${line.length}-${snippet}`;
     // Handle optional [HH:MM:SS] timestamp prefix before speaker label
-    const match = line.match(/^(?:\[\d{2}:\d{2}:\d{2}\]\s)?(.+?):\s(.*)/);
+    const tsMatch = line.match(/^(\[\d{2}:\d{2}:\d{2}\])\s/);
+    const timestamp = tsMatch ? tsMatch[1] : null;
+    const afterTs = timestamp ? line.slice(timestamp.length + 1) : line;
+    const match = afterTs.match(/^(.+?):\s(.*)/);
     if (match) {
-      return { id, index, speaker: match[1], text: match[2], raw: line };
+      return { id, index, speaker: match[1], text: match[2], raw: line, timestamp };
     }
-    return { id, index, speaker: null, text: line, raw: line };
+    return { id, index, speaker: null, text: afterTs, raw: line, timestamp };
   });
 }
 
 function reconstructContent(segments: Segment[]): string {
   return segments.map((s) => {
-    if (s.speaker) return `${s.speaker}: ${s.text}`;
+    const prefix = s.timestamp ? `${s.timestamp} ` : "";
+    if (s.speaker) return `${prefix}${s.speaker}: ${s.text}`;
     return s.text || s.raw;
   }).join("\n");
 }
@@ -190,10 +195,11 @@ export default function TranscriptEditor({
     const segId = segments[activeIndex].id;
     const updated = segments.map((s, i) => {
       if (i !== activeIndex) return s;
+      const prefix = s.timestamp ? `${s.timestamp} ` : "";
       return {
         ...s,
         text: editText,
-        raw: s.speaker ? `${s.speaker}: ${editText}` : editText,
+        raw: s.speaker ? `${prefix}${s.speaker}: ${editText}` : editText,
       };
     });
     setSegments(updated);
@@ -219,10 +225,11 @@ export default function TranscriptEditor({
     setSaving(true);
     const updated = segments.map((s, i) => {
       if (i !== segIndex) return s;
+      const prefix = s.timestamp ? `${s.timestamp} ` : "";
       return {
         ...s,
         speaker: newSpeaker,
-        raw: `${newSpeaker}: ${s.text}`,
+        raw: `${prefix}${newSpeaker}: ${s.text}`,
       };
     });
     setSegments(updated);
@@ -262,10 +269,11 @@ export default function TranscriptEditor({
     setSaving(true);
     const newId = generateSegId();
     const updated = [...segments];
+    const prefix = seg.timestamp ? `${seg.timestamp} ` : "";
     updated[activeIndex] = {
       ...seg,
       text: textBefore,
-      raw: seg.speaker ? `${seg.speaker}: ${textBefore}` : textBefore,
+      raw: seg.speaker ? `${prefix}${seg.speaker}: ${textBefore}` : textBefore,
     };
     updated.splice(activeIndex + 1, 0, {
       id: newId,
@@ -273,6 +281,7 @@ export default function TranscriptEditor({
       speaker: seg.speaker,
       text: textAfter,
       raw: seg.speaker ? `${seg.speaker}: ${textAfter}` : textAfter,
+      timestamp: null,
     });
     // Re-index
     updated.forEach((s, i) => { s.index = i; });
@@ -317,11 +326,12 @@ export default function TranscriptEditor({
 
     const updated = segments.filter((_, i) => i !== index).map((s, i) => {
       if (i === index - 1) {
+        const prefix = s.timestamp ? `${s.timestamp} ` : "";
         return {
           ...s,
           speaker,
           text: mergedText,
-          raw: speaker ? `${speaker}: ${mergedText}` : mergedText,
+          raw: speaker ? `${prefix}${speaker}: ${mergedText}` : mergedText,
         };
       }
       return { ...s, index: i };
