@@ -219,6 +219,9 @@ export default function JobDetail() {
                   );
                 })()}
               </div>
+              <div className="mt-3">
+                <JobDetailTags jobId={id} />
+              </div>
             </div>
           )}
 
