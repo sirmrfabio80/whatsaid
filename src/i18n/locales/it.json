@@ -326,7 +326,8 @@
   "speakerChips": {
     "speakers": "Relatori:",
     "resetNames": "Reimposta nomi",
-    "suggestions": "Suggerimenti"
+    "suggestions": "Suggerimenti",
+    "addSpeaker": "Relatore"
   },
   "languageSelector": {
     "language": "Lingua",
