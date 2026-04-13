@@ -153,6 +153,20 @@ Rules:
       .update({ status: "completed", summary_language: langLabel, short_summary: shortSummary.trim().slice(0, 300) })
       .eq("id", job_id);
 
+    // 7. Auto-tag transcript (non-blocking)
+    try {
+      const tagResult = await autoTag(supabase, job_id, LOVABLE_API_KEY);
+      if (tagResult.skipped) {
+        console.log(`[post-process] Tagging skipped for job ${job_id}: ${tagResult.reason}`);
+      } else if (!tagResult.success) {
+        console.error(`[post-process] Tagging failed for job ${job_id}: ${tagResult.reason}`);
+      } else {
+        console.log(`[post-process] Tagging complete for job ${job_id}`);
+      }
+    } catch (tagError) {
+      console.error(`[post-process] Tagging error for job ${job_id}:`, tagError);
+    }
+
     console.log(`[post-process] Job ${job_id} completed`);
 
     return new Response(
