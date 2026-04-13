@@ -95,7 +95,7 @@ function SpeakerChip({
   if (editing) {
     return (
       <div className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-background px-2 py-1 shadow-sm ring-1 ring-primary/10">
-        <Input ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }} className="h-6 w-24 sm:w-28 text-xs border-none shadow-none p-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" aria-label={`New name for ${original}`} maxLength={30} />
+        <Input ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }} className="h-6 w-24 sm:w-28 text-xs border-none shadow-none px-1.5 py-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" aria-label={`New name for ${original}`} maxLength={30} />
         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={save} aria-label={t("common.save")}><Check className="w-3 h-3" /></Button>
         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={cancel} aria-label={t("common.cancel")}><X className="w-3 h-3" /></Button>
         <DropdownMenu>
