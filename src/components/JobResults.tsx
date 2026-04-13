@@ -52,6 +52,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [extraSpeakers, setExtraSpeakers] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<SpeakerSuggestion[]>([]);
   const [suggestingForSpeaker, setSuggestingForSpeaker] = useState<string | null>(null);
+  const [suggestionTarget, setSuggestionTarget] = useState<string | null>(null);
   const editedIdsRef = useRef<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
