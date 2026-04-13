@@ -15,6 +15,25 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function applySpeakerNames(text: string, names: Record<string, string> | null | undefined): string {
+  if (!text || !names) return text
+
+  let result = text
+  for (const [original, renamed] of Object.entries(names)) {
+    if (!original || !renamed) continue
+    const lineStartRegex = new RegExp(`^${escapeRegex(original)}:`, 'gm')
+    result = result.replace(lineStartRegex, `${renamed}:`)
+    const inlineRegex = new RegExp(`\\b${escapeRegex(original)}\\b`, 'g')
+    result = result.replace(inlineRegex, renamed)
+  }
+
+  return result
+}
+
 function markdownSectionsToHtml(content: string): string {
   const lines = content.split('\n')
   const html: string[] = []
@@ -95,13 +114,11 @@ function buildEmailHtml(opts: {
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:640px;margin:0 auto;padding:32px 16px;">
     <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <!-- Header -->
       <div style="padding:28px 28px 20px;border-bottom:1px solid hsl(220,15%,92%);">
         <p style="font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:hsl(245,50%,48%);margin:0 0 8px;">${SITE_NAME}</p>
         <h1 style="font-family:'Space Grotesk',Arial,sans-serif;font-size:22px;font-weight:700;color:hsl(220,25%,10%);margin:0;line-height:1.3;">${escapeHtml(title)}</h1>
       </div>
 
-      <!-- Body -->
       <div style="padding:24px 28px 32px;">
         ${summarySection}
         ${questionsSection}
@@ -112,7 +129,6 @@ function buildEmailHtml(opts: {
         </div>
       </div>
 
-      <!-- Footer -->
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
         <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
           Shared by ${escapeHtml(senderLabel)} via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>
@@ -176,7 +192,6 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Fetch sender profile for display name / email
     const { data: senderProfile } = await serviceClient
       .from('profiles')
       .select('display_name, email')
@@ -187,10 +202,9 @@ Deno.serve(async (req) => {
     const senderEmail = senderProfile?.email || user.email || 'someone'
     const senderLabel = senderDisplayName || senderEmail
 
-    // Fetch job (ensure it belongs to the user)
     const { data: job, error: jobError } = await serviceClient
       .from('jobs')
-      .select('title, file_name, user_id')
+      .select('title, file_name, user_id, speaker_names')
       .eq('id', job_id)
       .maybeSingle()
 
@@ -205,7 +219,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Fetch outputs
     const { data: outputs } = await serviceClient
       .from('job_outputs')
       .select('output_type, content, custom_prompt')
@@ -224,25 +237,32 @@ Deno.serve(async (req) => {
       })
     }
 
+    const speakerNames = (job.speaker_names ?? {}) as Record<string, string>
+    const transformedTranscript = applySpeakerNames(transcript.content, speakerNames)
+    const transformedSummary = summary?.content ? applySpeakerNames(summary.content, speakerNames) : null
+    const transformedQuestions = questions.map((q) => ({
+      prompt: q.prompt,
+      answer: applySpeakerNames(q.answer, speakerNames),
+    }))
+
     const title = job.title || job.file_name?.replace(/\.[^.]+$/, '') || 'Transcript'
 
     const html = buildEmailHtml({
       title,
       senderLabel,
-      summary: summary?.content || null,
-      questions,
-      transcript: transcript.content,
+      summary: transformedSummary,
+      questions: transformedQuestions,
+      transcript: transformedTranscript,
     })
 
     const text = buildPlainText({
       title,
       senderLabel,
-      summary: summary?.content || null,
-      questions,
-      transcript: transcript.content,
+      summary: transformedSummary,
+      questions: transformedQuestions,
+      transcript: transformedTranscript,
     })
 
-    // Enqueue email
     const messageId = crypto.randomUUID()
 
     const recipientLower = recipient_email.toLowerCase().trim()
