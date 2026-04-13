@@ -1,116 +1,127 @@
 
 
-# AI-Assisted Speaker Reassignment — Revised Plan
+# Speaker Reassignment UX Redesign
 
-## A. Current Segment Representation
+## A. UX Critique of Current Implementation
 
-Transcript segments have **no stable IDs today**. The `Segment` interface in `TranscriptEditor.tsx` uses a positional `index` (line number) that changes whenever lines are added, removed, or reordered. The `parseSegments()` function splits content by `\n` and assigns sequential indices.
+**1. Disconnected mental model.** The top speaker chips handle naming, adding, deleting, and AI suggestions. The transcript blocks handle text editing. Speaker reassignment is buried inside transcript editing — you must click "Edit Transcript", click a block, then find a small `Select` dropdown labeled "Change speaker". These two layers feel unrelated.
 
-**Required groundwork**: Generate a stable UUID for each segment at parse time. These IDs live only in React state and are never persisted to the database — the DB continues to store plain text. IDs are regenerated deterministically from content on each parse, or (simpler and safer) generated fresh with `crypto.randomUUID()` each time content is parsed into segments. Since suggestions are ephemeral and consumed in the same session, fresh UUIDs are fine.
+**2. Unclear unit of reassignment.** Nothing visually communicates that the transcript is block-based. In read mode, blocks run together as prose. A user cannot tell that each line is independently assignable.
 
-## B. Revised UX Flow
+**3. Passive dropdown.** The `Select` for changing speaker appears as a secondary control inside the edit card, below a label that says "Change speaker". It looks like a form field, not the primary action. Users editing text may not even notice it.
 
-1. User adds a new speaker via `+ Speaker` chip (existing)
-2. On the newly created speaker chip, a small secondary action appears: **"Suggest segments"** (sparkle icon) — only on speakers that have zero assigned segments
-3. Clicking it sends the transcript + target speaker name to the `suggest-speakers` edge function
-4. Loading state appears as a subtle shimmer on the transcript area (~2-4s)
-5. AI returns a list of `{ segmentId, confidence }` pairs — only segments it thinks belong to the **new speaker**
-6. Transcript enters **preview mode**:
-   - Suggested segments get a tinted left border + small badge showing the new speaker name
-   - Segments the user has manually edited are excluded and never highlighted
-   - A floating bar appears: **"Accept all (N)" / "Dismiss"**
-7. User can click individual segment badges to reject them before accepting
-8. "Accept all" saves reassigned segments via the existing `onSave` path
-9. Preview state is cleared after accept or dismiss
+**4. No manual fallback hint.** When AI suggestions return zero results, a single `toast.info` fires and disappears. The user is left staring at the same UI with no guidance on what to do manually.
 
-**UI trigger rationale**: The "Suggest segments" action only appears on speaker chips with zero segments assigned. This avoids clutter — existing speakers with content don't show it. It disappears once the speaker has segments. One action, scoped to the relevant speaker.
+**5. No visual block boundaries.** In read mode, blocks have no separators, gutters, or speaker badges — just bold speaker names inline. This makes multi-speaker transcripts hard to scan.
 
-## C. Data Contract
+---
 
-```typescript
-// Segment with stable ID (frontend only)
-interface Segment {
-  id: string;        // crypto.randomUUID(), ephemeral
-  index: number;     // positional, for rendering order
-  speaker: string | null;
-  text: string;
-  raw: string;
-}
+## B. Recommended Redesigned Interaction Flow
 
-// Edge function request
-interface SuggestSpeakersRequest {
-  transcript_lines: Array<{
-    id: string;
-    speaker: string | null;
-    text: string;
-  }>;
-  target_speaker: string;        // the new speaker to assign
-  existing_speakers: string[];   // all current speaker labels
-  excluded_ids: string[];        // manually edited segment IDs
-}
+### Principle: always-visible speaker label per block, no hidden dropdowns
 
-// Edge function response
-interface SuggestSpeakersResponse {
-  suggestions: Array<{
-    id: string;          // segment ID from request
-    confidence: number;  // 0.0–1.0
-  }>;
-}
+**Read mode (default):**
+- Each transcript block gets a subtle left gutter with a small **speaker badge** (pill with speaker display name, coloured dot or left-border colour-coded by speaker).
+- Blocks have light separator spacing (already `mb-3`, keep it).
+- No edit controls visible.
+
+**Edit mode (after clicking "Edit Transcript"):**
+- Each block's speaker badge becomes **clickable** — tapping it opens a small inline popover/dropdown anchored to the badge showing all available speakers as a list. Selecting one reassigns instantly (auto-saves, no separate "Save segment" step for speaker-only changes).
+- Clicking the **text area** of a block opens the existing text editor for content edits (keep current flow).
+- This separates the two actions: **badge click = reassign speaker**, **text click = edit text**.
+
+**Zero-segment speaker hint:**
+- When a newly added speaker has 0 segments, show a subtle inline hint below the speaker chips: *"To assign blocks to [Speaker Name], enter edit mode and click any speaker badge in the transcript."*
+- This replaces reliance on the AI sparkle button as the primary affordance.
+
+**AI suggestions unchanged:**
+- Keep AI sparkle icon on zero-segment chips as a power-user shortcut.
+- When AI returns 0 suggestions, show the same manual-assignment hint instead of just a toast.
+
+**Split block (future — design only, do not implement):**
+- In edit mode, when editing a block's text, show a "Split here" affordance (scissor icon or divider line) at cursor position or between sentences.
+- Splitting creates two blocks; the second block defaults to the same speaker but the badge is immediately clickable to reassign.
+
+### Interaction summary
+
+```text
+┌─────────────────────────────────────────────┐
+│ Speaker chips: rename, add, delete, AI      │
+├─────────────────────────────────────────────┤
+│ [Edit Transcript]                           │
+├─────────────────────────────────────────────┤
+│ ● Dr Smith   "Hello, how are you today..." │  ← badge + text
+│ ● Patient    "I've been having headaches.."│
+│ ● Dr Smith   "Let me check your records.." │
+└─────────────────────────────────────────────┘
+
+Edit mode — click badge:
+┌─────────────────────────────────┐
+│ [Dr Smith ▾]  ← popover opens  │
+│  ┌──────────────┐              │
+│  │ Dr Smith   ✓ │              │
+│  │ Patient      │              │
+│  │ Nurse        │              │
+│  └──────────────┘              │
+└─────────────────────────────────┘
+
+Edit mode — click text:
+┌─────────────────────────────────┐
+│ ● Dr Smith                      │
+│ ┌─────────────────────────────┐ │
+│ │ Hello, how are you today... │ │ ← textarea
+│ └─────────────────────────────┘ │
+│ [Save] [Cancel]                 │
+└─────────────────────────────────┘
 ```
 
-All suggestions reference segment IDs from the request. The frontend maps them back to its local segment state. No line indices cross the wire.
+---
 
-## D. Long-Transcript Cost Strategy
-
-**Proven pattern**: `auto-tag.ts` already truncates transcripts to 12,000 chars. This function will follow the same approach.
-
-- **Transcripts ≤ 15,000 chars** (~25 min of speech): send full transcript. Single AI call.
-- **Transcripts > 15,000 chars**: send the first 2,000 chars + last 2,000 chars as context anchors, plus the full list of segment IDs/speakers/first-50-chars-of-text. The AI sees enough conversational pattern to suggest reassignments without receiving every word.
-- **Model**: `google/gemini-2.5-flash-lite` (same as auto-tag — cheapest, fast, sufficient for pattern matching).
-- **Single call per user action**. No streaming, no retries, no polling.
-- Suggestions below 0.5 confidence are filtered server-side and never sent to the client.
-
-## E. Backend Approach — No Tool-Calling
-
-The codebase uses plain JSON response parsing everywhere (`auto-tag.ts` pattern):
-- System prompt instructs: "Return ONLY a JSON array"
-- Response text is stripped of markdown fences, then `JSON.parse`
-- Validated and cleaned with a typed function
-
-The `suggest-speakers` function will follow this exact pattern. No tool-calling, no `response_format`.
-
-## F. Manual Edit Exclusion
-
-- `TranscriptEditor` will track a `Set<string>` of manually edited segment IDs (segments saved via `saveSegment`)
-- This set is passed up to `JobResults` and forwarded to the edge function as `excluded_ids`
-- The AI never sees excluded segments in its input
-- If a user manually edits a segment during preview mode, that segment's suggestion is silently removed
-
-## G. Files to Change
+## C. Exact Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/functions/suggest-speakers/index.ts` | **New** — edge function, JSON-parse approach |
-| `src/components/TranscriptEditor.tsx` | Add `id` to Segment interface, generate UUIDs at parse, track edited IDs, render suggestion preview highlights, accept/reject UI |
-| `src/components/SpeakerChips.tsx` | Add "Suggest segments" action on zero-segment speaker chips |
-| `src/components/JobResults.tsx` | Add suggestion state, handler for `suggest-speakers` invoke, pass props down |
-| `src/i18n/locales/en.json` | New strings |
-| `src/i18n/locales/fr.json` | New strings |
-| `src/i18n/locales/it.json` | New strings |
+| `src/components/TranscriptEditor.tsx` | Add speaker badge per block in read+edit mode; make badge clickable in edit mode to open speaker popover; separate speaker-change from text-edit; add zero-suggestion manual hint |
+| `src/components/JobResults.tsx` | Add zero-segment hint text below speaker chips; pass speaker-change-only save handler |
+| `src/i18n/locales/en.json` | Add hint strings: `speakerChips.assignHint`, `speakerSuggestions.noSuggestionsHint` |
+| `src/i18n/locales/fr.json` | French equivalents |
+| `src/i18n/locales/it.json` | Italian equivalents |
+| `src/index.css` | Optional: speaker colour-dot utility classes (2-3 lines) |
 
-## H. Implementation Order
+No backend, schema, edge function, export, share, or routing changes.
 
-1. Add `id: string` to `Segment` interface and generate UUIDs in `parseSegments()`
-2. Track manually edited segment IDs in `TranscriptEditor`
-3. Create `suggest-speakers` edge function
-4. Add suggestion state + handler in `JobResults.tsx`
-5. Add "Suggest segments" trigger to `SpeakerChips.tsx` (only on zero-segment speakers)
-6. Add suggestion preview rendering + accept/dismiss bar in `TranscriptEditor.tsx`
-7. Add i18n strings
+---
 
-## I. Regression Risks
+## D. Phased Implementation Order
 
-- **Low**: Segment ID is additive — `reconstructContent()` ignores IDs, so DB persistence is unchanged. Export, share, copy all read from `segments` state or raw content string.
-- **Medium**: TranscriptEditor's editing state (active segment, dirty flag, confirm dialogs) must dismiss suggestions when entering manual edit mode. Mitigation: entering edit mode on a segment clears its suggestion; accepting suggestions exits edit mode first.
-- **None for existing features**: No DB schema changes, no new tables, no changes to export/share/summary/tags.
+**Phase 1 — Speaker badge per block (visual only, read mode)**
+- Add a small speaker pill/badge with coloured left border to each block in `TranscriptEditor`.
+- No behaviour change. Purely visual.
+- Low risk: only adds markup to read-only rendering.
+
+**Phase 2 — Clickable badge for reassignment in edit mode**
+- In edit mode, clicking the speaker badge opens a `Popover` with speaker list.
+- Selecting a speaker auto-saves (calls `onSave` with updated content).
+- Clicking the text body still opens the text editor as before.
+- Medium risk: must stop click propagation so badge click ≠ text edit click.
+
+**Phase 3 — Zero-segment hint and improved no-suggestions fallback**
+- Show inline hint below speaker chips when any speaker has 0 segments.
+- Replace toast-only feedback on 0 AI suggestions with persistent inline hint.
+- Low risk: additive UI only.
+
+**Phase 4 (future, not implemented) — Split block**
+- Design note only. Adds a split action inside the text editor.
+
+---
+
+## E. Regression Risks
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| Badge click propagation conflicts with block click handler | Medium | Use `e.stopPropagation()` on badge click; keep text-click handler on the text portion only |
+| Speaker-only save triggers "transcript edited" badge prematurely | Low | It already does this for any `onSave` call — consistent behaviour |
+| Speaker colour assignment for >6 speakers | Low | Use modular colour array, cycle if exceeded |
+| AI suggestion preview highlights conflict with new badge styling | Low | Suggestion highlights already use left-border; badge sits in a gutter area, no overlap |
+| Existing text editing flow breaks | Low | Text editing is triggered by clicking the text body, unchanged; badge is a separate click target |
 
