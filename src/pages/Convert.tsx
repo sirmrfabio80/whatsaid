@@ -145,8 +145,9 @@ export default function Convert() {
 
       // Build transcription_config from UI settings
       const txConfig: Record<string, unknown> = {};
-      if (transcriptionConfig.profile) txConfig.profile = transcriptionConfig.profile;
+      if (transcriptionConfig.strategy) txConfig.strategy = transcriptionConfig.strategy;
       if (transcriptionConfig.speakers_expected) txConfig.speakers_expected = transcriptionConfig.speakers_expected;
+      if (transcriptionConfig.keyterms && transcriptionConfig.keyterms.length > 0) txConfig.keyterms = transcriptionConfig.keyterms;
       const hasConfig = Object.keys(txConfig).length > 0;
 
       const { error: jobError } = await supabase
