@@ -42,7 +42,7 @@ function ShareContent({
           placeholder={t("share.emailPlaceholder")}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-10 rounded-lg text-sm"
+          className="h-10 rounded-lg text-base md:text-sm"
           onKeyDown={(e) => { if (e.key === "Enter") handleSendEmail(); }}
           disabled={sending || sent || sendingRecord || sentRecord}
           autoFocus={autoFocusInput}
@@ -106,7 +106,7 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSent(true);
       toast.success(t("share.sentSuccess"));
-      setTimeout(() => { setOpen(false); setSent(false); setEmail(""); }, 1500);
+      setTimeout(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setOpen(false); setSent(false); setEmail(""); }, 1500);
     } catch { toast.error(t("share.sendFailed")); } finally { setSending(false); }
   };
 
@@ -120,11 +120,12 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSentRecord(true);
       toast.success(t("share.recordSentSuccess"));
-      setTimeout(() => { setOpen(false); setSentRecord(false); setEmail(""); }, 1500);
+      setTimeout(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setOpen(false); setSentRecord(false); setEmail(""); }, 1500);
     } catch { toast.error(t("share.sendFailed")); } finally { setSendingRecord(false); }
   };
 
   const handleOpenChange = (next: boolean) => {
+    if (!next && document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setOpen(next);
     if (!next) {
       setTimeout(() => { setEmail(""); setSent(false); setSentRecord(false); }, 200);
