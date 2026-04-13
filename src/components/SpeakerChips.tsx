@@ -19,11 +19,12 @@ interface SpeakerChipsProps {
   onDeleteSpeaker?: (speaker: string) => void;
   onSuggestSpeaker?: (speaker: string) => void;
   suggestingForSpeaker?: string | null;
+  enableDrag?: boolean;
 }
 
 export default function SpeakerChips({
   speakers, speakerNames, speakerSegmentCounts, deletableSpeakers, onRename, onReset, onAddSpeaker,
-  onDeleteSpeaker, onSuggestSpeaker, suggestingForSpeaker,
+  onDeleteSpeaker, onSuggestSpeaker, suggestingForSpeaker, enableDrag,
 }: SpeakerChipsProps) {
   const { t } = useTranslation();
   if (speakers.length === 0 && !onAddSpeaker) return null;
