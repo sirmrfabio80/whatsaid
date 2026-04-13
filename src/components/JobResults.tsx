@@ -52,6 +52,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [extraSpeakers, setExtraSpeakers] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<SpeakerSuggestion[]>([]);
   const [suggestingForSpeaker, setSuggestingForSpeaker] = useState<string | null>(null);
+  const [suggestionTarget, setSuggestionTarget] = useState<string | null>(null);
   const editedIdsRef = useRef<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
@@ -88,6 +89,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleDeleteSpeaker = (speaker: string) => {
     setExtraSpeakers((prev) => prev.filter((s) => s !== speaker));
     setSuggestions((prev) => prev.filter((s) => s.speaker !== speaker));
+    if (suggestionTarget === speaker) setSuggestionTarget(null);
     const updated = { ...speakerNames };
     delete updated[speaker];
     setSpeakerNames(updated);
@@ -96,6 +98,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleSuggestSpeaker = async (targetSpeaker: string) => {
     if (!transcript || suggestingForSpeaker) return;
     setSuggestingForSpeaker(targetSpeaker);
+    setSuggestionTarget(targetSpeaker);
     setSuggestions([]);
     try {
       const segments = parseSegments(transcript.content);
@@ -114,6 +117,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
       if (error || data?.error) {
         toast.error(data?.error ?? t("speakerSuggestions.error"));
+        setSuggestionTarget(null);
         return;
       }
 
@@ -125,10 +129,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
       if (sug.length === 0) {
         toast.info(t("speakerSuggestions.noSuggestions"));
+        setSuggestionTarget(null);
       }
       setSuggestions(sug);
     } catch {
       toast.error(t("speakerSuggestions.error"));
+      setSuggestionTarget(null);
     } finally {
       setSuggestingForSpeaker(null);
     }
@@ -150,11 +156,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     const newContent = updated.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.raw)).join("\n");
     await handleTranscriptSave(newContent);
     setSuggestions([]);
+    setSuggestionTarget(null);
     toast.success(t("speakerSuggestions.accepted", { count: accepted.length }));
   };
 
   const handleDismissSuggestions = () => {
     setSuggestions([]);
+    setSuggestionTarget(null);
   };
 
   const handleSummaryLanguageChange = async (langCode: string) => {
@@ -260,7 +268,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   onSave={handleTranscriptSave}
                   transcriptEdited={transcriptEdited}
                   suggestions={suggestions}
-                  suggestingTarget={suggestingForSpeaker}
+                  suggestingTarget={suggestionTarget}
                   onAcceptSuggestions={handleAcceptSuggestions}
                   onDismissSuggestions={handleDismissSuggestions}
                   onEditedIdsChange={(ids) => { editedIdsRef.current = ids; }}

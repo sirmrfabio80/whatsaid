@@ -136,7 +136,7 @@ function SpeakerChip({
           {isSuggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
         </button>
       )}
-      {isDeletable && !showSuggest && (
+      {isDeletable && (
         <button
           onClick={() => setConfirmDelete(true)}
           className="inline-flex items-center justify-center w-7 h-7 ml-0.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
