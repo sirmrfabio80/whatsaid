@@ -3,16 +3,25 @@ import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/cons
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 function escapeHtml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
-function buildShareRecordEmail(opts: { title: string; senderLabel: string; claimUrl: string }): string {
-  const { title, senderLabel, claimUrl } = opts
+function buildShareRecordEmail(opts: {
+  title: string
+  senderLabel: string
+  claimUrl: string
+  downloadUrl: string | null
+}): string {
+  const { title, senderLabel, claimUrl, downloadUrl } = opts
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
@@ -26,9 +35,10 @@ function buildShareRecordEmail(opts: { title: string; senderLabel: string; claim
         <p style="font-size:16px;font-weight:600;color:hsl(220,25%,15%);margin:16px 0 24px;padding:12px 20px;background:hsl(220,20%,97%);border-radius:10px;display:inline-block;">${escapeHtml(title)}</p>
       </div>
       <div style="padding:0 28px 32px;text-align:center;">
-        <a href="${claimUrl}" style="display:inline-block;padding:14px 40px;background:hsl(245,50%,48%);color:#fff;font-size:15px;font-weight:600;border-radius:12px;text-decoration:none;letter-spacing:0.01em;">Open your copy</a>
+        ${downloadUrl ? `<a href="${downloadUrl}" style="display:inline-block;padding:14px 40px;background:hsl(220,25%,10%);color:#fff;font-size:15px;font-weight:600;border-radius:12px;text-decoration:none;letter-spacing:0.01em;margin:0 8px 12px;">Download PDF</a>` : ''}
+        <a href="${claimUrl}" style="display:inline-block;padding:14px 40px;background:hsl(245,50%,48%);color:#fff;font-size:15px;font-weight:600;border-radius:12px;text-decoration:none;letter-spacing:0.01em;margin:0 8px 12px;">Open your copy</a>
         <p style="font-size:13px;color:hsl(220,10%,55%);margin:20px 0 0;line-height:1.5;">
-          Click the button to sign in (or create a free account) and get your own copy of this transcript in ${SITE_NAME}. This link expires in 2 days.
+          Sign in or create a free WhatSaid account first to access this share.${downloadUrl ? ' The PDF download is only available after login.' : ''} This link expires in 2 days.
         </p>
       </div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
@@ -56,23 +66,41 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     })
-    const { data: { user }, error: authError } = await userClient.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await userClient.auth.getUser()
+
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const { job_id, recipient_email } = await req.json()
+    const body = await req.json()
+    const job_id = typeof body?.job_id === 'string' ? body.job_id : ''
+    const recipient_email = typeof body?.recipient_email === 'string' ? body.recipient_email : ''
+    const pdf_storage_path = typeof body?.pdf_storage_path === 'string' && body.pdf_storage_path.trim()
+      ? body.pdf_storage_path.trim()
+      : null
+
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (pdf_storage_path && (!pdf_storage_path.startsWith(`${job_id}/`) || pdf_storage_path.includes('..'))) {
+      return new Response(JSON.stringify({ error: 'Invalid PDF path' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Fetch sender profile for display name / email
     const { data: senderProfile } = await serviceClient
       .from('profiles')
       .select('display_name, email')
@@ -83,7 +111,6 @@ Deno.serve(async (req) => {
     const senderEmail = senderProfile?.email || user.email || 'someone'
     const senderLabel = senderDisplayName || senderEmail
 
-    // Verify job ownership
     const { data: job } = await serviceClient
       .from('jobs')
       .select('title, file_name, user_id')
@@ -92,16 +119,18 @@ Deno.serve(async (req) => {
 
     if (!job || job.user_id !== user.id) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Create share record
+    const recipientLower = recipient_email.toLowerCase().trim()
+
     const { data: share, error: shareError } = await serviceClient
       .from('transcript_shares')
       .insert({
         job_id,
-        recipient_email: recipient_email.toLowerCase().trim(),
+        recipient_email: recipientLower,
         shared_by: user.id,
       })
       .select('token')
@@ -110,18 +139,19 @@ Deno.serve(async (req) => {
     if (shareError || !share) {
       console.error('Failed to create share record', shareError)
       return new Response(JSON.stringify({ error: 'Failed to create share' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const title = job.title || job.file_name?.replace(/\.[^.]+$/, '') || 'Transcript'
     const claimUrl = `${SITE_URL}/claim/${share.token}`
+    const downloadUrl = pdf_storage_path
+      ? `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
+      : null
 
-    // Send email
     const messageId = crypto.randomUUID()
 
-    // Get or create unsubscribe token for recipient
-    const recipientLower = recipient_email.toLowerCase().trim()
     const { data: existingToken } = await serviceClient
       .from('email_unsubscribe_tokens')
       .select('token')
@@ -145,6 +175,19 @@ Deno.serve(async (req) => {
     })
 
     const subjectLine = `Transcript shared with you: ${title}`
+    const textParts = [
+      `${senderLabel} shared a transcript with you on ${SITE_NAME}.`,
+      '',
+      `"${title}"`,
+      '',
+      `Open your copy: ${claimUrl}`,
+    ]
+
+    if (downloadUrl) {
+      textParts.push('', `Download PDF after login: ${downloadUrl}`)
+    }
+
+    textParts.push('', 'Sign in or create a free WhatSaid account first to access this share.', 'This link expires in 2 days.')
 
     await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
@@ -156,8 +199,8 @@ Deno.serve(async (req) => {
         reply_to: senderEmail,
         sender_domain: SENDER_DOMAIN,
         subject: subjectLine,
-        html: buildShareRecordEmail({ title, senderLabel, claimUrl }),
-        text: `${senderLabel} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy. This link expires in 2 days.`,
+        html: buildShareRecordEmail({ title, senderLabel, claimUrl, downloadUrl }),
+        text: textParts.join('\n'),
         purpose: 'transactional',
         label: 'share-transcript-record',
         unsubscribe_token: unsubscribeToken,
@@ -166,12 +209,14 @@ Deno.serve(async (req) => {
     })
 
     return new Response(JSON.stringify({ success: true }), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
     console.error('share-transcript-record error:', error)
     return new Response(JSON.stringify({ error: 'Internal error' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
