@@ -18,12 +18,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
-  handleSendEmail, handleShareRecord, t,
+  handleSendEmail, handleShareRecord, t, autoFocusInput = true,
 }: {
   email: string; setEmail: (v: string) => void; isValid: boolean;
   sending: boolean; sent: boolean; sendingRecord: boolean; sentRecord: boolean;
   handleSendEmail: () => void; handleShareRecord: () => void;
-  t: (k: string) => string;
+  t: (k: string) => string; autoFocusInput?: boolean;
 }) {
   return (
     <>
@@ -45,7 +45,7 @@ function ShareContent({
           className="h-10 rounded-lg text-sm"
           onKeyDown={(e) => { if (e.key === "Enter") handleSendEmail(); }}
           disabled={sending || sent || sendingRecord || sentRecord}
-          autoFocus
+          autoFocus={autoFocusInput}
         />
       </div>
 
@@ -140,7 +140,7 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
 
   const contentProps = {
     email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
-    handleSendEmail, handleShareRecord, t,
+    handleSendEmail, handleShareRecord, t, autoFocusInput: !isMobile,
   };
 
   if (isMobile) {
