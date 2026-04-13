@@ -3,7 +3,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
@@ -110,18 +109,18 @@ export default function JobDetail() {
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <div className="container mx-auto px-5 sm:px-6 py-10 sm:py-14">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground" onClick={() => navigate("/history")}>
-              <ArrowLeft className="w-4 h-4" />{t("jobDetail.backToHistory")}
+              <ArrowLeft className="w-4 h-4" /><span className="hidden sm:inline">{t("jobDetail.backToHistory")}</span>
             </Button>
-            <Button size="sm" className="rounded-xl gap-1.5" onClick={() => navigate("/convert")}>
+            <Button size="sm" className="rounded-full gap-1.5" onClick={() => navigate("/convert")}>
               <Plus className="w-4 h-4" />{t("jobDetail.newTranscription")}
             </Button>
           </div>
 
           {meta && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-2 group">
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3 group">
                 {editing ? (
                   <div className="flex items-center gap-2 flex-1">
                     <Input
@@ -130,7 +129,7 @@ export default function JobDetail() {
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditing(false); }}
                       onBlur={saveTitle}
-                      className="font-heading text-xl sm:text-2xl font-bold h-auto py-0.5 px-1.5 rounded-lg border-primary/30"
+                      className="font-heading text-2xl sm:text-3xl font-bold h-auto py-0.5 px-1.5 rounded-lg border-primary/30"
                       aria-label="Job title"
                       maxLength={100}
                     />
@@ -141,7 +140,7 @@ export default function JobDetail() {
                 ) : (
                   <>
                     <h1
-                      className="font-heading text-xl sm:text-2xl font-bold truncate cursor-pointer hover:text-primary/80 transition-colors"
+                      className="font-heading text-2xl sm:text-3xl font-bold truncate cursor-pointer hover:text-primary/80 transition-colors"
                       onClick={startEditing}
                       title={t("jobDetail.clickToRename")}
                       role="button"
@@ -165,13 +164,13 @@ export default function JobDetail() {
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
-                    <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-0.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
+                    <button className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium hover:bg-muted/60 transition-colors cursor-pointer">
                       <Calendar className="w-3 h-3" />
                       {displayDate}
-                      <span className="text-muted-foreground">·</span>
+                      <span className="opacity-40">·</span>
                       <Clock className="w-3 h-3" />
                       {displayTime}
                     </button>
@@ -191,14 +190,14 @@ export default function JobDetail() {
                   </PopoverContent>
                 </Popover>
                 {meta.duration_seconds != null && (
-                  <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium">
                     <Timer className="w-3 h-3" />{formatDuration(meta.duration_seconds)}
-                  </Badge>
+                  </span>
                 )}
                 {meta.language_detected && (
-                  <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium">
                     <Globe className="w-3 h-3" />{getLanguageLabel(meta.language_detected)}
-                  </Badge>
+                  </span>
                 )}
                 {(() => {
                   const loc = meta.metadata_location_iso6709 ? parseISO6709(meta.metadata_location_iso6709) : null;
@@ -212,14 +211,14 @@ export default function JobDetail() {
                       className="inline-flex"
                       title={formatCoordinates(loc)}
                     >
-                      <Badge variant="outline" className="rounded-lg gap-1.5 text-xs font-medium hover:bg-muted/50 transition-colors cursor-pointer">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium hover:bg-muted/60 transition-colors cursor-pointer">
                         <MapPin className="w-3 h-3" />{label}
-                      </Badge>
+                      </span>
                     </a>
                   );
                 })()}
               </div>
-              <div className="mt-3">
+              <div className="mt-5">
                 <JobDetailTags jobId={id} />
               </div>
             </div>

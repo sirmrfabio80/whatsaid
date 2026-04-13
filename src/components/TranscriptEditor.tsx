@@ -470,7 +470,7 @@ export default function TranscriptEditor({
 
       {/* Transcript segments */}
       <div className="p-4 sm:p-5">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {segments.map((seg, i) => {
             const isActive = activeIndex === i;
             const isEmpty = !seg.text.trim() && !seg.speaker;
@@ -626,8 +626,8 @@ export default function TranscriptEditor({
               <div
                 key={seg.id}
                 ref={(el) => { if (el) segmentRefs.current.set(i, el); }}
-                className={`rounded-xl transition-all duration-150 ${
-                  editing ? "border bg-card/50 " : ""
+                className={`rounded-xl transition-all duration-150 border-l-[3px] ${
+                  editing ? "border bg-card/50 " : "bg-card/40 p-3 "
                 }${
                   hasSuggestionHighlight
                     ? suggestion.confidence >= 0.8
@@ -641,13 +641,13 @@ export default function TranscriptEditor({
                 }${
                   isDropSuccess ? " ring-2 ring-green-500/40" : ""
                 }`}
-                style={color ? { borderLeft: `3px solid ${hasSuggestionHighlight ? color.border : color.border + (editing ? "80" : "60")}` } : undefined}
+                style={{ '--seg-color': color ? (hasSuggestionHighlight ? color.border : color.border + (editing ? "80" : "60")) : 'transparent', borderLeftColor: 'var(--seg-color)' } as React.CSSProperties}
                 onDragOver={editing ? (e) => { e.preventDefault(); setDragOverIndex(i); } : undefined}
                 onDragLeave={editing ? () => setDragOverIndex(null) : undefined}
                 onDrop={editing ? (e) => handleDrop(e, i) : undefined}
               >
                 {/* Speaker badge */}
-                <div className={`pl-2.5 pt-1.5 ${editing ? "pl-3 pt-2" : ""}`}>
+                <div className={editing ? "pl-3 pt-2" : ""}>
                   {seg.speaker ? (
                     <SpeakerBadge
                       speaker={seg.speaker}
@@ -676,7 +676,7 @@ export default function TranscriptEditor({
 
                 {/* Text content */}
                 <div
-                  className={`min-w-0 px-3 ${seg.speaker || editing ? "pt-0.5 pb-2" : "py-2"} ${
+                  className={`min-w-0 ${editing ? "px-3" : ""} ${seg.speaker || editing ? "pt-1 pb-0" : ""} ${
                     editing ? "cursor-pointer pb-3" : ""
                   }`}
                   role={editing ? "button" : undefined}
@@ -692,7 +692,7 @@ export default function TranscriptEditor({
                   }}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm leading-relaxed flex-1">
+                    <p className="text-[15px] leading-[1.7] flex-1">
                       {displayedText}
                     </p>
                     {hasSuggestionHighlight && (
@@ -776,10 +776,10 @@ function SpeakerBadge({
 
   const badge = (
     <span
-      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-1.5 py-0.5 select-none whitespace-nowrap ${
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full select-none whitespace-nowrap ${
         editing ? "cursor-pointer hover:opacity-80" : ""
       }`}
-      style={{ color: color.border }}
+      style={{ color: color.border, backgroundColor: color.bg }}
     >
       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color.dot }} />
       {displayName}
