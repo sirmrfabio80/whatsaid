@@ -86,6 +86,70 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     }
   };
 
+  const handleSuggestSpeaker = async (targetSpeaker: string) => {
+    if (!transcript || suggestingForSpeaker) return;
+    setSuggestingForSpeaker(targetSpeaker);
+    setSuggestions([]);
+    try {
+      const segments = parseSegments(transcript.content);
+      const lines = segments
+        .filter((s) => s.speaker)
+        .map((s) => ({ id: s.id, speaker: s.speaker, text: s.text }));
+
+      const { data, error } = await supabase.functions.invoke("suggest-speakers", {
+        body: {
+          transcript_lines: lines,
+          target_speaker: targetSpeaker,
+          existing_speakers: allSpeakers,
+          excluded_ids: [...editedIdsRef.current],
+        },
+      });
+
+      if (error || data?.error) {
+        toast.error(data?.error ?? t("speakerSuggestions.error"));
+        return;
+      }
+
+      const sug: SpeakerSuggestion[] = (data?.suggestions ?? []).map((s: { id: string; confidence: number }) => ({
+        id: s.id,
+        confidence: s.confidence,
+        speaker: targetSpeaker,
+      }));
+
+      if (sug.length === 0) {
+        toast.info(t("speakerSuggestions.noSuggestions"));
+      }
+      setSuggestions(sug);
+    } catch {
+      toast.error(t("speakerSuggestions.error"));
+    } finally {
+      setSuggestingForSpeaker(null);
+    }
+  };
+
+  const handleAcceptSuggestions = async (accepted: SpeakerSuggestion[]) => {
+    if (!transcript) return;
+    const acceptedMap = new Map(accepted.map((s) => [s.id, s.speaker]));
+    const segments = parseSegments(transcript.content);
+    const updated = segments.map((seg) => {
+      const newSpeaker = acceptedMap.get(seg.id);
+      if (!newSpeaker) return seg;
+      return {
+        ...seg,
+        speaker: newSpeaker,
+        raw: `${newSpeaker}: ${seg.text}`,
+      };
+    });
+    const newContent = updated.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.raw)).join("\n");
+    await handleTranscriptSave(newContent);
+    setSuggestions([]);
+    toast.success(t("speakerSuggestions.accepted", { count: accepted.length }));
+  };
+
+  const handleDismissSuggestions = () => {
+    setSuggestions([]);
+  };
+
   const handleSummaryLanguageChange = async (langCode: string) => {
     if (langCode === summaryLang) return;
     const prevLang = summaryLang; setSummaryLang(langCode); setRegeneratingSummary(true);
@@ -116,6 +180,17 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const getQuestionEntries = () => outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
   const speakers = transcript ? parseSpeakers(transcript.content) : [];
   const allSpeakers = [...new Set([...speakers, ...extraSpeakers])];
+
+  // Count segments per speaker for showing suggest button
+  const speakerSegmentCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allSpeakers.forEach((s) => { counts[s] = 0; });
+    if (transcript) {
+      const segs = parseSegments(transcript.content);
+      segs.forEach((s) => { if (s.speaker && counts[s.speaker] !== undefined) counts[s.speaker]++; });
+    }
+    return counts;
+  }, [transcript?.content, allSpeakers.join(",")]);
 
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
 
