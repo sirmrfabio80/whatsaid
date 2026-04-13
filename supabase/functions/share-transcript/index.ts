@@ -183,9 +183,21 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { job_id, recipient_email } = await req.json()
+    const body = await req.json()
+    const job_id = typeof body?.job_id === 'string' ? body.job_id : ''
+    const recipient_email = typeof body?.recipient_email === 'string' ? body.recipient_email : ''
+    const pdf_storage_path = typeof body?.pdf_storage_path === 'string' && body.pdf_storage_path.trim()
+      ? body.pdf_storage_path.trim()
+      : null
+
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (pdf_storage_path && (!pdf_storage_path.startsWith(`${job_id}/`) || pdf_storage_path.includes('..'))) {
+      return new Response(JSON.stringify({ error: 'Invalid PDF path' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
