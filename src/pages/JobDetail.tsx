@@ -15,6 +15,7 @@ import { getLanguageLabel } from "@/lib/languages";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRecordedDate, formatRecordedTime, toLocalDate, replaceDate, replaceTime } from "@/lib/recorded-date";
 import { parseISO6709, formatCoordinates, mapsUrl, reverseGeocode } from "@/lib/location";
+import JobDetailTags from "@/components/JobDetailTags";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -217,6 +218,9 @@ export default function JobDetail() {
                     </a>
                   );
                 })()}
+              </div>
+              <div className="mt-3">
+                <JobDetailTags jobId={id} />
               </div>
             </div>
           )}

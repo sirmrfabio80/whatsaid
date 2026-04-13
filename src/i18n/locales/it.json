@@ -251,7 +251,15 @@
     "generatingTitle": "Generazione titolo…",
     "clickToRename": "Clicca per rinominare",
     "durationLabel": "Durata: {{duration}}",
-    "recordingTime": "Orario registrazione"
+    "recordingTime": "Orario registrazione",
+    "tags": {
+      "addPlaceholder": "Aggiungi tag…",
+      "addLabel": "Aggiungi un tag",
+      "renameLabel": "Rinomina tag",
+      "clickToRename": "Clicca per rinominare",
+      "remove": "Rimuovi tag {{name}}",
+      "create": "Crea \"{{name}}\""
+    }
   },
   "jobResults": {
     "transcript": "Trascrizione",
