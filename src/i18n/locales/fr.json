@@ -329,6 +329,16 @@
     "suggestions": "Suggestions",
     "addSpeaker": "Intervenant"
   },
+  "speakerSuggestions": {
+    "suggest": "Suggérer des segments pour cet intervenant",
+    "previewLabel": "{{count}} segments suggérés pour {{speaker}}",
+    "acceptAll": "Tout accepter ({{count}})",
+    "dismiss": "Ignorer",
+    "rejectOne": "Rejeter cette suggestion",
+    "noSuggestions": "Aucun segment n'a pu être attribué avec confiance à cet intervenant.",
+    "error": "Impossible de générer des suggestions. Veuillez réessayer.",
+    "accepted": "{{count}} segments réattribués avec succès."
+  },
   "languageSelector": {
     "language": "Langue",
     "detected": "(détectée : {{lang}})",
