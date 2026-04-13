@@ -114,7 +114,7 @@ function usePointerFine() {
 export default function TranscriptEditor({
   content, speakerNames, allSpeakers: allSpeakersProp, onSave, transcriptEdited,
   suggestions, suggestingTarget, onAcceptSuggestions, onDismissSuggestions, onEditedIdsChange,
-  onCreateAndAssign,
+  onCreateSpeaker,
 }: TranscriptEditorProps) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);

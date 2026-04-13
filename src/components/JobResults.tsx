@@ -95,8 +95,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setSpeakerNames(updated);
   };
 
-  // Create a new speaker and immediately assign it to a segment — defined after transcript is available
-  const createAndAssignRef = useRef<(segIndex: number) => void>(() => {});
+  // Create a new speaker — returns the name
+  const createSpeakerRef = useRef<() => string | null>(() => null);
 
   const handleSuggestSpeaker = async (targetSpeaker: string) => {
     if (!transcript || suggestingForSpeaker) return;
