@@ -18,43 +18,72 @@ import {
 const LOGO_URL = 'https://gidjkdtmagxuzhlntlbt.supabase.co/storage/v1/object/public/email-assets/logo.png'
 const SITE_NAME = 'WhatSaid'
 
+const translations: Record<string, {
+  preview: string
+  heading: string
+  body: string
+  cta: string
+  footer: string
+}> = {
+  en: {
+    preview: `You've been invited to join ${SITE_NAME}`,
+    heading: "You've been invited",
+    body: `You've been invited to join <strong>${SITE_NAME}</strong>. Click the button below to accept the invitation and create your account.`,
+    cta: "Accept Invitation",
+    footer: "If you weren't expecting this invitation, you can safely ignore this email.",
+  },
+  it: {
+    preview: `Sei stato invitato a unirti a ${SITE_NAME}`,
+    heading: "Sei stato invitato",
+    body: `Sei stato invitato a unirti a <strong>${SITE_NAME}</strong>. Clicca il pulsante qui sotto per accettare l'invito e creare il tuo account.`,
+    cta: "Accetta l'invito",
+    footer: "Se non ti aspettavi questo invito, puoi ignorare questa email.",
+  },
+  fr: {
+    preview: `Vous avez été invité à rejoindre ${SITE_NAME}`,
+    heading: "Vous avez été invité",
+    body: `Vous avez été invité à rejoindre <strong>${SITE_NAME}</strong>. Cliquez sur le bouton ci-dessous pour accepter l'invitation et créer votre compte.`,
+    cta: "Accepter l'invitation",
+    footer: "Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet email.",
+  },
+}
+
 interface InviteEmailProps {
   siteName: string
   siteUrl: string
   confirmationUrl: string
+  locale?: string
 }
 
 export const InviteEmail = ({
   siteName,
   siteUrl,
   confirmationUrl,
-}: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>You've been invited to join {SITE_NAME}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={logo} />
-        <Heading style={h1}>You've been invited</Heading>
-        <Text style={text}>
-          You've been invited to join{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{SITE_NAME}</strong>
-          </Link>
-          . Click the button below to accept the invitation and create your
-          account.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Accept Invitation
-        </Button>
-        <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  locale,
+}: InviteEmailProps) => {
+  const lang = locale && translations[locale] ? locale : 'en'
+  const t = translations[lang]
+
+  return (
+    <Html lang={lang} dir="ltr">
+      <Head />
+      <Preview>{t.preview}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={logo} />
+          <Heading style={h1}>{t.heading}</Heading>
+          <Text style={text} dangerouslySetInnerHTML={{ __html: t.body }} />
+          <Button style={button} href={confirmationUrl}>
+            {t.cta}
+          </Button>
+          <Text style={footer}>
+            {t.footer}
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default InviteEmail
 
