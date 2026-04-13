@@ -15,13 +15,15 @@ type: design
 - Section title: text-lg font-semibold (font-heading)
 - Card heading: text-base font-semibold (font-heading)
 - Body: text-sm leading-relaxed (font-body)
+- Transcript body: text-[15px] leading-[1.7] on all breakpoints
 - Caption: text-xs text-muted-foreground
 
 ## Border Radius
-- Cards, dialogs: rounded-xl (1rem)
-- Buttons, inputs, badges, chips: rounded-lg (0.75rem)
+- Main content cards (transcript, summary, Q&A): rounded-2xl
+- Inner surface cards (summary sections, Q&A entries, segments): rounded-xl
+- Buttons, inputs, badges, chips, pills, tabs: rounded-full
 - Icon containers: rounded-xl
-- Never use rounded-2xl or rounded-full for badges
+- Never use rounded-full for badges
 
 ## Glass
 - Navbar only. All other surfaces use solid bg-muted or bg-card.
@@ -36,8 +38,8 @@ type: design
 
 ## Surface Layering
 - L0: --background (page)
-- L1: --card with border-border (cards)
-- L2: bg-muted/50 (nested surfaces inside cards)
+- L1: --card with border-border/40 (cards) — rounded-2xl
+- L2: bg-muted/40 rounded-xl (nested surfaces inside cards)
 - L3: --popover with shadow-lg (popovers/dropdowns)
 
 ## Page Spacing
