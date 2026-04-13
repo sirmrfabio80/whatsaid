@@ -575,5 +575,19 @@
     "finalCta": "Create account and continue",
     "finalCtaLoggedIn": "Continue",
     "comingSoon": "Payment system is being finalised — check back soon."
+  },
+  "transcriptionSettings": {
+    "title": "Transcription settings",
+    "presetLabel": "Recording type",
+    "presetHelp": "Choose the option that best matches your audio to improve speaker separation.",
+    "presetAutomatic": "Automatic",
+    "presetPhoneCall": "Phone call recording",
+    "presetMeeting": "Meeting / conversation",
+    "speakersLabel": "Expected speakers",
+    "speakersHelp": "Leave on Auto-detect unless you already know how many people are speaking.",
+    "speakersAuto": "Auto-detect",
+    "speakers2": "2 speakers",
+    "speakers3": "3 speakers",
+    "speakers4": "4 speakers"
   }
 }
