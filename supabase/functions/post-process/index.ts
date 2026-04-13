@@ -8,9 +8,19 @@ const corsHeaders = {
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL_SUMMARY = "google/gemini-2.5-flash";
+const MODEL_CUSTOM = "google/gemini-3-flash-preview";
 
-async function callAI(apiKey: string, systemPrompt: string, userPrompt: string): Promise<string> {
+function extractShortSummary(summaryContent: string): string {
+  // Try to extract the first paragraph after "## Overview"
+  const overviewMatch = summaryContent.match(/##\s*Overview\s*\n+([\s\S]*?)(?=\n##|\n*$)/i);
+  const text = overviewMatch?.[1]?.trim() || summaryContent.split("\n").filter(l => l.trim()).slice(0, 2).join(" ");
+  // Strip markdown formatting
+  const plain = text.replace(/[*#_`>\-]/g, "").replace(/\s+/g, " ").trim();
+  return plain.slice(0, 200);
+}
+
+async function callAI(apiKey: string, model: string, systemPrompt: string, userPrompt: string): Promise<string> {
   const res = await fetch(AI_GATEWAY, {
     method: "POST",
     headers: {
@@ -18,7 +28,7 @@ async function callAI(apiKey: string, systemPrompt: string, userPrompt: string):
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -114,7 +124,7 @@ Rules:
 
     const summaryPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
 
-    const summaryContent = await callAI(LOVABLE_API_KEY, summarySystemPrompt, summaryPrompt);
+    const summaryContent = await callAI(LOVABLE_API_KEY, MODEL_SUMMARY, summarySystemPrompt, summaryPrompt);
     console.log(`[post-process] Summary generated for job ${job_id}`);
 
     // 3. Insert summary output
@@ -130,7 +140,7 @@ Rules:
 
       const customUserPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
 
-      const customContent = await callAI(LOVABLE_API_KEY, customSystemPrompt, customUserPrompt);
+      const customContent = await callAI(LOVABLE_API_KEY, MODEL_CUSTOM, customSystemPrompt, customUserPrompt);
       console.log(`[post-process] Custom output generated for job ${job_id}`);
 
       await supabase.from("job_outputs").insert({
@@ -141,16 +151,14 @@ Rules:
       });
     }
 
-    // 5. Generate short summary for history view
-    const shortSummarySystemPrompt = `You are a concise summariser. Given a transcript, produce a 1-2 sentence summary (max 200 characters) capturing the core topic and outcome. No markdown, no bullet points, just plain text.${languageInstruction}`;
-    const shortSummaryPrompt = `Summarise this transcript in 1-2 sentences:\n\n${transcript.slice(0, 8000)}`;
-    const shortSummary = await callAI(LOVABLE_API_KEY, shortSummarySystemPrompt, shortSummaryPrompt);
-    console.log(`[post-process] Short summary generated for job ${job_id}`);
+    // 5. Extract short summary from the generated summary (no extra AI call)
+    const shortSummary = extractShortSummary(summaryContent);
+    console.log(`[post-process] Short summary extracted for job ${job_id}`);
 
     // 6. Mark job as completed and record summary language + short summary
     await supabase
       .from("jobs")
-      .update({ status: "completed", summary_language: langLabel, short_summary: shortSummary.trim().slice(0, 300) })
+      .update({ status: "completed", summary_language: langLabel, short_summary: shortSummary })
       .eq("id", job_id);
 
     // 7. Auto-tag transcript (non-blocking)

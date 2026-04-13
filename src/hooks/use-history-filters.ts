@@ -14,7 +14,7 @@ interface JobTagMapping {
   tag_id: string;
 }
 
-export function useHistoryFilters(userId: string | undefined) {
+export function useHistoryFilters(userId: string | undefined, jobIds: string[] = []) {
   const [userTags, setUserTags] = useState<TagOption[]>([]);
   const [jobTagMappings, setJobTagMappings] = useState<JobTagMapping[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -38,17 +38,27 @@ export function useHistoryFilters(userId: string | undefined) {
     fetch();
   }, [userId]);
 
-  // Fetch job-tag mappings
+  // Fetch job-tag mappings scoped to loaded jobs
   useEffect(() => {
-    if (!userId) return;
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("job_tags")
-        .select("job_id, tag_id");
-      setJobTagMappings((data as JobTagMapping[]) ?? []);
+    if (!userId || jobIds.length === 0) {
+      setJobTagMappings([]);
+      return;
+    }
+    const fetchMappings = async () => {
+      // Supabase .in() has a practical limit; batch in chunks of 200
+      const chunks: JobTagMapping[] = [];
+      for (let i = 0; i < jobIds.length; i += 200) {
+        const slice = jobIds.slice(i, i + 200);
+        const { data } = await supabase
+          .from("job_tags")
+          .select("job_id, tag_id")
+          .in("job_id", slice);
+        if (data) chunks.push(...(data as JobTagMapping[]));
+      }
+      setJobTagMappings(chunks);
     };
-    fetch();
-  }, [userId]);
+    fetchMappings();
+  }, [userId, jobIds.join(",")]);
 
   // Debounce search
   useEffect(() => {

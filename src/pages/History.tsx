@@ -39,7 +39,8 @@ export default function History() {
   const [deleteTarget, setDeleteTarget] = useState<Job | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const filters = useHistoryFilters(user?.id);
+  const jobIds = useMemo(() => jobs.map((j) => j.id), [jobs]);
+  const filters = useHistoryFilters(user?.id, jobIds);
 
   useEffect(() => {
     if (authLoading) return;

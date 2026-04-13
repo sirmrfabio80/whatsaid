@@ -81,12 +81,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if user already exists
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers({
-      page: 1,
-      perPage: 1,
-    });
-    // Search by email
+    // Check if user already exists by email
     const { data: userByEmail } = await adminClient
       .from("profiles")
       .select("user_id")
