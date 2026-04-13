@@ -192,6 +192,7 @@ Rules:
     if (regenerateType === "summary") {
       const lang = target_language || job.language_detected || "en";
       updatePayload.summary_language = lang;
+      updatePayload.short_summary = extractShortSummary(content);
     }
     await supabase
       .from("jobs")
