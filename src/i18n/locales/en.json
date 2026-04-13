@@ -342,7 +342,8 @@
   "speakerChips": {
     "speakers": "Speakers:",
     "resetNames": "Reset names",
-    "suggestions": "Suggestions"
+    "suggestions": "Suggestions",
+    "addSpeaker": "Speaker"
   },
   "languageSelector": {
     "language": "Language",
