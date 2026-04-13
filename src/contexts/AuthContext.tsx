@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   creditBalance: number;
   avatarUrl: string | null;
+  displayName: string | null;
   needsPasswordSetup: boolean;
   refreshCredits: () => Promise<void>;
   refreshAvatar: () => Promise<void>;
