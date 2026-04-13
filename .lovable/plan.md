@@ -1,43 +1,92 @@
 
 
-# Revised Plan: Improve Speaker Diarization for Phone Calls
+# Dynamic Transcription Routing — Revised Implementation Plan
 
-## Problem
-Job `27ac40d1-702a-4c7f-9b96-40b98374bea0` transcribed both voices correctly but merged them into a single `Speaker A`. The audio is a phone call with volume imbalance between speakers.
+## Overview
 
-## Change
-Add `speakers_expected: 2` to the AssemblyAI transcription payload. This is a documented, supported parameter that hints the diarizer to look for exactly 2 speakers, improving separation when one voice is quieter.
+Detect audio channel count from file headers (no full decoding), store it on the job row, and route AssemblyAI transcription between multichannel and mono+diarization modes.
 
-**`audio_boost` is removed** — no documentation found confirming it as a supported parameter on the `/v2/transcript` endpoint.
+## Channel Count Detection Strategy
 
-## File touched
-`supabase/functions/transcribe/index.ts` — one line added to the payload object (line 61-65):
+Header-based parsing only — no `decodeAudioData()`, no full file read for large files.
 
-```typescript
-const transcriptPayload: Record<string, unknown> = {
-  audio_url: signedUrlData.signedUrl,
-  speech_models: ["universal-3-pro"],
-  speaker_labels: true,
-  speakers_expected: 2,  // hint for diarizer
-};
+| Format | Method | Bytes needed |
+|--------|--------|-------------|
+| WAV | Read first 44 bytes. Channel count is a uint16 at byte offset 22 (little-endian). | 44 bytes |
+| M4A/MP4 | Reuse existing `findBox()` from `audio-creation-date.ts`. Navigate `moov > trak > mdia > minf > stbl > stsd`, read channel count (uint16) from the audio sample entry. The full file buffer is already loaded for creation-date extraction. | Already loaded |
+| MP3 | Read first 10+ bytes. Parse MPEG frame header — bits 6-7 of byte 3 encode channel mode (stereo vs mono). Skip ID3v2 tag if present. | ~4KB max |
+
+**Fallback**: If header parsing fails for any format, default to `null` (treated as mono — current safe behaviour).
+
+## Routing Matrix
+
+```text
+audio_channels >= 2  →  multichannel: true, omit speaker_labels
+audio_channels == 1  →  speaker_labels: true (current behaviour)
+audio_channels null  →  speaker_labels: true (safe default)
 ```
 
-No other files touched. No schema changes. No UI changes.
+**Comments in code will document:**
+- Mono same-mic multi-speaker audio remains best-effort for diarization
+- Multichannel routing helps only when channels contain actually separated audio
+- Stereo files with identical/mixed channels may produce duplicate output under multichannel mode
 
-## Post-deployment verification
-1. Reprocess the same audio file (`Fatebenefratelli.m4a`)
-2. Compare against the current result:
-   - Speaker count: was 1 (`Speaker A` only)
-   - Check if utterances are now split across `Speaker A` and `Speaker B`
-   - Confirm the quieter phone voice is attributed to a separate speaker
+## AssemblyAI Parameter (verified from live docs)
 
-## Risk
-- **Low**: `speakers_expected` is a soft hint per AssemblyAI docs. If the model detects more speakers, it can still return them.
-- **Concern**: Hardcoding `2` may slightly bias multi-speaker meetings. AssemblyAI treats it as a hint, not a hard cap, so impact should be minimal.
+Top-level boolean: `multichannel: true`
 
-## Rollback
-Remove the one line. Redeploy.
+When enabled, the response includes `audio_channels` (number) and each utterance includes a `channel` property. `speaker_labels` should be omitted (multichannel replaces diarization).
 
-## Follow-up (if needed)
-If testing shows this helps phone calls but harms meetings, propose a user-selectable "Number of speakers" option on the upload form as a separate change.
+## Files Touched
+
+### 1. New file: `src/lib/audio-channels.ts`
+- `detectChannelCount(file: File): Promise<number | null>`
+- WAV header parser (44 bytes slice)
+- M4A/MP4 parser using existing `findBox` pattern (shared or duplicated — small function)
+- MP3 frame header parser (first 4KB slice)
+- Returns `null` on failure
+
+### 2. `src/components/AudioUploader.tsx`
+- After duration detection, call `detectChannelCount(file)`
+- Pass channel count through `onFileSelected` callback (new parameter)
+- Interface change: `onFileSelected: (file, duration, creationDate, channels) => void`
+
+### 3. `src/pages/Convert.tsx`
+- Accept `channels` from uploader
+- Store in component state
+- Include `audio_channels` in the job insert payload
+
+### 4. Database migration
+- `ALTER TABLE public.jobs ADD COLUMN audio_channels integer DEFAULT NULL;`
+
+### 5. `supabase/functions/transcribe/index.ts`
+- Read `job.audio_channels` from the job row
+- If `>= 2`: set `multichannel: true`, omit `speaker_labels`
+- If `1` or `null`: set `speaker_labels: true` (current behaviour)
+- For multichannel responses, build transcript text from per-channel utterances instead of speaker-label utterances
+
+### 6. No UI changes
+- No user-facing channel selector in v1
+- No visual indication of detected channels (can add later if needed)
+
+## Implementation Order
+
+1. **Migration** — add `audio_channels` column. Zero risk, additive only.
+2. **`audio-channels.ts`** — new utility, no existing code affected.
+3. **`AudioUploader.tsx` + `Convert.tsx`** — pass and store channel count. Existing jobs with `null` continue to work.
+4. **`transcribe/index.ts`** — routing logic. Only activates for jobs with `audio_channels >= 2`.
+
+Each step is independently deployable. Steps 1-3 change nothing about transcription behaviour.
+
+## Regression Risk
+
+**Very low.** The only behaviour change is in step 4, and it only triggers for files detected as multichannel. All mono and unknown files follow the exact current path. Existing jobs in the database have `audio_channels = null` and are unaffected.
+
+**Risk area**: Stereo files with identical channels (e.g. a phone call recorded to both L+R) would get multichannel mode, potentially producing duplicate text. This is an inherent limitation documented in code comments. A future user-facing override ("Separate channels: No") can address this if it becomes a real problem.
+
+## Rollback Plan
+
+- Remove routing logic from `transcribe/index.ts` (revert to always `speaker_labels: true`)
+- Column `audio_channels` can remain — it's nullable and harmless
+- Client-side detection code is inert without the backend routing
 
