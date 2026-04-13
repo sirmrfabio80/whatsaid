@@ -52,7 +52,6 @@ Deno.serve(async (req) => {
         .eq('user_id', share.shared_by)
         .maybeSingle()
 
-      const job = share.jobs as any
       return new Response(JSON.stringify({
         title: job?.title || job?.file_name?.replace(/\.[^.]+$/, '') || 'Transcript',
         senderEmail: senderProfile?.email || 'someone',
