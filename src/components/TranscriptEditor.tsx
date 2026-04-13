@@ -504,7 +504,7 @@ export default function TranscriptEditor({
                         speakerNames={speakerNames}
                         displaySpeaker={displaySpeaker}
                         onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                        onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                        onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                         disabled={saving}
                       />
                     ) : (
@@ -514,7 +514,7 @@ export default function TranscriptEditor({
                         speakerNames={speakerNames}
                         displaySpeaker={displaySpeaker}
                         onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                        onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                        onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                         disabled={saving}
                       />
                     )}
@@ -658,7 +658,7 @@ export default function TranscriptEditor({
                       speakerNames={speakerNames}
                       displaySpeaker={displaySpeaker}
                       onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                      onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                      onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                       disabled={saving}
                     />
                   ) : editing ? (
@@ -668,7 +668,7 @@ export default function TranscriptEditor({
                       speakerNames={speakerNames}
                       displaySpeaker={displaySpeaker}
                       onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
-                      onCreateAndAssign={onCreateAndAssign ? () => onCreateAndAssign(i) : undefined}
+                      onCreateAndAssign={onCreateSpeaker ? () => { const name = onCreateSpeaker(); if (name) reassignSpeaker(i, name); } : undefined}
                       disabled={saving}
                     />
                   ) : null}
