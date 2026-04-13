@@ -204,9 +204,11 @@ Deno.serve(async (req) => {
         job_id,
         language_detected: detectedLanguage,
         duration_seconds: audioDuration,
-        speaker_count: utterances.length > 0
-          ? new Set(utterances.map((u) => u.speaker)).size
-          : null,
+        speaker_count: isMultichannel
+          ? (transcript.audio_channels as number) ?? null
+          : ((transcript.utterances as Array<{ speaker: string }>) ?? []).length > 0
+            ? new Set(((transcript.utterances as Array<{ speaker: string }>) ?? []).map((u) => u.speaker)).size
+            : null,
       }),
       {
         status: 200,
