@@ -8,6 +8,15 @@ const corsHeaders = {
 
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
 
+/** Format milliseconds as [HH:MM:SS] */
+function formatTimestamp(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `[${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}]`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -49,7 +58,7 @@ Deno.serve(async (req) => {
     // 2. Create a signed URL for the audio file
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from("temp-audio")
-      .createSignedUrl(job.temp_file_path, 3600); // 1 hour
+      .createSignedUrl(job.temp_file_path, 3600);
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       throw new Error(`Could not create signed URL: ${signedUrlError?.message}`);
@@ -58,29 +67,35 @@ Deno.serve(async (req) => {
     const fileExt = (job.file_name ?? "").split(".").pop()?.toLowerCase() ?? "unknown";
     console.log(`[transcribe] Starting transcription for job ${job_id}, file: ${job.file_name}`);
 
-    // 3. Submit to AssemblyAI
-    //
-    // MULTICHANNEL ROUTING DISABLED — diarization-first is the safe default.
-    //
-    // Automatic channel-count-based routing (audio_channels >= 2 → multichannel mode)
-    // caused regressions on real uploads: stereo files where both channels contain the
-    // same mixed audio lost speaker separation entirely, because AssemblyAI collapsed
-    // all speech into a single channel output ("Speaker A" only, no Speaker B).
-    //
-    // Diarization (speaker_labels: true) works correctly for both mono AND stereo files
-    // with mixed/identical channels, which is the vast majority of real-world uploads.
-    //
-    // Multichannel mode should only be re-enabled behind explicit user opt-in
-    // (e.g. an "Advanced" UI toggle), never automatically based on channel count alone.
-    //
-    // All groundwork is preserved and dormant:
-    //   - audio_channels detection and storage still runs
-    //   - structured logging still records channel count and chosen route
-    //   - multichannel transcript-building code (Speaker A/B mapping) remains below
-    //
-    const isMultichannel = false;
+    // 3. Build AssemblyAI payload with optimised settings
+    const isMultichannel = false; // Kept dormant — diarization-first is the safe default
 
-    // Structured routing log for future analysis of real uploads
+    // Read optional tuning config from job row (set by process-job if provided)
+    const tuningConfig = (job.transcription_config as Record<string, unknown>) ?? {};
+
+    const transcriptPayload: Record<string, unknown> = {
+      audio_url: signedUrlData.signedUrl,
+      speech_models: ["universal-3-pro", "universal-2"],
+      temperature: 0.1,
+      ...(isMultichannel
+        ? { multichannel: true }
+        : { speaker_labels: true }),
+    };
+
+    // Language handling: manual selection → explicit, otherwise auto-detect
+    if (job.language_selected && job.language_selected !== "auto") {
+      transcriptPayload.language_code = job.language_selected;
+    } else {
+      transcriptPayload.language_detection = true;
+    }
+
+    // Optional tuning: keyterms_prompt (mutually exclusive with custom_prompt/prompt)
+    if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
+      transcriptPayload.keyterms_prompt = tuningConfig.keyterms_prompt;
+      // Never send both prompt and keyterms_prompt
+    }
+
+    // Structured routing log
     console.log(JSON.stringify({
       event: "transcription_routing",
       job_id,
@@ -89,25 +104,28 @@ Deno.serve(async (req) => {
       file_size_bytes: job.file_size_bytes ?? null,
       audio_channels: job.audio_channels ?? null,
       route: isMultichannel ? "multichannel" : "diarization",
-      // Future: add duplicate_channel_suspect flag here once detection is implemented
+      speech_models: transcriptPayload.speech_models,
+      temperature: transcriptPayload.temperature,
+      has_keyterms: !!transcriptPayload.keyterms_prompt,
     }));
 
-    const transcriptPayload: Record<string, unknown> = {
-      audio_url: signedUrlData.signedUrl,
-      speech_models: ["universal-3-pro"],
-      ...(isMultichannel
-        ? { multichannel: true }
-        : { speaker_labels: true }),
-    };
+    // 4. Save transcription config to jobs table for evaluation
+    await supabase
+      .from("jobs")
+      .update({
+        transcription_config: {
+          speech_models: transcriptPayload.speech_models,
+          temperature: transcriptPayload.temperature,
+          speaker_labels: transcriptPayload.speaker_labels ?? false,
+          multichannel: transcriptPayload.multichannel ?? false,
+          language_code: transcriptPayload.language_code ?? null,
+          language_detection: transcriptPayload.language_detection ?? false,
+          keyterms_prompt: transcriptPayload.keyterms_prompt ?? null,
+        },
+      })
+      .eq("id", job_id);
 
-    // If language is manually selected and not "auto", pass it
-    if (job.language_selected && job.language_selected !== "auto") {
-      transcriptPayload.language_code = job.language_selected;
-    } else {
-      // Use automatic language detection
-      transcriptPayload.language_detection = true;
-    }
-
+    // 5. Submit to AssemblyAI
     const submitRes = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
       method: "POST",
       headers: {
@@ -126,7 +144,7 @@ Deno.serve(async (req) => {
     const transcriptId = submitData.id;
     console.log(`[transcribe] AssemblyAI transcript ID: ${transcriptId}`);
 
-    // 4. Poll for completion
+    // 6. Poll for completion
     let transcript: Record<string, unknown> | null = null;
     const maxPolls = 120; // 10 minutes max (5s * 120)
 
@@ -160,12 +178,17 @@ Deno.serve(async (req) => {
       throw new Error("Transcription timed out after 10 minutes");
     }
 
-    // Structured completion log for routing analysis
+    // 7. Extract structured data
     const utterances = (transcript.utterances as Array<Record<string, unknown>>) ?? [];
     const uniqueSpeakers = isMultichannel
       ? new Set(utterances.map((u) => String(u.channel ?? ""))).size
       : new Set(utterances.map((u) => String(u.speaker ?? ""))).size;
 
+    const avgConfidence = utterances.length > 0
+      ? utterances.reduce((sum, u) => sum + (Number(u.confidence) || 0), 0) / utterances.length
+      : null;
+
+    // Structured completion log with evaluation signals
     console.log(JSON.stringify({
       event: "transcription_completed",
       job_id,
@@ -175,40 +198,38 @@ Deno.serve(async (req) => {
       unique_speakers_or_channels: uniqueSpeakers,
       duration_seconds: Math.round((transcript.audio_duration as number) ?? 0),
       language_detected: (transcript.language_code as string) ?? null,
+      avg_confidence: avgConfidence ? Math.round(avgConfidence * 1000) / 1000 : null,
+      speech_models: transcriptPayload.speech_models,
+      temperature: transcriptPayload.temperature,
+      has_keyterms: !!transcriptPayload.keyterms_prompt,
     }));
 
-    // 5. Build transcript text
-    // Normalise all labels to "Speaker A / B / C …" regardless of source,
-    // so the UI never shows raw technical labels like "Channel 1".
+    // 8. Build rendered transcript text with timestamps
     let transcriptText: string;
 
     if (isMultichannel) {
-      // Multichannel mode: each utterance has a `channel` property (string, e.g. "1", "2").
-      // Map channel identifiers to sequential "Speaker A", "Speaker B", …
-      const mcUtterances = (transcript.utterances as Array<{ channel: string; text: string }>) ?? [];
+      const mcUtterances = (transcript.utterances as Array<{ channel: string; start: number; text: string }>) ?? [];
       if (mcUtterances.length > 0) {
         const channelToSpeaker: Record<string, string> = {};
         let nextLetter = 0;
         for (const u of mcUtterances) {
           const ch = String(u.channel);
           if (!(ch in channelToSpeaker)) {
-            // A=65
             channelToSpeaker[ch] = `Speaker ${String.fromCharCode(65 + nextLetter)}`;
             nextLetter++;
           }
         }
         transcriptText = mcUtterances
-          .map((u) => `${channelToSpeaker[String(u.channel)]}: ${u.text}`)
+          .map((u) => `${formatTimestamp(u.start)} ${channelToSpeaker[String(u.channel)]}: ${u.text}`)
           .join("\n\n");
       } else {
         transcriptText = (transcript.text as string) ?? "";
       }
     } else {
-      // Speaker diarization mode: each utterance has a `speaker` label
-      const utterances = (transcript.utterances as Array<{ speaker: string; text: string }>) ?? [];
-      if (utterances.length > 0) {
-        transcriptText = utterances
-          .map((u) => `Speaker ${u.speaker}: ${u.text}`)
+      const diarUtterances = (transcript.utterances as Array<{ speaker: string; start: number; text: string }>) ?? [];
+      if (diarUtterances.length > 0) {
+        transcriptText = diarUtterances
+          .map((u) => `${formatTimestamp(u.start)} Speaker ${u.speaker}: ${u.text}`)
           .join("\n\n");
       } else {
         transcriptText = (transcript.text as string) ?? "";
@@ -218,7 +239,11 @@ Deno.serve(async (req) => {
     const detectedLanguage = (transcript.language_code as string) ?? null;
     const audioDuration = Math.round((transcript.audio_duration as number) ?? 0);
 
-    // 6. Update job with metadata
+    // 9. Sanitize raw response — remove audio_url for security
+    const sanitizedResponse = { ...transcript };
+    delete sanitizedResponse.audio_url;
+
+    // 10. Update job with metadata
     await supabase
       .from("jobs")
       .update({
@@ -229,14 +254,23 @@ Deno.serve(async (req) => {
       })
       .eq("id", job_id);
 
-    // 7. Insert transcript output
+    // 11. Insert transcript output with raw response and structured metadata
     await supabase.from("job_outputs").insert({
       job_id,
       output_type: "transcript",
       content: transcriptText,
+      raw_response: sanitizedResponse,
+      metadata: {
+        utterances: utterances,
+        confidence: transcript.confidence ?? null,
+        audio_duration: transcript.audio_duration ?? null,
+        language_code: detectedLanguage,
+        utterance_count: utterances.length,
+        unique_speakers: uniqueSpeakers,
+      },
     });
 
-    // 8. Delete audio file from storage
+    // 12. Delete audio file from storage
     const { error: deleteError } = await supabase.storage
       .from("temp-audio")
       .remove([job.temp_file_path]);
@@ -247,7 +281,7 @@ Deno.serve(async (req) => {
       console.log(`[transcribe] Audio file deleted: ${job.temp_file_path}`);
     }
 
-    // 9. Mark audio as deleted
+    // 13. Mark audio as deleted
     await supabase
       .from("jobs")
       .update({ audio_deleted_at: new Date().toISOString() })
@@ -261,9 +295,7 @@ Deno.serve(async (req) => {
         duration_seconds: audioDuration,
         speaker_count: isMultichannel
           ? (transcript.audio_channels as number) ?? null
-          : ((transcript.utterances as Array<{ speaker: string }>) ?? []).length > 0
-            ? new Set(((transcript.utterances as Array<{ speaker: string }>) ?? []).map((u) => u.speaker)).size
-            : null,
+          : uniqueSpeakers > 0 ? uniqueSpeakers : null,
       }),
       {
         status: 200,

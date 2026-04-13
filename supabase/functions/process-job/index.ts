@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { job_id, custom_prompt } = await req.json();
+    const { job_id, custom_prompt, keyterms_prompt } = await req.json();
     if (!job_id) {
       return new Response(JSON.stringify({ error: "job_id is required" }), {
         status: 400,
@@ -69,7 +69,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Update job status to processing
+    // 2b. If keyterms_prompt provided, save to transcription_config for the transcribe function
+    if (keyterms_prompt) {
+      // Validate: keyterms_prompt and custom_prompt are mutually exclusive for AssemblyAI
+      await supabase
+        .from("jobs")
+        .update({
+          transcription_config: { keyterms_prompt },
+        })
+        .eq("id", job_id);
+    }
+
+    // 3. Update job status to processing
     await supabase
       .from("jobs")
       .update({ status: "processing" })

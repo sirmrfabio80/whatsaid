@@ -49,7 +49,8 @@ export function parseSegments(content: string): Segment[] {
   return content.split("\n").map((line, index) => {
     const snippet = line.slice(0, 40).replace(/[^a-zA-Z0-9]/g, "");
     const id = `seg-${index}-${line.length}-${snippet}`;
-    const match = line.match(/^(.+?):\s(.*)/);
+    // Handle optional [HH:MM:SS] timestamp prefix before speaker label
+    const match = line.match(/^(?:\[\d{2}:\d{2}:\d{2}\]\s)?(.+?):\s(.*)/);
     if (match) {
       return { id, index, speaker: match[1], text: match[2], raw: line };
     }

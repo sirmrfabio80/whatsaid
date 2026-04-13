@@ -159,7 +159,9 @@ export type Database = {
           custom_prompt: string | null
           id: string
           job_id: string
+          metadata: Json | null
           output_type: string
+          raw_response: Json | null
         }
         Insert: {
           content?: string
@@ -167,7 +169,9 @@ export type Database = {
           custom_prompt?: string | null
           id?: string
           job_id: string
+          metadata?: Json | null
           output_type: string
+          raw_response?: Json | null
         }
         Update: {
           content?: string
@@ -175,7 +179,9 @@ export type Database = {
           custom_prompt?: string | null
           id?: string
           job_id?: string
+          metadata?: Json | null
           output_type?: string
+          raw_response?: Json | null
         }
         Relationships: [
           {
@@ -254,6 +260,7 @@ export type Database = {
           summary_language: string | null
           temp_file_path: string | null
           title: string | null
+          transcription_config: Json | null
           updated_at: string
           user_id: string | null
         }
@@ -287,6 +294,7 @@ export type Database = {
           summary_language?: string | null
           temp_file_path?: string | null
           title?: string | null
+          transcription_config?: Json | null
           updated_at?: string
           user_id?: string | null
         }
@@ -320,6 +328,7 @@ export type Database = {
           summary_language?: string | null
           temp_file_path?: string | null
           title?: string | null
+          transcription_config?: Json | null
           updated_at?: string
           user_id?: string | null
         }
