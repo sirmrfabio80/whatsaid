@@ -11,16 +11,8 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function buildShareRecordEmail(opts: { title: string; senderLabel: string; claimUrl: string; pdfUrl: string | null }): string {
-  const { title, senderLabel, claimUrl, pdfUrl } = opts
-
-  const pdfSection = pdfUrl
-    ? `<div style="margin:24px 0 0;text-align:center;">
-        <a href="${pdfUrl}" style="display:inline-block;padding:12px 32px;background:hsl(220,20%,97%);color:hsl(245,50%,48%);font-size:14px;font-weight:600;border-radius:10px;text-decoration:none;border:1px solid hsl(220,15%,88%);">📄 Download PDF</a>
-        <p style="font-size:12px;color:hsl(220,10%,55%);margin:10px 0 0;">This link expires in 7 days</p>
-      </div>`
-    : ''
-
+function buildShareRecordEmail(opts: { title: string; senderLabel: string; claimUrl: string }): string {
+  const { title, senderLabel, claimUrl } = opts
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
@@ -38,7 +30,6 @@ function buildShareRecordEmail(opts: { title: string; senderLabel: string; claim
         <p style="font-size:13px;color:hsl(220,10%,55%);margin:20px 0 0;line-height:1.5;">
           Click the button to sign in (or create a free account) and get your own copy of this transcript in ${SITE_NAME}.
         </p>
-        ${pdfSection}
       </div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
         <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;text-align:center;">
@@ -72,7 +63,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { job_id, recipient_email, pdf_storage_path } = await req.json()
+    const { job_id, recipient_email } = await req.json()
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,21 +94,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
-    }
-
-    // Generate signed URL for PDF if path was provided
-    let pdfUrl: string | null = null
-    if (pdf_storage_path && typeof pdf_storage_path === 'string') {
-      const { data: signedUrlData, error: signedUrlError } = await serviceClient
-        .storage
-        .from('shared-pdfs')
-        .createSignedUrl(pdf_storage_path, 7 * 24 * 60 * 60) // 7 days
-
-      if (!signedUrlError && signedUrlData?.signedUrl) {
-        pdfUrl = signedUrlData.signedUrl
-      } else {
-        console.error('Failed to create signed URL for PDF:', signedUrlError)
-      }
     }
 
     // Create share record
@@ -170,8 +146,6 @@ Deno.serve(async (req) => {
 
     const subjectLine = `Transcript shared with you: ${title}`
 
-    const pdfNote = pdfUrl ? `\n\nDownload PDF: ${pdfUrl}\n(This link expires in 7 days)` : ''
-
     await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
       payload: {
@@ -182,8 +156,8 @@ Deno.serve(async (req) => {
         reply_to: senderEmail,
         sender_domain: SENDER_DOMAIN,
         subject: subjectLine,
-        html: buildShareRecordEmail({ title, senderLabel, claimUrl, pdfUrl }),
-        text: `${senderLabel} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy.${pdfNote}`,
+        html: buildShareRecordEmail({ title, senderLabel, claimUrl }),
+        text: `${senderLabel} shared a transcript with you on ${SITE_NAME}.\n\n"${title}"\n\nOpen your copy: ${claimUrl}\n\nSign in or create a free account to get your own copy.`,
         purpose: 'transactional',
         label: 'share-transcript-record',
         unsubscribe_token: unsubscribeToken,

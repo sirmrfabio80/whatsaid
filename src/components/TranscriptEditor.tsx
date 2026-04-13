@@ -432,7 +432,7 @@ export default function TranscriptEditor({
         <Button
           variant={editing ? "default" : "outline"}
           size="sm"
-          className="rounded-lg gap-1.5 text-xs h-8"
+          className="rounded-full gap-1.5 text-xs h-8"
           onClick={toggleEditing}
         >
           <Pencil className="w-3.5 h-3.5" />
@@ -489,7 +489,7 @@ export default function TranscriptEditor({
                 <div
                   key={seg.id}
                   ref={(el) => { if (el) segmentRefs.current.set(i, el); }}
-                  className="rounded-xl border border-primary/30 bg-card p-3 sm:p-4 space-y-3 shadow-sm"
+                  className="rounded-xl border border-primary/20 bg-card p-3 sm:p-4 space-y-3"
                   style={color ? { borderLeftWidth: 3, borderLeftColor: color.border } : undefined}
                 >
                   {/* Badge row */}
@@ -532,7 +532,7 @@ export default function TranscriptEditor({
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       size="sm"
-                      className="rounded-lg gap-1.5 h-9 min-w-[44px] px-4 text-xs"
+                      className="rounded-full gap-1.5 h-9 min-w-[44px] px-4 text-xs"
                       onClick={saveSegment}
                       disabled={saving || !dirty}
                     >
@@ -542,7 +542,7 @@ export default function TranscriptEditor({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="rounded-lg gap-1.5 h-9 min-w-[44px] px-4 text-xs"
+                      className="rounded-full gap-1.5 h-9 min-w-[44px] px-4 text-xs"
                       onClick={cancelEdit}
                       disabled={saving}
                     >
@@ -556,7 +556,7 @@ export default function TranscriptEditor({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-lg gap-1.5 h-9 min-w-[44px] px-3 text-xs"
+                      className="rounded-full gap-1.5 h-9 min-w-[44px] px-3 text-xs"
                       onClick={splitSegment}
                       disabled={saving}
                       title={t("jobResults.splitHere")}
@@ -570,7 +570,7 @@ export default function TranscriptEditor({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-lg gap-1.5 h-9 min-w-[44px] px-3 text-xs"
+                        className="rounded-full gap-1.5 h-9 min-w-[44px] px-3 text-xs"
                         onClick={() => mergeUp(i)}
                         disabled={saving}
                         title={t("jobResults.mergeUp")}
