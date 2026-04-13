@@ -8,13 +8,34 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { CanonicalExportData } from "@/lib/export-types";
+import { generatePdfBlob } from "@/lib/export-pdf";
 
 interface ShareButtonProps {
   jobId: string;
   disabled?: boolean;
+  exportData?: CanonicalExportData | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Promise<string | null> {
+  try {
+    const blob = await generatePdfBlob(data);
+    const path = `${jobId}/${crypto.randomUUID()}.pdf`;
+    const { error } = await supabase.storage
+      .from("shared-pdfs")
+      .upload(path, blob, { contentType: "application/pdf", upsert: false });
+    if (error) {
+      console.error("PDF upload failed:", error);
+      return null;
+    }
+    return path;
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+    return null;
+  }
+}
 
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
@@ -84,7 +105,7 @@ function ShareContent({
   );
 }
 
-export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
+export default function ShareButton({ jobId, disabled, exportData }: ShareButtonProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -114,8 +135,14 @@ export default function ShareButton({ jobId, disabled }: ShareButtonProps) {
     if (!isValid || sendingRecord) return;
     setSendingRecord(true);
     try {
+      // Generate and upload PDF if export data is available
+      let pdfPath: string | null = null;
+      if (exportData) {
+        pdfPath = await uploadPdfForShare(jobId, exportData);
+      }
+
       const { data, error } = await supabase.functions.invoke("share-transcript-record", {
-        body: { job_id: jobId, recipient_email: email.trim() },
+        body: { job_id: jobId, recipient_email: email.trim(), pdf_storage_path: pdfPath },
       });
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSentRecord(true);
