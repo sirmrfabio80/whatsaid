@@ -264,7 +264,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   }) : null;
 
   return (
-    <div className="space-y-4 animate-page-enter">
+    <div className="space-y-6 animate-page-enter">
       <Tabs defaultValue="transcript" className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <TabsList className="w-auto justify-start rounded-full bg-muted/40 p-1 h-auto gap-0.5">
@@ -371,14 +371,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     <p className="text-sm text-muted-foreground">{t("jobResults.noQuestionsDesc")}</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-border/40">
+                  <div className="p-4 sm:p-5 space-y-3">
                     {[...questionEntries].reverse().map((entry) => {
                       const isExcluded = excludedQAIds.has(entry.id);
                       const checkboxId = `qa-include-${entry.id}`;
                       return (
-                        <div key={entry.id} className={`p-4 sm:p-5 transition-opacity ${isExcluded ? "opacity-50" : ""}`}>
+                        <div key={entry.id} className={`rounded-xl bg-muted/40 p-4 transition-opacity ${isExcluded ? "opacity-50" : ""}`}>
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/40">
+                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/30">
                               <div className="flex items-center gap-2">
                                 <Checkbox id={checkboxId} checked={!isExcluded} onCheckedChange={(checked) => { setExcludedQAIds((prev) => { const next = new Set(prev); if (checked) next.delete(entry.id); else next.add(entry.id); return next; }); }} aria-label={`Include "${entry.custom_prompt ?? "this answer"}" in export`} />
                                 <label htmlFor={checkboxId} className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap select-none">{t("jobResults.includeInExport")}</label>
