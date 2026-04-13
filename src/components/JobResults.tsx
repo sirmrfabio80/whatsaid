@@ -97,6 +97,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleSuggestSpeaker = async (targetSpeaker: string) => {
     if (!transcript || suggestingForSpeaker) return;
     setSuggestingForSpeaker(targetSpeaker);
+    setSuggestionTarget(targetSpeaker);
     setSuggestions([]);
     try {
       const segments = parseSegments(transcript.content);
@@ -115,6 +116,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
       if (error || data?.error) {
         toast.error(data?.error ?? t("speakerSuggestions.error"));
+        setSuggestionTarget(null);
         return;
       }
 
@@ -126,10 +128,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
       if (sug.length === 0) {
         toast.info(t("speakerSuggestions.noSuggestions"));
+        setSuggestionTarget(null);
       }
       setSuggestions(sug);
     } catch {
       toast.error(t("speakerSuggestions.error"));
+      setSuggestionTarget(null);
     } finally {
       setSuggestingForSpeaker(null);
     }
