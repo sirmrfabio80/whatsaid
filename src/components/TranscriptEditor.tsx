@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Check, X, AlertTriangle, MessageSquareWarning } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -15,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export interface Segment {
   id: string;
@@ -25,9 +25,9 @@ export interface Segment {
 }
 
 export interface SpeakerSuggestion {
-  id: string; // segment ID
-  confidence: number; // 0.0–1.0
-  speaker: string; // target speaker name
+  id: string;
+  confidence: number;
+  speaker: string;
 }
 
 interface TranscriptEditorProps {
@@ -45,7 +45,6 @@ interface TranscriptEditorProps {
 
 export function parseSegments(content: string): Segment[] {
   return content.split("\n").map((line, index) => {
-    // Deterministic ID: stable across calls for the same content
     const snippet = line.slice(0, 40).replace(/[^a-zA-Z0-9]/g, "");
     const id = `seg-${index}-${line.length}-${snippet}`;
     const match = line.match(/^(.+?):\s(.*)/);
@@ -77,6 +76,23 @@ function applySpeakerNamesToText(text: string, speakerNames: Record<string, stri
   return result;
 }
 
+// Color palette for speaker badges — cycles for >8 speakers
+const SPEAKER_COLORS = [
+  { border: "hsl(245, 50%, 48%)", bg: "hsl(245, 50%, 48%, 0.08)", dot: "hsl(245, 50%, 48%)" },
+  { border: "hsl(170, 55%, 42%)", bg: "hsl(170, 55%, 42%, 0.08)", dot: "hsl(170, 55%, 42%)" },
+  { border: "hsl(38, 90%, 50%)",  bg: "hsl(38, 90%, 50%, 0.08)",  dot: "hsl(38, 90%, 50%)" },
+  { border: "hsl(340, 60%, 50%)", bg: "hsl(340, 60%, 50%, 0.08)", dot: "hsl(340, 60%, 50%)" },
+  { border: "hsl(200, 65%, 50%)", bg: "hsl(200, 65%, 50%, 0.08)", dot: "hsl(200, 65%, 50%)" },
+  { border: "hsl(280, 50%, 55%)", bg: "hsl(280, 50%, 55%, 0.08)", dot: "hsl(280, 50%, 55%)" },
+  { border: "hsl(145, 55%, 38%)", bg: "hsl(145, 55%, 38%, 0.08)", dot: "hsl(145, 55%, 38%)" },
+  { border: "hsl(15, 70%, 50%)",  bg: "hsl(15, 70%, 50%, 0.08)",  dot: "hsl(15, 70%, 50%)" },
+];
+
+function getSpeakerColor(speaker: string, allSpeakers: string[]) {
+  const idx = allSpeakers.indexOf(speaker);
+  return SPEAKER_COLORS[(idx >= 0 ? idx : 0) % SPEAKER_COLORS.length];
+}
+
 export default function TranscriptEditor({
   content, speakerNames, allSpeakers: allSpeakersProp, onSave, transcriptEdited,
   suggestions, suggestingTarget, onAcceptSuggestions, onDismissSuggestions, onEditedIdsChange,
@@ -86,7 +102,6 @@ export default function TranscriptEditor({
   const [segments, setSegments] = useState<Segment[]>(() => parseSegments(content));
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
-  const [editSpeaker, setEditSpeaker] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [confirmSwitch, setConfirmSwitch] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -94,14 +109,12 @@ export default function TranscriptEditor({
   const [rejectedSuggestionIds, setRejectedSuggestionIds] = useState<Set<string>>(new Set());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Sync segments when content changes externally
   useEffect(() => {
     if (!editing) {
       setSegments(parseSegments(content));
     }
   }, [content, editing]);
 
-  // Clear rejected suggestions when suggestions change
   useEffect(() => {
     setRejectedSuggestionIds(new Set());
   }, [suggestions]);
@@ -111,7 +124,6 @@ export default function TranscriptEditor({
     ? [...new Set([...contentSpeakers, ...allSpeakersProp])]
     : contentSpeakers;
 
-  // Build active suggestions map (excluding rejected + edited)
   const activeSuggestions = new Map<string, SpeakerSuggestion>();
   if (suggestions) {
     for (const s of suggestions) {
@@ -127,7 +139,6 @@ export default function TranscriptEditor({
     const seg = segments[index];
     setActiveIndex(index);
     setEditText(seg.text);
-    setEditSpeaker(seg.speaker ?? "");
     setDirty(false);
   }, [segments]);
 
@@ -144,7 +155,6 @@ export default function TranscriptEditor({
   const cancelEdit = useCallback(() => {
     setActiveIndex(null);
     setEditText("");
-    setEditSpeaker("");
     setDirty(false);
   }, []);
 
@@ -154,16 +164,13 @@ export default function TranscriptEditor({
     const segId = segments[activeIndex].id;
     const updated = segments.map((s, i) => {
       if (i !== activeIndex) return s;
-      const newSpeaker = editSpeaker || s.speaker;
       return {
         ...s,
-        speaker: newSpeaker,
         text: editText,
-        raw: newSpeaker ? `${newSpeaker}: ${editText}` : editText,
+        raw: s.speaker ? `${s.speaker}: ${editText}` : editText,
       };
     });
     setSegments(updated);
-    // Track this segment as manually edited
     const newEditedIds = new Set(editedIds);
     newEditedIds.add(segId);
     setEditedIds(newEditedIds);
@@ -177,7 +184,34 @@ export default function TranscriptEditor({
     } finally {
       setSaving(false);
     }
-  }, [activeIndex, editSpeaker, editText, segments, onSave, content, editedIds, onEditedIdsChange]);
+  }, [activeIndex, editText, segments, onSave, content, editedIds, onEditedIdsChange]);
+
+  // Speaker-only reassignment — auto-saves immediately
+  const reassignSpeaker = useCallback(async (segIndex: number, newSpeaker: string) => {
+    const seg = segments[segIndex];
+    if (!seg.speaker || seg.speaker === newSpeaker) return;
+    setSaving(true);
+    const updated = segments.map((s, i) => {
+      if (i !== segIndex) return s;
+      return {
+        ...s,
+        speaker: newSpeaker,
+        raw: `${newSpeaker}: ${s.text}`,
+      };
+    });
+    setSegments(updated);
+    const newEditedIds = new Set(editedIds);
+    newEditedIds.add(seg.id);
+    setEditedIds(newEditedIds);
+    onEditedIdsChange?.(newEditedIds);
+    try {
+      await onSave(reconstructContent(updated));
+    } catch {
+      setSegments(parseSegments(content));
+    } finally {
+      setSaving(false);
+    }
+  }, [segments, onSave, content, editedIds, onEditedIdsChange]);
 
   const toggleEditing = useCallback(() => {
     if (editing && activeIndex !== null && dirty) {
@@ -214,7 +248,6 @@ export default function TranscriptEditor({
     onAcceptSuggestions(accepted);
   }, [activeSuggestions, onAcceptSuggestions]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -277,7 +310,7 @@ export default function TranscriptEditor({
 
       {/* Transcript lines */}
       <div className="p-5 sm:p-6">
-        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
+        <div className="space-y-1">
           {segments.map((seg, i) => {
             const isActive = activeIndex === i;
             const isEmpty = !seg.text.trim() && !seg.speaker;
@@ -285,26 +318,24 @@ export default function TranscriptEditor({
 
             if (isEmpty) return <div key={seg.id} className="h-2" />;
 
+            // Active text editing
             if (isActive && editing) {
+              const color = seg.speaker ? getSpeakerColor(seg.speaker, speakers) : null;
               return (
-                <div key={seg.id} className="rounded-xl border border-primary/30 bg-primary/5 p-3 sm:p-4 mb-3 space-y-3">
+                <div
+                  key={seg.id}
+                  className="rounded-xl border border-primary/30 bg-primary/5 p-3 sm:p-4 space-y-3"
+                  style={color ? { borderLeftWidth: 3, borderLeftColor: color.border } : undefined}
+                >
                   {seg.speaker && (
                     <div className="flex items-center gap-2">
-                      <label className="text-xs font-medium text-muted-foreground shrink-0">
-                        {t("jobResults.changeSpeaker")}
-                      </label>
-                      <Select value={editSpeaker} onValueChange={(v) => { setEditSpeaker(v); setDirty(true); }}>
-                        <SelectTrigger className="h-8 w-[160px] text-xs rounded-lg border-border/60">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {speakers.map((sp) => (
-                            <SelectItem key={sp} value={sp} className="text-xs">
-                              {displaySpeaker(sp)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <span
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md"
+                        style={{ backgroundColor: color?.bg, color: color?.border }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color?.dot }} />
+                        {displaySpeaker(seg.speaker)}
+                      </span>
                     </div>
                   )}
                   <Textarea
@@ -339,62 +370,81 @@ export default function TranscriptEditor({
               );
             }
 
-            // Read-only line
+            // Read-only line with speaker badge
             const displayedText = applySpeakerNamesToText(seg.text, speakerNames);
             const hasSuggestionHighlight = !!suggestion;
+            const color = seg.speaker ? getSpeakerColor(seg.speaker, speakers) : null;
 
             return (
               <div
                 key={seg.id}
-                role={editing ? "button" : undefined}
-                tabIndex={editing ? 0 : undefined}
-                className={`mb-3 ${
+                className={`flex items-start gap-0 rounded-lg transition-colors ${
                   hasSuggestionHighlight
-                    ? `rounded-lg px-3 py-2 -mx-2 transition-colors ${
-                        suggestion.confidence >= 0.8
-                          ? "border-l-[3px] border-l-primary/60 bg-primary/5"
-                          : "border-l-[3px] border-l-primary/30 border-dashed bg-primary/[0.03]"
-                      }`
+                    ? suggestion.confidence >= 0.8
+                      ? "bg-primary/5"
+                      : "bg-primary/[0.03]"
                     : ""
                 } ${
                   editing && !hasSuggestionHighlight
-                    ? "cursor-pointer rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none group"
+                    ? "hover:bg-muted/60 group"
                     : ""
                 }`}
-                onClick={() => {
-                  if (editing) handleSegmentClick(i);
-                }}
-                onKeyDown={(e) => {
-                  if (editing && (e.key === "Enter" || e.key === " ")) {
-                    e.preventDefault();
-                    handleSegmentClick(i);
-                  }
-                }}
+                style={color ? { borderLeft: `3px solid ${hasSuggestionHighlight ? color.border : color.border + "60"}`, paddingLeft: 0 } : undefined}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="inline flex-1">
-                    {seg.speaker && (
-                      <strong className="font-semibold">{displaySpeaker(seg.speaker)}:{" "}</strong>
+                {/* Speaker badge */}
+                {seg.speaker && (
+                  <SpeakerBadge
+                    speaker={seg.speaker}
+                    displayName={displaySpeaker(seg.speaker)}
+                    color={color!}
+                    editing={editing}
+                    speakers={speakers}
+                    speakerNames={speakerNames}
+                    displaySpeaker={displaySpeaker}
+                    onReassign={(newSpeaker) => reassignSpeaker(i, newSpeaker)}
+                    disabled={saving}
+                  />
+                )}
+
+                {/* Text content */}
+                <div
+                  className={`flex-1 min-w-0 py-2 pr-3 ${!seg.speaker ? "pl-3" : ""} ${
+                    editing ? "cursor-pointer" : ""
+                  }`}
+                  role={editing ? "button" : undefined}
+                  tabIndex={editing ? 0 : undefined}
+                  onClick={() => {
+                    if (editing) handleSegmentClick(i);
+                  }}
+                  onKeyDown={(e) => {
+                    if (editing && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      handleSegmentClick(i);
+                    }
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm leading-relaxed flex-1">
+                      {displayedText}
+                      {editing && !hasSuggestionHighlight && (
+                        <Pencil className="w-3 h-3 text-muted-foreground/40 inline-block ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </p>
+                    {hasSuggestionHighlight && (
+                      <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                        <span className="inline-flex items-center text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                          → {displaySpeaker(suggestion.speaker)}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRejectSuggestion(seg.id); }}
+                          className="inline-flex items-center justify-center w-5 h-5 rounded text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+                          aria-label={t("speakerSuggestions.rejectOne")}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     )}
-                    {displayedText}
-                    {editing && !hasSuggestionHighlight && (
-                      <Pencil className="w-3 h-3 text-muted-foreground/40 inline-block ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    )}
-                  </p>
-                  {hasSuggestionHighlight && (
-                    <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                      <span className="inline-flex items-center text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">
-                        → {displaySpeaker(suggestion.speaker)}
-                      </span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRejectSuggestion(seg.id); }}
-                        className="inline-flex items-center justify-center w-5 h-5 rounded text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
-                        aria-label={t("speakerSuggestions.rejectOne")}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             );
@@ -402,7 +452,7 @@ export default function TranscriptEditor({
         </div>
       </div>
 
-      {/* Report issue placeholder */}
+      {/* Report issue */}
       <div className="px-5 pb-4 sm:px-6">
         <Button
           variant="ghost"
@@ -436,5 +486,86 @@ export default function TranscriptEditor({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/* ─── Speaker Badge with Popover ─── */
+
+function SpeakerBadge({
+  speaker, displayName, color, editing, speakers, speakerNames, displaySpeaker,
+  onReassign, disabled,
+}: {
+  speaker: string;
+  displayName: string;
+  color: { border: string; bg: string; dot: string };
+  editing: boolean;
+  speakers: string[];
+  speakerNames: Record<string, string>;
+  displaySpeaker: (s: string) => string;
+  onReassign: (newSpeaker: string) => void;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+
+  const badge = (
+    <span
+      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold pl-2.5 pr-2 py-2 shrink-0 select-none whitespace-nowrap ${
+        editing ? "cursor-pointer hover:opacity-80" : ""
+      }`}
+      style={{ color: color.border }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color.dot }} />
+      {displayName}
+    </span>
+  );
+
+  if (!editing) return badge;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-l-lg"
+          onClick={(e) => e.stopPropagation()}
+          disabled={disabled}
+          aria-label={t("jobResults.changeSpeaker")}
+        >
+          {badge}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        className="w-44 p-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-[10px] font-medium text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
+          {t("jobResults.changeSpeaker")}
+        </div>
+        {speakers.filter((s) => s !== null).map((sp) => {
+          const spColor = getSpeakerColor(sp, speakers);
+          const isCurrent = sp === speaker;
+          return (
+            <button
+              key={sp}
+              onClick={() => {
+                if (!isCurrent) onReassign(sp);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-md transition-colors ${
+                isCurrent
+                  ? "bg-muted font-semibold"
+                  : "hover:bg-muted/60"
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: spColor.dot }} />
+              <span className="flex-1 text-left truncate">{displaySpeaker(sp)}</span>
+              {isCurrent && <Check className="w-3 h-3 text-primary shrink-0" />}
+            </button>
+          );
+        })}
+      </PopoverContent>
+    </Popover>
   );
 }

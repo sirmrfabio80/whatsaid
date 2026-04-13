@@ -354,6 +354,8 @@
     "dismiss": "Dismiss",
     "rejectOne": "Reject this suggestion",
     "noSuggestions": "No segments could be confidently attributed to this speaker.",
+    "noSuggestionsHint": "No segments could be confidently suggested. You can reassign blocks manually — enter edit mode and click any speaker badge.",
+    "assignHint": "To assign blocks to {{speaker}}, enter edit mode and click any speaker badge in the transcript.",
     "error": "Could not generate suggestions. Please try again.",
     "accepted_one": "{{count}} segment reassigned successfully.",
     "accepted_other": "{{count}} segments reassigned successfully.",

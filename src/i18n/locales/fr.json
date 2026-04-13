@@ -338,6 +338,8 @@
     "dismiss": "Ignorer",
     "rejectOne": "Rejeter cette suggestion",
     "noSuggestions": "Aucun segment n'a pu être attribué avec confiance à cet intervenant.",
+    "noSuggestionsHint": "Aucun segment n'a pu être suggéré avec confiance. Vous pouvez réattribuer les blocs manuellement — passez en mode édition et cliquez sur un badge d'intervenant.",
+    "assignHint": "Pour attribuer des blocs à {{speaker}}, passez en mode édition et cliquez sur un badge d'intervenant dans la transcription.",
     "error": "Impossible de générer des suggestions. Veuillez réessayer.",
     "accepted_one": "{{count}} segment réattribué avec succès.",
     "accepted_other": "{{count}} segments réattribués avec succès.",
