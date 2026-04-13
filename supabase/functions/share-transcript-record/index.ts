@@ -174,7 +174,8 @@ Deno.serve(async (req) => {
       status: 'pending',
     })
 
-    const subjectLine = `Transcript shared with you: ${title}`
+    const shortId = messageId.slice(0, 6)
+    const subjectLine = `Transcript shared with you: ${title} [${shortId}]`
     const textParts = [
       `${senderLabel} shared a transcript with you on ${SITE_NAME}.`,
       '',
