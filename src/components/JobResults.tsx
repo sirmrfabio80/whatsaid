@@ -161,6 +161,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   const handleDismissSuggestions = () => {
     setSuggestions([]);
+    setSuggestionTarget(null);
   };
 
   const handleSummaryLanguageChange = async (langCode: string) => {
