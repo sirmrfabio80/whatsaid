@@ -119,6 +119,25 @@ export default function AdminInviteCard() {
             </Select>
           </div>
 
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              {t("settings.admin.languageLabel")}
+            </Label>
+            <Select value={inviteLanguage} onValueChange={setInviteLanguage}>
+              <SelectTrigger className="rounded-lg h-11 w-full sm:w-[280px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {UI_LANGUAGES.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               onClick={() => sendInvite("email")}
