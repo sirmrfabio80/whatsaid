@@ -8,9 +8,19 @@ const corsHeaders = {
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL_SUMMARY = "google/gemini-2.5-flash";
+const MODEL_CUSTOM = "google/gemini-3-flash-preview";
 
-async function callAI(apiKey: string, systemPrompt: string, userPrompt: string): Promise<string> {
+function extractShortSummary(summaryContent: string): string {
+  // Try to extract the first paragraph after "## Overview"
+  const overviewMatch = summaryContent.match(/##\s*Overview\s*\n+([\s\S]*?)(?=\n##|\n*$)/i);
+  const text = overviewMatch?.[1]?.trim() || summaryContent.split("\n").filter(l => l.trim()).slice(0, 2).join(" ");
+  // Strip markdown formatting
+  const plain = text.replace(/[*#_`>\-]/g, "").replace(/\s+/g, " ").trim();
+  return plain.slice(0, 200);
+}
+
+async function callAI(apiKey: string, model: string, systemPrompt: string, userPrompt: string): Promise<string> {
   const res = await fetch(AI_GATEWAY, {
     method: "POST",
     headers: {
@@ -18,7 +28,7 @@ async function callAI(apiKey: string, systemPrompt: string, userPrompt: string):
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
