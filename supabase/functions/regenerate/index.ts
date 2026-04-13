@@ -121,9 +121,6 @@ Rules:
 
       userPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
 
-
-
-
       console.log(`[regenerate] Processing job ${job_id}, prompt: "${custom_prompt.slice(0, 80)}..."`);
     }
 
