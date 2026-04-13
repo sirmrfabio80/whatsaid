@@ -191,7 +191,7 @@ export default function Convert() {
           </div>
 
           {processing || step === "failed" ? (
-            <Card className="rounded-xl border-border/50 bg-card shadow-sm mb-6">
+            <Card className="rounded-xl border-border/50 bg-card shadow-sm mb-6 animate-enter">
               <CardContent className="p-8 sm:p-12">
                 <div className="flex flex-col items-center text-center space-y-6">
                   <div className="w-full max-w-sm space-y-4">
