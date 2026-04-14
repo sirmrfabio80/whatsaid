@@ -355,7 +355,8 @@
     "speakers": "Intervenants :",
     "resetNames": "Réinitialiser les noms",
     "suggestions": "Suggestions",
-    "addSpeaker": "Intervenant"
+    "addSpeaker": "Intervenant",
+    "identifySpeakers": "Identifier les intervenants"
   },
   "speakerSuggestions": {
     "suggest": "Suggérer des segments pour cet intervenant",

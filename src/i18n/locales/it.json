@@ -355,7 +355,8 @@
     "speakers": "Relatori:",
     "resetNames": "Reimposta nomi",
     "suggestions": "Suggerimenti",
-    "addSpeaker": "Relatore"
+    "addSpeaker": "Relatore",
+    "identifySpeakers": "Identifica relatori"
   },
   "speakerSuggestions": {
     "suggest": "Suggerisci segmenti per questo relatore",
