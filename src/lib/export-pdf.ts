@@ -56,6 +56,7 @@ const PARAGRAPH_GAP_MM = 1;
 /** Typography (px) — optimised for handheld PDF reading */
 const BODY_FONT_PX = 15;
 const TRANSCRIPT_FONT_PX = 15;
+const TIMESTAMP_FONT_PX = 12;
 const META_FONT_PX = 13;
 const H1_FONT_PX = 30;
 const H2_FONT_PX = 20;
@@ -63,6 +64,15 @@ const H3_FONT_PX = 18;
 const H4_FONT_PX = 17;
 const QA_PROMPT_FONT_PX = 15;
 const BULLET_FONT_PX = BODY_FONT_PX;
+
+/** Colours */
+const COLOR_HEADING = "#111827";
+const COLOR_BODY = "#1f2937";
+const COLOR_TIMESTAMP = "#9ca3af";
+const COLOR_SPEAKER = "#111827";
+const COLOR_META = "#6b7280";
+const COLOR_DIVIDER = "#e5e7eb";
+const COLOR_ACCENT = "#6366f1";
 
 /** Inner wrapper horizontal padding (px) — tighter to maximise reading width */
 const WRAPPER_PAD_X_PX = 28;
