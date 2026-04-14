@@ -139,6 +139,7 @@ export default function TranscriptEditor({
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set());
   const [rejectedSuggestionIds, setRejectedSuggestionIds] = useState<Set<string>>(new Set());
   const [mergeConfirm, setMergeConfirm] = useState<{ index: number; prevSpeaker: string; currSpeaker: string } | null>(null);
+  const [deleteConfirmIndex, setDeleteConfirmIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dropSuccessIndex, setDropSuccessIndex] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
