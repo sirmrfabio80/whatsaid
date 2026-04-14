@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, XCircle, Info, FileText, Loader2, Download, X } from "lucide-react";
+import { CheckCircle2, XCircle, Info, FileText, Loader2, Download, X, RotateCw } from "lucide-react";
 import { useNotifications, type AppNotification } from "@/contexts/NotificationsContext";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 function timeAgo(dateStr: string): string {
@@ -29,8 +30,11 @@ interface NotificationItemProps {
 
 export default function NotificationItem({ notification, onClose }: NotificationItemProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { markRead, downloadExport, deleteNotification } = useNotifications();
   const [downloading, setDownloading] = useState(false);
+
+  const isPdfExportFailed = notification.type === "pdf_export_failed" && notification.resource_id;
 
   const handleClick = async () => {
     if (!notification.read) {
@@ -60,6 +64,14 @@ export default function NotificationItem({ notification, onClose }: Notification
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await deleteNotification(notification.id);
+  };
+
+  const handleRetry = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (notification.resource_id) {
+      navigate(`/job/${notification.resource_id}`);
+      onClose();
+    }
   };
 
   const isFile = notification.resource_type === "file" && notification.resource_url;
@@ -98,13 +110,21 @@ export default function NotificationItem({ notification, onClose }: Notification
                 <Download className="w-3 h-3" /> Download
               </span>
             )}
+            {isPdfExportFailed && (
+              <button
+                onClick={handleRetry}
+                className="text-[11px] text-primary flex items-center gap-0.5 hover:underline"
+              >
+                <RotateCw className="w-3 h-3" /> {t("notifications.retry")}
+              </button>
+            )}
           </div>
         </div>
         {!notification.read && (
           <div className="mt-1.5 shrink-0 w-2 h-2 rounded-full bg-primary" />
         )}
       </button>
-      {/* Delete button — visible on hover */}
+      {/* Delete button — always visible on mobile, hover on desktop */}
       <button
         onClick={handleDelete}
         className="absolute top-2 right-2 p-2 md:p-1 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-muted text-muted-foreground hover:text-destructive"

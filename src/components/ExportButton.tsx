@@ -12,7 +12,7 @@ import { useNotifications } from "@/contexts/NotificationsContext";
 
 type ExportFormat = "txt" | "json" | "doc" | "pdf";
 
-interface ExportButtonProps { data: CanonicalExportData | null; disabled?: boolean; }
+interface ExportButtonProps { data: CanonicalExportData | null; disabled?: boolean; sourceJobId?: string; }
 
 function downloadString(content: string, filename: string, mime: string) {
   const blob = new Blob([content], { type: mime });
@@ -20,7 +20,7 @@ function downloadString(content: string, filename: string, mime: string) {
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 }
 
-export default function ExportButton({ data, disabled }: ExportButtonProps) {
+export default function ExportButton({ data, disabled, sourceJobId }: ExportButtonProps) {
   const { t } = useTranslation();
   const { startPdfExport } = useNotifications();
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
@@ -31,7 +31,7 @@ export default function ExportButton({ data, disabled }: ExportButtonProps) {
 
     // PDF is handled as an async job via NotificationsContext
     if (format === "pdf") {
-      startPdfExport(data);
+      startPdfExport(data, sourceJobId);
       return;
     }
 

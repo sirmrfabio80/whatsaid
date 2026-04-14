@@ -28,7 +28,7 @@ interface NotificationsContextType {
   markAllRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   clearAllNotifications: () => Promise<void>;
-  startPdfExport: (data: CanonicalExportData) => void;
+  startPdfExport: (data: CanonicalExportData, sourceJobId?: string) => void;
   downloadExport: (storagePath: string, filename?: string) => Promise<void>;
 }
 
@@ -51,8 +51,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  // Track active PDF exports to prevent duplicate toasts on unmount/remount
   const activePdfExports = useRef<Set<string>>(new Set());
+  // Ref to hold latest notifications for rollback without stale closures
+  const notificationsRef = useRef<AppNotification[]>([]);
+  notificationsRef.current = notifications;
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -77,22 +79,43 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     loadNotifications();
   }, [loadNotifications]);
 
-  // Realtime subscription
+  // Realtime subscription — explicit INSERT, UPDATE, DELETE
   useEffect(() => {
     if (!user) return;
+    const filter = `user_id=eq.${user.id}`;
+
     const channel = supabase
       .channel("notifications-realtime")
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
+        { event: "INSERT", schema: "public", table: "notifications", filter },
         (payload) => {
           const newNotif = payload.new as AppNotification;
-          setNotifications((prev) => [newNotif, ...prev].slice(0, 50));
+          setNotifications((prev) => {
+            // Dedupe — don't add if already present
+            if (prev.some((n) => n.id === newNotif.id)) return prev;
+            return [newNotif, ...prev].slice(0, 50);
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications", filter },
+        (payload) => {
+          const updated = payload.new as AppNotification;
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n))
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "notifications", filter },
+        (payload) => {
+          const deletedId = (payload.old as { id?: string })?.id;
+          if (deletedId) {
+            setNotifications((prev) => prev.filter((n) => n.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -102,33 +125,55 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
+  // --- Optimistic actions with rollback ---
+
   const markRead = useCallback(async (id: string) => {
+    const snapshot = notificationsRef.current;
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
-  }, []);
+    const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
+    if (error) {
+      setNotifications(snapshot);
+      toast.error(t("notifications.actionFailed"));
+    }
+  }, [t]);
 
   const markAllRead = useCallback(async () => {
     if (!user) return;
+    const snapshot = notificationsRef.current;
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    await supabase
+    const { error } = await supabase
       .from("notifications")
       .update({ read: true })
       .eq("user_id", user.id)
       .eq("read", false);
-  }, [user]);
+    if (error) {
+      setNotifications(snapshot);
+      toast.error(t("notifications.actionFailed"));
+    }
+  }, [user, t]);
 
   const deleteNotification = useCallback(async (id: string) => {
+    const snapshot = notificationsRef.current;
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-    await supabase.from("notifications").delete().eq("id", id);
-  }, []);
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    if (error) {
+      setNotifications(snapshot);
+      toast.error(t("notifications.actionFailed"));
+    }
+  }, [t]);
 
   const clearAllNotifications = useCallback(async () => {
     if (!user) return;
+    const snapshot = notificationsRef.current;
     setNotifications([]);
-    await supabase.from("notifications").delete().eq("user_id", user.id);
-  }, [user]);
+    const { error } = await supabase.from("notifications").delete().eq("user_id", user.id);
+    if (error) {
+      setNotifications(snapshot);
+      toast.error(t("notifications.actionFailed"));
+    }
+  }, [user, t]);
 
   /** Generate a fresh signed URL for a storage path and trigger download */
   const downloadExport = useCallback(async (storagePath: string, filename?: string) => {
@@ -149,12 +194,19 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   /** Start an async PDF export — runs in the App shell context so it survives navigation */
   const startPdfExport = useCallback(
-    (data: CanonicalExportData) => {
+    (data: CanonicalExportData, sourceJobId?: string) => {
       if (!user) return;
 
-      const exportId = crypto.randomUUID();
-      if (activePdfExports.current.has(exportId)) return;
-      activePdfExports.current.add(exportId);
+      // Dedupe: prefer sourceJobId, fallback to deterministic key from payload
+      const exportKey = sourceJobId
+        ? `pdf:${sourceJobId}`
+        : `pdf:${data.title}:${data.createdAt}:${(data.transcript?.length ?? 0)}`;
+
+      if (activePdfExports.current.has(exportKey)) {
+        toast.info(t("notifications.exportAlreadyRunning"));
+        return;
+      }
+      activePdfExports.current.add(exportKey);
 
       toast.info(t("notifications.pdfExportStarted"));
 
@@ -170,6 +222,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               job_type: "pdf_export",
               status: "processing",
               title: data.title,
+              resource_id: sourceJobId ?? null,
             })
             .select("id")
             .single();
@@ -212,6 +265,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             status: "success",
             resource_type: "file",
             resource_url: storagePath,
+            resource_id: sourceJobId ?? null,
             async_job_id: asyncJobId,
           });
 
@@ -233,19 +287,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               .eq("id", asyncJobId);
           }
 
-          // Create failure notification
+          // Create failure notification with pdf-specific type
           await supabase.from("notifications").insert({
             user_id: user!.id,
-            type: "job_failed",
+            type: "pdf_export_failed",
             title: data.title,
             description: t("notifications.pdfExportFailed"),
             status: "error",
+            resource_id: sourceJobId ?? null,
             async_job_id: asyncJobId,
           });
 
           toast.error(t("notifications.pdfExportFailed"));
         } finally {
-          activePdfExports.current.delete(exportId);
+          activePdfExports.current.delete(exportKey);
         }
       })();
     },
