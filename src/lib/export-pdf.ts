@@ -73,8 +73,8 @@ const COLOR_SPEAKER = "#111827";
 const COLOR_META = "#6b7280";
 const COLOR_DIVIDER = "#e5e7eb";
 const COLOR_ACCENT = "#6366f1";
-
-/** Inner wrapper horizontal padding (px) — tighter to maximise reading width */
+const COLOR_TRANSCRIPT_BG = "#f8f9fa";
+const COLOR_TRANSCRIPT_BORDER = "#6366f1";
 const WRAPPER_PAD_X_PX = 28;
 
 /** Approximate usable content height in px (at scale 1) used as batch threshold */
