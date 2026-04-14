@@ -1,61 +1,108 @@
 
 
-# Move and Redefine the Language Selector — Plan
+# Translated Content Variants — Final Revised Plan
 
-## Naming options
+## 1. Current `job_outputs` storage shape
 
-| Option | Label | Rationale |
-|--------|-------|-----------|
-| **A** | **Output language** | Clear, neutral, covers all generated content. Does not imply it changes the source audio language. |
-| **B** | **Content language** | Slightly broader — could be confused with the language of the original audio. |
-| **C** | **Translation** | Implies the content is being translated, which is accurate but may confuse users who think it changes the original. |
+Each output is a separate row in `job_outputs`:
 
-**Recommendation: "Output language"** — it communicates that the control affects what the app produces (transcript, summary, Q&A, exports) without suggesting it changes the source audio.
+| `output_type` | `custom_prompt` | Notes |
+|---|---|---|
+| `transcript` | NULL | One per job. Editable. |
+| `summary` | NULL | One per job. |
+| `custom` | The user's question | Zero or more per job. Each Q&A is its own row. |
 
-## Placement
+## 2. Data model changes
 
-Move the selector into the Transcript tab's top action bar (the `flex` row at lines 397–399 that currently holds `SpeakerChips`). Place it right-aligned after the speaker chips, before the card content. On mobile, it sits in the mobile speaker-chips bar area.
+### New table: `job_output_variants`
 
-```text
-┌─────────────────────────────────────────────────┐
-│ [Transcript] [Summary] [Questions]   [Copy][Share][Export] │
-├─────────────────────────────────────────────────┤
-│ SpeakerChips ...              [🌐 Output language ▾] │
-├─────────────────────────────────────────────────┤
-│ transcript content                              │
-└─────────────────────────────────────────────────┘
+```sql
+CREATE TABLE public.job_output_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_output_id UUID NOT NULL REFERENCES public.job_outputs(id) ON DELETE CASCADE,
+  language TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (job_output_id, language)
+);
 ```
 
-## What changes
+RLS: authenticated users can SELECT via join through `job_outputs → jobs` checking `user_id`. Service role has full access.
 
-### `src/components/JobResults.tsx`
-1. Move the language `Select` + `Globe` icon + `Loader2` spinner from the Summary tab (lines 452–462) into the Transcript tab's top bar (lines 397–399), right-aligned via `ml-auto`.
-2. Rename `handleSummaryLanguageChange` → `handleOutputLanguageChange` (internal only, same logic for now).
-3. Rename state `summaryLang` → `outputLang` for clarity.
-4. Remove the entire `<div className="flex flex-col gap-2 p-3 border-b">` wrapper from the Summary tab — the selector no longer lives there.
-5. Update the `aria-label` and `id` from `summary-lang` to `output-lang`.
+### New column on `jobs`
 
-### `src/i18n/locales/en.json`, `fr.json`, `it.json`
-- Add key `jobResults.outputLanguage` with translations:
-  - EN: `"Output language"`
-  - FR: `"Langue de sortie"`
-  - IT: `"Lingua di output"`
-- Keep `summaryLanguage` key temporarily (no breaking references elsewhere).
+```sql
+ALTER TABLE public.jobs ADD COLUMN output_language TEXT;
+```
 
-### No other files change
-The `regenerate` edge function already accepts `target_language` — no backend change needed. The control's _meaning_ is redefined in the UI; actual multi-output regeneration (translating transcript + Q&A too) is deferred per the guardrails.
+## 3. API contract: `regenerate` edge function
 
-## Regression risks
+```json
+{
+  "job_id": "...",
+  "output_type": "translate_all",
+  "target_language": "fr"
+}
+```
 
-| Risk | Detail |
-|------|--------|
-| Summary regeneration still works | The handler logic is unchanged — only moved. Low risk. |
-| Transcript tab layout shift | Adding a selector to the speaker-chips row. Need to ensure it doesn't crowd chips on narrow screens — use `shrink-0` and `ml-auto`. |
-| Stale i18n key references | `summaryLanguage` key left in place; no breakage. Will be cleaned up later. |
-| User expectation mismatch | Control now implies it affects transcript/Q&A, but actual translation of those is not yet wired. The spinner + regeneration currently only affects summary. Acceptable per guardrails — this prompt is UI repositioning only. |
+Processing: read all `job_outputs` for the job → translate each via AI → upsert into `job_output_variants` on `(job_output_id, language)` → update `jobs.output_language` → return translated content keyed by `job_output_id`.
 
-## Out of scope (per guardrails)
-- Translating transcript or Q&A when language changes
-- Persisting translation variants
-- Reset-to-original functionality
+## 4. Legacy summary-language handling
+
+- Original language = `jobs.language_detected`.
+- Old jobs with `summary_language !== language_detected`: the current `job_outputs.content` for summary is already translated. It stays untouched as the baseline.
+- If user switches back to `language_detected`, we regenerate the summary in the original language and store it as a variant keyed to `language_detected`.
+- New jobs: `job_outputs.content` always holds original-language content. Translations go into variants only.
+
+## 5. Export path verification
+
+- **Client-side exports** (PDF, TXT, JSON): all consume content passed from `JobResults` through `buildCanonicalPayload()`. No changes needed — active variant content flows through automatically.
+- **`share-transcript` edge function**: reads directly from `job_outputs`. Must be updated to check `jobs.output_language` and read from `job_output_variants` when the active language differs from original.
+
+## 6. `claim-transcript-share` — explicit phase 1 behaviour
+
+**Phase 1 decision: copy only original outputs.**
+
+When a recipient claims a shared transcript, the `claim-transcript-share` function will copy only `job_outputs` rows (original content). It will NOT copy any `job_output_variants` rows.
+
+The recipient's new job will have `output_language = NULL` (defaulting to original language). If the recipient wants translations, they generate their own variants via the Output language selector.
+
+**Rationale**: variants are cheap to regenerate on demand, and copying them adds complexity around ownership and staleness. This keeps the claim flow simple.
+
+**Follow-up item**: In a future prompt, evaluate whether to copy the sender's active-language variants into the claimed job so the recipient sees the same language the sender shared. This is tracked as a separate task.
+
+## 7. Frontend changes (`JobResults.tsx`)
+
+- After fetching job data, if `outputLang !== originalLang`, fetch `job_output_variants` for all outputs in that language.
+- State: `variants: Record<string, string>` mapping `job_output_id` → translated content.
+- Rendering: display variant content when available, otherwise original.
+- Transcript editor: read-only when viewing a translation.
+- `handleOutputLanguageChange`: check for cached variants → fetch from DB → if missing, call `regenerate` with `translate_all` → persist `output_language`.
+
+## 8. Files affected
+
+| File | Change |
+|---|---|
+| Migration SQL | Create `job_output_variants` table + `output_language` column |
+| `supabase/functions/regenerate/index.ts` | Add `translate_all` code path |
+| `src/components/JobResults.tsx` | Fetch/cache variants, swap content, read-only transcript, persist `output_language` |
+| `supabase/functions/share-transcript/index.ts` | Read variants when `output_language` differs from original |
+
+## 9. Regression risks
+
+| Risk | Mitigation |
+|---|---|
+| Transcript editing locked during translation | Clear visual indicator; switching to original re-enables editing |
+| Legacy jobs with pre-translated summaries | Baseline untouched; original regenerated on demand as variant |
+| Share email sends wrong language | Updated to respect `output_language` |
+| Variant staleness after transcript edit | Out of scope — no invalidation yet |
+| Claimed jobs missing variants | Explicit: phase 1 copies originals only |
+
+## 10. Rollout order
+
+1. Run migration (table + column)
+2. Deploy updated `regenerate` function
+3. Update `JobResults` client code
+4. Update `share-transcript` to respect active language
+5. Existing jobs unaffected until user switches language
 
