@@ -86,7 +86,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     };
     await supabase
       .from("job_outputs")
-      .update({ metadata: metadata as unknown as Record<string, unknown> })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ metadata: metadata as any })
       .eq("id", identificationOutputId);
   };
 
