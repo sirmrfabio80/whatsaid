@@ -66,12 +66,36 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
       supabase.from("job_outputs").select("id, output_type, content, custom_prompt").eq("job_id", jobId).order("created_at", { ascending: true }),
-      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label").eq("id", jobId).maybeSingle(),
+      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label, output_language").eq("id", jobId).maybeSingle(),
     ]);
     setOutputs((outputsData as JobOutput[]) ?? []);
     const m = jobData ? { ...jobData, speaker_names: (jobData.speaker_names as Record<string, string>) ?? {} } : null;
     setMeta(m as JobMeta | null);
-    if (m) { setSpeakerNames((m.speaker_names as Record<string, string>) ?? {}); setOutputLang((prev) => prev || m.summary_language || m.language_detected || "en"); onMetaLoaded?.(m as JobMeta); }
+    if (m) {
+      setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
+      const activeLang = m.output_language || m.summary_language || m.language_detected || "en";
+      setOutputLang((prev) => prev || activeLang);
+
+      // Load existing variants if active language differs from original
+      const originalLang = m.language_detected || "en";
+      if (activeLang !== originalLang && outputsData && outputsData.length > 0) {
+        const outputIds = (outputsData as JobOutput[]).map(o => o.id);
+        const { data: variantRows } = await supabase
+          .from("job_output_variants")
+          .select("job_output_id, content")
+          .in("job_output_id", outputIds)
+          .eq("language", activeLang);
+        if (variantRows && variantRows.length > 0) {
+          const vMap: Record<string, string> = {};
+          for (const v of variantRows) vMap[v.job_output_id] = v.content;
+          setVariants(vMap);
+        }
+      } else {
+        setVariants({});
+      }
+
+      onMetaLoaded?.(m as JobMeta);
+    }
     setLoading(false);
   }, [jobId]);
 
