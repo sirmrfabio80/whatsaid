@@ -134,11 +134,11 @@ function markdownToHtml(text: string): string {
     }
 
     if (line.startsWith("### ")) {
-      htmlParts.push(`<h4 style="font-size:${H4_FONT_PX}px;line-height:1.35;margin:14px 0 6px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(4)))}</h4>`);
+      htmlParts.push(`<h4 style="font-size:${H4_FONT_PX}px;line-height:1.35;margin:14px 0 6px;font-weight:700;color:${COLOR_HEADING}">${inlineMarkdownToHtml(escapeHtml(line.slice(4)))}</h4>`);
       continue;
     }
     if (line.startsWith("## ")) {
-      htmlParts.push(`<h3 style="font-size:${H3_FONT_PX}px;line-height:1.35;margin:18px 0 8px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(3)))}</h3>`);
+      htmlParts.push(`<h3 style="font-size:${H3_FONT_PX}px;line-height:1.35;margin:18px 0 8px;font-weight:700;color:${COLOR_HEADING}">${inlineMarkdownToHtml(escapeHtml(line.slice(3)))}</h3>`);
       continue;
     }
 
@@ -156,7 +156,7 @@ function markdownToHtml(text: string): string {
       continue;
     }
 
-    htmlParts.push(`<p style="margin:5px 0;line-height:1.65;font-size:${BODY_FONT_PX}px">${inlineMarkdownToHtml(escapeHtml(line))}</p>`);
+    htmlParts.push(`<p style="margin:5px 0;line-height:1.65;font-size:${BODY_FONT_PX}px;color:${COLOR_BODY}">${inlineMarkdownToHtml(escapeHtml(line))}</p>`);
   }
 
   if (inList) htmlParts.push("</ul>");
@@ -164,20 +164,26 @@ function markdownToHtml(text: string): string {
 }
 
 function speakerParagraphToHtml(line: string): string {
+  // Match timestamp + speaker: "[00:12:34] Speaker Name: text..."
+  const tsMatch = line.match(/^\[(\d{2}:\d{2}:\d{2})\]\s*(.+?):\s(.*)/);
+  if (tsMatch) {
+    const timestamp = tsMatch[1];
+    const speaker = escapeHtml(tsMatch[2]);
+    const text = escapeHtml(tsMatch[3]);
+    return `<p style="margin:6px 0 2px;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><span style="font-size:${TIMESTAMP_FONT_PX}px;color:${COLOR_TIMESTAMP};font-family:monospace;letter-spacing:-0.3px">${timestamp}</span>&ensp;<strong style="color:${COLOR_SPEAKER};font-weight:700">${speaker}:</strong> ${text}</p>`;
+  }
+  // Fallback: speaker without timestamp
   const speakerMatch = line.match(/^(.+?):\s/);
   if (speakerMatch) {
     const label = escapeHtml(`${speakerMatch[1]}:`);
     const rest = escapeHtml(line.slice(speakerMatch[0].length));
-    return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px"><strong>${label}</strong> ${rest}</p>`;
+    return `<p style="margin:6px 0 2px;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><strong style="color:${COLOR_SPEAKER};font-weight:700">${label}</strong> ${rest}</p>`;
   }
   if (!line.trim()) {
-    return '<div style="height:8px"></div>';
+    return '<div style="height:6px"></div>';
   }
-  return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px">${escapeHtml(line)}</p>`;
+  return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}">${escapeHtml(line)}</p>`;
 }
-
-/* ------------------------------------------------------------------ */
-/*  Section model                                                      */
 /* ------------------------------------------------------------------ */
 
 interface PdfBlock {
