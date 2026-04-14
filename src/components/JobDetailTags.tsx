@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useJobTags, Tag } from "@/hooks/use-job-tags";
+import { useTranslatedTags } from "@/hooks/use-translated-tags";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
 export default function JobDetailTags({ jobId }: Props) {
   const { t } = useTranslation();
   const { jobTags, suggestions, loading, addTag, removeTag, renameTag } = useJobTags(jobId);
+  const translatedJobTags = useTranslatedTags(jobTags);
+  const translatedSuggestions = useTranslatedTags(suggestions);
   const [inputValue, setInputValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
