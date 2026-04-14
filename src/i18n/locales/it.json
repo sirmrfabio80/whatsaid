@@ -330,11 +330,11 @@
   },
   "audioUploader": {
     "dropTitle": "Trascina qui il tuo file audio",
-    "dropDesc": "o clicca per sfogliare · .m4a, .mp3, .wav · max 60 min / 200 MB",
+    "dropDesc": "o clicca per sfogliare · .m4a, .mp3, .wav · max 60 min / 100 MB",
     "securityNotice": "🔒 Il tuo audio viene elaborato in modo sicuro ed eliminato immediatamente dopo. Assicurati che tutte le parti registrate siano a conoscenza della registrazione.",
     "detectingDuration": "Rilevamento durata...",
     "unsupportedFormat": "Formato non supportato. Carica file {{formats}}.",
-    "fileTooLarge": "File troppo grande. La dimensione massima è 200 MB.",
+    "fileTooLarge": "File troppo grande. La dimensione massima è 100 MB.",
     "fileTooLong": "Il file supera i 60 minuti. Taglia il tuo audio.",
     "couldNotRead": "Impossibile leggere il file audio. Prova un formato diverso.",
     "uploadLabel": "Carica file audio"
