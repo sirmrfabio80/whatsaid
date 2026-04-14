@@ -365,7 +365,32 @@ export default function TranscriptEditor({
     }
   }, [segments, onSave, content, suggestions, onDismissSuggestions, t]);
 
-  const toggleEditing = useCallback(() => {
+  // Delete a segment
+  const deleteSegment = useCallback(async (index: number) => {
+    const nonEmpty = segments.filter((s) => s.text.trim() || s.speaker);
+    if (nonEmpty.length <= 1) {
+      toast.error(t("jobResults.deleteSegmentLastError"));
+      return;
+    }
+    setSaving(true);
+    const updated = segments.filter((_, i) => i !== index);
+    updated.forEach((s, i) => { s.index = i; });
+    setSegments(updated);
+    setDeleteConfirmIndex(null);
+    if (suggestions?.length) onDismissSuggestions?.();
+    try {
+      await onSave(reconstructContent(updated));
+      setActiveIndex(null);
+      setEditText("");
+      setDirty(false);
+      toast.success(t("jobResults.deleteSegmentSuccess"));
+    } catch {
+      setSegments(parseSegments(content));
+    } finally {
+      setSaving(false);
+    }
+  }, [segments, onSave, content, suggestions, onDismissSuggestions, t]);
+
     if (editing && activeIndex !== null && dirty) {
       setConfirmSwitch(-1);
       return;
