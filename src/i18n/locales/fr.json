@@ -567,5 +567,16 @@
     "actionFailed": "L'action a échoué — veuillez réessayer",
     "exportAlreadyRunning": "Cet export est déjà en cours",
     "retry": "Réessayer"
+  },
+  "speakerIdentification": {
+    "bannerTitle_one": "L'IA a identifié {{count}} intervenant",
+    "bannerTitle_other": "L'IA a identifié {{count}} intervenants",
+    "dismissAll": "Ignorer",
+    "evidence": "preuve",
+    "accept": "Accepter le nom",
+    "reject": "Rejeter",
+    "undo": "Annuler le renommage",
+    "edit": "Modifier le nom",
+    "suggested": "suggéré"
   }
 }
