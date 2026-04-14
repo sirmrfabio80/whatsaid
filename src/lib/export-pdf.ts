@@ -192,15 +192,29 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   if (data.duration) meta.push(`Duration: ${data.duration}`);
   if (data.language) meta.push(`Language: ${data.language}`);
 
-  let headerAndSummary = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
-  headerAndSummary += `<p style="margin:0;color:#6b7280;font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
-  headerAndSummary += "</header>";
+  let headerHtml = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
+  headerHtml += `<p style="margin:0;color:#6b7280;font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
+  headerHtml += "</header>";
 
   if (data.summary) {
-    headerAndSummary += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
-  }
+    // Split summary into sections so headings always stay with their content
+    const sections = splitMarkdownBySections(data.summary);
+    // First section merges with the header + "Summary" heading
+    const firstSection = sections[0] || "";
+    headerHtml += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(firstSection)}</section>`;
+    blocks.push({ html: headerHtml, forceNewPage: false, gapAfterMm: PARAGRAPH_GAP_MM });
 
-  blocks.push({ html: headerAndSummary, forceNewPage: false, gapAfterMm: SECTION_GAP_MM });
+    // Remaining summary sections as separate blocks (heading + content kept together)
+    for (let s = 1; s < sections.length; s++) {
+      blocks.push({
+        html: `<section>${markdownToHtml(sections[s])}</section>`,
+        forceNewPage: false,
+        gapAfterMm: s < sections.length - 1 ? PARAGRAPH_GAP_MM : SECTION_GAP_MM,
+      });
+    }
+  } else {
+    blocks.push({ html: headerHtml, forceNewPage: false, gapAfterMm: SECTION_GAP_MM });
+  }
 
   // --- Questions & Answers (heading + each Q/A as its own block) ---
   if (data.questions && data.questions.length > 0) {
