@@ -232,12 +232,32 @@ function extractCompoundPatterns(t: string): Candidate | null {
   m = t.match(/\bje\s+suis\s+(\S+)[,\s]+(?:le|la)\s+(.+)/i);
   if (m) { const c = mk(m[1], t, "compound", m[2]); if (c) return c; }
 
+  // French: "je suis X le/la [role]" — name first, role after (e.g. "je suis Marie la thérapeute")
+  m = t.match(/\bje\s+suis\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:le|la)\s+(\S+)/i);
+  if (m) {
+    const namePart = cleanName(m[1]);
+    const rolePart = cleanName(m[2]);
+    if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
+      return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+    }
+  }
+
   // Spanish: "soy el/la [role] X"
   m = t.match(/\bsoy\s+(?:el|la)\s+(.+?)\s+([A-ZÀ-Öa-zà-ö]\S+)\s*$/i);
   if (m) {
     const rolePart = cleanName(m[1]);
     const namePart = cleanName(m[2]);
     if (isValidName(namePart)) return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+  }
+
+  // Spanish: "soy X el/la [role]" — name first, role after (e.g. "soy Carlos el enfermero")
+  m = t.match(/\bsoy\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:el|la)\s+(\S+)/i);
+  if (m) {
+    const namePart = cleanName(m[1]);
+    const rolePart = cleanName(m[2]);
+    if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
+      return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+    }
   }
 
   return null;
