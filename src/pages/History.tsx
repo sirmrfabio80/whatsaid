@@ -14,6 +14,7 @@ import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
 import { useHistoryFilters } from "@/hooks/use-history-filters";
+import { useTranslatedTags } from "@/hooks/use-translated-tags";
 import HistoryFilters from "@/components/HistoryFilters";
 
 interface Job {
