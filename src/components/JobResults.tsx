@@ -44,8 +44,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
-  const [summaryLang, setSummaryLang] = useState<string>("");
-  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
+  const [outputLang, setOutputLang] = useState<string>("");
+  const [regeneratingLang, setRegeneratingLang] = useState(false);
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
@@ -68,7 +68,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setOutputs((outputsData as JobOutput[]) ?? []);
     const m = jobData ? { ...jobData, speaker_names: (jobData.speaker_names as Record<string, string>) ?? {} } : null;
     setMeta(m as JobMeta | null);
-    if (m) { setSpeakerNames((m.speaker_names as Record<string, string>) ?? {}); setSummaryLang((prev) => prev || m.summary_language || m.language_detected || "en"); onMetaLoaded?.(m as JobMeta); }
+    if (m) { setSpeakerNames((m.speaker_names as Record<string, string>) ?? {}); setOutputLang((prev) => prev || m.summary_language || m.language_detected || "en"); onMetaLoaded?.(m as JobMeta); }
     setLoading(false);
   }, [jobId]);
 
@@ -245,10 +245,10 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setSuggestionTarget(null);
   };
 
-  const handleSummaryLanguageChange = async (langCode: string) => {
-    if (langCode === summaryLang) return;
-    const prevLang = summaryLang; setSummaryLang(langCode); setRegeneratingSummary(true);
-    try { const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, output_type: "summary", target_language: langCode } }); if (error || data?.error) { setSummaryLang(prevLang); return; } await fetchData(); } catch { setSummaryLang(prevLang); } finally { setRegeneratingSummary(false); }
+  const handleOutputLanguageChange = async (langCode: string) => {
+    if (langCode === outputLang) return;
+    const prevLang = outputLang; setOutputLang(langCode); setRegeneratingLang(true);
+    try { const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, output_type: "summary", target_language: langCode } }); if (error || data?.error) { setOutputLang(prevLang); return; } await fetchData(); } catch { setOutputLang(prevLang); } finally { setRegeneratingLang(false); }
   };
 
   const handleCopy = async (content: string, id: string) => { await navigator.clipboard.writeText(content); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
@@ -396,9 +396,27 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
               {transcript && (
                 <div className="flex items-center gap-2 p-3 border-b border-border/40 hidden sm:flex">
                   <div className="flex items-center gap-2 min-w-0 flex-1"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} enableDrag /></div>
+                  <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                    <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                    <Select value={outputLang} onValueChange={handleOutputLanguageChange} disabled={regeneratingLang}>
+                      <SelectTrigger id="output-lang" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.outputLanguage")}><SelectValue /></SelectTrigger>
+                      <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                    {regeneratingLang && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+                  </div>
                 </div>
               )}
-              <div className="px-4 py-3 border-b border-border/40 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
+              <div className="px-4 py-3 border-b border-border/40 sm:hidden">
+                <SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} />
+                <div className="flex items-center gap-1.5 mt-2">
+                  <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Select value={outputLang} onValueChange={handleOutputLanguageChange} disabled={regeneratingLang}>
+                    <SelectTrigger id="output-lang-mobile" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.outputLanguage")}><SelectValue /></SelectTrigger>
+                    <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {regeneratingLang && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+                </div>
+              </div>
               {/* AI Speaker Identification Banner */}
               {!identificationBannerDismissed && identifications.filter((s) => s.status === "applied" || s.status === "suggested").length > 0 && (
                 <div className="px-3 py-2 border-b border-border/40">
@@ -449,19 +467,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex flex-col gap-2 p-3 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                  <label htmlFor="summary-lang" className="text-xs text-muted-foreground font-medium whitespace-nowrap">{t("jobResults.summaryLanguage")}</label>
-                  <Select value={summaryLang} onValueChange={handleSummaryLanguageChange} disabled={regeneratingSummary}>
-                    <SelectTrigger id="summary-lang" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.summaryLanguage")}><SelectValue /></SelectTrigger>
-                    <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                  {regeneratingSummary && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
-                </div>
-              </div>
               <div className="p-5 sm:p-6">
-                {regeneratingSummary ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.regeneratingSummary")}</div>
+                {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.regeneratingSummary")}</div>
                   : summary ? <StructuredSummary content={applySpeakerNames(summary.content, speakerNames)} />
                   : <p className="text-sm text-muted-foreground">{t("jobResults.noSummary")}</p>}
               </div>
