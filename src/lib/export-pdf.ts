@@ -14,6 +14,9 @@ const RENDER_SCALE = 2;
 const SECTION_GAP_MM = 4;
 const PARAGRAPH_GAP_MM = 1.5;
 
+/** Approximate usable content height in px (at scale 1) used as batch threshold */
+const BATCH_HEIGHT_THRESHOLD_PX = 800;
+
 /* ------------------------------------------------------------------ */
 /*  HTML helpers                                                       */
 /* ------------------------------------------------------------------ */
@@ -127,7 +130,6 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
 
   // --- Questions & Answers (heading + each Q/A as its own block) ---
   if (data.questions && data.questions.length > 0) {
-    // Section heading block
     blocks.push({
       html: `<h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`,
       forceNewPage: true,
@@ -150,7 +152,6 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
 
   // --- Transcript (heading + each speaker paragraph as its own block) ---
   if (data.transcript) {
-    // Section heading block
     blocks.push({
       html: `<h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>`,
       forceNewPage: true,
@@ -172,7 +173,6 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
 
 // Keep for backward compat / testing
 export function buildPdfSections(data: CanonicalExportData): { html: string; forceNewPage: boolean }[] {
-  // Group blocks back into legacy sections for tests
   const blocks = buildPdfBlocks(data);
   const sections: { html: string; forceNewPage: boolean }[] = [];
   let currentHtml = "";
@@ -198,10 +198,112 @@ export function buildPdfDocumentHtml(data: CanonicalExportData): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  DOM + Canvas helpers                                               */
+/*  Performance instrumentation                                        */
+/* ------------------------------------------------------------------ */
+
+interface PdfPerfLog {
+  originalBlockCount: number;
+  batchedBlockCount: number;
+  totalTimeMs: number;
+  layoutMeasureTimeMs: number;
+  html2canvasTimeMs: number;
+  pngEncodeTimeMs: number;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Layout-aware batching                                              */
 /* ------------------------------------------------------------------ */
 
 const WRAPPER_STYLE = `box-sizing:border-box;width:${RENDER_WIDTH_PX}px;background:#ffffff;color:#111827;padding:12px 56px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;`;
+
+/**
+ * Measure each block's rendered height using a single reusable container,
+ * then merge consecutive non-forceNewPage blocks until combined height
+ * approaches the page height threshold.
+ */
+function measureAndBatchBlocks(
+  blocks: PdfBlock[],
+): { batched: PdfBlock[]; layoutMeasureTimeMs: number } {
+  const measureStart = performance.now();
+
+  // Create a single measurement container
+  const container = document.createElement("div");
+  Object.assign(container.style, {
+    position: "fixed",
+    left: "-10000px",
+    top: "0",
+    width: `${RENDER_WIDTH_PX}px`,
+    opacity: "1",
+    pointerEvents: "none",
+    zIndex: "-1",
+  });
+  const inner = document.createElement("div");
+  inner.setAttribute("style", WRAPPER_STYLE);
+  container.appendChild(inner);
+  document.body.appendChild(container);
+
+  // Measure each block's height
+  const heights: number[] = [];
+  for (const block of blocks) {
+    inner.innerHTML = block.html;
+    heights.push(inner.scrollHeight);
+  }
+
+  // Remove measurement container
+  container.remove();
+
+  // Batch blocks by accumulated height
+  const batched: PdfBlock[] = [];
+  let batchHtml = "";
+  let batchHeight = 0;
+  let batchGap = 0;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+
+    // If this block forces a new page, flush the current batch first
+    if (block.forceNewPage) {
+      if (batchHtml) {
+        batched.push({ html: batchHtml, forceNewPage: false, gapAfterMm: batchGap });
+      }
+      // Start a new batch with this block
+      batchHtml = block.html;
+      batchHeight = heights[i];
+      batchGap = block.gapAfterMm;
+      // Mark the batch as forceNewPage
+      // We'll flush it either when the next forceNewPage comes or when height exceeds threshold
+      batched.push({ html: batchHtml, forceNewPage: true, gapAfterMm: batchGap });
+      batchHtml = "";
+      batchHeight = 0;
+      batchGap = 0;
+      continue;
+    }
+
+    // Would adding this block exceed the threshold?
+    if (batchHtml && batchHeight + heights[i] > BATCH_HEIGHT_THRESHOLD_PX) {
+      // Flush current batch
+      batched.push({ html: batchHtml, forceNewPage: false, gapAfterMm: batchGap });
+      batchHtml = "";
+      batchHeight = 0;
+    }
+
+    batchHtml += block.html;
+    batchHeight += heights[i];
+    batchGap = block.gapAfterMm;
+  }
+
+  // Flush remaining
+  if (batchHtml) {
+    batched.push({ html: batchHtml, forceNewPage: false, gapAfterMm: batchGap });
+  }
+
+  const layoutMeasureTimeMs = performance.now() - measureStart;
+  return { batched, layoutMeasureTimeMs };
+}
+
+/* ------------------------------------------------------------------ */
+/*  DOM + Canvas helpers                                               */
+/* ------------------------------------------------------------------ */
 
 function createBlockElement(html: string): HTMLDivElement {
   const el = document.createElement("div");
@@ -250,8 +352,17 @@ function canvasHeightMm(canvas: HTMLCanvasElement): number {
 /* ------------------------------------------------------------------ */
 
 export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> {
-  const blocks = buildPdfBlocks(data);
+  const totalStart = performance.now();
+  const originalBlocks = buildPdfBlocks(data);
+
+  // Measure and batch
+  const { batched: blocks, layoutMeasureTimeMs } = measureAndBatchBlocks(originalBlocks);
+
+  // Create render elements only for batched blocks
   const elements = blocks.map((b) => createBlockElement(b.html));
+
+  let html2canvasTimeMs = 0;
+  let pngEncodeTimeMs = 0;
 
   try {
     await waitForLayout();
@@ -275,7 +386,11 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
+
+      const h2cStart = performance.now();
       const canvas = await renderCanvas(elements[i]);
+      html2canvasTimeMs += performance.now() - h2cStart;
+
       const heightMm = canvasHeightMm(canvas);
 
       if (block.forceNewPage && currentY > MARGIN_MM) {
@@ -287,8 +402,12 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
       // Block fits on current page
       if (heightMm <= remainingMm) {
+        const encStart = performance.now();
+        const imgData = canvas.toDataURL("image/png");
+        pngEncodeTimeMs += performance.now() - encStart;
+
         pdf.addImage(
-          canvas.toDataURL("image/png"),
+          imgData,
           "PNG",
           MARGIN_MM,
           currentY,
@@ -302,7 +421,6 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
       }
 
       // Block doesn't fit — need to slice across pages
-      // First, move to a new page if we're not at the top
       if (currentY > MARGIN_MM) {
         pdf.addPage();
         currentY = MARGIN_MM;
@@ -317,7 +435,6 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
         const srcY = Math.round(renderedMm * pxPerMm);
         const srcH = Math.round(sliceHeightMm * pxPerMm);
 
-        // Create a sub-canvas for this page slice
         const sliceCanvas = document.createElement("canvas");
         sliceCanvas.width = canvas.width;
         sliceCanvas.height = srcH;
@@ -337,8 +454,12 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
           currentY = MARGIN_MM;
         }
 
+        const encStart = performance.now();
+        const imgData = sliceCanvas.toDataURL("image/png");
+        pngEncodeTimeMs += performance.now() - encStart;
+
         pdf.addImage(
-          sliceCanvas.toDataURL("image/png"),
+          imgData,
           "PNG",
           MARGIN_MM,
           currentY,
@@ -354,6 +475,17 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
       currentY += block.gapAfterMm;
     }
+
+    const totalTimeMs = performance.now() - totalStart;
+    const perfLog: PdfPerfLog = {
+      originalBlockCount: originalBlocks.length,
+      batchedBlockCount: blocks.length,
+      totalTimeMs: Math.round(totalTimeMs),
+      layoutMeasureTimeMs: Math.round(layoutMeasureTimeMs),
+      html2canvasTimeMs: Math.round(html2canvasTimeMs),
+      pngEncodeTimeMs: Math.round(pngEncodeTimeMs),
+    };
+    console.info("[PDF perf]", perfLog);
 
     return pdf.output("blob");
   } finally {
