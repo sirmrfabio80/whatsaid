@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { CanonicalExportData } from "@/lib/export-types";
+import { sanitizeFileBaseName } from "@/lib/export-filename";
 
 export interface AppNotification {
   id: string;
