@@ -299,7 +299,8 @@ border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 aut
           const blob = await generatePdfBlob(data);
 
           // 3. Upload to exports bucket
-          const storagePath = `${user.id}/${asyncJobId}.pdf`;
+          const pdfFileName = `${sanitizeFileBaseName(data.title)}.pdf`;
+          const storagePath = `${user.id}/${asyncJobId}/${pdfFileName}`;
           const { error: uploadErr } = await supabase.storage
             .from("exports")
             .upload(storagePath, blob, {
