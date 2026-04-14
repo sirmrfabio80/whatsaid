@@ -331,7 +331,17 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (error) { toast.error(t("jobResults.saveFailed")); throw error; }
     setOutputs((prev) => prev.map((o) => o.id === transcript.id ? { ...o, content: newContent } : o));
     setTranscriptEdited(true);
-    toast.success(t("jobResults.transcriptUpdated"));
+
+    // Clear stale variants — they no longer match the edited transcript
+    setVariants({});
+    const origLang = meta?.language_detected || "en";
+    if (outputLang !== origLang) {
+      setOutputLang(origLang);
+      await supabase.from("jobs").update({ output_language: null }).eq("id", jobId);
+      toast.info(t("jobResults.transcriptEditedResetLang"));
+    } else {
+      toast.success(t("jobResults.transcriptUpdated"));
+    }
   };
 
   const handleAskQuestion = async () => {
