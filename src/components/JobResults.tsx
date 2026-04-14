@@ -570,7 +570,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               <div className="p-5 sm:p-6">
                 {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.regeneratingSummary")}</div>
-                  : summary ? <StructuredSummary content={applySpeakerNames(summary.content, speakerNames)} />
+                  : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
                   : <p className="text-sm text-muted-foreground">{t("jobResults.noSummary")}</p>}
               </div>
             </CardContent>
