@@ -33,3 +33,25 @@ export const STOPWORDS = new Set([
   "rien", "toujours", "disponible", "accord", "sûr", "sûre",
   "désolé", "désolée", "prêt", "prête",
 ]);
+
+/** Role/profession words that should never be used as person names */
+export const ROLE_WORDS = new Set([
+  // Italian
+  "terapista", "occupazionale", "dottore", "dottoressa", "dott",
+  "infermiere", "infermiera", "assistente", "coordinatore", "coordinatrice",
+  "responsabile", "direttore", "direttrice", "paziente", "collega",
+  "fisioterapista", "logopedista", "psicologo", "psicologa",
+  "educatore", "educatrice", "operatore", "operatrice", "medico",
+  "primario", "chirurgo", "farmacista", "ostetrica", "ostetrico",
+  "tecnico", "tecnica", "professore", "professoressa",
+  // English
+  "doctor", "nurse", "therapist", "manager", "director", "assistant",
+  "coordinator", "patient", "colleague", "supervisor", "consultant",
+  "specialist", "technician", "professor", "teacher", "counselor",
+  "practitioner", "surgeon", "pharmacist", "midwife",
+  // French
+  "docteur", "infirmier", "infirmière", "thérapeute", "directeur",
+  "directrice", "assistant", "assistante", "coordinateur", "coordinatrice",
+  "médecin", "chirurgien", "pharmacien", "pharmacienne", "professeur",
+  "conseiller", "conseillère", "spécialiste", "technicien", "technicienne",
+]);
