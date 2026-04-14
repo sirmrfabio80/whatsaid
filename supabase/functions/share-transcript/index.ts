@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
 
     const { data: job, error: jobError } = await serviceClient
       .from('jobs')
-      .select('title, file_name, user_id, speaker_names')
+      .select('title, file_name, user_id, speaker_names, output_language, language_detected')
       .eq('id', job_id)
       .maybeSingle()
 
@@ -239,26 +239,48 @@ Deno.serve(async (req) => {
 
     const { data: outputs } = await serviceClient
       .from('job_outputs')
-      .select('output_type, content, custom_prompt')
+      .select('id, output_type, content, custom_prompt')
       .eq('job_id', job_id)
       .order('created_at', { ascending: true })
 
-    const transcript = outputs?.find(o => o.output_type === 'transcript')
-    const summary = outputs?.find(o => o.output_type === 'summary')
-    const questions = (outputs ?? [])
-      .filter(o => o.output_type === 'custom' || o.output_type === 'question')
-      .map(o => ({ prompt: o.custom_prompt, answer: o.content }))
+    // Check if we need to use translated variants
+    const activeOutputLang = job.output_language || job.language_detected || 'en'
+    const originalLang = job.language_detected || 'en'
+    const useVariants = activeOutputLang !== originalLang
 
-    if (!transcript) {
+    let variantMap: Record<string, string> = {}
+    if (useVariants && outputs && outputs.length > 0) {
+      const outputIds = outputs.map((o: { id: string }) => o.id)
+      const { data: variantRows } = await serviceClient
+        .from('job_output_variants')
+        .select('job_output_id, content')
+        .in('job_output_id', outputIds)
+        .eq('language', activeOutputLang)
+
+      if (variantRows) {
+        for (const v of variantRows) variantMap[v.job_output_id] = v.content
+      }
+    }
+
+    const getContent = (output: { id: string; content: string }) =>
+      useVariants && variantMap[output.id] ? variantMap[output.id] : output.content
+
+    const transcriptOutput = outputs?.find((o: { output_type: string }) => o.output_type === 'transcript')
+    const summaryOutput = outputs?.find((o: { output_type: string }) => o.output_type === 'summary')
+    const questions = (outputs ?? [])
+      .filter((o: { output_type: string }) => o.output_type === 'custom' || o.output_type === 'question')
+      .map((o: { id: string; custom_prompt: string | null; content: string }) => ({ prompt: o.custom_prompt, answer: getContent(o) }))
+
+    if (!transcriptOutput) {
       return new Response(JSON.stringify({ error: 'No transcript available' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const speakerNames = (job.speaker_names ?? {}) as Record<string, string>
-    const transformedTranscript = applySpeakerNames(transcript.content, speakerNames)
-    const transformedSummary = summary?.content ? applySpeakerNames(summary.content, speakerNames) : null
-    const transformedQuestions = questions.map((q) => ({
+    const transformedTranscript = applySpeakerNames(getContent(transcriptOutput), speakerNames)
+    const transformedSummary = summaryOutput ? applySpeakerNames(getContent(summaryOutput), speakerNames) : null
+    const transformedQuestions = questions.map((q: { prompt: string | null; answer: string }) => ({
       prompt: q.prompt,
       answer: applySpeakerNames(q.answer, speakerNames),
     }))

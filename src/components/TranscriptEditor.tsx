@@ -44,6 +44,7 @@ interface TranscriptEditorProps {
   onDismissSuggestions?: () => void;
   onEditedIdsChange?: (ids: Set<string>) => void;
   onCreateSpeaker?: () => string | null;
+  readOnly?: boolean;
 }
 
 export function parseSegments(content: string): Segment[] {
@@ -120,7 +121,7 @@ function usePointerFine() {
 export default function TranscriptEditor({
   content, speakerNames, allSpeakers: allSpeakersProp, onSave, transcriptEdited,
   suggestions, suggestingTarget, onAcceptSuggestions, onDismissSuggestions, onEditedIdsChange,
-  onCreateSpeaker,
+  onCreateSpeaker, readOnly,
 }: TranscriptEditorProps) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -440,15 +441,17 @@ export default function TranscriptEditor({
             </span>
           )}
         </div>
-        <Button
-          variant={editing ? "default" : "outline"}
-          size="sm"
-          className="rounded-full gap-1.5 text-xs h-8"
-          onClick={toggleEditing}
-        >
-          <Pencil className="w-3.5 h-3.5" />
-          {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
-        </Button>
+        {!readOnly && (
+          <Button
+            variant={editing ? "default" : "outline"}
+            size="sm"
+            className="rounded-full gap-1.5 text-xs h-8"
+            onClick={toggleEditing}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
+          </Button>
+        )}
       </div>
 
       {/* Suggestion bar */}

@@ -28,6 +28,7 @@ export interface JobMeta {
   speech_model: string | null; speaker_names: Record<string, string>; title: string | null;
   metadata_location_iso6709: string | null;
   location_label: string | null;
+  output_language: string | null;
 }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
@@ -59,16 +60,42 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [identificationBannerDismissed, setIdentificationBannerDismissed] = useState(false);
   const [identificationOutputId, setIdentificationOutputId] = useState<string | null>(null);
   const identificationRanRef = useRef(false);
+  // Variant state: maps job_output_id → translated content
+  const [variants, setVariants] = useState<Record<string, string>>({});
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
       supabase.from("job_outputs").select("id, output_type, content, custom_prompt").eq("job_id", jobId).order("created_at", { ascending: true }),
-      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label").eq("id", jobId).maybeSingle(),
+      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label, output_language").eq("id", jobId).maybeSingle(),
     ]);
     setOutputs((outputsData as JobOutput[]) ?? []);
     const m = jobData ? { ...jobData, speaker_names: (jobData.speaker_names as Record<string, string>) ?? {} } : null;
     setMeta(m as JobMeta | null);
-    if (m) { setSpeakerNames((m.speaker_names as Record<string, string>) ?? {}); setOutputLang((prev) => prev || m.summary_language || m.language_detected || "en"); onMetaLoaded?.(m as JobMeta); }
+    if (m) {
+      setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
+      const activeLang = m.output_language || m.summary_language || m.language_detected || "en";
+      setOutputLang((prev) => prev || activeLang);
+
+      // Load existing variants if active language differs from original
+      const originalLang = m.language_detected || "en";
+      if (activeLang !== originalLang && outputsData && outputsData.length > 0) {
+        const outputIds = (outputsData as JobOutput[]).map(o => o.id);
+        const { data: variantRows } = await supabase
+          .from("job_output_variants")
+          .select("job_output_id, content")
+          .in("job_output_id", outputIds)
+          .eq("language", activeLang);
+        if (variantRows && variantRows.length > 0) {
+          const vMap: Record<string, string> = {};
+          for (const v of variantRows) vMap[v.job_output_id] = v.content;
+          setVariants(vMap);
+        }
+      } else {
+        setVariants({});
+      }
+
+      onMetaLoaded?.(m as JobMeta);
+    }
     setLoading(false);
   }, [jobId]);
 
@@ -245,10 +272,75 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setSuggestionTarget(null);
   };
 
+  const originalLang = meta?.language_detected || "en";
+  const isViewingTranslation = outputLang !== originalLang && Object.keys(variants).length > 0;
+
+  // Helper to get content for an output — uses variant if viewing translation
+  const getContent = useCallback((output: JobOutput): string => {
+    if (isViewingTranslation && variants[output.id]) return variants[output.id];
+    return output.content;
+  }, [isViewingTranslation, variants]);
+
   const handleOutputLanguageChange = async (langCode: string) => {
     if (langCode === outputLang) return;
-    const prevLang = outputLang; setOutputLang(langCode); setRegeneratingLang(true);
-    try { const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, output_type: "summary", target_language: langCode } }); if (error || data?.error) { setOutputLang(prevLang); return; } await fetchData(); } catch { setOutputLang(prevLang); } finally { setRegeneratingLang(false); }
+    const prevLang = outputLang;
+    const prevVariants = { ...variants };
+    setOutputLang(langCode);
+
+    const origLang = meta?.language_detected || "en";
+
+    // Switching back to original language
+    if (langCode === origLang) {
+      setVariants({});
+      await supabase.from("jobs").update({ output_language: langCode }).eq("id", jobId);
+      return;
+    }
+
+    // Check if variants already exist locally (cached from a previous switch)
+    // If not, check DB first
+    setRegeneratingLang(true);
+    try {
+      const outputIds = outputs.map(o => o.id);
+      const { data: existingVariants } = await supabase
+        .from("job_output_variants")
+        .select("job_output_id, content")
+        .in("job_output_id", outputIds)
+        .eq("language", langCode);
+
+      const translatableOutputs = outputs.filter(o =>
+        o.output_type === "transcript" || o.output_type === "summary" || o.output_type === "custom" || o.output_type === "question"
+      );
+
+      if (existingVariants && existingVariants.length >= translatableOutputs.length) {
+        // All variants exist in DB
+        const vMap: Record<string, string> = {};
+        for (const v of existingVariants) vMap[v.job_output_id] = v.content;
+        setVariants(vMap);
+        await supabase.from("jobs").update({ output_language: langCode }).eq("id", jobId);
+      } else {
+        // Call regenerate with translate_all
+        const { data, error } = await supabase.functions.invoke("regenerate", {
+          body: { job_id: jobId, output_type: "translate_all", target_language: langCode },
+        });
+
+        if (error || data?.error) {
+          setOutputLang(prevLang);
+          setVariants(prevVariants);
+          toast.error(data?.error || t("jobResults.translationFailed"));
+          return;
+        }
+
+        if (data?.variants) {
+          setVariants(data.variants as Record<string, string>);
+        }
+      }
+    } catch {
+      setOutputLang(prevLang);
+      setVariants(prevVariants);
+      toast.error(t("jobResults.translationFailed"));
+    } finally {
+      setRegeneratingLang(false);
+    }
   };
 
   const handleCopy = async (content: string, id: string) => { await navigator.clipboard.writeText(content); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
@@ -362,11 +454,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const effectiveJobTitle = hasDistinctLiveTitle ? liveTitle : persistedJobTitle;
   const generatedTitle = !persistedJobTitle && hasDistinctLiveTitle ? liveTitle : null;
 
+  const activeTranscriptContent = transcript ? getContent(transcript) : "";
+  const activeSummaryContent = summary ? getContent(summary) : null;
+
   const canonicalData = transcript ? buildCanonicalPayload({
     jobTitle: effectiveJobTitle, generatedTitle, originalFileName: meta?.file_name ?? null,
     createdAt: meta?.recorded_at ?? meta?.created_at ?? null, durationSeconds: meta?.duration_seconds ?? null,
-    languageCode: meta?.language_detected ?? null, speakerNames, transcript: transcript.content,
-    summary: summary?.content ?? null, questionEntries: questionEntries.map((q) => ({ id: q.id, prompt: q.custom_prompt, content: q.content })), excludedQAIds,
+    languageCode: meta?.language_detected ?? null, speakerNames, transcript: activeTranscriptContent,
+    summary: activeSummaryContent, questionEntries: questionEntries.map((q) => ({ id: q.id, prompt: q.custom_prompt, content: getContent(q) })), excludedQAIds,
   }) : null;
 
   return (
@@ -381,7 +476,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
           {/* Floating action bar */}
           <div className="inline-flex items-center gap-0.5 rounded-full bg-muted/30 border border-border/30 px-1.5 py-0.5 self-end sm:self-auto">
-            <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-8 px-2.5" onClick={() => { if (transcript) handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id); }}>
+            <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-8 px-2.5" onClick={() => { if (transcript) handleCopy(applySpeakerNames(activeTranscriptContent, speakerNames), transcript.id); }}>
               {copiedId === transcript?.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="hidden xs:inline">{copiedId === transcript?.id ? t("common.copied") : t("common.copy")}</span>
             </Button>
@@ -443,9 +538,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 );
               })()}
+              {isViewingTranslation && (
+                <div className="px-4 py-2 border-b border-border/40 bg-primary/5">
+                  <p className="text-xs text-primary font-medium">{t("jobResults.viewingTranslation")}</p>
+                </div>
+              )}
               {transcript ? (
                 <TranscriptEditor
-                  content={transcript.content}
+                  content={activeTranscriptContent}
                   speakerNames={speakerNames}
                   allSpeakers={allSpeakers}
                   onSave={handleTranscriptSave}
@@ -456,6 +556,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   onDismissSuggestions={handleDismissSuggestions}
                   onEditedIdsChange={(ids) => { editedIdsRef.current = ids; }}
                   onCreateSpeaker={() => createSpeakerRef.current()}
+                  readOnly={isViewingTranslation}
                 />
               ) : (
                 <div className="p-5 sm:p-6"><p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p></div>
@@ -469,7 +570,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               <div className="p-5 sm:p-6">
                 {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.regeneratingSummary")}</div>
-                  : summary ? <StructuredSummary content={applySpeakerNames(summary.content, speakerNames)} />
+                  : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
                   : <p className="text-sm text-muted-foreground">{t("jobResults.noSummary")}</p>}
               </div>
             </CardContent>
@@ -509,13 +610,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                                 <Checkbox id={checkboxId} checked={!isExcluded} onCheckedChange={(checked) => { setExcludedQAIds((prev) => { const next = new Set(prev); if (checked) next.delete(entry.id); else next.add(entry.id); return next; }); }} aria-label={`Include "${entry.custom_prompt ?? "this answer"}" in export`} />
                                 <label htmlFor={checkboxId} className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap select-none">{t("jobResults.includeInExport")}</label>
                               </div>
-                              <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-7" onClick={() => handleCopy(applySpeakerNames(entry.content, speakerNames), entry.id)}>
+                              <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-7" onClick={() => handleCopy(applySpeakerNames(getContent(entry), speakerNames), entry.id)}>
                                 {copiedId === entry.id ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}{copiedId === entry.id ? t("common.copied") : t("common.copy")}
                               </Button>
                             </div>
                             <div>
                               {entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>}
-                              <div className="pl-5"><SectionBody body={applySpeakerNames(entry.content, speakerNames)} /></div>
+                              <div className="pl-5"><SectionBody body={applySpeakerNames(getContent(entry), speakerNames)} /></div>
                             </div>
                           </div>
                         </div>
