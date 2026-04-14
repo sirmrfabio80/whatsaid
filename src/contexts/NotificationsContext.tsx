@@ -239,7 +239,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       if (sourceJobId) {
         exportKey = `pdf:${sourceJobId}`;
       } else {
-        // Build a stable fingerprint from multiple payload characteristics
         const parts = [
           data.title,
           data.createdAt,
@@ -248,7 +247,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           String(data.transcript?.length ?? 0),
           String(data.summary?.length ?? 0),
           String(data.questions?.length ?? 0),
-          // First 64 chars of transcript for additional uniqueness
           data.transcript?.slice(0, 64) ?? "",
         ];
         exportKey = `pdf:fallback:${parts.join("|")}`;
@@ -259,6 +257,19 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         return;
       }
       activePdfExports.current.add(exportKey);
+
+      // Pre-open tab synchronously from user gesture — browsers allow this
+      const pdfTab = window.open("", "_blank");
+      if (pdfTab) {
+        pdfTab.document.write(`<!DOCTYPE html><html><head><title>WhatSaid</title>
+<style>body{font-family:Inter,sans-serif;display:flex;align-items:center;
+justify-content:center;height:100vh;margin:0;background:#0F172A;color:#e2e8f0;}
+.c{text-align:center}.s{animation:spin 1s linear infinite;width:24px;height:24px;
+border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}</style></head>
+<body><div class="c"><div class="s"></div><div>Preparing PDF\u2026</div></div></body></html>`);
+        pdfTab.document.close();
+      }
 
       toast.info(t("notifications.pdfExportStarted"));
 
@@ -321,14 +332,34 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             async_job_id: asyncJobId,
           });
 
-          // 6. Open PDF in new tab for instant viewing
-          const opened = await openExport(storagePath);
-          if (!opened) {
+          // 6. Navigate pre-opened tab to the signed PDF URL
+          if (pdfTab && !pdfTab.closed) {
+            const { data: urlData } = await supabase.storage
+              .from("exports")
+              .createSignedUrl(storagePath, 600);
+            if (urlData?.signedUrl) {
+              pdfTab.location.href = urlData.signedUrl;
+            }
+          } else {
             toast.info(t("notifications.pdfReadyCheckNotifications"));
           }
         } catch (err) {
           console.error("[PDF export] Error:", err);
           const errorMsg = err instanceof Error ? err.message : "Export failed";
+
+          // Show generic safe error in pre-opened tab
+          if (pdfTab && !pdfTab.closed) {
+            pdfTab.document.open();
+            pdfTab.document.write(`<!DOCTYPE html><html><head><title>WhatSaid</title>
+<style>body{font-family:Inter,sans-serif;display:flex;align-items:center;
+justify-content:center;height:100vh;margin:0;background:#0F172A;color:#e2e8f0;}
+.c{text-align:center;max-width:400px}h2{color:#f87171}</style></head>
+<body><div class="c"><h2>Export failed</h2>
+<p>Something went wrong while preparing your PDF.</p>
+<p style="margin-top:12px;color:#94a3b8">Check your notifications for details.</p>
+</div></body></html>`);
+            pdfTab.document.close();
+          }
 
           // Mark async_job as failed if it was created
           if (asyncJobId) {
@@ -342,7 +373,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               .eq("id", asyncJobId);
           }
 
-          // Create failure notification with pdf-specific type
+          // Create failure notification
           await supabase.from("notifications").insert({
             user_id: user!.id,
             type: "pdf_export_failed",
@@ -359,7 +390,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
       })();
     },
-    [user, t, openExport]
+    [user, t]
   );
 
   return (
