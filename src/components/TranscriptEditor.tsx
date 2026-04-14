@@ -441,15 +441,17 @@ export default function TranscriptEditor({
             </span>
           )}
         </div>
-        <Button
-          variant={editing ? "default" : "outline"}
-          size="sm"
-          className="rounded-full gap-1.5 text-xs h-8"
-          onClick={toggleEditing}
-        >
-          <Pencil className="w-3.5 h-3.5" />
-          {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
-        </Button>
+        {!readOnly && (
+          <Button
+            variant={editing ? "default" : "outline"}
+            size="sm"
+            className="rounded-full gap-1.5 text-xs h-8"
+            onClick={toggleEditing}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
+          </Button>
+        )}
       </div>
 
       {/* Suggestion bar */}
