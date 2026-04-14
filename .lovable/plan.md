@@ -1,99 +1,66 @@
 
 
-# Implement Speech-Oriented Audio Enhancement Chain
+# Fix: Missing Italian "sono X" Speaker Identification Patterns
+
+## Root cause
+
+Two regex gaps in `supabase/functions/identify-speakers/index.ts`:
+
+1. **No compound pattern for "sono [Name] la/il [Role]"** — the name-first word order used in natural Italian ("sono Martina la logopedista"). Existing patterns only handle the reverse: "sono il/la [role] [Name]".
+
+2. **No broad pattern for bare "sono X"** without "io". Italian is a pro-drop language — speakers routinely omit the subject pronoun. The existing `\bio\s+sono\s+(\S+)` pattern requires the explicit "io", missing most real-world self-introductions.
 
 ## File to change
 
-`src/lib/audio-enhance.ts` — single file, no other changes.
+`supabase/functions/identify-speakers/index.ts` — `extractCompoundPatterns()` and `extractSelfIdentification()` functions only.
 
-## Implementation
+## Changes
 
-Replace the current processing logic with this chain:
+### 1. Add compound pattern: "sono [Name] la/il [Role]" (name-first)
 
-### 1. Add `computeRMS` helper
+Insert in `extractCompoundPatterns()` (after line ~166, before the elided-article pattern):
 
 ```typescript
-function computeRMS(buffer: AudioBuffer): number {
-  let sumSq = 0;
-  let count = 0;
-  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-    const data = buffer.getChannelData(ch);
-    for (let i = 0; i < data.length; i++) {
-      sumSq += data[i] * data[i];
-      count++;
-    }
+// Italian: "sono X la/il [role]" — name first, role after (e.g. "sono Martina la logopedista")
+m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:il|la)\s+(\S+)/i);
+if (m) {
+  const namePart = cleanName(m[1]);
+  const rolePart = cleanName(m[2]);
+  if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
+    return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
   }
-  return Math.sqrt(sumSq / count);
 }
 ```
 
-### 2. Noise gate — skip enhancement for near-silent audio
+This explicitly checks that the word after "la/il" is a known `ROLE_WORD`, ensuring we don't misfire on non-role phrases. With the input text, it matches `sono (Martina) la (logopedista)` — "logopedista" is in the `ROLE_WORDS` set.
 
-Before building the offline graph, check RMS. If below -50 dBFS (~0.00316), skip enhancement entirely — just WAV-encode the original decoded buffer and return.
+### 2. Add broad pattern: bare "sono X" (without "io")
 
-### 3. Revised compressor settings
-
-| Param | Value | Why |
-|-------|-------|-----|
-| threshold | -30 dB | Catch more dynamic range |
-| ratio | 4:1 | Gentle, avoids pumping |
-| knee | 12 dB | Transparent transition |
-| attack | 5 ms | Preserves consonants |
-| release | 150 ms | Tracks syllables naturally |
-
-### 4. Conservative make-up gain
-
-`GainNode` at +6 dB (factor 2.0) in the offline graph after compressor. This is fixed and conservative — the final normalisation stage handles any remaining shortfall, but with a cap.
-
-### 5. Post-render soft-clip limiter
-
-In-place on rendered buffer. Any sample exceeding ±0.95 is soft-clipped via `tanh`:
+Insert in `extractSelfIdentification()` broad section (after the "io sono X" pattern at line ~359):
 
 ```typescript
-if (Math.abs(data[i]) > 0.95) {
-  data[i] = 0.95 * Math.tanh(data[i] / 0.95);
-}
+// Italian: "sono X" (without explicit "io" — pro-drop)
+m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)/);
+if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
 ```
 
-### 6. Capped peak normalisation (safeguard only)
+This requires the name to start with a capital letter (case-sensitive regex, no `i` flag) to avoid false positives on phrases like "sono contenta". Combined with `isValidName()` filtering out stopwords and role words, this is safe as a broad/suggested pattern.
 
-Target: -1 dBFS (0.891). **Hard cap: maximum +9 dB gain** (factor ~2.82).
+### Why this order matters
 
-```typescript
-const TARGET_PEAK = 0.891;
-const MAX_NORM_GAIN = 2.818; // ~+9 dB cap
-let maxSample = 0;
-// ... find peak across all channels ...
-if (maxSample > 0 && maxSample < TARGET_PEAK) {
-  const gain = Math.min(TARGET_PEAK / maxSample, MAX_NORM_GAIN);
-  // ... apply gain in-place ...
-}
-```
+The compound pattern is checked first (in `extractCompoundPatterns`). So "sono Martina la logopedista" will match as a **compound** hit with high confidence and the role captured. If the text were just "sono Martina" without a role, it would fall through to the **broad** pattern and be suggested rather than auto-applied.
 
-If the file needs more than +9 dB of normalisation after compression + make-up gain, it stays quieter rather than amplifying noise.
+## Expected result for the failing text
 
-### Signal flow
+- Pattern matched: compound `sono (Martina) la (logopedista)`
+- Name: "Martina"
+- Role: "logopedista"
+- Confidence: high (compound pattern)
+- Status: applied (capitalised + compound)
 
-```text
-decode → noise gate check
-           ↓ (pass)
-source → compressor (4:1, -30dB) → gain (+6dB) → destination
-           ↓ (render)
-soft-clip limiter (tanh at ±0.95)
-           ↓
-peak normalize (target 0.891, capped at +9dB)
-           ↓
-encodeWav → File
-```
+## Scope
 
-## What stays unchanged
-
-- `encodeWav` function — untouched
-- Function signature of `enhanceAudioForTranscription` — identical
-- File output format — WAV, same as before
-- No UI, API, or edge function changes
-
-## Regression risk
-
-**Low.** Same function signature, same output format. Only internal processing logic changes. The noise gate adds safety for edge-case silent files. The gain cap prevents runaway amplification.
+- One edge function file only
+- No UI, API, or database changes
+- No changes to confidence scoring, validation, or AI fallback logic
 
