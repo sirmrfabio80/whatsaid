@@ -563,6 +563,9 @@
     "pdfExportStarted": "Export PDF en cours — vous pouvez naviguer librement",
     "pdfReady": "Votre PDF est prêt à télécharger",
     "pdfExportFailed": "L'export PDF a échoué — veuillez réessayer",
-    "downloadFailed": "Impossible de générer le lien de téléchargement"
+    "downloadFailed": "Impossible de générer le lien de téléchargement",
+    "actionFailed": "L'action a échoué — veuillez réessayer",
+    "exportAlreadyRunning": "Cet export est déjà en cours",
+    "retry": "Réessayer"
   }
 }

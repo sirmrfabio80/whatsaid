@@ -611,6 +611,9 @@
     "pdfExportStarted": "PDF export started — you can navigate freely",
     "pdfReady": "Your PDF is ready to download",
     "pdfExportFailed": "PDF export failed — please try again",
-    "downloadFailed": "Could not generate download link"
+    "downloadFailed": "Could not generate download link",
+    "actionFailed": "Action failed — please try again",
+    "exportAlreadyRunning": "This export is already in progress",
+    "retry": "Retry"
   }
 }
