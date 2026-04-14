@@ -15,8 +15,8 @@ export function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-/** Max file size in bytes (200MB) */
-export const MAX_FILE_SIZE = 200 * 1024 * 1024;
+/** Max file size in bytes (100MB) */
+export const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 /** Max duration in seconds (60 min) */
 export const MAX_DURATION = 3600;
