@@ -190,7 +190,11 @@ function sectionHeadingHtml(title: string): string {
   return `<div style="border-top:2px solid ${COLOR_ACCENT};padding-top:10px;margin-top:4px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:${COLOR_HEADING}">${escapeHtml(title)}</h2></div>`;
 }
 
-/* ------------------------------------------------------------------
+/* ------------------------------------------------------------------ */
+/*  Section model                                                      */
+/* ------------------------------------------------------------------ */
+
+interface PdfBlock {
   html: string;
   /** Force a new page before this block */
   forceNewPage: boolean;
