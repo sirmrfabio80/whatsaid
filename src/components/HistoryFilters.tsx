@@ -44,6 +44,7 @@ export default function HistoryFilters({
   }, [tagOpen]);
 
   const filteredSuggestions = tagSuggestions.filter((tag) =>
+    (tag.displayName ?? tag.name).toLowerCase().includes(tagSearch.toLowerCase()) ||
     tag.name.toLowerCase().includes(tagSearch.toLowerCase())
   );
 
