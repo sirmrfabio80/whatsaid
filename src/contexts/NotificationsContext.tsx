@@ -103,9 +103,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         { event: "UPDATE", schema: "public", table: "notifications", filter },
         (payload) => {
           const updated = payload.new as AppNotification;
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n))
-          );
+          setNotifications((prev) => {
+            const exists = prev.some((n) => n.id === updated.id);
+            if (exists) {
+              return prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n));
+            }
+            // Not in local state — add it (e.g. arrived while list was stale)
+            return [updated, ...prev].slice(0, 50);
+          });
         }
       )
       .on(
@@ -125,23 +130,28 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
-  // --- Optimistic actions with rollback ---
+  // --- Optimistic actions with re-fetch on failure ---
 
   const markRead = useCallback(async (id: string) => {
-    const snapshot = notificationsRef.current;
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
     const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
     if (error) {
-      setNotifications(snapshot);
+      // Granular: revert only this notification's read state
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: false } : n))
+      );
       toast.error(t("notifications.actionFailed"));
     }
   }, [t]);
 
   const markAllRead = useCallback(async () => {
     if (!user) return;
-    const snapshot = notificationsRef.current;
+    // Track which IDs were unread before so we can revert only those
+    const unreadIds = new Set(
+      notificationsRef.current.filter((n) => !n.read).map((n) => n.id)
+    );
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     const { error } = await supabase
       .from("notifications")
@@ -149,31 +159,43 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .eq("user_id", user.id)
       .eq("read", false);
     if (error) {
-      setNotifications(snapshot);
+      // Revert only the ones we optimistically changed
+      setNotifications((prev) =>
+        prev.map((n) => (unreadIds.has(n.id) ? { ...n, read: false } : n))
+      );
       toast.error(t("notifications.actionFailed"));
     }
   }, [user, t]);
 
   const deleteNotification = useCallback(async (id: string) => {
-    const snapshot = notificationsRef.current;
+    // Capture the item for reinsertion on failure
+    const deleted = notificationsRef.current.find((n) => n.id === id);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     const { error } = await supabase.from("notifications").delete().eq("id", id);
     if (error) {
-      setNotifications(snapshot);
+      // Re-insert at original position based on created_at
+      if (deleted) {
+        setNotifications((prev) => {
+          const merged = [...prev, deleted].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          return merged.slice(0, 50);
+        });
+      }
       toast.error(t("notifications.actionFailed"));
     }
   }, [t]);
 
   const clearAllNotifications = useCallback(async () => {
     if (!user) return;
-    const snapshot = notificationsRef.current;
     setNotifications([]);
     const { error } = await supabase.from("notifications").delete().eq("user_id", user.id);
     if (error) {
-      setNotifications(snapshot);
+      // Full re-fetch — safest recovery for bulk delete failure
       toast.error(t("notifications.actionFailed"));
+      await loadNotifications();
     }
-  }, [user, t]);
+  }, [user, t, loadNotifications]);
 
   /** Generate a fresh signed URL for a storage path and trigger download */
   const downloadExport = useCallback(async (storagePath: string, filename?: string) => {
