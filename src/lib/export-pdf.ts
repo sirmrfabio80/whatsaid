@@ -163,6 +163,8 @@ function markdownToHtml(text: string): string {
   return htmlParts.join("");
 }
 
+const SPEAKER_BLOCK_STYLE = `margin:4px 0;padding:8px 12px;background:${COLOR_TRANSCRIPT_BG};border-left:3px solid ${COLOR_TRANSCRIPT_BORDER};border-radius:0 4px 4px 0`;
+
 function speakerParagraphToHtml(line: string): string {
   // Match timestamp + speaker: "[00:12:34] Speaker Name: text..."
   const tsMatch = line.match(/^\[(\d{2}:\d{2}:\d{2})\]\s*(.+?):\s(.*)/);
@@ -170,14 +172,14 @@ function speakerParagraphToHtml(line: string): string {
     const timestamp = tsMatch[1];
     const speaker = escapeHtml(tsMatch[2]);
     const text = escapeHtml(tsMatch[3]);
-    return `<p style="margin:6px 0 2px;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><span style="font-size:${TIMESTAMP_FONT_PX}px;color:${COLOR_TIMESTAMP};font-family:monospace;letter-spacing:-0.3px">${timestamp}</span>&ensp;<strong style="color:${COLOR_SPEAKER};font-weight:700">${speaker}:</strong> ${text}</p>`;
+    return `<div style="${SPEAKER_BLOCK_STYLE}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><span style="font-size:${TIMESTAMP_FONT_PX}px;color:${COLOR_TIMESTAMP};font-family:monospace;letter-spacing:-0.3px">${timestamp}</span>&ensp;<strong style="color:${COLOR_SPEAKER};font-weight:700">${speaker}:</strong> ${text}</p></div>`;
   }
   // Fallback: speaker without timestamp
   const speakerMatch = line.match(/^(.+?):\s/);
   if (speakerMatch) {
     const label = escapeHtml(`${speakerMatch[1]}:`);
     const rest = escapeHtml(line.slice(speakerMatch[0].length));
-    return `<p style="margin:6px 0 2px;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><strong style="color:${COLOR_SPEAKER};font-weight:700">${label}</strong> ${rest}</p>`;
+    return `<div style="${SPEAKER_BLOCK_STYLE}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><strong style="color:${COLOR_SPEAKER};font-weight:700">${label}</strong> ${rest}</p></div>`;
   }
   if (!line.trim()) {
     return '<div style="height:6px"></div>';
