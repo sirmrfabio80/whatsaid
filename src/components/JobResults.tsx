@@ -494,7 +494,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               {transcript && (
                 <div className="flex items-center gap-2 p-3 border-b border-border/40 hidden sm:flex">
-                  <div className="flex items-center gap-2 min-w-0 flex-1"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} enableDrag /></div>
+                  <div className="flex items-center gap-2 min-w-0 flex-1"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} enableDrag onIdentifySpeakers={runSpeakerIdentification} identifyingInProgress={identifyingInProgress} /></div>
                   <div className="flex items-center gap-1.5 ml-auto shrink-0">
                     <Globe className="w-3.5 h-3.5 text-muted-foreground" />
                     <Select value={outputLang} onValueChange={handleOutputLanguageChange} disabled={regeneratingLang}>
@@ -506,7 +506,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               <div className="px-4 py-3 border-b border-border/40 sm:hidden">
-                <SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} />
+                <SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} onIdentifySpeakers={runSpeakerIdentification} identifyingInProgress={identifyingInProgress} />
                 <div className="flex items-center gap-1.5 mt-2">
                   <Globe className="w-3.5 h-3.5 text-muted-foreground" />
                   <Select value={outputLang} onValueChange={handleOutputLanguageChange} disabled={regeneratingLang}>
