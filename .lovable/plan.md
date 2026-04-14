@@ -1,130 +1,135 @@
 
 
-# Audio Preprocessing for Difficult Mono Phone-Call Recordings
+# Revised Plan: Simplified Upload UX + Canonical English Tags
 
-## Feasibility Analysis
+## Part A: Simplified Upload UX with Smart Auto-Defaults
 
-### Backend (Edge Function) preprocessing — NOT recommended
-
-Supabase Edge Functions run on Deno Deploy with a **512MB memory limit** and **no ffmpeg binary** available. The options are:
-
-- **ffmpeg.wasm**: ~30MB WASM binary, high memory usage during processing, slow startup. A 10-minute m4a file decoded to PCM could consume 100-200MB. Combined with the WASM runtime overhead, this risks OOM crashes and adds 15-60 seconds of latency. Unreliable for production.
-- **Pure JS DSP in Deno**: Would require manually decoding m4a (AAC) to PCM without ffmpeg — no mature Deno-native AAC decoder exists. Not feasible.
-- **External microservice (e.g., Cloud Run with ffmpeg)**: Reliable but introduces a new infrastructure dependency, deployment pipeline, and cost. Disproportionate for an optional enhancement.
-
-### Client-side preprocessing — RECOMMENDED
-
-The browser's **Web Audio API** provides exactly what we need:
-
-- `OfflineAudioContext` decodes any supported audio format to PCM
-- `DynamicsCompressorNode` applies real-time dynamic range compression (reduces loud/quiet gap)
-- The processed audio can be re-encoded to WAV and uploaded instead of the original
-- No external dependencies, no backend changes, no memory constraints (runs on user's machine)
-- Works on all modern browsers including Safari (iPhone Voice Memo users)
-
-**Tradeoff**: The uploaded file will be WAV (larger than m4a), but since we delete audio after processing and AssemblyAI accepts WAV, this is acceptable. Typical size increase: a 10-minute mono m4a (~5MB) becomes ~100MB WAV. This increases upload time but is within Supabase Storage limits.
-
-## Recommended Preprocessing Chain
-
-Using Web Audio API's `DynamicsCompressorNode`:
+### A1. Phone-call auto-detection heuristic (v1, conservative)
 
 ```text
-Input m4a → AudioContext.decodeAudioData() → OfflineAudioContext
-  → DynamicsCompressorNode (threshold: -24dB, ratio: 12, knee: 10, attack: 0.003, release: 0.25)
-  → destination
-  → renderOffline()
-  → encode to WAV blob
-  → upload WAV instead of original
+isLikelyPhoneCall = channels === 1 (mono) AND extension is .m4a
 ```
 
-**What this does**: Compresses the dynamic range so the quiet remote voice is brought closer in volume to the loud local voice, without clipping or distortion. The compressor parameters are tuned for speech (fast attack to catch transients, moderate release to avoid pumping).
+When matched, auto-set:
+- `strategy: "recovery"`
+- `enhanceAudio: true`
 
-**What this does NOT do**: It does not denoise, filter, or alter frequency content. It only reduces the loudness gap between speakers.
+This is a cautious first-version heuristic. Mono `.m4a` is a strong signal for iPhone Voice Memo but not a guaranteed phone-call detector.
 
-## Expected Benefits and Limitations
+### A2. Convert.tsx — hide settings, show badge, fix scroll
 
-**Benefits**:
-- Quieter remote voice becomes louder relative to local voice
-- AssemblyAI receives audio where both speakers are more equally represented
-- Should improve: missed short segments, faint interjection recovery, speaker attribution
-- Zero backend changes required
+**Hide TranscriptionSettings by default.** Replace the always-visible `<TranscriptionSettings>` with:
+- A small info badge when auto-detection fires: "Optimised for phone call recording" (dismissible, with a link to advanced options)
+- A subtle collapsible link: "Advanced transcription options" that reveals the full `TranscriptionSettings` component
+- When user opens advanced and changes settings, the auto-detected badge disappears
 
-**Limitations**:
-- Does not fix fundamental acoustic issues (echo, reverberation, noise)
-- Cannot separate speakers — only reduces volume imbalance
-- Increases upload file size (WAV vs compressed m4a)
-- Processing happens on user's device (adds a few seconds before upload)
-- Results are audio-dependent — some recordings may not benefit
+**Auto-apply logic** (in `handleFileSelected` or a `useEffect` watching `file`/`audioChannels`):
+```ts
+const ext = file?.name.split(".").pop()?.toLowerCase();
+const isLikelyPhoneCall = audioChannels === 1 && ext === "m4a";
+if (isLikelyPhoneCall) {
+  setTranscriptionConfig({ strategy: "recovery", enhanceAudio: true });
+  setAutoOptimised(true);
+} else {
+  setTranscriptionConfig({});
+  setAutoOptimised(false);
+}
+```
 
-## Risks
+**Scroll fix:** Add a `useRef` on the upload card container. In `handleConvert`, call `cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })` instead of `window.scrollTo`. This anchors reliably on both mobile and desktop.
 
-| Risk | Mitigation |
-|------|-----------|
-| Compression artifacts damage audio quality | Conservative parameters; original always available as fallback |
-| Large WAV upload fails on slow connections | Show progress; could add optional client-side WAV→PCM encoding at lower sample rate |
-| Browser compatibility edge cases | Web Audio API is well-supported; Safari, Chrome, Firefox all work |
-| User confusion about the option | Keep it off by default, label clearly, hide in advanced settings |
+### A3. TranscriptionSettings.tsx — no structural changes
 
-## Implementation Plan
+Keep as-is. The parent `Convert.tsx` controls when it's visible via the advanced collapsible.
 
-### Phase 1: Audio enhancement utility (new file)
-
-Create `src/lib/audio-enhance.ts`:
-- Function `enhanceAudioForTranscription(file: File): Promise<File>`
-- Decodes audio via `AudioContext.decodeAudioData()`
-- Applies `DynamicsCompressorNode` via `OfflineAudioContext`
-- Encodes result to WAV `Blob`
-- Returns new `File` object with `.wav` extension
-
-### Phase 2: UI toggle in TranscriptionSettings
-
-Update `src/components/TranscriptionSettings.tsx`:
-- Add a `Switch` control: "Enhance audio (phone call recordings)"
-- Help text: "Reduces volume differences between speakers. Recommended for phone calls recorded on speaker."
-- Only visible when strategy is `recovery` or profile is `phone_call` (contextually relevant)
-- Off by default
-- Passes `enhanceAudio: boolean` up via `onSettingsChange`
-
-### Phase 3: Wire into Convert page upload flow
-
-Update `src/pages/Convert.tsx`:
-- When `enhanceAudio` is true, after file selection and before upload:
-  - Show "Enhancing audio..." progress state
-  - Call `enhanceAudioForTranscription(file)`
-  - Upload the returned WAV file instead of the original
-  - Store `audio_enhanced: true` in `transcription_config` for logging
-
-### Phase 4: Localization
-
-Update `en.json`, `fr.json`, `it.json` with label and help text strings.
-
-## Files Touched
+### A4. Files changed (Part A)
 
 | File | Change |
 |------|--------|
-| `src/lib/audio-enhance.ts` | **New** — Web Audio API preprocessing utility |
-| `src/components/TranscriptionSettings.tsx` | Add enhance toggle |
-| `src/pages/Convert.tsx` | Wire enhancement into upload flow |
-| `src/i18n/locales/en.json` | Add strings |
-| `src/i18n/locales/fr.json` | Add strings |
-| `src/i18n/locales/it.json` | Add strings |
+| `src/pages/Convert.tsx` | Auto-detect logic, hide settings, add badge, advanced collapsible, scroll fix |
+| `src/i18n/locales/en.json` | Strings for badge, advanced link |
+| `src/i18n/locales/fr.json` | Same |
+| `src/i18n/locales/it.json` | Same |
 
-No backend changes. No database changes. No edge function changes.
+---
 
-## A/B Testing Strategy
+## Part B: Canonical English Tags + UI Translation
 
-Upload the same audio file twice:
-1. With "Enhance audio" OFF → baseline transcript
-2. With "Enhance audio" ON → enhanced transcript
+### B1. Problem today
 
-Compare: utterance count, content length, speaker count, missed interjections. The `transcription_config.audio_enhanced` flag on the job row identifies which is which.
+The AI prompt in `auto-tag.ts` does not specify output language. If the transcript is in Italian, tags come back in Italian (e.g. "ospedale", "logopedia"). This makes tags inconsistent across languages and breaks reuse.
 
-## Scope Guardrails
+### B2. Fix: force English in AI prompt
 
-- No backend changes
-- No provider changes
-- No export changes
-- Toggle is off by default
-- Only affects the uploaded file, not the transcription pipeline
-- Fully backward compatible
+Update the system prompt in `supabase/functions/_shared/auto-tag.ts`:
+```
+- Tags must ALWAYS be in English, regardless of the transcript language
+```
+
+This ensures all generated tags are canonical English. Existing manual user-created tags are unaffected.
+
+### B3. UI translation layer
+
+Create a lightweight tag translation utility that uses the Lovable AI gateway to translate tag names on demand for display:
+
+**Approach:** Client-side translation with caching.
+
+Create `src/lib/tag-translation.ts`:
+- `translateTags(tags: string[], targetLang: string): Promise<Map<string, string>>`
+- Calls a small edge function `translate-tags` that batch-translates English tag names to the target language
+- Results are cached in a `Map` keyed by `lang:tagName` (in-memory, per session)
+- When `targetLang === "en"`, return identity mapping (no API call)
+
+Create `supabase/functions/translate-tags/index.ts`:
+- Accepts `{ tags: string[], target_lang: string }`
+- Uses Lovable AI gateway with a simple prompt: "Translate these English tags to {lang}. Return JSON object mapping English to translated."
+- Lightweight, fast, cacheable
+
+**Hook:** Create `src/hooks/use-translated-tags.ts`:
+- Takes an array of `Tag[]` and the current UI language from `i18n`
+- Returns the same array with a `displayName` field added
+- Caches results so repeated renders don't re-fetch
+
+**Rendering changes:**
+- `src/components/JobDetailTags.tsx` — show `tag.displayName ?? tag.name` instead of `tag.name`
+- `src/pages/History.tsx` — same change for tag chips in job cards
+- `src/hooks/use-history-filters.ts` — filter dropdown shows translated names
+
+### B4. Existing tags — no migration needed
+
+Existing non-English tags continue to work. They were created by users or old AI runs. They'll display as-is (the translation layer only translates when it has a mapping). Over time, new AI tags will all be English. Users can manually rename old tags if they want.
+
+### B5. Files changed (Part B)
+
+| File | Change |
+|------|--------|
+| `supabase/functions/_shared/auto-tag.ts` | Add "always English" rule to AI prompt |
+| `supabase/functions/translate-tags/index.ts` | **New** — batch tag translation edge function |
+| `src/lib/tag-translation.ts` | **New** — client-side translation cache utility |
+| `src/hooks/use-translated-tags.ts` | **New** — hook providing translated tag display names |
+| `src/components/JobDetailTags.tsx` | Use translated display names |
+| `src/pages/History.tsx` | Use translated display names for tag chips |
+| `src/hooks/use-history-filters.ts` | Use translated names in filter dropdown |
+
+---
+
+## Regression Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| Auto-detection false positive (mono .m4a that's not a phone call) | User can override via advanced options; badge makes auto-detection visible |
+| Translation API adds latency to tag display | Cache aggressively; English users see zero latency; non-English users see brief flash then translated names |
+| Existing non-English tags look inconsistent alongside new English ones | Acceptable for v1; translation layer will translate them too if they're recognisable English |
+| Scroll fix breaks on certain mobile browsers | `scrollIntoView` is well-supported; fallback to `window.scrollTo` if ref is null |
+
+## Test Plan
+
+1. Upload a mono `.m4a` file → verify badge appears, config auto-set to recovery + enhance
+2. Upload a stereo `.mp3` → verify no badge, balanced strategy, no enhance
+3. Open advanced options → change strategy → verify badge disappears
+4. Click Convert → verify card scrolls into view smoothly on mobile and desktop
+5. Process a job → verify generated tags are English regardless of transcript language
+6. Switch UI language to French → verify tag chips display French translations
+7. Switch UI language to English → verify tags display as-is (no translation call)
+8. Check History page tag chips and filter dropdown show translated names
 
