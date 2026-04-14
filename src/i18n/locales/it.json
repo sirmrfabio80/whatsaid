@@ -563,6 +563,9 @@
     "pdfExportStarted": "Esportazione PDF avviata — puoi navigare liberamente",
     "pdfReady": "Il tuo PDF è pronto per il download",
     "pdfExportFailed": "Esportazione PDF fallita — riprova",
-    "downloadFailed": "Impossibile generare il link di download"
+    "downloadFailed": "Impossibile generare il link di download",
+    "actionFailed": "Azione fallita — riprova",
+    "exportAlreadyRunning": "Questa esportazione è già in corso",
+    "retry": "Riprova"
   }
 }

@@ -280,7 +280,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
               <span className="hidden xs:inline">{copiedId === transcript?.id ? t("common.copied") : t("common.copy")}</span>
             </Button>
             <ShareButton jobId={jobId} disabled={!transcript} exportData={canonicalData} />
-            <ExportButton data={canonicalData} disabled={!transcript} />
+            <ExportButton data={canonicalData} disabled={!transcript} sourceJobId={jobId} />
           </div>
         </div>
 

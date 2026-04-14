@@ -17,15 +17,15 @@ Deno.serve(async (req) => {
 
     const STALE_MINUTES = 5;
 
-    // Find stale pdf_export jobs
+    // Use updated_at for staleness — gives active jobs more time
     const cutoff = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
 
     const { data: staleJobs, error: fetchErr } = await supabase
       .from("async_jobs")
-      .select("id, user_id, title")
+      .select("id, user_id, title, resource_url")
       .eq("job_type", "pdf_export")
       .eq("status", "processing")
-      .lt("created_at", cutoff);
+      .lt("updated_at", cutoff);
 
     if (fetchErr) {
       console.error("[cleanup-stale-jobs] Fetch error:", fetchErr.message);
@@ -44,8 +44,23 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[cleanup-stale-jobs] Found ${staleJobs.length} stale job(s)`);
+    let cleaned = 0;
 
     for (const job of staleJobs) {
+      // Skip if it already has a resource_url (completed upload, status update may have lagged)
+      if (job.resource_url) {
+        console.log(`[cleanup-stale-jobs] Skipping ${job.id} — has resource_url`);
+        continue;
+      }
+
+      // Check for existing failure notification to prevent duplicates
+      const { data: existingNotif } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("async_job_id", job.id)
+        .eq("status", "error")
+        .limit(1);
+
       // Mark as failed
       await supabase
         .from("async_jobs")
@@ -56,20 +71,24 @@ Deno.serve(async (req) => {
         })
         .eq("id", job.id);
 
-      // Create failure notification for the user
-      await supabase.from("notifications").insert({
-        user_id: job.user_id,
-        type: "job_failed",
-        title: job.title || "PDF export",
-        description: "Export timed out — please try again",
-        status: "error",
-        async_job_id: job.id,
-      });
+      // Only create failure notification if one doesn't already exist
+      if (!existingNotif || existingNotif.length === 0) {
+        await supabase.from("notifications").insert({
+          user_id: job.user_id,
+          type: "pdf_export_failed",
+          title: job.title || "PDF export",
+          description: "Export timed out — please try again",
+          status: "error",
+          async_job_id: job.id,
+        });
+      }
+
+      cleaned++;
     }
 
-    console.log(`[cleanup-stale-jobs] Cleaned ${staleJobs.length} stale job(s)`);
+    console.log(`[cleanup-stale-jobs] Cleaned ${cleaned} stale job(s)`);
 
-    return new Response(JSON.stringify({ cleaned: staleJobs.length }), {
+    return new Response(JSON.stringify({ cleaned }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
