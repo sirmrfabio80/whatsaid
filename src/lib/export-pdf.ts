@@ -74,7 +74,20 @@ const COLOR_META = "#6b7280";
 const COLOR_DIVIDER = "#e5e7eb";
 const COLOR_ACCENT = "#6366f1";
 const COLOR_TRANSCRIPT_BG = "#f8f9fa";
-const COLOR_TRANSCRIPT_BORDER = "#6366f1";
+
+/** Palette for per-speaker left-border colours — professional, accessible, distinct */
+const SPEAKER_COLORS = [
+  "#6366f1", // indigo
+  "#0891b2", // cyan
+  "#16a34a", // green
+  "#d97706", // amber
+  "#dc2626", // red
+  "#9333ea", // purple
+  "#0d9488", // teal
+  "#c026d3", // fuchsia
+  "#2563eb", // blue
+  "#ea580c", // orange
+];
 const WRAPPER_PAD_X_PX = 28;
 
 /** Approximate usable content height in px (at scale 1) used as batch threshold */
@@ -163,23 +176,40 @@ function markdownToHtml(text: string): string {
   return htmlParts.join("");
 }
 
-const SPEAKER_BLOCK_STYLE = `margin:4px 0;padding:8px 12px;background:${COLOR_TRANSCRIPT_BG};border-left:3px solid ${COLOR_TRANSCRIPT_BORDER};border-radius:0 4px 4px 0`;
+function speakerBlockStyle(borderColor: string): string {
+  return `margin:4px 0;padding:8px 12px;background:${COLOR_TRANSCRIPT_BG};border-left:3px solid ${borderColor};border-radius:0 4px 4px 0`;
+}
 
-function speakerParagraphToHtml(line: string): string {
+function speakerParagraphToHtml(line: string, speakerColorMap: Map<string, string>): string {
+  /** Resolve or assign a colour for a speaker name */
+  function colorFor(name: string): string {
+    const key = name.toLowerCase();
+    let color = speakerColorMap.get(key);
+    if (!color) {
+      color = SPEAKER_COLORS[speakerColorMap.size % SPEAKER_COLORS.length];
+      speakerColorMap.set(key, color);
+    }
+    return color;
+  }
+
   // Match timestamp + speaker: "[00:12:34] Speaker Name: text..."
   const tsMatch = line.match(/^\[(\d{2}:\d{2}:\d{2})\]\s*(.+?):\s(.*)/);
   if (tsMatch) {
     const timestamp = tsMatch[1];
-    const speaker = escapeHtml(tsMatch[2]);
+    const speakerRaw = tsMatch[2];
+    const speaker = escapeHtml(speakerRaw);
     const text = escapeHtml(tsMatch[3]);
-    return `<div style="${SPEAKER_BLOCK_STYLE}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><span style="font-size:${TIMESTAMP_FONT_PX}px;color:${COLOR_TIMESTAMP};font-family:monospace;letter-spacing:-0.3px">${timestamp}</span>&ensp;<strong style="color:${COLOR_SPEAKER};font-weight:700">${speaker}:</strong> ${text}</p></div>`;
+    const style = speakerBlockStyle(colorFor(speakerRaw));
+    return `<div style="${style}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><span style="font-size:${TIMESTAMP_FONT_PX}px;color:${COLOR_TIMESTAMP};font-family:monospace;letter-spacing:-0.3px">${timestamp}</span>&ensp;<strong style="color:${COLOR_SPEAKER};font-weight:700">${speaker}:</strong> ${text}</p></div>`;
   }
   // Fallback: speaker without timestamp
   const speakerMatch = line.match(/^(.+?):\s/);
   if (speakerMatch) {
-    const label = escapeHtml(`${speakerMatch[1]}:`);
+    const speakerRaw = speakerMatch[1];
+    const label = escapeHtml(`${speakerRaw}:`);
     const rest = escapeHtml(line.slice(speakerMatch[0].length));
-    return `<div style="${SPEAKER_BLOCK_STYLE}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><strong style="color:${COLOR_SPEAKER};font-weight:700">${label}</strong> ${rest}</p></div>`;
+    const style = speakerBlockStyle(colorFor(speakerRaw));
+    return `<div style="${style}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><strong style="color:${COLOR_SPEAKER};font-weight:700">${label}</strong> ${rest}</p></div>`;
   }
   if (!line.trim()) {
     return '<div style="height:6px"></div>';
@@ -285,9 +315,10 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     });
 
     const lines = data.transcript.split("\n");
+    const speakerColorMap = new Map<string, string>();
     lines.forEach((line, i) => {
       blocks.push({
-        html: speakerParagraphToHtml(line),
+        html: speakerParagraphToHtml(line, speakerColorMap),
         forceNewPage: false,
         gapAfterMm: i < lines.length - 1 ? PARAGRAPH_GAP_MM : 0,
       });
