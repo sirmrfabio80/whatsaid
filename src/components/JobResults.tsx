@@ -401,42 +401,47 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extraSpeakers.join(",")]);
 
-  // Speaker identification: run once after transcript loads
+  // Speaker identification: reusable function
+  const runSpeakerIdentification = useCallback(async () => {
+    if (!transcript) return;
+    const segments = parseSegments(transcript.content);
+    const lines = segments
+      .filter((s) => s.speaker)
+      .map((s) => ({ speaker: s.speaker, text: s.text }));
+    if (lines.length === 0) return;
+
+    setIdentifyingInProgress(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("identify-speakers", {
+        body: { job_id: jobId, transcript_lines: lines, existing_speaker_names: speakerNames },
+      });
+      if (error || data?.error) return;
+      const result = data?.data as SpeakerIdentificationData | undefined;
+      if (!result?.suggestions) return;
+
+      setIdentifications(result.suggestions);
+      setIdentificationBannerDismissed(result.banner_dismissed ?? false);
+
+      // If names were auto-applied server-side, refetch
+      if (!data.cached && result.suggestions.some((s: SpeakerIdentification) => s.status === "applied")) {
+        const { data: jobData } = await supabase.from("jobs").select("speaker_names").eq("id", jobId).maybeSingle();
+        if (jobData) setSpeakerNames((jobData.speaker_names as Record<string, string>) ?? {});
+      }
+
+      const { data: outputRow } = await supabase.from("job_outputs").select("id").eq("job_id", jobId).eq("output_type", "speaker_identifications").maybeSingle();
+      if (outputRow) setIdentificationOutputId(outputRow.id);
+    } catch (e) {
+      console.error("Speaker identification error:", e);
+    } finally {
+      setIdentifyingInProgress(false);
+    }
+  }, [transcript, jobId, speakerNames]);
+
+  // Run once after transcript loads
   useEffect(() => {
     if (!transcript || identificationRanRef.current) return;
     identificationRanRef.current = true;
-
-    const run = async () => {
-      const segments = parseSegments(transcript.content);
-      const lines = segments
-        .filter((s) => s.speaker)
-        .map((s) => ({ speaker: s.speaker, text: s.text }));
-      if (lines.length === 0) return;
-
-      try {
-        const { data, error } = await supabase.functions.invoke("identify-speakers", {
-          body: { job_id: jobId, transcript_lines: lines, existing_speaker_names: speakerNames },
-        });
-        if (error || data?.error) return;
-        const result = data?.data as SpeakerIdentificationData | undefined;
-        if (!result?.suggestions) return;
-
-        setIdentifications(result.suggestions);
-        setIdentificationBannerDismissed(result.banner_dismissed ?? false);
-
-        // If names were auto-applied server-side, refetch
-        if (!data.cached && result.suggestions.some((s: SpeakerIdentification) => s.status === "applied")) {
-          const { data: jobData } = await supabase.from("jobs").select("speaker_names").eq("id", jobId).maybeSingle();
-          if (jobData) setSpeakerNames((jobData.speaker_names as Record<string, string>) ?? {});
-        }
-
-        const { data: outputRow } = await supabase.from("job_outputs").select("id").eq("job_id", jobId).eq("output_type", "speaker_identifications").maybeSingle();
-        if (outputRow) setIdentificationOutputId(outputRow.id);
-      } catch (e) {
-        console.error("Speaker identification error:", e);
-      }
-    };
-    run();
+    runSpeakerIdentification();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.id]);
 
