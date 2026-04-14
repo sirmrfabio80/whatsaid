@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe, RefreshCw } from "lucide-react";
 import ShareButton from "@/components/ShareButton";
 import { LANGUAGES } from "@/lib/languages";
 import { applySpeakerNames } from "@/lib/speaker-names";
@@ -62,11 +62,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const identificationRanRef = useRef(false);
   // Variant state: maps job_output_id → translated content
   const [variants, setVariants] = useState<Record<string, string>>({});
+  const [summaryNeedsRegen, setSummaryNeedsRegen] = useState(false);
+  const [summaryRegenCount, setSummaryRegenCount] = useState(0);
+  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
       supabase.from("job_outputs").select("id, output_type, content, custom_prompt").eq("job_id", jobId).order("created_at", { ascending: true }),
-      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label, output_language").eq("id", jobId).maybeSingle(),
+      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label, output_language, summary_needs_regen, summary_regen_count").eq("id", jobId).maybeSingle(),
     ]);
     setOutputs((outputsData as JobOutput[]) ?? []);
     const m = jobData ? { ...jobData, speaker_names: (jobData.speaker_names as Record<string, string>) ?? {} } : null;
@@ -75,6 +78,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
       const activeLang = m.output_language || m.summary_language || m.language_detected || "en";
       setOutputLang((prev) => prev || activeLang);
+      setSummaryNeedsRegen((jobData as Record<string, unknown>)?.summary_needs_regen === true);
+      setSummaryRegenCount(((jobData as Record<string, unknown>)?.summary_regen_count as number) ?? 0);
 
       // Load existing variants if active language differs from original
       const originalLang = m.language_detected || "en";
