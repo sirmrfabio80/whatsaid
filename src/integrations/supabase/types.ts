@@ -204,6 +204,7 @@ export type Database = {
           id: string
           job_output_id: string
           language: string
+          source_hash: string
         }
         Insert: {
           content?: string
@@ -211,6 +212,7 @@ export type Database = {
           id?: string
           job_output_id: string
           language: string
+          source_hash?: string
         }
         Update: {
           content?: string
@@ -218,6 +220,7 @@ export type Database = {
           id?: string
           job_output_id?: string
           language?: string
+          source_hash?: string
         }
         Relationships: [
           {

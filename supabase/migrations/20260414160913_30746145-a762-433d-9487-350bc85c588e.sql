@@ -1,0 +1,1 @@
+ALTER TABLE public.job_output_variants ADD COLUMN source_hash TEXT NOT NULL DEFAULT '';
