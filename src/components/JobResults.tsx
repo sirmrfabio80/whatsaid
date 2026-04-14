@@ -309,6 +309,45 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extraSpeakers.join(",")]);
 
+  // Speaker identification: run once after transcript loads
+  useEffect(() => {
+    if (!transcript || identificationRanRef.current) return;
+    identificationRanRef.current = true;
+
+    const run = async () => {
+      const segments = parseSegments(transcript.content);
+      const lines = segments
+        .filter((s) => s.speaker)
+        .map((s) => ({ speaker: s.speaker, text: s.text }));
+      if (lines.length === 0) return;
+
+      try {
+        const { data, error } = await supabase.functions.invoke("identify-speakers", {
+          body: { job_id: jobId, transcript_lines: lines, existing_speaker_names: speakerNames },
+        });
+        if (error || data?.error) return;
+        const result = data?.data as SpeakerIdentificationData | undefined;
+        if (!result?.suggestions) return;
+
+        setIdentifications(result.suggestions);
+        setIdentificationBannerDismissed(result.banner_dismissed ?? false);
+
+        // If names were auto-applied server-side, refetch
+        if (!data.cached && result.suggestions.some((s: SpeakerIdentification) => s.status === "applied")) {
+          const { data: jobData } = await supabase.from("jobs").select("speaker_names").eq("id", jobId).maybeSingle();
+          if (jobData) setSpeakerNames((jobData.speaker_names as Record<string, string>) ?? {});
+        }
+
+        const { data: outputRow } = await supabase.from("job_outputs").select("id").eq("job_id", jobId).eq("output_type", "speaker_identifications").maybeSingle();
+        if (outputRow) setIdentificationOutputId(outputRow.id);
+      } catch (e) {
+        console.error("Speaker identification error:", e);
+      }
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcript?.id]);
+
   if (loading) return <div className="space-y-4 py-8"><div className="animate-pulse space-y-3"><div className="h-10 bg-muted rounded-xl w-full" /><div className="h-64 bg-muted rounded-xl w-full" /></div></div>;
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
 
