@@ -44,6 +44,7 @@ interface TranscriptEditorProps {
   onDismissSuggestions?: () => void;
   onEditedIdsChange?: (ids: Set<string>) => void;
   onCreateSpeaker?: () => string | null;
+  readOnly?: boolean;
 }
 
 export function parseSegments(content: string): Segment[] {
