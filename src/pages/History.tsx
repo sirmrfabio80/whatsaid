@@ -42,6 +42,8 @@ export default function History() {
 
   const jobIds = useMemo(() => jobs.map((j) => j.id), [jobs]);
   const filters = useHistoryFilters(user?.id, jobIds);
+  const translatedSuggestions = useTranslatedTags(filters.tagSuggestions);
+  const translatedSelected = useTranslatedTags(filters.selectedTags);
 
   useEffect(() => {
     if (authLoading) return;
@@ -124,8 +126,8 @@ export default function History() {
             <HistoryFilters
               searchQuery={filters.searchQuery}
               onSearchChange={filters.setSearchQuery}
-              tagSuggestions={filters.tagSuggestions}
-              selectedTags={filters.selectedTags}
+              tagSuggestions={translatedSuggestions}
+              selectedTags={translatedSelected}
               onToggleTag={filters.toggleTag}
               onClearAll={filters.clearAll}
               hasActiveFilters={filters.hasActiveFilters}
