@@ -476,7 +476,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
           {/* Floating action bar */}
           <div className="inline-flex items-center gap-0.5 rounded-full bg-muted/30 border border-border/30 px-1.5 py-0.5 self-end sm:self-auto">
-            <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-8 px-2.5" onClick={() => { if (transcript) handleCopy(applySpeakerNames(transcript.content, speakerNames), transcript.id); }}>
+            <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-8 px-2.5" onClick={() => { if (transcript) handleCopy(applySpeakerNames(activeTranscriptContent, speakerNames), transcript.id); }}>
               {copiedId === transcript?.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="hidden xs:inline">{copiedId === transcript?.id ? t("common.copied") : t("common.copy")}</span>
             </Button>
