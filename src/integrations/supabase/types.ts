@@ -197,6 +197,38 @@ export type Database = {
         }
         Relationships: []
       }
+      job_output_variants: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          job_output_id: string
+          language: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          job_output_id: string
+          language: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          job_output_id?: string
+          language?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_output_variants_job_output_id_fkey"
+            columns: ["job_output_id"]
+            isOneToOne: false
+            referencedRelation: "job_outputs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_outputs: {
         Row: {
           content: string
@@ -294,6 +326,7 @@ export type Database = {
           metadata_file_lastmodified: string | null
           metadata_location_iso6709: string | null
           metadata_mvhd_creation: string | null
+          output_language: string | null
           recorded_at: string | null
           recorded_at_source: string | null
           regeneration_count: number
@@ -328,6 +361,7 @@ export type Database = {
           metadata_file_lastmodified?: string | null
           metadata_location_iso6709?: string | null
           metadata_mvhd_creation?: string | null
+          output_language?: string | null
           recorded_at?: string | null
           recorded_at_source?: string | null
           regeneration_count?: number
@@ -362,6 +396,7 @@ export type Database = {
           metadata_file_lastmodified?: string | null
           metadata_location_iso6709?: string | null
           metadata_mvhd_creation?: string | null
+          output_language?: string | null
           recorded_at?: string | null
           recorded_at_source?: string | null
           regeneration_count?: number
