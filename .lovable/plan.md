@@ -1,97 +1,108 @@
 
 
-# Variant Freshness & Invalidation — Plan
+# `claim-transcript-share` Phase 2 — Copy Active-Language Variants
 
-## Freshness model
+## Mapping strategy (tightened)
 
-**Staleness is implicit, not flagged.** There is no `stale` boolean column. A variant is treated as stale when its stored `source_hash` does not match the hash of the current source transcript content. Variants are never explicitly marked as stale in the database.
+The current code inserts outputs in bulk (line 177–184) but does not return the new IDs. The fix:
 
-## Schema change
+1. Fetch old outputs with `id` included, ordered by `created_at` (deterministic insertion order).
+2. Insert new outputs **one at a time in order**, collecting each new `id`.
+3. Build an in-memory array of `{ oldId, newId }` pairs using positional correspondence — the Nth old output maps to the Nth new output.
 
-Add one column to `job_output_variants`:
+This avoids relying on `(output_type, custom_prompt)` uniqueness entirely. The mapping is purely positional, driven by the same deterministic sort order on both sides.
 
-```sql
-ALTER TABLE public.job_output_variants
-  ADD COLUMN source_hash TEXT NOT NULL DEFAULT '';
+For clarity:
+- `transcript` and `summary` are unique by type, so positional mapping is trivially correct for them.
+- Multiple `custom` outputs with identical prompts are handled safely because order is preserved.
+
+## Changes to `claim-transcript-share/index.ts`
+
+### 1. Fetch old outputs with `id`, ordered
+
+```typescript
+const { data: outputs } = await serviceClient
+  .from('job_outputs')
+  .select('id, output_type, content, custom_prompt')
+  .eq('job_id', share.job_id)
+  .order('created_at', { ascending: true })
 ```
 
-Existing rows get `''` (empty string). Since an empty string never matches any real content hash, existing variants are implicitly stale and will be regenerated on next language switch. No data loss — just one extra regeneration per legacy job.
+### 2. Insert new outputs individually, build mapping
 
-## Hash function
+```typescript
+const idMap: Array<{ oldId: string; newId: string }> = []
+for (const o of outputs) {
+  const { data: newOutput } = await serviceClient
+    .from('job_outputs')
+    .insert({
+      job_id: newJob.id,
+      output_type: o.output_type,
+      content: o.content,
+      custom_prompt: o.custom_prompt,
+    })
+    .select('id')
+    .single()
+  if (newOutput) {
+    idMap.push({ oldId: o.id, newId: newOutput.id })
+  }
+}
+```
 
-SHA-256 of the transcript content, truncated to the first 16 hex characters. Computed server-side only (in the `regenerate` edge function). The client does not need to compute hashes.
+### 3. Copy `output_language` to new job
 
-## Invalidation rules
+Add `output_language: originalJob.output_language` to the job insert (line 137).
 
-All variants (transcript, summary, Q&A) depend on the original-language transcript as their source:
+### 4. Copy active-language variants
 
-| Variant type | Stale when |
-|---|---|
-| Transcript variant | `source_hash` does not match current transcript content hash |
-| Summary variant | Same — derived from transcript |
-| Q&A (`custom`) variant | Same — derived from transcript |
+If `originalJob.output_language` exists and differs from `originalJob.language_detected`:
 
-## Changes
+```typescript
+const activeLang = originalJob.output_language
+if (activeLang && activeLang !== originalJob.language_detected) {
+  const oldOutputIds = idMap.map(m => m.oldId)
+  const { data: variants } = await serviceClient
+    .from('job_output_variants')
+    .select('job_output_id, language, content, source_hash')
+    .in('job_output_id', oldOutputIds)
+    .eq('language', activeLang)
 
-### 1. Migration
+  if (variants && variants.length > 0) {
+    const variantInserts = variants
+      .map(v => {
+        const mapped = idMap.find(m => m.oldId === v.job_output_id)
+        if (!mapped) return null
+        return {
+          job_output_id: mapped.newId,
+          language: v.language,
+          content: v.content,
+          source_hash: v.source_hash,
+        }
+      })
+      .filter(Boolean)
 
-Add `source_hash TEXT NOT NULL DEFAULT ''` to `job_output_variants`.
-
-### 2. `supabase/functions/regenerate/index.ts` — `handleTranslateAll`
-
-- Compute `source_hash` from the transcript's current `content` using `crypto.subtle.digest("SHA-256", ...)`, truncated to 16 hex chars.
-- When checking existing variants (line ~69–75), also fetch `source_hash` and compare against the computed hash. Variants with mismatched hashes are treated as missing and re-translated.
-- Store `source_hash` on every upserted variant row.
-
-### 3. `src/components/JobResults.tsx` — `handleTranscriptSave`
-
-After saving the edited transcript (line 348–355):
-- Clear `variants` state.
-- If `outputLang !== originalLang`, reset `outputLang` to `originalLang` and persist `output_language = null` on the job.
-- Show toast: `t("jobResults.transcriptEditedResetLang")`.
-
-This ensures the user is returned to the original language after editing. The next language switch will trigger `regenerate`, which will detect hash mismatches and re-translate.
-
-### 4. `src/components/JobResults.tsx` — `handleOutputLanguageChange`
-
-No changes needed. The existing flow calls `regenerate` when variants are missing. The backend hash comparison handles staleness transparently — stale variants are re-translated server-side without the client needing to know.
-
-One adjustment: when fetching existing variants from DB (line ~304–308), also fetch `source_hash`. But since the client doesn't know the current transcript hash, it's simpler to let the backend handle this entirely. The client flow already falls through to `regenerate` when variant count is insufficient. The backend will re-translate stale variants and return fresh content.
-
-**Simplification**: Remove the client-side DB check for existing variants (lines 303–319). Always call the `regenerate` function, which already handles caching internally (returns existing fresh variants without re-translating). This eliminates the need for the client to reason about staleness at all.
-
-### 5. i18n
-
-Add one key to EN, FR, IT:
-- `jobResults.transcriptEditedResetLang`
-  - EN: `"Transcript edited — translations will update on next language switch"`
-  - FR: `"Transcription modifiée — les traductions seront mises à jour au prochain changement de langue"`
-  - IT: `"Trascrizione modificata — le traduzioni verranno aggiornate al prossimo cambio di lingua"`
+    if (variantInserts.length > 0) {
+      await serviceClient.from('job_output_variants').insert(variantInserts)
+    }
+  }
+}
+```
 
 ## Files affected
 
 | File | Change |
 |---|---|
-| Migration SQL | Add `source_hash` column |
-| `supabase/functions/regenerate/index.ts` | Compute hash, compare on read, store on upsert |
-| `src/components/JobResults.tsx` | Clear variants + reset lang on transcript save; simplify language switch to always call `regenerate` |
-| `src/i18n/locales/en.json`, `fr.json`, `it.json` | Add `transcriptEditedResetLang` |
+| `supabase/functions/claim-transcript-share/index.ts` | Ordered fetch, sequential insert with ID mapping, copy `output_language`, copy active variants |
+
+## No migration needed
+
+No schema changes — uses existing `job_output_variants` and `jobs.output_language`.
 
 ## Regression risks
 
 | Risk | Mitigation |
 |---|---|
-| Existing variants all have `source_hash = ''` | Treated as stale (empty never matches real hash), regenerated once on next switch |
-| Auto-switch to original after edit may surprise user | Toast explains why |
-| Removing client-side variant cache check | Backend already caches fresh variants; no extra latency for fresh variants |
-| Summary/Q&A variants regenerated when only transcript changed | Correct — all outputs derive from transcript |
-
-## Test plan
-
-1. Open a completed job with existing translations — verify they load
-2. Edit transcript while viewing original language — verify no disruption
-3. Edit transcript while viewing a translation — verify auto-switch to original + toast
-4. Switch to another language after editing — verify spinner, regeneration, fresh content
-5. Switch again to same language without editing — verify cached variants load instantly (no re-translation)
-6. Verify exports use correct content after re-translation
+| Sequential inserts slower than bulk | Typically 2–4 outputs per job; negligible latency |
+| Variant `source_hash` mismatch after copy | Hash matches copied transcript content, so variants are fresh |
+| `output_language` set but no variants exist | Frontend handles this — calls `regenerate` on next language switch |
 
