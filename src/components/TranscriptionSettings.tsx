@@ -4,12 +4,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 
 export interface TranscriptionConfig {
   strategy?: string;
   speakers_expected?: number;
   keyterms?: string[];
+  enhanceAudio?: boolean;
   /** @deprecated Legacy field kept for backward compatibility */
   profile?: string;
 }
@@ -153,6 +155,26 @@ export default function TranscriptionSettings({ value, onChange, disabled }: Tra
             {t("transcriptionSettings.speakersHelp")}
           </p>
         </div>
+
+        {/* Audio enhancement toggle — contextually relevant for recovery/phone_call */}
+        {(currentStrategy === "recovery" || value.profile === "phone_call") && (
+          <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-muted/50">
+            <div className="space-y-0.5">
+              <Label htmlFor="enhance-audio" className="text-sm font-medium cursor-pointer">
+                {t("transcriptionSettings.enhanceLabel")}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t("transcriptionSettings.enhanceHelp")}
+              </p>
+            </div>
+            <Switch
+              id="enhance-audio"
+              checked={value.enhanceAudio ?? false}
+              onCheckedChange={(checked) => onChange({ ...value, enhanceAudio: checked || undefined })}
+              disabled={disabled}
+            />
+          </div>
+        )}
       </CollapsibleContent>
     </Collapsible>
   );
