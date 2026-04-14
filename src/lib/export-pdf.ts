@@ -1,7 +1,29 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import logoUrl from "@/assets/logo.png";
 
 import type { CanonicalExportData } from "./export-types";
+
+/** Cache the logo as a base64 data URL so we decode it only once per session. */
+let _logoDataUrl: string | null = null;
+async function getLogoDataUrl(): Promise<string | null> {
+  if (_logoDataUrl) return _logoDataUrl;
+  try {
+    const resp = await fetch(logoUrl);
+    const blob = await resp.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        _logoDataUrl = reader.result as string;
+        resolve(_logoDataUrl);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    console.warn("Could not load logo for PDF footer");
+    return null;
+  }
+}
 
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
