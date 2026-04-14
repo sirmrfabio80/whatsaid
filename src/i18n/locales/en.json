@@ -607,6 +607,7 @@
     "title": "Notifications",
     "empty": "No notifications yet",
     "markAllRead": "Mark all read",
+    "clearAll": "Clear all",
     "pdfExportStarted": "PDF export started — you can navigate freely",
     "pdfReady": "Your PDF is ready to download",
     "pdfExportFailed": "PDF export failed — please try again",
