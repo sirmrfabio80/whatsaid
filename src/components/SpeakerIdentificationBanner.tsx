@@ -121,11 +121,6 @@ export default function SpeakerIdentificationBanner({
                   <span className="font-medium text-foreground">
                     {s.inferred_name}
                   </span>
-                  {s.role && (
-                    <span className="text-muted-foreground italic">
-                      ({s.role})
-                    </span>
-                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="text-muted-foreground/60 cursor-help underline decoration-dotted underline-offset-2">
