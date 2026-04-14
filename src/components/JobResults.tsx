@@ -528,12 +528,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 );
               })()}
-              {isViewingTranslation && (
+              {isViewingTranslation && !regeneratingLang && (
                 <div className="px-4 py-2 border-b border-border/40 bg-primary/5">
                   <p className="text-xs text-primary font-medium">{t("jobResults.viewingTranslation")}</p>
                 </div>
               )}
-              {transcript ? (
+              {regeneratingLang ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.translatingTranscript")}</div>
+              ) : transcript ? (
                 <TranscriptEditor
                   content={activeTranscriptContent}
                   speakerNames={speakerNames}
@@ -559,7 +561,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
               <div className="p-5 sm:p-6">
-                {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.regeneratingSummary")}</div>
+                {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.translatingContent")}</div>
                   : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
                   : <p className="text-sm text-muted-foreground">{t("jobResults.noSummary")}</p>}
               </div>
