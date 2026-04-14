@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Check, X, AlertTriangle, MessageSquareWarning, Scissors, ArrowUpToLine, Plus } from "lucide-react";
+import { Pencil, Check, X, AlertTriangle, MessageSquareWarning, Scissors, ArrowUpToLine, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -139,6 +139,7 @@ export default function TranscriptEditor({
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set());
   const [rejectedSuggestionIds, setRejectedSuggestionIds] = useState<Set<string>>(new Set());
   const [mergeConfirm, setMergeConfirm] = useState<{ index: number; prevSpeaker: string; currSpeaker: string } | null>(null);
+  const [deleteConfirmIndex, setDeleteConfirmIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dropSuccessIndex, setDropSuccessIndex] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -357,6 +358,32 @@ export default function TranscriptEditor({
       setEditText(mergedText);
       setDirty(false);
       toast.success(t("jobResults.mergeSuccess"));
+    } catch {
+      setSegments(parseSegments(content));
+    } finally {
+      setSaving(false);
+    }
+  }, [segments, onSave, content, suggestions, onDismissSuggestions, t]);
+
+  // Delete a segment
+  const deleteSegment = useCallback(async (index: number) => {
+    const nonEmpty = segments.filter((s) => s.text.trim() || s.speaker);
+    if (nonEmpty.length <= 1) {
+      toast.error(t("jobResults.deleteSegmentLastError"));
+      return;
+    }
+    setSaving(true);
+    const updated = segments.filter((_, i) => i !== index);
+    updated.forEach((s, i) => { s.index = i; });
+    setSegments(updated);
+    setDeleteConfirmIndex(null);
+    if (suggestions?.length) onDismissSuggestions?.();
+    try {
+      await onSave(reconstructContent(updated));
+      setActiveIndex(null);
+      setEditText("");
+      setDirty(false);
+      toast.success(t("jobResults.deleteSegmentSuccess"));
     } catch {
       setSegments(parseSegments(content));
     } finally {
@@ -603,7 +630,52 @@ export default function TranscriptEditor({
                         <span className="hidden sm:inline">{t("jobResults.mergeUp")}</span>
                       </Button>
                     )}
+
+                    {/* Delete segment */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full gap-1.5 h-9 min-w-[44px] px-3 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                      onClick={() => setDeleteConfirmIndex(i)}
+                      disabled={saving}
+                      title={t("jobResults.deleteSegment")}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{t("jobResults.deleteSegment")}</span>
+                    </Button>
                   </div>
+
+                  {/* Delete confirmation inline */}
+                  {deleteConfirmIndex === i && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2 animate-in fade-in-0 zoom-in-95 duration-150">
+                      <p className="text-xs font-medium text-foreground">
+                        {t("jobResults.deleteSegmentConfirmTitle")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t("jobResults.deleteSegmentConfirmDesc")}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="rounded-lg h-8 text-xs gap-1.5"
+                          onClick={() => deleteSegment(i)}
+                          disabled={saving}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          {t("jobResults.deleteSegment")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="rounded-lg h-8 text-xs"
+                          onClick={() => setDeleteConfirmIndex(null)}
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Merge confirmation inline */}
                   {mergeConfirm?.index === i && (
