@@ -88,6 +88,27 @@ function inlineMarkdownToHtml(escaped: string): string {
   return result;
 }
 
+/**
+ * Split markdown text into sections where each section starts with a heading.
+ * Each returned chunk contains the heading AND the content that follows it,
+ * so they are always rendered together (preventing orphaned headings).
+ */
+function splitMarkdownBySections(text: string): string[] {
+  const lines = text.split("\n");
+  const chunks: string[] = [];
+  let current: string[] = [];
+
+  for (const line of lines) {
+    if (/^#{2,4}\s/.test(line) && current.length > 0) {
+      chunks.push(current.join("\n"));
+      current = [];
+    }
+    current.push(line);
+  }
+  if (current.length > 0) chunks.push(current.join("\n"));
+  return chunks;
+}
+
 function markdownToHtml(text: string): string {
   const lines = text.split("\n");
   const htmlParts: string[] = [];
