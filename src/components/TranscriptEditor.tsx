@@ -675,7 +675,7 @@ export default function TranscriptEditor({
                         </Button>
                       </div>
                     </div>
-                  )
+                  )}
 
                   {/* Merge confirmation inline */}
                   {mergeConfirm?.index === i && (
