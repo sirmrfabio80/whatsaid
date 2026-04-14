@@ -391,6 +391,7 @@ export default function TranscriptEditor({
     }
   }, [segments, onSave, content, suggestions, onDismissSuggestions, t]);
 
+  const toggleEditing = useCallback(() => {
     if (editing && activeIndex !== null && dirty) {
       setConfirmSwitch(-1);
       return;
