@@ -602,5 +602,10 @@
     "speakers4": "4 speakers",
     "enhanceLabel": "Enhance audio for phone calls",
     "enhanceHelp": "Reduces volume differences between speakers. Recommended for phone calls recorded on speaker."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "markAllRead": "Mark all read"
   }
 }

@@ -161,6 +161,26 @@ Rules:
       .update({ status: "completed", summary_language: langLabel, short_summary: shortSummary })
       .eq("id", job_id);
 
+    // 6b. Fetch job to get user_id and title for notification
+    const { data: jobForNotif } = await supabase
+      .from("jobs")
+      .select("user_id, title, file_name")
+      .eq("id", job_id)
+      .single();
+
+    if (jobForNotif?.user_id) {
+      const notifTitle = jobForNotif.title || jobForNotif.file_name || "Transcript";
+      await supabase.from("notifications").insert({
+        user_id: jobForNotif.user_id,
+        type: "transcript_ready",
+        title: notifTitle,
+        description: shortSummary || null,
+        status: "success",
+        resource_type: "job",
+        resource_id: job_id,
+      });
+    }
+
     // 7. Auto-tag transcript (non-blocking)
     try {
       const tagResult = await autoTag(supabase, job_id, LOVABLE_API_KEY);
@@ -187,7 +207,7 @@ Rules:
   } catch (error) {
     console.error(`[post-process] Error:`, error);
 
-    // Try to mark job as failed
+    // Try to mark job as failed and insert failure notification
     try {
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -202,6 +222,25 @@ Rules:
             error_message: sanitizeErrorForClient(error),
           })
           .eq("id", body.job_id);
+
+        // Insert failure notification
+        const { data: failedJob } = await supabase
+          .from("jobs")
+          .select("user_id, title, file_name")
+          .eq("id", body.job_id)
+          .single();
+
+        if (failedJob?.user_id) {
+          await supabase.from("notifications").insert({
+            user_id: failedJob.user_id,
+            type: "job_failed",
+            title: failedJob.title || failedJob.file_name || "Transcription",
+            description: sanitizeErrorForClient(error),
+            status: "error",
+            resource_type: "job",
+            resource_id: body.job_id,
+          });
+        }
       }
     } catch {
       // ignore cleanup errors

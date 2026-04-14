@@ -554,5 +554,10 @@
     "speakers4": "4 interlocutori",
     "enhanceLabel": "Migliora audio per chiamate telefoniche",
     "enhanceHelp": "Riduce le differenze di volume tra gli interlocutori. Consigliato per chiamate registrate in vivavoce."
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "empty": "Nessuna notifica",
+    "markAllRead": "Segna tutto come letto"
   }
 }
