@@ -457,9 +457,10 @@ function runDeterministicExtraction(
     const [, topGroup] = sorted[0];
     const bestCandidate = topGroup.find((c) => c.capitalised) ?? topGroup[0];
     const displayName = bestCandidate.name.charAt(0).toUpperCase() + bestCandidate.name.slice(1);
+    const MAX_EVIDENCE_CHARS = 120;
     const allEvidence = [...new Set(
       (hasMultipleNames ? candidates : topGroup).flatMap((c) => c.evidence)
-    )].slice(0, 3);
+    )].slice(0, 3).map((e) => e.length > MAX_EVIDENCE_CHARS ? e.slice(0, MAX_EVIDENCE_CHARS) + "…" : e);
     const role = topGroup.find((c) => c.role)?.role ?? candidates.find((c) => c.role)?.role;
 
     const validation = validateCandidate(bestCandidate);
