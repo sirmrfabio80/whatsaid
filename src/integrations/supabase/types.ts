@@ -339,6 +339,8 @@ export type Database = {
           status: Database["public"]["Enums"]["job_status"]
           stripe_payment_id: string | null
           summary_language: string | null
+          summary_needs_regen: boolean
+          summary_regen_count: number
           temp_file_path: string | null
           title: string | null
           transcription_config: Json | null
@@ -374,6 +376,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
           summary_language?: string | null
+          summary_needs_regen?: boolean
+          summary_regen_count?: number
           temp_file_path?: string | null
           title?: string | null
           transcription_config?: Json | null
@@ -409,6 +413,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_id?: string | null
           summary_language?: string | null
+          summary_needs_regen?: boolean
+          summary_regen_count?: number
           temp_file_path?: string | null
           title?: string | null
           transcription_config?: Json | null
