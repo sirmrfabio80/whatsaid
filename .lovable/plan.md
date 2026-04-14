@@ -1,108 +1,52 @@
 
 
-# `claim-transcript-share` Phase 2 — Copy Active-Language Variants
+# Output Language UX/Copy Cleanup — Revised Plan
 
-## Mapping strategy (tightened)
+## Verification results
 
-The current code inserts outputs in bulk (line 177–184) but does not return the new IDs. The fix:
+**`summary_language` (DB column)**: Actively written by `post-process`, `regenerate`, and `claim-transcript-share` edge functions. Used as a fallback in `JobResults.tsx` line 76. **Not safe to remove.** Keep as backward-compatibility fallback.
 
-1. Fetch old outputs with `id` included, ordered by `created_at` (deterministic insertion order).
-2. Insert new outputs **one at a time in order**, collecting each new `id`.
-3. Build an in-memory array of `{ oldId, newId }` pairs using positional correspondence — the Nth old output maps to the Nth new output.
+**`summaryLanguage` (i18n key)**: Zero references in any `.ts` or `.tsx` file. Present only in the three JSON locale files. **Dead key — safe to remove.**
 
-This avoids relying on `(output_type, custom_prompt)` uniqueness entirely. The mapping is purely positional, driven by the same deterministic sort order on both sides.
+**`regeneratingSummary` (i18n key)**: Referenced in exactly one place (`JobResults.tsx` line 562). Can be safely renamed.
 
-For clarity:
-- `transcript` and `summary` are unique by type, so positional mapping is trivially correct for them.
-- Multiple `custom` outputs with identical prompts are handled safely because order is preserved.
+## Changes
 
-## Changes to `claim-transcript-share/index.ts`
+### 1. i18n keys (en.json, fr.json, it.json)
 
-### 1. Fetch old outputs with `id`, ordered
+- **Remove** `summaryLanguage` — confirmed dead, no code references
+- **Rename** `regeneratingSummary` → `translatingContent` (same copy, fix legacy key name)
+- **Update** `viewingTranslation`:
+  - EN: "Translated view — edit in original language"
+  - FR: "Vue traduite — modifiez dans la langue d'origine"
+  - IT: "Vista tradotta — modifica nella lingua originale"
+- **Add** `translatingTranscript`:
+  - EN: "Translating…"
+  - FR: "Traduction…"
+  - IT: "Traduzione…"
 
-```typescript
-const { data: outputs } = await serviceClient
-  .from('job_outputs')
-  .select('id, output_type, content, custom_prompt')
-  .eq('job_id', share.job_id)
-  .order('created_at', { ascending: true })
-```
+### 2. JobResults.tsx
 
-### 2. Insert new outputs individually, build mapping
+- **Keep** `summary_language` in the select query and `JobMeta` interface — backward compatibility
+- **Keep** the fallback chain `m.output_language || m.summary_language || m.language_detected`
+- **Update** `t("jobResults.regeneratingSummary")` → `t("jobResults.translatingContent")` on line 562
+- **Add transcript tab loading state**: when `regeneratingLang` is true, show a spinner overlay with `t("jobResults.translatingTranscript")` instead of the transcript editor (same pattern as summary tab, lines 536–553)
 
-```typescript
-const idMap: Array<{ oldId: string; newId: string }> = []
-for (const o of outputs) {
-  const { data: newOutput } = await serviceClient
-    .from('job_outputs')
-    .insert({
-      job_id: newJob.id,
-      output_type: o.output_type,
-      content: o.content,
-      custom_prompt: o.custom_prompt,
-    })
-    .select('id')
-    .single()
-  if (newOutput) {
-    idMap.push({ oldId: o.id, newId: newOutput.id })
-  }
-}
-```
+### 3. No other files change
 
-### 3. Copy `output_language` to new job
-
-Add `output_language: originalJob.output_language` to the job insert (line 137).
-
-### 4. Copy active-language variants
-
-If `originalJob.output_language` exists and differs from `originalJob.language_detected`:
-
-```typescript
-const activeLang = originalJob.output_language
-if (activeLang && activeLang !== originalJob.language_detected) {
-  const oldOutputIds = idMap.map(m => m.oldId)
-  const { data: variants } = await serviceClient
-    .from('job_output_variants')
-    .select('job_output_id, language, content, source_hash')
-    .in('job_output_id', oldOutputIds)
-    .eq('language', activeLang)
-
-  if (variants && variants.length > 0) {
-    const variantInserts = variants
-      .map(v => {
-        const mapped = idMap.find(m => m.oldId === v.job_output_id)
-        if (!mapped) return null
-        return {
-          job_output_id: mapped.newId,
-          language: v.language,
-          content: v.content,
-          source_hash: v.source_hash,
-        }
-      })
-      .filter(Boolean)
-
-    if (variantInserts.length > 0) {
-      await serviceClient.from('job_output_variants').insert(variantInserts)
-    }
-  }
-}
-```
+No schema changes. No edge function changes. No architecture changes.
 
 ## Files affected
 
 | File | Change |
 |---|---|
-| `supabase/functions/claim-transcript-share/index.ts` | Ordered fetch, sequential insert with ID mapping, copy `output_language`, copy active variants |
+| `src/i18n/locales/en.json` | Remove `summaryLanguage`, rename key `regeneratingSummary` → `translatingContent`, update `viewingTranslation`, add `translatingTranscript` |
+| `src/i18n/locales/fr.json` | Same |
+| `src/i18n/locales/it.json` | Same |
+| `src/components/JobResults.tsx` | Update i18n key ref, add transcript loading state |
 
-## No migration needed
+## What is explicitly preserved
 
-No schema changes — uses existing `job_output_variants` and `jobs.output_language`.
-
-## Regression risks
-
-| Risk | Mitigation |
-|---|---|
-| Sequential inserts slower than bulk | Typically 2–4 outputs per job; negligible latency |
-| Variant `source_hash` mismatch after copy | Hash matches copied transcript content, so variants are fresh |
-| `output_language` set but no variants exist | Frontend handles this — calls `regenerate` on next language switch |
+- `summary_language` DB column, query field, interface property, and fallback — all untouched
+- All edge function references to `summary_language` — untouched
 
