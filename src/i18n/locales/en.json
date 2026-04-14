@@ -606,6 +606,10 @@
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications yet",
-    "markAllRead": "Mark all read"
+    "markAllRead": "Mark all read",
+    "pdfExportStarted": "PDF export started — you can navigate freely",
+    "pdfReady": "Your PDF is ready to download",
+    "pdfExportFailed": "PDF export failed — please try again",
+    "downloadFailed": "Could not generate download link"
   }
 }

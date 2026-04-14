@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      async_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          resource_id: string | null
+          resource_type: string | null
+          resource_url: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type: string
+          resource_id?: string | null
+          resource_type?: string | null
+          resource_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          resource_id?: string | null
+          resource_type?: string | null
+          resource_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_balances: {
         Row: {
           balance: number
