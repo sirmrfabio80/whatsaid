@@ -107,7 +107,7 @@ export default function NotificationItem({ notification, onClose }: Notification
       {/* Delete button — visible on hover */}
       <button
         onClick={handleDelete}
-        className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted text-muted-foreground hover:text-destructive"
+        className="absolute top-2 right-2 p-2 md:p-1 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-muted text-muted-foreground hover:text-destructive"
         aria-label="Delete notification"
       >
         <X className="w-3 h-3" />

@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/contexts/NotificationsContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import NotificationItem from "@/components/NotificationItem";
 
 export default function NotificationBell() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { notifications, unreadCount, markAllRead, clearAllNotifications } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
