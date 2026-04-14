@@ -558,6 +558,10 @@
   "notifications": {
     "title": "Notifiche",
     "empty": "Nessuna notifica",
-    "markAllRead": "Segna tutto come letto"
+    "markAllRead": "Segna tutto come letto",
+    "pdfExportStarted": "Esportazione PDF avviata — puoi navigare liberamente",
+    "pdfReady": "Il tuo PDF è pronto per il download",
+    "pdfExportFailed": "Esportazione PDF fallita — riprova",
+    "downloadFailed": "Impossibile generare il link di download"
   }
 }
