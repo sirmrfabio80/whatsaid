@@ -34,6 +34,13 @@ async function callAI(apiKey: string, model: string, system: string, user: strin
 
 // ─── translate_all handler ───────────────────────────────────────────────────
 
+async function computeSourceHash(content: string): Promise<string> {
+  const encoded = new TextEncoder().encode(content);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+
 async function handleTranslateAll(
   supabase: ReturnType<typeof createClient>,
   apiKey: string,
@@ -59,6 +66,11 @@ async function handleTranslateAll(
 
   if (outErr || !outputs || outputs.length === 0) throw new Error("No outputs found for this job");
 
+  // Compute source hash from the transcript content
+  const transcriptOutput = outputs.find((o: { output_type: string }) => o.output_type === "transcript");
+  if (!transcriptOutput) throw new Error("Transcript not found for this job");
+  const sourceHash = await computeSourceHash(transcriptOutput.content);
+
   // Filter to translatable types
   const translatable = outputs.filter(
     (o: { output_type: string }) => o.output_type === "transcript" || o.output_type === "summary" || o.output_type === "custom" || o.output_type === "question"
@@ -68,16 +80,22 @@ async function handleTranslateAll(
   const outputIds = translatable.map((o: { id: string }) => o.id);
   const { data: existingVariants } = await supabase
     .from("job_output_variants")
-    .select("job_output_id, content")
+    .select("job_output_id, content, source_hash")
     .in("job_output_id", outputIds)
     .eq("language", targetLang);
 
-  const existingMap = new Map((existingVariants ?? []).map((v: { job_output_id: string; content: string }) => [v.job_output_id, v.content]));
+  // Build map of fresh variants only (source_hash matches current transcript hash)
+  const freshMap = new Map<string, string>();
+  for (const v of (existingVariants ?? [])) {
+    if (v.source_hash === sourceHash) {
+      freshMap.set(v.job_output_id, v.content);
+    }
+  }
 
-  // If all variants exist, just return them
-  if (existingMap.size === translatable.length) {
+  // If all variants exist and are fresh, just return them
+  if (freshMap.size === translatable.length) {
     const result: Record<string, string> = {};
-    for (const o of translatable) result[o.id] = existingMap.get(o.id) ?? o.content;
+    for (const o of translatable) result[o.id] = freshMap.get(o.id) ?? o.content;
 
     // Persist active language
     await supabase.from("jobs").update({ output_language: targetLang }).eq("id", jobId);
@@ -85,23 +103,23 @@ async function handleTranslateAll(
     return result;
   }
 
-  // Translate missing outputs
+  // Translate missing or stale outputs
   const systemPrompt = `You are a professional translator. Translate the following content to ${targetLang}. Preserve ALL formatting exactly: markdown structure, speaker labels (e.g. "Speaker A:"), timestamps, section headings, bullet points, bold text. Do NOT add, remove, summarize, or interpret any content. Output ONLY the translated text.`;
 
   const result: Record<string, string> = {};
 
   for (const output of translatable) {
-    if (existingMap.has(output.id)) {
-      result[output.id] = existingMap.get(output.id)!;
+    if (freshMap.has(output.id)) {
+      result[output.id] = freshMap.get(output.id)!;
       continue;
     }
 
-    console.log(`[regenerate] Translating ${output.output_type} (${output.id}) to ${targetLang}`);
+    console.log(`[regenerate] Translating ${output.output_type} (${output.id}) to ${targetLang} [stale or missing]`);
     const translated = await callAI(apiKey, MODEL_TRANSLATE, systemPrompt, output.content);
 
-    // Upsert variant
+    // Upsert variant with source_hash
     await supabase.from("job_output_variants").upsert(
-      { job_output_id: output.id, language: targetLang, content: translated },
+      { job_output_id: output.id, language: targetLang, content: translated, source_hash: sourceHash },
       { onConflict: "job_output_id,language" }
     );
 

@@ -278,6 +278,7 @@
     "regeneratingSummary": "Translating content…",
     "viewingTranslation": "Viewing translated version — switch to original language to edit",
     "translationFailed": "Translation failed. Please try again.",
+    "transcriptEditedResetLang": "Transcript edited — translations will update on next language switch",
     "noTranscript": "No transcript available.",
     "noSummary": "No summary available.",
     "noOutputs": "No outputs found for this job.",
