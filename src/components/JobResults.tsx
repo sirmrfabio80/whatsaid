@@ -336,7 +336,10 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (error) { toast.error(t("jobResults.saveFailed")); throw error; }
     setOutputs((prev) => prev.map((o) => o.id === transcript.id ? { ...o, content: newContent } : o));
     setTranscriptEdited(true);
+    setSummaryNeedsRegen(true);
 
+    // Mark summary as stale in the database
+    await supabase.from("jobs").update({ summary_needs_regen: true }).eq("id", jobId);
     // Clear stale variants — they no longer match the edited transcript
     setVariants({});
     const origLang = meta?.language_detected || "en";
