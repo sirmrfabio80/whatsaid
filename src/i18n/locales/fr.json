@@ -278,6 +278,7 @@
     "regeneratingSummary": "Traduction du contenu…",
     "viewingTranslation": "Version traduite — passez à la langue d'origine pour modifier",
     "translationFailed": "La traduction a échoué. Veuillez réessayer.",
+    "transcriptEditedResetLang": "Transcription modifiée — les traductions seront mises à jour au prochain changement de langue",
     "noTranscript": "Aucune transcription disponible.",
     "noSummary": "Aucun résumé disponible.",
     "noOutputs": "Aucun résultat trouvé pour ce travail.",
