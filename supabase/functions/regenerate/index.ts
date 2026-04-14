@@ -136,6 +136,86 @@ async function handleTranslateAll(
   return result;
 }
 
+// ─── summary_from_edit handler ───────────────────────────────────────────────
+
+async function handleSummaryFromEdit(
+  supabase: ReturnType<typeof createClient>,
+  apiKey: string,
+  jobId: string,
+) {
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .select("id, status, language_detected, summary_needs_regen, summary_regen_count")
+    .eq("id", jobId)
+    .single();
+
+  if (jobError || !job) throw Object.assign(new Error("Job not found"), { statusCode: 404 });
+  if (job.status !== "completed") throw Object.assign(new Error("Job is not completed"), { statusCode: 400 });
+  if (!job.summary_needs_regen) throw Object.assign(new Error("Summary is already up to date"), { statusCode: 400 });
+  if ((job.summary_regen_count ?? 0) >= 3) throw Object.assign(new Error("Summary regeneration limit reached (3 of 3 used)"), { statusCode: 403 });
+
+  // Read current transcript
+  const { data: txRow, error: txError } = await supabase
+    .from("job_outputs")
+    .select("content")
+    .eq("job_id", jobId)
+    .eq("output_type", "transcript")
+    .single();
+
+  if (txError || !txRow?.content) throw new Error(`Transcript not found for job ${jobId}`);
+  const transcript = txRow.content;
+
+  const lang = job.language_detected || "en";
+  const langInstruction = `\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST write the ENTIRE output in ${lang}. Every heading, every bullet point, every sentence must be in ${lang}. Do NOT use English unless ${lang} IS English. This is mandatory and non-negotiable.`;
+
+  const systemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries designed to be easy to scan and share.
+
+Your output MUST use the following markdown structure with exactly these section headings (translate the heading names into the output language):
+
+## Overview
+A concise 2-3 paragraph summary of what was discussed and the overall outcome.
+
+## Key Points
+A bullet list of the most important facts or information shared. Keep each point to 1-2 sentences.
+
+## Decisions & Next Steps
+A bullet list of decisions made, action items, follow-ups, or next steps. Include who is responsible and any dates mentioned.
+
+## Terms to Know
+A bullet list of specialised or technical terms with brief plain-language explanations. Only include this section if there are terms a non-specialist would find unclear. Omit entirely if not needed.
+
+Rules:
+- Use markdown: ## for headings, - for bullets, **bold** for emphasis.
+- Be factual and precise. Do not invent information.
+- Keep bullet points concise and scannable.${langInstruction}`;
+
+  const userPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
+
+  // Delete old summary
+  await supabase.from("job_outputs").delete().eq("job_id", jobId).eq("output_type", "summary");
+
+  console.log(`[regenerate] Regenerating summary from edited transcript for job ${jobId}`);
+  const content = await callAI(apiKey, MODEL_SUMMARY, systemPrompt, userPrompt);
+
+  const { data: insertedOutput, error: insertError } = await supabase
+    .from("job_outputs")
+    .insert({ job_id: jobId, output_type: "summary", content })
+    .select("id, output_type, content, custom_prompt")
+    .single();
+
+  if (insertError || !insertedOutput) throw new Error(insertError?.message || "Failed to save regenerated summary");
+
+  // Atomically clear flag and increment counter
+  await supabase.from("jobs").update({
+    summary_needs_regen: false,
+    summary_regen_count: (job.summary_regen_count ?? 0) + 1,
+    short_summary: extractShortSummary(content),
+  }).eq("id", jobId);
+
+  console.log(`[regenerate] summary_from_edit complete for job ${jobId}, count=${(job.summary_regen_count ?? 0) + 1}/3`);
+  return insertedOutput;
+}
+
 // ─── summary / custom handlers (original logic) ─────────────────────────────
 
 async function handleSummaryOrCustom(
@@ -269,6 +349,16 @@ Deno.serve(async (req) => {
       const variants = await handleTranslateAll(supabase, LOVABLE_API_KEY, job_id, target_language);
       return new Response(
         JSON.stringify({ success: true, job_id, variants }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── summary_from_edit ──
+    if (output_type === "summary_from_edit") {
+      const insertedOutput = await handleSummaryFromEdit(supabase, LOVABLE_API_KEY, job_id);
+      console.log(`[regenerate] summary_from_edit output regenerated for job ${job_id}`);
+      return new Response(
+        JSON.stringify({ success: true, job_id, output: insertedOutput }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

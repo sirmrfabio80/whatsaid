@@ -311,7 +311,14 @@
     "mergeConfirmTitle": "Which speaker should the merged segment keep?",
     "mergeKeepSpeaker": "Keep {{speaker}}",
     "unassigned": "Unassigned",
-    "newSpeakerInline": "New speaker"
+    "newSpeakerInline": "New speaker",
+    "summaryOutdated": "Summary may be outdated after transcript edits",
+    "regenerateSummary": "Regenerate summary",
+    "summaryRegenRemaining": "{{remaining}} of 3 remaining",
+    "summaryRegenLimitReached": "Regeneration limit reached (0 remaining)",
+    "regeneratingSummary": "Regenerating summary…",
+    "summaryRegenerated": "Summary regenerated from edited transcript",
+    "summaryRegenFailed": "Could not regenerate summary. Please try again."
   },
   "share": {
     "share": "Share",

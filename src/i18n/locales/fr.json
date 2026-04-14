@@ -311,7 +311,14 @@
     "mergeConfirmTitle": "Quel intervenant le segment fusionné doit-il garder ?",
     "mergeKeepSpeaker": "Garder {{speaker}}",
     "unassigned": "Non attribué",
-    "newSpeakerInline": "Nouvel intervenant"
+    "newSpeakerInline": "Nouvel intervenant",
+    "summaryOutdated": "Le résumé peut ne pas refléter les modifications de la transcription",
+    "regenerateSummary": "Régénérer le résumé",
+    "summaryRegenRemaining": "{{remaining}} sur 3 restantes",
+    "summaryRegenLimitReached": "Limite de régénération atteinte (0 restantes)",
+    "regeneratingSummary": "Régénération du résumé…",
+    "summaryRegenerated": "Résumé régénéré à partir de la transcription modifiée",
+    "summaryRegenFailed": "Impossible de régénérer le résumé. Veuillez réessayer."
   },
   "share": {
     "share": "Partager",
