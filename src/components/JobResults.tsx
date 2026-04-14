@@ -74,6 +74,131 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Speaker identification: run once after transcript loads
+  const runSpeakerIdentification = useCallback(async (force = false) => {
+    if (!transcript || identificationRanRef.current && !force) return;
+    identificationRanRef.current = true;
+
+    const segments = parseSegments(transcript.content);
+    const lines = segments
+      .filter((s) => s.speaker)
+      .map((s) => ({ speaker: s.speaker, text: s.text }));
+
+    if (lines.length === 0) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("identify-speakers", {
+        body: {
+          job_id: jobId,
+          transcript_lines: lines,
+          existing_speaker_names: speakerNames,
+          force,
+        },
+      });
+
+      if (error || data?.error) {
+        console.error("Speaker identification failed:", data?.error ?? error);
+        return;
+      }
+
+      const result = data?.data as SpeakerIdentificationData | undefined;
+      if (!result?.suggestions) return;
+
+      setIdentifications(result.suggestions);
+      setIdentificationBannerDismissed(result.banner_dismissed ?? false);
+
+      // If cached=false, names were auto-applied server-side — refetch meta
+      if (!data.cached && result.suggestions.some((s: SpeakerIdentification) => s.status === "applied")) {
+        const { data: jobData } = await supabase
+          .from("jobs")
+          .select("speaker_names")
+          .eq("id", jobId)
+          .maybeSingle();
+        if (jobData) {
+          setSpeakerNames((jobData.speaker_names as Record<string, string>) ?? {});
+        }
+      }
+
+      // If cached, also fetch the output ID for updates
+      if (data.cached || !data.cached) {
+        const { data: outputRow } = await supabase
+          .from("job_outputs")
+          .select("id")
+          .eq("job_id", jobId)
+          .eq("output_type", "speaker_identifications")
+          .maybeSingle();
+        if (outputRow) setIdentificationOutputId(outputRow.id);
+      }
+    } catch (e) {
+      console.error("Speaker identification error:", e);
+    }
+  }, [jobId, transcript?.content, speakerNames]);
+
+  // Run identification after transcript is available
+  useEffect(() => {
+    if (transcript && !identificationRanRef.current) {
+      runSpeakerIdentification();
+    }
+  }, [transcript?.id]);
+
+  // Identification action handlers
+  const updateIdentificationOutput = async (updatedSuggestions: SpeakerIdentification[], bannerDismissed?: boolean) => {
+    if (!identificationOutputId) return;
+    const metadata: SpeakerIdentificationData = {
+      suggestions: updatedSuggestions,
+      banner_dismissed: bannerDismissed ?? identificationBannerDismissed,
+      processed_at: new Date().toISOString(),
+    };
+    await supabase
+      .from("job_outputs")
+      .update({ metadata })
+      .eq("id", identificationOutputId);
+  };
+
+  const handleIdentificationAccept = async (speakerLabel: string, name: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "accepted" as const } : s
+    );
+    setIdentifications(updated);
+    await handleRenameSpeaker(speakerLabel, name);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationReject = async (speakerLabel: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "rejected" as const } : s
+    );
+    setIdentifications(updated);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationUndo = async (speakerLabel: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "rejected" as const } : s
+    );
+    setIdentifications(updated);
+    // Remove the name
+    const updatedNames = { ...speakerNames };
+    delete updatedNames[speakerLabel];
+    setSpeakerNames(updatedNames);
+    await supabase.from("jobs").update({ speaker_names: updatedNames }).eq("id", jobId);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationEdit = async (speakerLabel: string, newName: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "accepted" as const, inferred_name: newName } : s
+    );
+    setIdentifications(updated);
+    await handleRenameSpeaker(speakerLabel, newName);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationDismiss = async () => {
+    setIdentificationBannerDismissed(true);
+    await updateIdentificationOutput(identifications, true);
+  };
+
   const handleRenameSpeaker = async (original: string, newName: string) => { const updated = { ...speakerNames, [original]: newName }; setSpeakerNames(updated); await supabase.from("jobs").update({ speaker_names: updated }).eq("id", jobId); };
   const handleResetSpeakerNames = async () => { setSpeakerNames({}); await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId); };
 
