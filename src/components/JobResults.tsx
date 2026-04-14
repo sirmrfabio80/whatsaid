@@ -568,6 +568,56 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
+              {summaryNeedsRegen && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 border-b border-warning/30 bg-warning/5">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+                    <p className="text-xs text-foreground/80">{t("jobResults.summaryOutdated")}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {summaryRegenCount < 3 ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full gap-1.5 text-xs h-7 px-3"
+                          disabled={regeneratingSummary}
+                          onClick={async () => {
+                            setRegeneratingSummary(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("regenerate", {
+                                body: { job_id: jobId, output_type: "summary_from_edit" },
+                              });
+                              if (error || data?.error) {
+                                toast.error(data?.error || t("jobResults.summaryRegenFailed"));
+                                return;
+                              }
+                              if (data?.output) {
+                                setOutputs((prev) => prev.map((o) => o.output_type === "summary" ? data.output as JobOutput : o));
+                              }
+                              setSummaryNeedsRegen(false);
+                              setSummaryRegenCount((c) => c + 1);
+                              toast.success(t("jobResults.summaryRegenerated"));
+                            } catch {
+                              toast.error(t("jobResults.summaryRegenFailed"));
+                            } finally {
+                              setRegeneratingSummary(false);
+                            }
+                          }}
+                        >
+                          {regeneratingSummary ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {regeneratingSummary ? t("jobResults.regeneratingSummary") : t("jobResults.regenerateSummary")}
+                        </Button>
+                        <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                          {t("jobResults.summaryRegenRemaining", { remaining: 3 - summaryRegenCount })}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{t("jobResults.summaryRegenLimitReached")}</span>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="p-5 sm:p-6">
                 {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.translatingContent")}</div>
                   : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
