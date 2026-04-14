@@ -165,6 +165,16 @@ function extractCompoundPatterns(t: string): Candidate | null {
     if (isValidName(namePart)) return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
   }
 
+  // Italian: "sono X la/il [role]" — name first, role after (e.g. "sono Martina la logopedista")
+  m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:il|la)\s+(\S+)/i);
+  if (m) {
+    const namePart = cleanName(m[1]);
+    const rolePart = cleanName(m[2]);
+    if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
+      return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+    }
+  }
+
   // Italian: "sono l'[role] X" — elided article
   m = t.match(/\bsono\s+l[''\u2019](\S+)\s+(\S+)/i);
   if (m) {
@@ -356,6 +366,10 @@ function extractSelfIdentification(text: string): Candidate | null {
 
   // Italian: "io sono X"
   m = t.match(/\bio\s+sono\s+(\S+)/i);
+  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
+
+  // Italian: "sono X" (without explicit "io" — pro-drop)
+  m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)/);
   if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
 
   // English: "I am X"
