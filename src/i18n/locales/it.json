@@ -311,7 +311,14 @@
     "mergeConfirmTitle": "Quale relatore deve mantenere il segmento unito?",
     "mergeKeepSpeaker": "Mantieni {{speaker}}",
     "unassigned": "Non assegnato",
-    "newSpeakerInline": "Nuovo relatore"
+    "newSpeakerInline": "Nuovo relatore",
+    "summaryOutdated": "Il riassunto potrebbe non riflettere le modifiche alla trascrizione",
+    "regenerateSummary": "Rigenera riassunto",
+    "summaryRegenRemaining": "{{remaining}} di 3 rimanenti",
+    "summaryRegenLimitReached": "Limite di rigenerazione raggiunto (0 rimanenti)",
+    "regeneratingSummary": "Rigenerazione riassunto…",
+    "summaryRegenerated": "Riassunto rigenerato dalla trascrizione modificata",
+    "summaryRegenFailed": "Impossibile rigenerare il riassunto. Riprova."
   },
   "share": {
     "share": "Condividi",

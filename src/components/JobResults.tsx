@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe, RefreshCw } from "lucide-react";
 import ShareButton from "@/components/ShareButton";
 import { LANGUAGES } from "@/lib/languages";
 import { applySpeakerNames } from "@/lib/speaker-names";
@@ -62,11 +62,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const identificationRanRef = useRef(false);
   // Variant state: maps job_output_id → translated content
   const [variants, setVariants] = useState<Record<string, string>>({});
+  const [summaryNeedsRegen, setSummaryNeedsRegen] = useState(false);
+  const [summaryRegenCount, setSummaryRegenCount] = useState(0);
+  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
       supabase.from("job_outputs").select("id, output_type, content, custom_prompt").eq("job_id", jobId).order("created_at", { ascending: true }),
-      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label, output_language").eq("id", jobId).maybeSingle(),
+      supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label, output_language, summary_needs_regen, summary_regen_count").eq("id", jobId).maybeSingle(),
     ]);
     setOutputs((outputsData as JobOutput[]) ?? []);
     const m = jobData ? { ...jobData, speaker_names: (jobData.speaker_names as Record<string, string>) ?? {} } : null;
@@ -75,6 +78,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       setSpeakerNames((m.speaker_names as Record<string, string>) ?? {});
       const activeLang = m.output_language || m.summary_language || m.language_detected || "en";
       setOutputLang((prev) => prev || activeLang);
+      setSummaryNeedsRegen((jobData as Record<string, unknown>)?.summary_needs_regen === true);
+      setSummaryRegenCount(((jobData as Record<string, unknown>)?.summary_regen_count as number) ?? 0);
 
       // Load existing variants if active language differs from original
       const originalLang = m.language_detected || "en";
@@ -331,7 +336,10 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (error) { toast.error(t("jobResults.saveFailed")); throw error; }
     setOutputs((prev) => prev.map((o) => o.id === transcript.id ? { ...o, content: newContent } : o));
     setTranscriptEdited(true);
+    setSummaryNeedsRegen(true);
 
+    // Mark summary as stale in the database
+    await supabase.from("jobs").update({ summary_needs_regen: true }).eq("id", jobId);
     // Clear stale variants — they no longer match the edited transcript
     setVariants({});
     const origLang = meta?.language_detected || "en";
@@ -560,6 +568,56 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
+              {summaryNeedsRegen && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 border-b border-warning/30 bg-warning/5">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+                    <p className="text-xs text-foreground/80">{t("jobResults.summaryOutdated")}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {summaryRegenCount < 3 ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full gap-1.5 text-xs h-7 px-3"
+                          disabled={regeneratingSummary}
+                          onClick={async () => {
+                            setRegeneratingSummary(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("regenerate", {
+                                body: { job_id: jobId, output_type: "summary_from_edit" },
+                              });
+                              if (error || data?.error) {
+                                toast.error(data?.error || t("jobResults.summaryRegenFailed"));
+                                return;
+                              }
+                              if (data?.output) {
+                                setOutputs((prev) => prev.map((o) => o.output_type === "summary" ? data.output as JobOutput : o));
+                              }
+                              setSummaryNeedsRegen(false);
+                              setSummaryRegenCount((c) => c + 1);
+                              toast.success(t("jobResults.summaryRegenerated"));
+                            } catch {
+                              toast.error(t("jobResults.summaryRegenFailed"));
+                            } finally {
+                              setRegeneratingSummary(false);
+                            }
+                          }}
+                        >
+                          {regeneratingSummary ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {regeneratingSummary ? t("jobResults.regeneratingSummary") : t("jobResults.regenerateSummary")}
+                        </Button>
+                        <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                          {t("jobResults.summaryRegenRemaining", { remaining: 3 - summaryRegenCount })}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{t("jobResults.summaryRegenLimitReached")}</span>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="p-5 sm:p-6">
                 {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.translatingContent")}</div>
                   : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
