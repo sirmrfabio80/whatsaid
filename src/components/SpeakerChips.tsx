@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Pencil, Check, X, Plus, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Plus, Sparkles, Loader2, Trash2, ScanSearch } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ROLE_SUGGESTIONS = ["Doctor", "Nurse", "Me", "Mum", "Dad", "Receptionist", "Specialist", "Therapist"];
@@ -20,11 +20,13 @@ interface SpeakerChipsProps {
   onSuggestSpeaker?: (speaker: string) => void;
   suggestingForSpeaker?: string | null;
   enableDrag?: boolean;
+  onIdentifySpeakers?: () => void;
+  identifyingInProgress?: boolean;
 }
 
 export default function SpeakerChips({
   speakers, speakerNames, speakerSegmentCounts, deletableSpeakers, onRename, onReset, onAddSpeaker,
-  onDeleteSpeaker, onSuggestSpeaker, suggestingForSpeaker, enableDrag,
+  onDeleteSpeaker, onSuggestSpeaker, suggestingForSpeaker, enableDrag, onIdentifySpeakers, identifyingInProgress,
 }: SpeakerChipsProps) {
   const { t } = useTranslation();
   if (speakers.length === 0 && !onAddSpeaker) return null;
@@ -71,6 +73,12 @@ export default function SpeakerChips({
       {hasRenames && onReset && (
         <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full" onClick={onReset} aria-label={t("speakerChips.resetNames")}>
           {t("speakerChips.resetNames")}
+        </Button>
+      )}
+      {onIdentifySpeakers && (
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full gap-1" onClick={onIdentifySpeakers} disabled={identifyingInProgress} aria-label={t("speakerChips.identifySpeakers")}>
+          {identifyingInProgress ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanSearch className="w-3 h-3" />}
+          {t("speakerChips.identifySpeakers")}
         </Button>
       )}
     </div>
