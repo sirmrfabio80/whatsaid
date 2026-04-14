@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Check, X, AlertTriangle, MessageSquareWarning, Scissors, ArrowUpToLine, Plus } from "lucide-react";
+import { Pencil, Check, X, AlertTriangle, MessageSquareWarning, Scissors, ArrowUpToLine, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
