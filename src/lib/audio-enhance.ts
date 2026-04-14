@@ -1,8 +1,27 @@
 /**
  * Client-side audio preprocessing using Web Audio API.
- * Applies dynamic range compression to reduce loudness imbalance
- * between a loud near-mic voice and a quiet phone-speaker voice.
+ *
+ * Speech-oriented enhancement chain:
+ *   1. Noise gate — skip near-silent recordings
+ *   2. Gentle dynamic range compression (4:1)
+ *   3. Make-up gain (+6 dB)
+ *   4. Soft-clip limiter (tanh at ±0.95)
+ *   5. Capped peak normalisation (target -1 dBFS, max +9 dB)
  */
+
+/** Compute RMS level of an AudioBuffer across all channels. */
+function computeRMS(buffer: AudioBuffer): number {
+  let sumSq = 0;
+  let count = 0;
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      sumSq += data[i] * data[i];
+      count++;
+    }
+  }
+  return Math.sqrt(sumSq / count);
+}
 
 /** Encode an AudioBuffer to a WAV Blob (PCM 16-bit). */
 function encodeWav(buffer: AudioBuffer): Blob {
@@ -57,15 +76,15 @@ function encodeWav(buffer: AudioBuffer): Blob {
 }
 
 /**
- * Apply dynamic range compression to an audio file using Web Audio API.
+ * Apply a speech-oriented enhancement chain to an audio file.
  * Returns a new File object with WAV encoding.
  *
- * Compressor parameters are tuned for speech:
- * - threshold -24dB: only compress louder portions
- * - ratio 12:1: heavy compression to bring quiet voice closer
- * - knee 10dB: smooth transition
- * - attack 3ms: catch speech transients quickly
- * - release 250ms: avoid pumping artifacts
+ * Chain:
+ *   1. Noise gate — if RMS < -50 dBFS, skip enhancement (WAV-encode only)
+ *   2. Compressor — gentle 4:1 for speech intelligibility
+ *   3. Make-up gain — +6 dB to recover loudness after compression
+ *   4. Soft-clip limiter — tanh saturation at ±0.95 to prevent clipping
+ *   5. Peak normalise — target -1 dBFS, capped at +9 dB max gain
  */
 export async function enhanceAudioForTranscription(
   file: File,
@@ -80,6 +99,19 @@ export async function enhanceAudioForTranscription(
   const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
   await tempCtx.close();
 
+  // Build output filename early (used in both paths)
+  const baseName = file.name.replace(/\.[^.]+$/, "");
+  const enhancedFileName = `${baseName}_enhanced.wav`;
+
+  // --- Noise gate: skip enhancement for near-silent audio ---
+  const NOISE_FLOOR = Math.pow(10, -50 / 20); // -50 dBFS ≈ 0.00316
+  const rms = computeRMS(audioBuffer);
+  if (rms < NOISE_FLOOR) {
+    onProgress?.("encoding");
+    const wavBlob = encodeWav(audioBuffer);
+    return new File([wavBlob], enhancedFileName, { type: "audio/wav" });
+  }
+
   onProgress?.("processing");
 
   // Create offline context matching the source
@@ -93,28 +125,60 @@ export async function enhanceAudioForTranscription(
   const source = offlineCtx.createBufferSource();
   source.buffer = audioBuffer;
 
-  // Dynamics compressor
+  // --- Stage 1: Gentle dynamic range compression for speech ---
   const compressor = offlineCtx.createDynamicsCompressor();
-  compressor.threshold.setValueAtTime(-24, 0);
-  compressor.ratio.setValueAtTime(12, 0);
-  compressor.knee.setValueAtTime(10, 0);
-  compressor.attack.setValueAtTime(0.003, 0);
-  compressor.release.setValueAtTime(0.25, 0);
+  compressor.threshold.setValueAtTime(-30, 0);
+  compressor.ratio.setValueAtTime(4, 0);
+  compressor.knee.setValueAtTime(12, 0);
+  compressor.attack.setValueAtTime(0.005, 0);
+  compressor.release.setValueAtTime(0.15, 0);
 
-  // Connect: source -> compressor -> destination
+  // --- Stage 2: Make-up gain (+6 dB) ---
+  const makeupGain = offlineCtx.createGain();
+  makeupGain.gain.setValueAtTime(2.0, 0); // +6 dB ≈ 10^(6/20) ≈ 1.995
+
+  // Connect: source → compressor → makeupGain → destination
   source.connect(compressor);
-  compressor.connect(offlineCtx.destination);
+  compressor.connect(makeupGain);
+  makeupGain.connect(offlineCtx.destination);
   source.start(0);
 
   const renderedBuffer = await offlineCtx.startRendering();
 
+  // --- Stage 3: Soft-clip limiter (post-render, in-place) ---
+  const CLIP_THRESHOLD = 0.95;
+  for (let ch = 0; ch < renderedBuffer.numberOfChannels; ch++) {
+    const data = renderedBuffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      if (Math.abs(data[i]) > CLIP_THRESHOLD) {
+        data[i] = CLIP_THRESHOLD * Math.tanh(data[i] / CLIP_THRESHOLD);
+      }
+    }
+  }
+
+  // --- Stage 4: Capped peak normalisation (safeguard only) ---
+  const TARGET_PEAK = 0.891; // -1 dBFS
+  const MAX_NORM_GAIN = 2.818; // ~+9 dB cap — never boost more than this
+  let maxSample = 0;
+  for (let ch = 0; ch < renderedBuffer.numberOfChannels; ch++) {
+    const data = renderedBuffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      const abs = Math.abs(data[i]);
+      if (abs > maxSample) maxSample = abs;
+    }
+  }
+  if (maxSample > 0 && maxSample < TARGET_PEAK) {
+    const gain = Math.min(TARGET_PEAK / maxSample, MAX_NORM_GAIN);
+    for (let ch = 0; ch < renderedBuffer.numberOfChannels; ch++) {
+      const data = renderedBuffer.getChannelData(ch);
+      for (let i = 0; i < data.length; i++) {
+        data[i] *= gain;
+      }
+    }
+  }
+
   onProgress?.("encoding");
 
   const wavBlob = encodeWav(renderedBuffer);
-
-  // Build filename: replace extension with .wav
-  const baseName = file.name.replace(/\.[^.]+$/, "");
-  const enhancedFileName = `${baseName}_enhanced.wav`;
-
   return new File([wavBlob], enhancedFileName, { type: "audio/wav" });
 }
