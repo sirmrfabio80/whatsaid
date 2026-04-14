@@ -52,13 +52,17 @@ interface Identification {
 function isValidName(token: string): boolean {
   if (token.length < 2) return false;
   if (STOPWORDS.has(token.toLowerCase())) return false;
-  // Must not be purely numeric
   if (/^\d+$/.test(token)) return false;
   return true;
 }
 
 function isCapitalised(token: string): boolean {
   return /^[A-ZÀ-ÖØ-Þ]/.test(token);
+}
+
+/** Strip trailing punctuation from captured name tokens */
+function cleanName(raw: string): string {
+  return raw.replace(/[,.:;!?'"]+$/, "").trim();
 }
 
 /** Extract candidate names from a single utterance using strict self-identification patterns */
