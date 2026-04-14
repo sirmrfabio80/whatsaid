@@ -14,9 +14,11 @@ import { applySpeakerNames } from "@/lib/speaker-names";
 import { buildCanonicalPayload } from "@/lib/export-payload";
 import ExportButton from "@/components/ExportButton";
 import SpeakerChips from "@/components/SpeakerChips";
+import SpeakerIdentificationBanner from "@/components/SpeakerIdentificationBanner";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import TranscriptEditor, { parseSegments, type SpeakerSuggestion } from "@/components/TranscriptEditor";
 import { toast } from "sonner";
+import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/speaker-identification";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
@@ -53,6 +55,10 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [suggestingForSpeaker, setSuggestingForSpeaker] = useState<string | null>(null);
   const [suggestionTarget, setSuggestionTarget] = useState<string | null>(null);
   const editedIdsRef = useRef<Set<string>>(new Set());
+  const [identifications, setIdentifications] = useState<SpeakerIdentification[]>([]);
+  const [identificationBannerDismissed, setIdentificationBannerDismissed] = useState(false);
+  const [identificationOutputId, setIdentificationOutputId] = useState<string | null>(null);
+  const identificationRanRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -67,6 +73,67 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   }, [jobId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Speaker identification: deferred to after transcript is computed (see useEffect below)
+
+  // Identification action handlers
+  const updateIdentificationOutput = async (updatedSuggestions: SpeakerIdentification[], bannerDismissed?: boolean) => {
+    if (!identificationOutputId) return;
+    const metadata: SpeakerIdentificationData = {
+      suggestions: updatedSuggestions,
+      banner_dismissed: bannerDismissed ?? identificationBannerDismissed,
+      processed_at: new Date().toISOString(),
+    };
+    await supabase
+      .from("job_outputs")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ metadata: metadata as any })
+      .eq("id", identificationOutputId);
+  };
+
+  const handleIdentificationAccept = async (speakerLabel: string, name: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "accepted" as const } : s
+    );
+    setIdentifications(updated);
+    await handleRenameSpeaker(speakerLabel, name);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationReject = async (speakerLabel: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "rejected" as const } : s
+    );
+    setIdentifications(updated);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationUndo = async (speakerLabel: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "rejected" as const } : s
+    );
+    setIdentifications(updated);
+    // Remove the name
+    const updatedNames = { ...speakerNames };
+    delete updatedNames[speakerLabel];
+    setSpeakerNames(updatedNames);
+    await supabase.from("jobs").update({ speaker_names: updatedNames }).eq("id", jobId);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationEdit = async (speakerLabel: string, newName: string) => {
+    const updated = identifications.map((s) =>
+      s.speaker_label === speakerLabel ? { ...s, status: "accepted" as const, inferred_name: newName } : s
+    );
+    setIdentifications(updated);
+    await handleRenameSpeaker(speakerLabel, newName);
+    await updateIdentificationOutput(updated);
+  };
+
+  const handleIdentificationDismiss = async () => {
+    setIdentificationBannerDismissed(true);
+    await updateIdentificationOutput(identifications, true);
+  };
 
   const handleRenameSpeaker = async (original: string, newName: string) => { const updated = { ...speakerNames, [original]: newName }; setSpeakerNames(updated); await supabase.from("jobs").update({ speaker_names: updated }).eq("id", jobId); };
   const handleResetSpeakerNames = async () => { setSpeakerNames({}); await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId); };
@@ -243,6 +310,45 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extraSpeakers.join(",")]);
 
+  // Speaker identification: run once after transcript loads
+  useEffect(() => {
+    if (!transcript || identificationRanRef.current) return;
+    identificationRanRef.current = true;
+
+    const run = async () => {
+      const segments = parseSegments(transcript.content);
+      const lines = segments
+        .filter((s) => s.speaker)
+        .map((s) => ({ speaker: s.speaker, text: s.text }));
+      if (lines.length === 0) return;
+
+      try {
+        const { data, error } = await supabase.functions.invoke("identify-speakers", {
+          body: { job_id: jobId, transcript_lines: lines, existing_speaker_names: speakerNames },
+        });
+        if (error || data?.error) return;
+        const result = data?.data as SpeakerIdentificationData | undefined;
+        if (!result?.suggestions) return;
+
+        setIdentifications(result.suggestions);
+        setIdentificationBannerDismissed(result.banner_dismissed ?? false);
+
+        // If names were auto-applied server-side, refetch
+        if (!data.cached && result.suggestions.some((s: SpeakerIdentification) => s.status === "applied")) {
+          const { data: jobData } = await supabase.from("jobs").select("speaker_names").eq("id", jobId).maybeSingle();
+          if (jobData) setSpeakerNames((jobData.speaker_names as Record<string, string>) ?? {});
+        }
+
+        const { data: outputRow } = await supabase.from("job_outputs").select("id").eq("job_id", jobId).eq("output_type", "speaker_identifications").maybeSingle();
+        if (outputRow) setIdentificationOutputId(outputRow.id);
+      } catch (e) {
+        console.error("Speaker identification error:", e);
+      }
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcript?.id]);
+
   if (loading) return <div className="space-y-4 py-8"><div className="animate-pulse space-y-3"><div className="h-10 bg-muted rounded-xl w-full" /><div className="h-64 bg-muted rounded-xl w-full" /></div></div>;
   if (!transcript && !summary) return <div className="text-center text-muted-foreground py-8 text-sm">{t("jobResults.noOutputs")}</div>;
 
@@ -293,6 +399,19 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               <div className="px-4 py-3 border-b border-border/40 sm:hidden"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} /></div>
+              {/* AI Speaker Identification Banner */}
+              {!identificationBannerDismissed && identifications.filter((s) => s.status === "applied" || s.status === "suggested").length > 0 && (
+                <div className="px-3 py-2 border-b border-border/40">
+                  <SpeakerIdentificationBanner
+                    suggestions={identifications.filter((s) => s.status === "applied" || s.status === "suggested")}
+                    onAccept={handleIdentificationAccept}
+                    onReject={handleIdentificationReject}
+                    onUndo={handleIdentificationUndo}
+                    onEdit={handleIdentificationEdit}
+                    onDismiss={handleIdentificationDismiss}
+                  />
+                </div>
+              )}
               {/* Zero-segment speaker hint */}
               {(() => {
                 const zeroSegSpeakers = allSpeakers.filter((s) => (speakerSegmentCounts[s] ?? 0) === 0);

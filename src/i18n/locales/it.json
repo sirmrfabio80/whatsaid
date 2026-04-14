@@ -567,5 +567,16 @@
     "actionFailed": "Azione fallita — riprova",
     "exportAlreadyRunning": "Questa esportazione è già in corso",
     "retry": "Riprova"
+  },
+  "speakerIdentification": {
+    "bannerTitle_one": "L'AI ha identificato {{count}} relatore",
+    "bannerTitle_other": "L'AI ha identificato {{count}} relatori",
+    "dismissAll": "Ignora",
+    "evidence": "evidenza",
+    "accept": "Accetta nome",
+    "reject": "Rifiuta",
+    "undo": "Annulla rinomina",
+    "edit": "Modifica nome",
+    "suggested": "suggerito"
   }
 }
