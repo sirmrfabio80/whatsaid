@@ -8,6 +8,15 @@ import type { TagOption } from "@/hooks/use-history-filters";
 interface HistoryFiltersProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
+  tagSuggestions: (TagOption & { displayName?: string })[];
+  selectedTags: (TagOption & { displayName?: string })[];
+  onToggleTag: (tagId: string) => void;
+  onClearAll: () => void;
+  hasActiveFilters: boolean;
+  hasAnyTags: boolean;
+}
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
   tagSuggestions: TagOption[];
   selectedTags: TagOption[];
   onToggleTag: (tagId: string) => void;
