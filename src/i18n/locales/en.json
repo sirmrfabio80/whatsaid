@@ -618,7 +618,8 @@
     "downloadFailed": "Could not generate download link",
     "actionFailed": "Action failed — please try again",
     "exportAlreadyRunning": "This export is already in progress",
-    "retry": "Retry"
+    "retry": "Retry",
+    "pdfReadyCheckNotifications": "PDF ready — check notifications to view"
   },
   "speakerIdentification": {
     "bannerTitle_one": "AI identified {{count}} speaker",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, XCircle, Info, FileText, Loader2, Download, X, RotateCw } from "lucide-react";
+import { CheckCircle2, XCircle, Info, FileText, Loader2, X, RotateCw } from "lucide-react";
 import { useNotifications, type AppNotification } from "@/contexts/NotificationsContext";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,7 @@ interface NotificationItemProps {
 export default function NotificationItem({ notification, onClose }: NotificationItemProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { markRead, downloadExport, deleteNotification } = useNotifications();
+  const { markRead, openExport, deleteNotification } = useNotifications();
   const [downloading, setDownloading] = useState(false);
 
   const isPdfExportFailed = notification.type === "pdf_export_failed" && notification.resource_id;
@@ -41,12 +41,11 @@ export default function NotificationItem({ notification, onClose }: Notification
       await markRead(notification.id);
     }
 
-    // Handle file downloads (PDF exports)
+    // Handle file views (PDF exports) — open in new tab
     if (notification.resource_type === "file" && notification.resource_url) {
       setDownloading(true);
       try {
-        const filename = notification.title ? `${notification.title}.pdf` : undefined;
-        await downloadExport(notification.resource_url, filename);
+        await openExport(notification.resource_url);
       } finally {
         setDownloading(false);
       }
@@ -107,7 +106,7 @@ export default function NotificationItem({ notification, onClose }: Notification
             <span className="text-[11px] text-muted-foreground">{timeAgo(notification.created_at)}</span>
             {isFile && !downloading && (
               <span className="text-[11px] text-primary flex items-center gap-0.5">
-                <Download className="w-3 h-3" /> Download
+                <FileText className="w-3 h-3" /> View PDF
               </span>
             )}
             {isPdfExportFailed && (
