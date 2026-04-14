@@ -32,6 +32,13 @@ export const STOPWORDS = new Set([
   "occupé", "occupée", "seul", "seule", "encore", "aussi", "tout",
   "rien", "toujours", "disponible", "accord", "sûr", "sûre",
   "désolé", "désolée", "prêt", "prête",
+  // Spanish
+  "aquí", "listo", "lista", "contento", "contenta", "ocupado", "ocupada",
+  "cansado", "cansada", "seguro", "segura",
+  // German
+  "hier", "gut", "bereit", "müde", "beschäftigt", "sicher", "fertig",
+  // Portuguese
+  "aqui", "pronto", "pronta", "cansado", "cansada", "ocupado", "ocupada",
 ]);
 
 /** Role/profession words that should never be used as person names */
@@ -51,7 +58,16 @@ export const ROLE_WORDS = new Set([
   "practitioner", "surgeon", "pharmacist", "midwife",
   // French
   "docteur", "infirmier", "infirmière", "thérapeute", "directeur",
-  "directrice", "assistant", "assistante", "coordinateur", "coordinatrice",
+  "directrice", "assistante", "coordinateur", "coordinatrice",
   "médecin", "chirurgien", "pharmacien", "pharmacienne", "professeur",
   "conseiller", "conseillère", "spécialiste", "technicien", "technicienne",
+  // Spanish
+  "enfermero", "enfermera", "terapeuta", "coordinador", "coordinadora",
+  "directora", "asistente", "especialista", "cirujano", "cirujana",
+  // German
+  "arzt", "ärztin", "krankenschwester", "therapeut", "therapeutin",
+  "direktor", "direktorin", "assistentin", "assistent", "krankenpfleger",
+  // Portuguese
+  "doutor", "doutora", "enfermeiro", "enfermeira", "terapeuta",
+  "diretor", "diretora",
 ]);
