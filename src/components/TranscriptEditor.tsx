@@ -63,6 +63,11 @@ export function parseSegments(content: string): Segment[] {
   });
 }
 
+function formatTimestamp(ts: string): string {
+  const clean = ts.replace(/[\[\]]/g, "");
+  return clean.startsWith("00:") ? clean.slice(3) : clean;
+}
+
 function reconstructContent(segments: Segment[]): string {
   return segments.map((s) => {
     const prefix = s.timestamp ? `${s.timestamp} ` : "";
@@ -532,6 +537,11 @@ export default function TranscriptEditor({
                         disabled={saving}
                       />
                     )}
+                    {seg.timestamp && (
+                      <span className="text-[11px] text-muted-foreground/60 font-mono tabular-nums whitespace-nowrap select-none">
+                        {formatTimestamp(seg.timestamp)}
+                      </span>
+                    )}
                   </div>
 
                   <Textarea
@@ -686,6 +696,11 @@ export default function TranscriptEditor({
                       disabled={saving}
                     />
                   ) : null}
+                  {seg.timestamp && (
+                    <span className="text-[11px] text-muted-foreground/60 font-mono tabular-nums whitespace-nowrap select-none">
+                      {formatTimestamp(seg.timestamp)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Text content */}
