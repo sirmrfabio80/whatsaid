@@ -315,9 +315,10 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     });
 
     const lines = data.transcript.split("\n");
+    const speakerColorMap = new Map<string, string>();
     lines.forEach((line, i) => {
       blocks.push({
-        html: speakerParagraphToHtml(line),
+        html: speakerParagraphToHtml(line, speakerColorMap),
         forceNewPage: false,
         gapAfterMm: i < lines.length - 1 ? PARAGRAPH_GAP_MM : 0,
       });
