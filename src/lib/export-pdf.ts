@@ -25,16 +25,47 @@ async function getLogoDataUrl(): Promise<string | null> {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/*  PDF Layout Tokens                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Page geometry */
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
-const MARGIN_MM = 15;
-const BOTTOM_PADDING_MM = 10;
-const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_MM * 2;
-const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - MARGIN_MM - BOTTOM_PADDING_MM;
+
+/** Page margins — reduced for more content width on mobile screens */
+const MARGIN_LEFT_MM = 10;
+const MARGIN_RIGHT_MM = 10;
+const MARGIN_TOP_MM = 12;
+
+/** Footer reservation — fixed area at page bottom that content must never enter */
+const FOOTER_RESERVE_MM = 14;
+
+/** Derived layout values */
+const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM;
+const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - FOOTER_RESERVE_MM;
+
+/** Render pipeline */
 const RENDER_WIDTH_PX = 794;
 const RENDER_SCALE = 2;
-const SECTION_GAP_MM = 4;
-const PARAGRAPH_GAP_MM = 1.5;
+
+/** Spacing between blocks (mm) */
+const SECTION_GAP_MM = 3.5;
+const PARAGRAPH_GAP_MM = 1;
+
+/** Typography (px) — optimised for handheld PDF reading */
+const BODY_FONT_PX = 15;
+const TRANSCRIPT_FONT_PX = 15;
+const META_FONT_PX = 13;
+const H1_FONT_PX = 30;
+const H2_FONT_PX = 20;
+const H3_FONT_PX = 18;
+const H4_FONT_PX = 17;
+const QA_PROMPT_FONT_PX = 15;
+const BULLET_FONT_PX = BODY_FONT_PX;
+
+/** Inner wrapper horizontal padding (px) — tighter to maximise reading width */
+const WRAPPER_PAD_X_PX = 28;
 
 /** Approximate usable content height in px (at scale 1) used as batch threshold */
 const BATCH_HEIGHT_THRESHOLD_PX = 800;
