@@ -1,11 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
 
 export interface TranscriptionConfig {
   strategy?: string;
@@ -38,7 +35,6 @@ const SPEAKER_OPTIONS = [
 
 export default function TranscriptionSettings({ value, onChange, disabled }: TranscriptionSettingsProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
 
   const currentStrategy = value.strategy || "balanced";
   const currentSpeakers = value.speakers_expected?.toString() || "auto";
@@ -51,7 +47,6 @@ export default function TranscriptionSettings({ value, onChange, disabled }: Tra
     } else {
       next.strategy = strategy;
     }
-    // Clear keyterms when switching away from keyterms mode
     if (strategy !== "keyterms") {
       delete next.keyterms;
     }
@@ -80,102 +75,90 @@ export default function TranscriptionSettings({ value, onChange, disabled }: Tra
   };
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full py-1"
-        disabled={disabled}
-      >
-        <ChevronDown
-          className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
-        />
-        <span className="font-medium">{t("transcriptionSettings.title")}</span>
-      </CollapsibleTrigger>
+    <div className="space-y-4">
+      {/* Strategy selector */}
+      <div className="space-y-2">
+        <Label htmlFor="transcription-strategy" className="text-sm">
+          {t("transcriptionSettings.strategyLabel")}
+        </Label>
+        <Select value={currentStrategy} onValueChange={handleStrategyChange} disabled={disabled}>
+          <SelectTrigger id="transcription-strategy" className="rounded-xl">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STRATEGIES.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {t(s.labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {t(STRATEGIES.find(s => s.value === currentStrategy)?.descKey || "transcriptionSettings.strategyBalancedDesc")}
+        </p>
+      </div>
 
-      <CollapsibleContent className="mt-3 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
-        {/* Strategy selector */}
+      {/* Keyterms input — only for keyterms strategy */}
+      {currentStrategy === "keyterms" && (
         <div className="space-y-2">
-          <Label htmlFor="transcription-strategy" className="text-sm">
-            {t("transcriptionSettings.strategyLabel")}
+          <Label htmlFor="keyterms-input" className="text-sm">
+            {t("transcriptionSettings.keytermsLabel")}
           </Label>
-          <Select value={currentStrategy} onValueChange={handleStrategyChange} disabled={disabled}>
-            <SelectTrigger id="transcription-strategy" className="rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STRATEGIES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {t(s.labelKey)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Textarea
+            id="keyterms-input"
+            value={currentKeyterms}
+            onChange={(e) => handleKeytermsChange(e.target.value)}
+            placeholder={t("transcriptionSettings.keytermsPlaceholder")}
+            className="rounded-xl min-h-[80px] text-sm"
+            disabled={disabled}
+          />
           <p className="text-xs text-muted-foreground">
-            {t(STRATEGIES.find(s => s.value === currentStrategy)?.descKey || "transcriptionSettings.strategyBalancedDesc")}
+            {t("transcriptionSettings.keytermsHelp")}
           </p>
         </div>
+      )}
 
-        {/* Keyterms input — only for keyterms strategy */}
-        {currentStrategy === "keyterms" && (
-          <div className="space-y-2">
-            <Label htmlFor="keyterms-input" className="text-sm">
-              {t("transcriptionSettings.keytermsLabel")}
+      {/* Speaker count */}
+      <div className="space-y-2">
+        <Label htmlFor="speaker-count" className="text-sm">
+          {t("transcriptionSettings.speakersLabel")}
+        </Label>
+        <Select value={currentSpeakers} onValueChange={handleSpeakersChange} disabled={disabled}>
+          <SelectTrigger id="speaker-count" className="rounded-xl">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SPEAKER_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {t("transcriptionSettings.speakersHelp")}
+        </p>
+      </div>
+
+      {/* Audio enhancement toggle */}
+      {(currentStrategy === "recovery" || value.profile === "phone_call") && (
+        <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-muted/50">
+          <div className="space-y-0.5">
+            <Label htmlFor="enhance-audio" className="text-sm font-medium cursor-pointer">
+              {t("transcriptionSettings.enhanceLabel")}
             </Label>
-            <Textarea
-              id="keyterms-input"
-              value={currentKeyterms}
-              onChange={(e) => handleKeytermsChange(e.target.value)}
-              placeholder={t("transcriptionSettings.keytermsPlaceholder")}
-              className="rounded-xl min-h-[80px] text-sm"
-              disabled={disabled}
-            />
             <p className="text-xs text-muted-foreground">
-              {t("transcriptionSettings.keytermsHelp")}
+              {t("transcriptionSettings.enhanceHelp")}
             </p>
           </div>
-        )}
-
-        {/* Speaker count */}
-        <div className="space-y-2">
-          <Label htmlFor="speaker-count" className="text-sm">
-            {t("transcriptionSettings.speakersLabel")}
-          </Label>
-          <Select value={currentSpeakers} onValueChange={handleSpeakersChange} disabled={disabled}>
-            <SelectTrigger id="speaker-count" className="rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SPEAKER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {t(opt.labelKey)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {t("transcriptionSettings.speakersHelp")}
-          </p>
+          <Switch
+            id="enhance-audio"
+            checked={value.enhanceAudio ?? false}
+            onCheckedChange={(checked) => onChange({ ...value, enhanceAudio: checked || undefined })}
+            disabled={disabled}
+          />
         </div>
-
-        {/* Audio enhancement toggle — contextually relevant for recovery/phone_call */}
-        {(currentStrategy === "recovery" || value.profile === "phone_call") && (
-          <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-muted/50">
-            <div className="space-y-0.5">
-              <Label htmlFor="enhance-audio" className="text-sm font-medium cursor-pointer">
-                {t("transcriptionSettings.enhanceLabel")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("transcriptionSettings.enhanceHelp")}
-              </p>
-            </div>
-            <Switch
-              id="enhance-audio"
-              checked={value.enhanceAudio ?? false}
-              onCheckedChange={(checked) => onChange({ ...value, enhanceAudio: checked || undefined })}
-              disabled={disabled}
-            />
-          </div>
-        )}
-      </CollapsibleContent>
-    </Collapsible>
+      )}
+    </div>
   );
 }
