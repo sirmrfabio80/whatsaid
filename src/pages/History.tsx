@@ -42,8 +42,16 @@ export default function History() {
 
   const jobIds = useMemo(() => jobs.map((j) => j.id), [jobs]);
   const filters = useHistoryFilters(user?.id, jobIds);
+  const translatedUserTags = useTranslatedTags(filters.userTags);
   const translatedSuggestions = useTranslatedTags(filters.tagSuggestions);
   const translatedSelected = useTranslatedTags(filters.selectedTags);
+
+  // Build lookup for translated display names by tag id
+  const tagDisplayMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of translatedUserTags) map.set(t.id, t.displayName);
+    return map;
+  }, [translatedUserTags]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -202,7 +210,7 @@ export default function History() {
                                   {tag.color && (
                                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
                                   )}
-                                  {tag.name}
+                                  {tagDisplayMap.get(tag.id) ?? tag.name}
                                 </span>
                               ))}
                             </div>
