@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,7 +8,7 @@ import NotificationItem from "@/components/NotificationItem";
 
 export default function NotificationBell() {
   const { t } = useTranslation();
-  const { notifications, unreadCount, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markAllRead, clearAllNotifications } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -46,16 +46,29 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
             <h3 className="text-sm font-semibold">{t("notifications.title")}</h3>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-7 px-2 text-muted-foreground"
-                onClick={() => markAllRead()}
-              >
-                {t("notifications.markAllRead")}
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 px-2 text-muted-foreground"
+                  onClick={() => markAllRead()}
+                >
+                  {t("notifications.markAllRead")}
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
+                  onClick={() => clearAllNotifications()}
+                  aria-label={t("notifications.clearAll")}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* List */}

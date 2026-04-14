@@ -26,6 +26,8 @@ interface NotificationsContextType {
   loading: boolean;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
   startPdfExport: (data: CanonicalExportData) => void;
   downloadExport: (storagePath: string, filename?: string) => Promise<void>;
 }
@@ -36,6 +38,8 @@ const NotificationsContext = createContext<NotificationsContextType>({
   loading: true,
   markRead: async () => {},
   markAllRead: async () => {},
+  deleteNotification: async () => {},
+  clearAllNotifications: async () => {},
   startPdfExport: () => {},
   downloadExport: async () => {},
 });
@@ -113,6 +117,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .update({ read: true })
       .eq("user_id", user.id)
       .eq("read", false);
+  }, [user]);
+
+  const deleteNotification = useCallback(async (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await supabase.from("notifications").delete().eq("id", id);
+  }, []);
+
+  const clearAllNotifications = useCallback(async () => {
+    if (!user) return;
+    setNotifications([]);
+    await supabase.from("notifications").delete().eq("user_id", user.id);
   }, [user]);
 
   /** Generate a fresh signed URL for a storage path and trigger download */
@@ -239,7 +254,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, unreadCount, loading, markRead, markAllRead, startPdfExport, downloadExport }}
+      value={{ notifications, unreadCount, loading, markRead, markAllRead, deleteNotification, clearAllNotifications, startPdfExport, downloadExport }}
     >
       {children}
     </NotificationsContext.Provider>
