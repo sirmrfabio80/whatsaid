@@ -216,8 +216,8 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   if (data.duration) meta.push(`Duration: ${data.duration}`);
   if (data.language) meta.push(`Language: ${data.language}`);
 
-  let headerHtml = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
-  headerHtml += `<p style="margin:0;color:#6b7280;font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
+  let headerHtml = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:${COLOR_HEADING}">${escapeHtml(data.title)}</h1>`;
+  headerHtml += `<p style="margin:0;color:${COLOR_META};font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
   headerHtml += "</header>";
 
   if (data.summary) {
@@ -225,7 +225,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     const sections = splitMarkdownBySections(data.summary);
     // First section merges with the header + "Summary" heading
     const firstSection = sections[0] || "";
-    headerHtml += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(firstSection)}</section>`;
+    headerHtml += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:${COLOR_HEADING}">Summary</h2>${markdownToHtml(firstSection)}</section>`;
     blocks.push({ html: headerHtml, forceNewPage: false, gapAfterMm: PARAGRAPH_GAP_MM });
 
     // Remaining summary sections as separate blocks (heading + content kept together)
@@ -243,7 +243,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   // --- Questions & Answers (heading + each Q/A as its own block) ---
   if (data.questions && data.questions.length > 0) {
     blocks.push({
-      html: `<h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`,
+      html: sectionHeadingHtml("Questions & Answers"),
       forceNewPage: true,
       gapAfterMm: PARAGRAPH_GAP_MM,
     });
@@ -251,7 +251,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     data.questions.forEach((entry, i) => {
       let qaBlockHtml = "";
       if (entry.prompt) {
-        qaBlockHtml += `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:#111827">Q: ${escapeHtml(entry.prompt)}</p>`;
+        qaBlockHtml += `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:${COLOR_HEADING}">Q: ${escapeHtml(entry.prompt)}</p>`;
       }
       qaBlockHtml += `<div style="margin:0 0 4px">${markdownToHtml(entry.answer)}</div>`;
       blocks.push({
@@ -265,7 +265,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   // --- Transcript (heading + each speaker paragraph as its own block) ---
   if (data.transcript) {
     blocks.push({
-      html: `<h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>`,
+      html: sectionHeadingHtml("Transcript"),
       forceNewPage: true,
       gapAfterMm: PARAGRAPH_GAP_MM,
     });
