@@ -274,6 +274,7 @@
     "summary": "Résumé",
     "questions": "Questions",
     "summaryLanguage": "Langue du résumé",
+    "outputLanguage": "Langue de sortie",
     "regeneratingSummary": "Régénération du résumé…",
     "noTranscript": "Aucune transcription disponible.",
     "noSummary": "Aucun résumé disponible.",
