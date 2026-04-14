@@ -184,9 +184,13 @@ function speakerParagraphToHtml(line: string): string {
   }
   return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}">${escapeHtml(line)}</p>`;
 }
-/* ------------------------------------------------------------------ */
 
-interface PdfBlock {
+/** A thin accent divider + heading combo used before major sections */
+function sectionHeadingHtml(title: string): string {
+  return `<div style="border-top:2px solid ${COLOR_ACCENT};padding-top:10px;margin-top:4px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:${COLOR_HEADING}">${escapeHtml(title)}</h2></div>`;
+}
+
+/* ------------------------------------------------------------------
   html: string;
   /** Force a new page before this block */
   forceNewPage: boolean;
