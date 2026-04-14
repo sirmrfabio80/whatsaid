@@ -364,7 +364,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, unreadCount, loading, markRead, markAllRead, deleteNotification, clearAllNotifications, startPdfExport, downloadExport }}
+      value={{ notifications, unreadCount, loading, markRead, markAllRead, deleteNotification, clearAllNotifications, startPdfExport, downloadExport, openExport }}
     >
       {children}
     </NotificationsContext.Provider>
