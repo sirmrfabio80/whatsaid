@@ -47,7 +47,7 @@ const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - FOOTER_RESERVE_MM;
 
 /** Render pipeline */
 const RENDER_WIDTH_PX = 794;
-const RENDER_SCALE = 2;
+const RENDER_SCALE = 3;
 
 /** Spacing between blocks (mm) */
 const SECTION_GAP_MM = 3.5;
