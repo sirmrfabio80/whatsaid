@@ -60,6 +60,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [identificationBannerDismissed, setIdentificationBannerDismissed] = useState(false);
   const [identificationOutputId, setIdentificationOutputId] = useState<string | null>(null);
   const identificationRanRef = useRef(false);
+  const [identifyingInProgress, setIdentifyingInProgress] = useState(false);
   // Variant state: maps job_output_id → translated content
   const [variants, setVariants] = useState<Record<string, string>>({});
   const [summaryNeedsRegen, setSummaryNeedsRegen] = useState(false);
