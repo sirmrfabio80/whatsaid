@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -34,6 +35,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <NotificationsProvider>
           <Navbar />
           <Routes>
             <Route path="/" element={<Index />} />
@@ -57,6 +59,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
+          </NotificationsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -14,6 +14,7 @@ import {
 import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { useState, useEffect, useRef } from "react";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Navbar() {
   const { user, creditBalance, isAdmin, avatarUrl, displayName, signOut } = useAuth();
@@ -77,6 +78,9 @@ export default function Navbar() {
                 <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
               </div>
 
+              {/* Notification bell */}
+              <NotificationBell />
+
               {/* Avatar dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -124,10 +128,13 @@ export default function Navbar() {
         {/* Mobile: credit badge + hamburger */}
         <div className="flex md:hidden items-center gap-2">
           {user && (
-            <div className="bg-muted border border-border px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs">
-              <CreditCard className="w-3 h-3 text-primary" />
-              <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
-            </div>
+            <>
+              <div className="bg-muted border border-border px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs">
+                <CreditCard className="w-3 h-3 text-primary" />
+                <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
+              </div>
+              <NotificationBell />
+            </>
           )}
           <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
