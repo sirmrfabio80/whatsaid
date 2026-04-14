@@ -28,6 +28,7 @@ export interface JobMeta {
   speech_model: string | null; speaker_names: Record<string, string>; title: string | null;
   metadata_location_iso6709: string | null;
   location_label: string | null;
+  output_language: string | null;
 }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
