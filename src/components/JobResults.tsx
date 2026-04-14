@@ -610,13 +610,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                                 <Checkbox id={checkboxId} checked={!isExcluded} onCheckedChange={(checked) => { setExcludedQAIds((prev) => { const next = new Set(prev); if (checked) next.delete(entry.id); else next.add(entry.id); return next; }); }} aria-label={`Include "${entry.custom_prompt ?? "this answer"}" in export`} />
                                 <label htmlFor={checkboxId} className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap select-none">{t("jobResults.includeInExport")}</label>
                               </div>
-                              <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-7" onClick={() => handleCopy(applySpeakerNames(entry.content, speakerNames), entry.id)}>
+                              <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-7" onClick={() => handleCopy(applySpeakerNames(getContent(entry), speakerNames), entry.id)}>
                                 {copiedId === entry.id ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}{copiedId === entry.id ? t("common.copied") : t("common.copy")}
                               </Button>
                             </div>
                             <div>
                               {entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>}
-                              <div className="pl-5"><SectionBody body={applySpeakerNames(entry.content, speakerNames)} /></div>
+                              <div className="pl-5"><SectionBody body={applySpeakerNames(getContent(entry), speakerNames)} /></div>
                             </div>
                           </div>
                         </div>
