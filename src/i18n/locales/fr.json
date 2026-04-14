@@ -554,5 +554,10 @@
     "speakers4": "4 interlocuteurs",
     "enhanceLabel": "Améliorer l'audio pour les appels téléphoniques",
     "enhanceHelp": "Réduit les différences de volume entre les interlocuteurs. Recommandé pour les appels enregistrés en haut-parleur."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification",
+    "markAllRead": "Tout marquer comme lu"
   }
 }
