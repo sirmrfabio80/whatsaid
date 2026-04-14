@@ -8,8 +8,8 @@ import type { TagOption } from "@/hooks/use-history-filters";
 interface HistoryFiltersProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  tagSuggestions: TagOption[];
-  selectedTags: TagOption[];
+  tagSuggestions: (TagOption & { displayName?: string })[];
+  selectedTags: (TagOption & { displayName?: string })[];
   onToggleTag: (tagId: string) => void;
   onClearAll: () => void;
   hasActiveFilters: boolean;
@@ -44,6 +44,7 @@ export default function HistoryFilters({
   }, [tagOpen]);
 
   const filteredSuggestions = tagSuggestions.filter((tag) =>
+    (tag.displayName ?? tag.name).toLowerCase().includes(tagSearch.toLowerCase()) ||
     tag.name.toLowerCase().includes(tagSearch.toLowerCase())
   );
 
@@ -121,7 +122,7 @@ export default function HistoryFilters({
                         {tag.color && (
                           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                         )}
-                        <span className="truncate">{tag.name}</span>
+                        <span className="truncate">{tag.displayName ?? tag.name}</span>
                         <span className="ml-auto text-[10px] text-muted-foreground/60 uppercase">{tag.source}</span>
                       </button>
                     ))
@@ -146,7 +147,7 @@ export default function HistoryFilters({
               {tag.color && (
                 <span className="w-2 h-2 rounded-full shrink-0 mr-0.5" style={{ backgroundColor: tag.color }} />
               )}
-              {tag.name}
+              {(tag as any).displayName ?? tag.name}
               <X className="w-3 h-3 ml-0.5 opacity-60" />
             </button>
           ))}

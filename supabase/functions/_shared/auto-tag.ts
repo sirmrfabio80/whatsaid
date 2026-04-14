@@ -82,6 +82,7 @@ export async function autoTag(
 Rules:
 - Return ONLY a JSON array of strings, e.g. ["tag1","tag2","tag3"]
 - Each tag must be 1–4 words, lowercase
+- Tags must ALWAYS be in English, regardless of the transcript language
 - Tags should be high-signal: topic, domain, or meeting type
 - Do NOT include generic filler like "discussion", "meeting", "conversation", "audio"
 - Do NOT invent names, companies, or entities not clearly stated in the transcript

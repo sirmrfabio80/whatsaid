@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useJobTags, Tag } from "@/hooks/use-job-tags";
+import { useTranslatedTags } from "@/hooks/use-translated-tags";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
 export default function JobDetailTags({ jobId }: Props) {
   const { t } = useTranslation();
   const { jobTags, suggestions, loading, addTag, removeTag, renameTag } = useJobTags(jobId);
+  const translatedJobTags = useTranslatedTags(jobTags);
+  const translatedSuggestions = useTranslatedTags(suggestions);
   const [inputValue, setInputValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,7 +40,8 @@ export default function JobDetailTags({ jobId }: Props) {
     if (editingId) setTimeout(() => editRef.current?.focus(), 50);
   }, [editingId]);
 
-  const filtered = suggestions.filter((s) =>
+  const filtered = translatedSuggestions.filter((s) =>
+    s.displayName.toLowerCase().includes(inputValue.trim().toLowerCase()) ||
     s.name.toLowerCase().includes(inputValue.trim().toLowerCase())
   );
 
@@ -70,10 +74,10 @@ export default function JobDetailTags({ jobId }: Props) {
     setEditingId(null);
   };
 
-  const exactMatch = inputValue.trim() && suggestions.some(
+  const exactMatch = inputValue.trim() && translatedSuggestions.some(
     (s) => s.normalized_name === inputValue.trim().toLowerCase().replace(/\s+/g, " ")
   );
-  const showCreate = inputValue.trim().length > 0 && !exactMatch && !jobTags.some(
+  const showCreate = inputValue.trim().length > 0 && !exactMatch && !translatedJobTags.some(
     (t) => t.normalized_name === inputValue.trim().toLowerCase().replace(/\s+/g, " ")
   );
 
@@ -84,7 +88,7 @@ export default function JobDetailTags({ jobId }: Props) {
       <TagIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 
       {/* Assigned tags */}
-      {jobTags.map((tag) =>
+      {translatedJobTags.map((tag) =>
         editingId === tag.id ? (
           <div key={tag.id} className="inline-flex items-center gap-1">
             <Input
@@ -127,7 +131,7 @@ export default function JobDetailTags({ jobId }: Props) {
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === "Enter") startRename(tag); }}
             >
-              {tag.name}
+              {tag.displayName}
             </span>
             {tag.source === "ai" && (
               <span className="text-[10px] text-muted-foreground opacity-60 ml-0.5">AI</span>
@@ -172,7 +176,7 @@ export default function JobDetailTags({ jobId }: Props) {
                 className="w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-center gap-2"
               >
                 <TagIcon className="w-3 h-3 text-muted-foreground shrink-0" />
-                <span className="truncate">{s.name}</span>
+                <span className="truncate">{s.displayName}</span>
                 {s.source === "ai" && (
                   <span className="text-[10px] text-muted-foreground ml-auto">AI</span>
                 )}

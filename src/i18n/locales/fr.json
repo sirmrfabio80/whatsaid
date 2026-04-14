@@ -93,7 +93,10 @@
     "and": "et",
     "noCreditsTitle": "Crédits insuffisants",
     "noCreditsDesc": "Ce fichier nécessite {{required}} crédit(s) mais vous en avez {{balance}}. Achetez des crédits pour continuer.",
-    "buyCredits": "Acheter des crédits"
+    "buyCredits": "Acheter des crédits",
+    "autoOptimisedBadge": "Optimisé pour l'enregistrement d'appel téléphonique",
+    "autoOptimisedHint": "Audio mono détecté — mode récupération et amélioration audio appliqués automatiquement.",
+    "advancedOptions": "Options avancées de transcription"
   },
   "login": {
     "title": "Se connecter à WhatSaid",

@@ -14,6 +14,7 @@ import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
 import { useHistoryFilters } from "@/hooks/use-history-filters";
+import { useTranslatedTags } from "@/hooks/use-translated-tags";
 import HistoryFilters from "@/components/HistoryFilters";
 
 interface Job {
@@ -41,6 +42,16 @@ export default function History() {
 
   const jobIds = useMemo(() => jobs.map((j) => j.id), [jobs]);
   const filters = useHistoryFilters(user?.id, jobIds);
+  const translatedUserTags = useTranslatedTags(filters.userTags);
+  const translatedSuggestions = useTranslatedTags(filters.tagSuggestions);
+  const translatedSelected = useTranslatedTags(filters.selectedTags);
+
+  // Build lookup for translated display names by tag id
+  const tagDisplayMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of translatedUserTags) map.set(t.id, t.displayName);
+    return map;
+  }, [translatedUserTags]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -123,8 +134,8 @@ export default function History() {
             <HistoryFilters
               searchQuery={filters.searchQuery}
               onSearchChange={filters.setSearchQuery}
-              tagSuggestions={filters.tagSuggestions}
-              selectedTags={filters.selectedTags}
+              tagSuggestions={translatedSuggestions}
+              selectedTags={translatedSelected}
               onToggleTag={filters.toggleTag}
               onClearAll={filters.clearAll}
               hasActiveFilters={filters.hasActiveFilters}
@@ -199,7 +210,7 @@ export default function History() {
                                   {tag.color && (
                                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
                                   )}
-                                  {tag.name}
+                                  {tagDisplayMap.get(tag.id) ?? tag.name}
                                 </span>
                               ))}
                             </div>
