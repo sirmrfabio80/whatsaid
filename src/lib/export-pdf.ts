@@ -56,6 +56,7 @@ const PARAGRAPH_GAP_MM = 1;
 /** Typography (px) — optimised for handheld PDF reading */
 const BODY_FONT_PX = 15;
 const TRANSCRIPT_FONT_PX = 15;
+const TIMESTAMP_FONT_PX = 12;
 const META_FONT_PX = 13;
 const H1_FONT_PX = 30;
 const H2_FONT_PX = 20;
@@ -63,6 +64,15 @@ const H3_FONT_PX = 18;
 const H4_FONT_PX = 17;
 const QA_PROMPT_FONT_PX = 15;
 const BULLET_FONT_PX = BODY_FONT_PX;
+
+/** Colours */
+const COLOR_HEADING = "#111827";
+const COLOR_BODY = "#1f2937";
+const COLOR_TIMESTAMP = "#9ca3af";
+const COLOR_SPEAKER = "#111827";
+const COLOR_META = "#6b7280";
+const COLOR_DIVIDER = "#e5e7eb";
+const COLOR_ACCENT = "#6366f1";
 
 /** Inner wrapper horizontal padding (px) — tighter to maximise reading width */
 const WRAPPER_PAD_X_PX = 28;
@@ -124,11 +134,11 @@ function markdownToHtml(text: string): string {
     }
 
     if (line.startsWith("### ")) {
-      htmlParts.push(`<h4 style="font-size:${H4_FONT_PX}px;line-height:1.35;margin:14px 0 6px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(4)))}</h4>`);
+      htmlParts.push(`<h4 style="font-size:${H4_FONT_PX}px;line-height:1.35;margin:14px 0 6px;font-weight:700;color:${COLOR_HEADING}">${inlineMarkdownToHtml(escapeHtml(line.slice(4)))}</h4>`);
       continue;
     }
     if (line.startsWith("## ")) {
-      htmlParts.push(`<h3 style="font-size:${H3_FONT_PX}px;line-height:1.35;margin:18px 0 8px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(3)))}</h3>`);
+      htmlParts.push(`<h3 style="font-size:${H3_FONT_PX}px;line-height:1.35;margin:18px 0 8px;font-weight:700;color:${COLOR_HEADING}">${inlineMarkdownToHtml(escapeHtml(line.slice(3)))}</h3>`);
       continue;
     }
 
@@ -146,7 +156,7 @@ function markdownToHtml(text: string): string {
       continue;
     }
 
-    htmlParts.push(`<p style="margin:5px 0;line-height:1.65;font-size:${BODY_FONT_PX}px">${inlineMarkdownToHtml(escapeHtml(line))}</p>`);
+    htmlParts.push(`<p style="margin:5px 0;line-height:1.65;font-size:${BODY_FONT_PX}px;color:${COLOR_BODY}">${inlineMarkdownToHtml(escapeHtml(line))}</p>`);
   }
 
   if (inList) htmlParts.push("</ul>");
@@ -154,16 +164,30 @@ function markdownToHtml(text: string): string {
 }
 
 function speakerParagraphToHtml(line: string): string {
+  // Match timestamp + speaker: "[00:12:34] Speaker Name: text..."
+  const tsMatch = line.match(/^\[(\d{2}:\d{2}:\d{2})\]\s*(.+?):\s(.*)/);
+  if (tsMatch) {
+    const timestamp = tsMatch[1];
+    const speaker = escapeHtml(tsMatch[2]);
+    const text = escapeHtml(tsMatch[3]);
+    return `<p style="margin:6px 0 2px;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><span style="font-size:${TIMESTAMP_FONT_PX}px;color:${COLOR_TIMESTAMP};font-family:monospace;letter-spacing:-0.3px">${timestamp}</span>&ensp;<strong style="color:${COLOR_SPEAKER};font-weight:700">${speaker}:</strong> ${text}</p>`;
+  }
+  // Fallback: speaker without timestamp
   const speakerMatch = line.match(/^(.+?):\s/);
   if (speakerMatch) {
     const label = escapeHtml(`${speakerMatch[1]}:`);
     const rest = escapeHtml(line.slice(speakerMatch[0].length));
-    return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px"><strong>${label}</strong> ${rest}</p>`;
+    return `<p style="margin:6px 0 2px;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><strong style="color:${COLOR_SPEAKER};font-weight:700">${label}</strong> ${rest}</p>`;
   }
   if (!line.trim()) {
-    return '<div style="height:8px"></div>';
+    return '<div style="height:6px"></div>';
   }
-  return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px">${escapeHtml(line)}</p>`;
+  return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}">${escapeHtml(line)}</p>`;
+}
+
+/** A thin accent divider + heading combo used before major sections */
+function sectionHeadingHtml(title: string): string {
+  return `<div style="border-top:2px solid ${COLOR_ACCENT};padding-top:10px;margin-top:4px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:${COLOR_HEADING}">${escapeHtml(title)}</h2></div>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -192,8 +216,8 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   if (data.duration) meta.push(`Duration: ${data.duration}`);
   if (data.language) meta.push(`Language: ${data.language}`);
 
-  let headerHtml = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
-  headerHtml += `<p style="margin:0;color:#6b7280;font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
+  let headerHtml = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:${COLOR_HEADING}">${escapeHtml(data.title)}</h1>`;
+  headerHtml += `<p style="margin:0;color:${COLOR_META};font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
   headerHtml += "</header>";
 
   if (data.summary) {
@@ -201,7 +225,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     const sections = splitMarkdownBySections(data.summary);
     // First section merges with the header + "Summary" heading
     const firstSection = sections[0] || "";
-    headerHtml += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(firstSection)}</section>`;
+    headerHtml += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:${COLOR_HEADING}">Summary</h2>${markdownToHtml(firstSection)}</section>`;
     blocks.push({ html: headerHtml, forceNewPage: false, gapAfterMm: PARAGRAPH_GAP_MM });
 
     // Remaining summary sections as separate blocks (heading + content kept together)
@@ -219,7 +243,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   // --- Questions & Answers (heading + each Q/A as its own block) ---
   if (data.questions && data.questions.length > 0) {
     blocks.push({
-      html: `<h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`,
+      html: sectionHeadingHtml("Questions & Answers"),
       forceNewPage: true,
       gapAfterMm: PARAGRAPH_GAP_MM,
     });
@@ -227,7 +251,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     data.questions.forEach((entry, i) => {
       let qaBlockHtml = "";
       if (entry.prompt) {
-        qaBlockHtml += `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:#111827">Q: ${escapeHtml(entry.prompt)}</p>`;
+        qaBlockHtml += `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:${COLOR_HEADING}">Q: ${escapeHtml(entry.prompt)}</p>`;
       }
       qaBlockHtml += `<div style="margin:0 0 4px">${markdownToHtml(entry.answer)}</div>`;
       blocks.push({
@@ -241,7 +265,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   // --- Transcript (heading + each speaker paragraph as its own block) ---
   if (data.transcript) {
     blocks.push({
-      html: `<h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>`,
+      html: sectionHeadingHtml("Transcript"),
       forceNewPage: true,
       gapAfterMm: PARAGRAPH_GAP_MM,
     });

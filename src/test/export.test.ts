@@ -69,7 +69,7 @@ describe("pdf content rendering", () => {
     expect(html).toContain("<strong>Budget</strong>");
     expect(html).toContain("<em>Timeline</em>");
     expect(html).toContain("Questions &amp; Answers");
-    expect(html).toContain("<strong>Speaker A:</strong>");
+    expect(html).toContain("Speaker A:</strong>");
   });
 
   it("omits excluded qa items when they are not passed in payload", () => {
