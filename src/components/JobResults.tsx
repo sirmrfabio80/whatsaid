@@ -454,11 +454,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const effectiveJobTitle = hasDistinctLiveTitle ? liveTitle : persistedJobTitle;
   const generatedTitle = !persistedJobTitle && hasDistinctLiveTitle ? liveTitle : null;
 
+  const activeTranscriptContent = transcript ? getContent(transcript) : "";
+  const activeSummaryContent = summary ? getContent(summary) : null;
+
   const canonicalData = transcript ? buildCanonicalPayload({
     jobTitle: effectiveJobTitle, generatedTitle, originalFileName: meta?.file_name ?? null,
     createdAt: meta?.recorded_at ?? meta?.created_at ?? null, durationSeconds: meta?.duration_seconds ?? null,
-    languageCode: meta?.language_detected ?? null, speakerNames, transcript: transcript.content,
-    summary: summary?.content ?? null, questionEntries: questionEntries.map((q) => ({ id: q.id, prompt: q.custom_prompt, content: q.content })), excludedQAIds,
+    languageCode: meta?.language_detected ?? null, speakerNames, transcript: activeTranscriptContent,
+    summary: activeSummaryContent, questionEntries: questionEntries.map((q) => ({ id: q.id, prompt: q.custom_prompt, content: getContent(q) })), excludedQAIds,
   }) : null;
 
   return (
