@@ -334,6 +334,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          async_job_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          read: boolean
+          resource_id: string | null
+          resource_type: string | null
+          resource_url: string | null
+          status: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          async_job_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          read?: boolean
+          resource_id?: string | null
+          resource_type?: string | null
+          resource_url?: string | null
+          status?: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          async_job_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          read?: boolean
+          resource_id?: string | null
+          resource_type?: string | null
+          resource_url?: string | null
+          status?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pending_invites: {
         Row: {
           claimed: boolean
