@@ -60,6 +60,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [identificationBannerDismissed, setIdentificationBannerDismissed] = useState(false);
   const [identificationOutputId, setIdentificationOutputId] = useState<string | null>(null);
   const identificationRanRef = useRef(false);
+  // Variant state: maps job_output_id → translated content
+  const [variants, setVariants] = useState<Record<string, string>>({});
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
