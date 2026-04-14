@@ -219,10 +219,25 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     (data: CanonicalExportData, sourceJobId?: string) => {
       if (!user) return;
 
-      // Dedupe: prefer sourceJobId, fallback to deterministic key from payload
-      const exportKey = sourceJobId
-        ? `pdf:${sourceJobId}`
-        : `pdf:${data.title}:${data.createdAt}:${(data.transcript?.length ?? 0)}`;
+      // Dedupe: prefer sourceJobId, fallback to deterministic hash of payload
+      let exportKey: string;
+      if (sourceJobId) {
+        exportKey = `pdf:${sourceJobId}`;
+      } else {
+        // Build a stable fingerprint from multiple payload characteristics
+        const parts = [
+          data.title,
+          data.createdAt,
+          data.language ?? "",
+          data.duration ?? "",
+          String(data.transcript?.length ?? 0),
+          String(data.summary?.length ?? 0),
+          String(data.questions?.length ?? 0),
+          // First 64 chars of transcript for additional uniqueness
+          data.transcript?.slice(0, 64) ?? "",
+        ];
+        exportKey = `pdf:fallback:${parts.join("|")}`;
+      }
 
       if (activePdfExports.current.has(exportKey)) {
         toast.info(t("notifications.exportAlreadyRunning"));
