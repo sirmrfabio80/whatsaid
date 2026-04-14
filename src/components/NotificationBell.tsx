@@ -34,7 +34,13 @@ export default function NotificationBell() {
         variant="ghost"
         size="icon"
         className="rounded-lg relative w-8 h-8"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (isMobile) {
+            navigate("/notifications");
+            return;
+          }
+          setOpen((o) => !o);
+        }}
         aria-label={t("notifications.title")}
       >
         <Bell className="w-4 h-4" />
@@ -45,7 +51,7 @@ export default function NotificationBell() {
         )}
       </Button>
 
-      {open && (
+      {!isMobile && open && (
         <div className="absolute right-0 top-10 w-80 max-w-[calc(100vw-2rem)] bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in">
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">

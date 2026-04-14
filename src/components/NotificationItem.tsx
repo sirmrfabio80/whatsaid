@@ -70,7 +70,7 @@ export default function NotificationItem({ notification, onClose }: Notification
         onClick={handleClick}
         disabled={downloading}
         className={cn(
-          "w-full text-left px-3 py-2.5 pr-8 flex gap-2.5 items-start rounded-lg transition-colors hover:bg-muted/60",
+          "w-full text-left px-3 py-2.5 pr-14 md:pr-8 flex gap-2.5 items-start rounded-lg transition-colors hover:bg-muted/60",
           !notification.read && "bg-primary/5",
           downloading && "opacity-60"
         )}
@@ -110,7 +110,7 @@ export default function NotificationItem({ notification, onClose }: Notification
         className="absolute top-2 right-2 p-2 md:p-1 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-muted text-muted-foreground hover:text-destructive"
         aria-label="Delete notification"
       >
-        <X className="w-3 h-3" />
+        <X className="w-4 h-4 md:w-3 md:h-3" />
       </button>
     </div>
   );
