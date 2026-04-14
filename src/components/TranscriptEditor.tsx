@@ -640,8 +640,8 @@ export default function TranscriptEditor({
               <div
                 key={seg.id}
                 ref={(el) => { if (el) segmentRefs.current.set(i, el); }}
-                className={`rounded-xl transition-all duration-150 border-l-[3px] ${
-                  editing ? "border bg-card/50 " : "bg-card/40 p-3 "
+                className={`transition-all duration-150 border-l-[3px] ${
+                  editing ? "rounded-xl border bg-card/50 " : "rounded-l-xl bg-card/40 p-3 "
                 }${
                   hasSuggestionHighlight
                     ? suggestion.confidence >= 0.8
