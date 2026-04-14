@@ -122,13 +122,9 @@ export default function Convert() {
     setStep("uploading");
     setErrorMessage(null);
 
-    // Scroll the card into view reliably
-    if (cardRef.current) {
-      cardRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else {
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "instant" : "smooth" });
-    }
+    // Scroll to top of page with smooth animation
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, left: 0, behavior: prefersReducedMotion ? "instant" : "smooth" });
 
     try {
       let uploadFile = file;
