@@ -8,7 +8,7 @@ import type { CanonicalExportData } from "@/lib/export-types";
 import { buildTxt } from "@/lib/export-txt";
 import { buildJson } from "@/lib/export-json";
 import { exportDocx } from "@/lib/export";
-import { exportPdf } from "@/lib/export-pdf";
+import { useNotifications } from "@/contexts/NotificationsContext";
 
 type ExportFormat = "txt" | "json" | "doc" | "pdf";
 
@@ -22,18 +22,25 @@ function downloadString(content: string, filename: string, mime: string) {
 
 export default function ExportButton({ data, disabled }: ExportButtonProps) {
   const { t } = useTranslation();
+  const { startPdfExport } = useNotifications();
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const isDisabled = disabled || !data || !data.transcript;
 
   const handleExport = async (format: ExportFormat) => {
     if (!data) return;
+
+    // PDF is handled as an async job via NotificationsContext
+    if (format === "pdf") {
+      startPdfExport(data);
+      return;
+    }
+
     setExporting(format);
     try {
       switch (format) {
         case "txt": downloadString(buildTxt(data), `${data.title}.txt`, "text/plain;charset=utf-8"); break;
         case "json": downloadString(buildJson(data), `${data.title}.json`, "application/json"); break;
         case "doc": await exportDocx(data); break;
-        case "pdf": await exportPdf(data); break;
       }
       toast.success(t("exportBtn.exportComplete"));
     } catch { toast.error(t("exportBtn.exportFailed")); } finally { setExporting(null); }

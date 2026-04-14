@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, XCircle, Info, FileText, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Info, FileText, Loader2, Download } from "lucide-react";
 import { useNotifications, type AppNotification } from "@/contexts/NotificationsContext";
 import { cn } from "@/lib/utils";
 
@@ -28,29 +29,52 @@ interface NotificationItemProps {
 
 export default function NotificationItem({ notification, onClose }: NotificationItemProps) {
   const navigate = useNavigate();
-  const { markRead } = useNotifications();
+  const { markRead, downloadExport } = useNotifications();
+  const [downloading, setDownloading] = useState(false);
 
   const handleClick = async () => {
     if (!notification.read) {
       await markRead(notification.id);
     }
-    // Navigate to resource if available
+
+    // Handle file downloads (PDF exports)
+    if (notification.resource_type === "file" && notification.resource_url) {
+      setDownloading(true);
+      try {
+        const filename = notification.title ? `${notification.title}.pdf` : undefined;
+        await downloadExport(notification.resource_url, filename);
+      } finally {
+        setDownloading(false);
+      }
+      onClose();
+      return;
+    }
+
+    // Navigate to resource if available (transcript jobs)
     if (notification.resource_type === "job" && notification.resource_id) {
       navigate(`/job/${notification.resource_id}`);
       onClose();
     }
   };
 
+  const isFile = notification.resource_type === "file" && notification.resource_url;
+
   return (
     <button
       onClick={handleClick}
+      disabled={downloading}
       className={cn(
         "w-full text-left px-3 py-2.5 flex gap-2.5 items-start rounded-lg transition-colors hover:bg-muted/60",
-        !notification.read && "bg-primary/5"
+        !notification.read && "bg-primary/5",
+        downloading && "opacity-60"
       )}
     >
       <div className="mt-0.5 shrink-0">
-        {statusIcons[notification.status] ?? <FileText className="w-4 h-4 text-muted-foreground" />}
+        {downloading ? (
+          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+        ) : (
+          statusIcons[notification.status] ?? <FileText className="w-4 h-4 text-muted-foreground" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <p className={cn("text-sm leading-snug", !notification.read && "font-medium")}>
@@ -61,7 +85,14 @@ export default function NotificationItem({ notification, onClose }: Notification
             {notification.description}
           </p>
         )}
-        <p className="text-[11px] text-muted-foreground mt-1">{timeAgo(notification.created_at)}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-[11px] text-muted-foreground">{timeAgo(notification.created_at)}</span>
+          {isFile && !downloading && (
+            <span className="text-[11px] text-primary flex items-center gap-0.5">
+              <Download className="w-3 h-3" /> Download
+            </span>
+          )}
+        </div>
       </div>
       {!notification.read && (
         <div className="mt-1.5 shrink-0 w-2 h-2 rounded-full bg-primary" />
