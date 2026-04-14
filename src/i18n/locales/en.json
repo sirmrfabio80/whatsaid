@@ -615,5 +615,16 @@
     "actionFailed": "Action failed — please try again",
     "exportAlreadyRunning": "This export is already in progress",
     "retry": "Retry"
+  },
+  "speakerIdentification": {
+    "bannerTitle_one": "AI identified {{count}} speaker",
+    "bannerTitle_other": "AI identified {{count}} speakers",
+    "dismissAll": "Dismiss",
+    "evidence": "evidence",
+    "accept": "Accept name",
+    "reject": "Reject",
+    "undo": "Undo rename",
+    "edit": "Edit name",
+    "suggested": "suggested"
   }
 }
