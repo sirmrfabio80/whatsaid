@@ -249,16 +249,28 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     });
 
     data.questions.forEach((entry, i) => {
-      let qaBlockHtml = "";
-      if (entry.prompt) {
-        qaBlockHtml += `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:${COLOR_HEADING}">Q: ${escapeHtml(entry.prompt)}</p>`;
-      }
-      qaBlockHtml += `<div style="margin:0 0 4px">${markdownToHtml(entry.answer)}</div>`;
+      const isLast = i === data.questions!.length - 1;
+      const answerSections = splitMarkdownBySections(entry.answer);
+      const promptHtml = entry.prompt
+        ? `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:${COLOR_HEADING}">Q: ${escapeHtml(entry.prompt)}</p>`
+        : "";
+
+      // First chunk: prompt + first answer section (kept together to prevent orphaned Q:)
+      const firstChunk = answerSections[0] || "";
       blocks.push({
-        html: qaBlockHtml,
+        html: promptHtml + `<div style="margin:0 0 4px">${markdownToHtml(firstChunk)}</div>`,
         forceNewPage: false,
-        gapAfterMm: i < data.questions!.length - 1 ? PARAGRAPH_GAP_MM : SECTION_GAP_MM,
+        gapAfterMm: answerSections.length > 1 ? PARAGRAPH_GAP_MM : (isLast ? SECTION_GAP_MM : PARAGRAPH_GAP_MM),
       });
+
+      // Remaining answer sections as separate blocks
+      for (let s = 1; s < answerSections.length; s++) {
+        blocks.push({
+          html: `<div style="margin:0 0 4px">${markdownToHtml(answerSections[s])}</div>`,
+          forceNewPage: false,
+          gapAfterMm: (s === answerSections.length - 1 && isLast) ? SECTION_GAP_MM : PARAGRAPH_GAP_MM,
+        });
+      }
     });
   }
 
