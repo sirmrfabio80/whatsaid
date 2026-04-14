@@ -14,9 +14,11 @@ import { applySpeakerNames } from "@/lib/speaker-names";
 import { buildCanonicalPayload } from "@/lib/export-payload";
 import ExportButton from "@/components/ExportButton";
 import SpeakerChips from "@/components/SpeakerChips";
+import SpeakerIdentificationBanner from "@/components/SpeakerIdentificationBanner";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import TranscriptEditor, { parseSegments, type SpeakerSuggestion } from "@/components/TranscriptEditor";
 import { toast } from "sonner";
+import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/speaker-identification";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
