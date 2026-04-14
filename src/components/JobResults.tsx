@@ -272,10 +272,75 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setSuggestionTarget(null);
   };
 
+  const originalLang = meta?.language_detected || "en";
+  const isViewingTranslation = outputLang !== originalLang && Object.keys(variants).length > 0;
+
+  // Helper to get content for an output — uses variant if viewing translation
+  const getContent = useCallback((output: JobOutput): string => {
+    if (isViewingTranslation && variants[output.id]) return variants[output.id];
+    return output.content;
+  }, [isViewingTranslation, variants]);
+
   const handleOutputLanguageChange = async (langCode: string) => {
     if (langCode === outputLang) return;
-    const prevLang = outputLang; setOutputLang(langCode); setRegeneratingLang(true);
-    try { const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, output_type: "summary", target_language: langCode } }); if (error || data?.error) { setOutputLang(prevLang); return; } await fetchData(); } catch { setOutputLang(prevLang); } finally { setRegeneratingLang(false); }
+    const prevLang = outputLang;
+    const prevVariants = { ...variants };
+    setOutputLang(langCode);
+
+    const origLang = meta?.language_detected || "en";
+
+    // Switching back to original language
+    if (langCode === origLang) {
+      setVariants({});
+      await supabase.from("jobs").update({ output_language: langCode }).eq("id", jobId);
+      return;
+    }
+
+    // Check if variants already exist locally (cached from a previous switch)
+    // If not, check DB first
+    setRegeneratingLang(true);
+    try {
+      const outputIds = outputs.map(o => o.id);
+      const { data: existingVariants } = await supabase
+        .from("job_output_variants")
+        .select("job_output_id, content")
+        .in("job_output_id", outputIds)
+        .eq("language", langCode);
+
+      const translatableOutputs = outputs.filter(o =>
+        o.output_type === "transcript" || o.output_type === "summary" || o.output_type === "custom" || o.output_type === "question"
+      );
+
+      if (existingVariants && existingVariants.length >= translatableOutputs.length) {
+        // All variants exist in DB
+        const vMap: Record<string, string> = {};
+        for (const v of existingVariants) vMap[v.job_output_id] = v.content;
+        setVariants(vMap);
+        await supabase.from("jobs").update({ output_language: langCode }).eq("id", jobId);
+      } else {
+        // Call regenerate with translate_all
+        const { data, error } = await supabase.functions.invoke("regenerate", {
+          body: { job_id: jobId, output_type: "translate_all", target_language: langCode },
+        });
+
+        if (error || data?.error) {
+          setOutputLang(prevLang);
+          setVariants(prevVariants);
+          toast.error(data?.error || t("jobResults.translationFailed"));
+          return;
+        }
+
+        if (data?.variants) {
+          setVariants(data.variants as Record<string, string>);
+        }
+      }
+    } catch {
+      setOutputLang(prevLang);
+      setVariants(prevVariants);
+      toast.error(t("jobResults.translationFailed"));
+    } finally {
+      setRegeneratingLang(false);
+    }
   };
 
   const handleCopy = async (content: string, id: string) => { await navigator.clipboard.writeText(content); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
