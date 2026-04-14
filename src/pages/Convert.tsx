@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
+import { enhanceAudioForTranscription } from "@/lib/audio-enhance";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard
@@ -19,7 +20,7 @@ import {
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 
-type ProcessingStep = "uploading" | "transcribing" | "summarising" | "completed" | "failed";
+type ProcessingStep = "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 
 export default function Convert() {
   const { user, isAdmin } = useAuth();
@@ -58,6 +59,7 @@ export default function Convert() {
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
+    enhancing: t("convert.stepEnhancing"),
     uploading: t("convert.stepUploading"),
     transcribing: t("convert.stepTranscribing"),
     summarising: t("convert.stepSummarising"),
@@ -124,12 +126,26 @@ export default function Convert() {
     window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "instant" : "smooth" });
 
     try {
+      let uploadFile = file;
+
+      // Apply audio enhancement if enabled
+      if (transcriptionConfig.enhanceAudio) {
+        setStep("enhancing");
+        try {
+          uploadFile = await enhanceAudioForTranscription(file);
+        } catch (enhanceError) {
+          console.warn("Audio enhancement failed, uploading original:", enhanceError);
+          // Fall back to original file silently
+        }
+      }
+
+      setStep("uploading");
       const newJobId = crypto.randomUUID();
-      const filePath = `${user.id}/${newJobId}/${file.name}`;
+      const filePath = `${user.id}/${newJobId}/${uploadFile.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("temp-audio")
-        .upload(filePath, file, { upsert: false });
+        .upload(filePath, uploadFile, { upsert: false });
 
       if (uploadError) {
         throw new Error(`Upload failed: ${uploadError.message}`);
@@ -148,6 +164,7 @@ export default function Convert() {
       if (transcriptionConfig.strategy) txConfig.strategy = transcriptionConfig.strategy;
       if (transcriptionConfig.speakers_expected) txConfig.speakers_expected = transcriptionConfig.speakers_expected;
       if (transcriptionConfig.keyterms && transcriptionConfig.keyterms.length > 0) txConfig.keyterms = transcriptionConfig.keyterms;
+      if (transcriptionConfig.enhanceAudio) txConfig.audio_enhanced = true;
       const hasConfig = Object.keys(txConfig).length > 0;
 
       const { error: jobError } = await supabase
@@ -223,11 +240,16 @@ export default function Convert() {
               <CardContent className="p-8 sm:p-12">
                 <div className="flex flex-col items-center text-center space-y-6">
                   <div className="w-full max-w-sm space-y-4">
-                    {(["uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
+                    {(transcriptionConfig.enhanceAudio
+                      ? ["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]
+                      : ["uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]
+                    ).map((s) => {
+                      const allSteps = transcriptionConfig.enhanceAudio
+                        ? ["enhancing", "uploading", "transcribing", "summarising", "completed"]
+                        : ["uploading", "transcribing", "summarising", "completed"];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
-                        ["uploading", "transcribing", "summarising", "completed"].indexOf(step!) >
-                        ["uploading", "transcribing", "summarising", "completed"].indexOf(s)
+                        allSteps.indexOf(step!) > allSteps.indexOf(s)
                       );
 
                       return (

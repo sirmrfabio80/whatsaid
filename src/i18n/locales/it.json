@@ -74,6 +74,7 @@
   "convert": {
     "title": "Converti il tuo audio",
     "subtitle": "Carica un file per ottenere una trascrizione, un riassunto e un'analisi AI personalizzata.",
+    "stepEnhancing": "Miglioramento audio...",
     "stepUploading": "Caricamento audio...",
     "stepTranscribing": "Trascrizione con etichette dei relatori...",
     "stepSummarising": "Generazione riassunto e analisi...",
@@ -547,6 +548,8 @@
     "speakersAuto": "Rilevamento automatico",
     "speakers2": "2 interlocutori",
     "speakers3": "3 interlocutori",
-    "speakers4": "4 interlocutori"
+    "speakers4": "4 interlocutori",
+    "enhanceLabel": "Migliora audio per chiamate telefoniche",
+    "enhanceHelp": "Riduce le differenze di volume tra gli interlocutori. Consigliato per chiamate registrate in vivavoce."
   }
 }

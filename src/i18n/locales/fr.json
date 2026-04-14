@@ -74,6 +74,7 @@
   "convert": {
     "title": "Convertir votre audio",
     "subtitle": "Téléchargez un fichier pour obtenir une transcription, un résumé et une analyse IA personnalisée.",
+    "stepEnhancing": "Amélioration de l'audio...",
     "stepUploading": "Téléchargement de l'audio...",
     "stepTranscribing": "Transcription avec identification des intervenants...",
     "stepSummarising": "Génération du résumé et de l'analyse...",
@@ -547,6 +548,8 @@
     "speakersAuto": "Détection automatique",
     "speakers2": "2 interlocuteurs",
     "speakers3": "3 interlocuteurs",
-    "speakers4": "4 interlocuteurs"
+    "speakers4": "4 interlocuteurs",
+    "enhanceLabel": "Améliorer l'audio pour les appels téléphoniques",
+    "enhanceHelp": "Réduit les différences de volume entre les interlocuteurs. Recommandé pour les appels enregistrés en haut-parleur."
   }
 }

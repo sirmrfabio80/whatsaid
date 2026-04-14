@@ -74,6 +74,7 @@
   "convert": {
     "title": "Convert your audio",
     "subtitle": "Upload a file to get a transcript, summary, and custom AI analysis.",
+    "stepEnhancing": "Enhancing audio...",
     "stepUploading": "Uploading audio...",
     "stepTranscribing": "Transcribing with speaker labels...",
     "stepSummarising": "Generating summary & analysis...",
@@ -595,6 +596,8 @@
     "speakersAuto": "Auto-detect",
     "speakers2": "2 speakers",
     "speakers3": "3 speakers",
-    "speakers4": "4 speakers"
+    "speakers4": "4 speakers",
+    "enhanceLabel": "Enhance audio for phone calls",
+    "enhanceHelp": "Reduces volume differences between speakers. Recommended for phone calls recorded on speaker."
   }
 }
