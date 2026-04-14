@@ -330,11 +330,11 @@
   },
   "audioUploader": {
     "dropTitle": "Déposez votre fichier audio ici",
-    "dropDesc": "ou cliquez pour parcourir · .m4a, .mp3, .wav · max 60 min / 200 Mo",
+    "dropDesc": "ou cliquez pour parcourir · .m4a, .mp3, .wav · max 60 min / 100 Mo",
     "securityNotice": "🔒 Votre audio est traité de manière sécurisée et supprimé immédiatement après. Veuillez vous assurer que toutes les parties enregistrées sont informées de l'enregistrement.",
     "detectingDuration": "Détection de la durée...",
     "unsupportedFormat": "Format non pris en charge. Veuillez télécharger des fichiers {{formats}}.",
-    "fileTooLarge": "Fichier trop volumineux. La taille maximale est de 200 Mo.",
+    "fileTooLarge": "Fichier trop volumineux. La taille maximale est de 100 Mo.",
     "fileTooLong": "Le fichier dépasse 60 minutes. Veuillez réduire votre audio.",
     "couldNotRead": "Impossible de lire le fichier audio. Veuillez essayer un autre format.",
     "uploadLabel": "Télécharger un fichier audio"

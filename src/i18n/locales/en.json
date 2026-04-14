@@ -346,11 +346,11 @@
   },
   "audioUploader": {
     "dropTitle": "Drop your audio file here",
-    "dropDesc": "or click to browse · .m4a, .mp3, .wav · max 60 min / 200 MB",
+    "dropDesc": "or click to browse · .m4a, .mp3, .wav · max 60 min / 100 MB",
     "securityNotice": "🔒 Your audio is processed securely and deleted immediately after. Please ensure all recorded parties are aware of the recording.",
     "detectingDuration": "Detecting duration...",
     "unsupportedFormat": "Unsupported format. Please upload {{formats}} files.",
-    "fileTooLarge": "File too large. Maximum size is 200 MB.",
+    "fileTooLarge": "File too large. Maximum size is 100 MB.",
     "fileTooLong": "File is longer than 60 minutes. Please trim your audio.",
     "couldNotRead": "Could not read audio file. Please try a different format.",
     "uploadLabel": "Upload audio file"
