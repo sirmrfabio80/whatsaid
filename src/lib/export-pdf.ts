@@ -25,16 +25,47 @@ async function getLogoDataUrl(): Promise<string | null> {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/*  PDF Layout Tokens                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Page geometry */
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
-const MARGIN_MM = 15;
-const BOTTOM_PADDING_MM = 10;
-const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_MM * 2;
-const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - MARGIN_MM - BOTTOM_PADDING_MM;
+
+/** Page margins — reduced for more content width on mobile screens */
+const MARGIN_LEFT_MM = 10;
+const MARGIN_RIGHT_MM = 10;
+const MARGIN_TOP_MM = 12;
+
+/** Footer reservation — fixed area at page bottom that content must never enter */
+const FOOTER_RESERVE_MM = 14;
+
+/** Derived layout values */
+const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM;
+const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - FOOTER_RESERVE_MM;
+
+/** Render pipeline */
 const RENDER_WIDTH_PX = 794;
 const RENDER_SCALE = 2;
-const SECTION_GAP_MM = 4;
-const PARAGRAPH_GAP_MM = 1.5;
+
+/** Spacing between blocks (mm) */
+const SECTION_GAP_MM = 3.5;
+const PARAGRAPH_GAP_MM = 1;
+
+/** Typography (px) — optimised for handheld PDF reading */
+const BODY_FONT_PX = 15;
+const TRANSCRIPT_FONT_PX = 15;
+const META_FONT_PX = 13;
+const H1_FONT_PX = 30;
+const H2_FONT_PX = 20;
+const H3_FONT_PX = 18;
+const H4_FONT_PX = 17;
+const QA_PROMPT_FONT_PX = 15;
+const BULLET_FONT_PX = BODY_FONT_PX;
+
+/** Inner wrapper horizontal padding (px) — tighter to maximise reading width */
+const WRAPPER_PAD_X_PX = 28;
 
 /** Approximate usable content height in px (at scale 1) used as batch threshold */
 const BATCH_HEIGHT_THRESHOLD_PX = 800;
@@ -72,11 +103,11 @@ function markdownToHtml(text: string): string {
     }
 
     if (line.startsWith("### ")) {
-      htmlParts.push(`<h4 style="font-size:16px;line-height:1.35;margin:18px 0 8px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(4)))}</h4>`);
+      htmlParts.push(`<h4 style="font-size:${H4_FONT_PX}px;line-height:1.35;margin:14px 0 6px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(4)))}</h4>`);
       continue;
     }
     if (line.startsWith("## ")) {
-      htmlParts.push(`<h3 style="font-size:18px;line-height:1.35;margin:22px 0 10px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(3)))}</h3>`);
+      htmlParts.push(`<h3 style="font-size:${H3_FONT_PX}px;line-height:1.35;margin:18px 0 8px;font-weight:700">${inlineMarkdownToHtml(escapeHtml(line.slice(3)))}</h3>`);
       continue;
     }
 
@@ -85,7 +116,7 @@ function markdownToHtml(text: string): string {
         htmlParts.push('<ul style="margin:8px 0 8px 22px;padding:0">');
         inList = true;
       }
-      htmlParts.push(`<li style="margin:4px 0;line-height:1.65">${inlineMarkdownToHtml(escapeHtml(bulletMatch[1]))}</li>`);
+      htmlParts.push(`<li style="margin:3px 0;line-height:1.6;font-size:${BULLET_FONT_PX}px">${inlineMarkdownToHtml(escapeHtml(bulletMatch[1]))}</li>`);
       continue;
     }
 
@@ -94,7 +125,7 @@ function markdownToHtml(text: string): string {
       continue;
     }
 
-    htmlParts.push(`<p style="margin:6px 0;line-height:1.7">${inlineMarkdownToHtml(escapeHtml(line))}</p>`);
+    htmlParts.push(`<p style="margin:5px 0;line-height:1.65;font-size:${BODY_FONT_PX}px">${inlineMarkdownToHtml(escapeHtml(line))}</p>`);
   }
 
   if (inList) htmlParts.push("</ul>");
@@ -106,12 +137,12 @@ function speakerParagraphToHtml(line: string): string {
   if (speakerMatch) {
     const label = escapeHtml(`${speakerMatch[1]}:`);
     const rest = escapeHtml(line.slice(speakerMatch[0].length));
-    return `<p style="margin:6px 0;line-height:1.7"><strong>${label}</strong> ${rest}</p>`;
+    return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px"><strong>${label}</strong> ${rest}</p>`;
   }
   if (!line.trim()) {
     return '<div style="height:8px"></div>';
   }
-  return `<p style="margin:6px 0;line-height:1.7">${escapeHtml(line)}</p>`;
+  return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px">${escapeHtml(line)}</p>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,12 +171,12 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   if (data.duration) meta.push(`Duration: ${data.duration}`);
   if (data.language) meta.push(`Language: ${data.language}`);
 
-  let headerAndSummary = `<header><h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
-  headerAndSummary += `<p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
+  let headerAndSummary = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:#111827">${escapeHtml(data.title)}</h1>`;
+  headerAndSummary += `<p style="margin:0;color:#6b7280;font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
   headerAndSummary += "</header>";
 
   if (data.summary) {
-    headerAndSummary += `<section style="margin-top:26px"><h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
+    headerAndSummary += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Summary</h2>${markdownToHtml(data.summary)}</section>`;
   }
 
   blocks.push({ html: headerAndSummary, forceNewPage: false, gapAfterMm: SECTION_GAP_MM });
@@ -153,7 +184,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   // --- Questions & Answers (heading + each Q/A as its own block) ---
   if (data.questions && data.questions.length > 0) {
     blocks.push({
-      html: `<h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`,
+      html: `<h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Questions &amp; Answers</h2>`,
       forceNewPage: true,
       gapAfterMm: PARAGRAPH_GAP_MM,
     });
@@ -161,7 +192,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     data.questions.forEach((entry, i) => {
       let qaBlockHtml = "";
       if (entry.prompt) {
-        qaBlockHtml += `<p style="margin:16px 0 6px;font-size:14px;line-height:1.5;font-weight:700;color:#111827">Q: ${escapeHtml(entry.prompt)}</p>`;
+        qaBlockHtml += `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:#111827">Q: ${escapeHtml(entry.prompt)}</p>`;
       }
       qaBlockHtml += `<div style="margin:0 0 4px">${markdownToHtml(entry.answer)}</div>`;
       blocks.push({
@@ -175,7 +206,7 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
   // --- Transcript (heading + each speaker paragraph as its own block) ---
   if (data.transcript) {
     blocks.push({
-      html: `<h2 style="margin:0 0 10px;font-size:18px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>`,
+      html: `<h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:#111827">Transcript</h2>`,
       forceNewPage: true,
       gapAfterMm: PARAGRAPH_GAP_MM,
     });
@@ -236,7 +267,7 @@ interface PdfPerfLog {
 /*  Layout-aware batching                                              */
 /* ------------------------------------------------------------------ */
 
-const WRAPPER_STYLE = `box-sizing:border-box;width:${RENDER_WIDTH_PX}px;background:#ffffff;color:#111827;padding:12px 56px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;`;
+const WRAPPER_STYLE = `box-sizing:border-box;width:${RENDER_WIDTH_PX}px;background:#ffffff;color:#111827;padding:10px ${WRAPPER_PAD_X_PX}px;font-family:Arial,Helvetica,sans-serif;font-size:${BODY_FONT_PX}px;line-height:1.65;`;
 
 /**
  * Measure each block's rendered height using a single reusable container,
@@ -403,8 +434,8 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
       author: "WhatSaid",
     });
 
-    let currentY = MARGIN_MM;
-    const usableHeight = MAX_CONTENT_Y_MM - MARGIN_MM;
+    let currentY = MARGIN_TOP_MM;
+    const usableHeight = MAX_CONTENT_Y_MM - MARGIN_TOP_MM;
 
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
@@ -415,9 +446,9 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
       const heightMm = canvasHeightMm(canvas);
 
-      if (block.forceNewPage && currentY > MARGIN_MM) {
+      if (block.forceNewPage && currentY > MARGIN_TOP_MM) {
         pdf.addPage();
-        currentY = MARGIN_MM;
+        currentY = MARGIN_TOP_MM;
       }
 
       const remainingMm = MAX_CONTENT_Y_MM - currentY;
@@ -431,7 +462,7 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
         pdf.addImage(
           imgData,
           "PNG",
-          MARGIN_MM,
+          MARGIN_LEFT_MM,
           currentY,
           CONTENT_WIDTH_MM,
           heightMm,
@@ -443,9 +474,9 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
       }
 
       // Block doesn't fit — need to slice across pages
-      if (currentY > MARGIN_MM) {
+      if (currentY > MARGIN_TOP_MM) {
         pdf.addPage();
-        currentY = MARGIN_MM;
+        currentY = MARGIN_TOP_MM;
       }
 
       // Slice the canvas image across as many pages as needed
@@ -473,7 +504,7 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
         if (renderedMm > 0) {
           pdf.addPage();
-          currentY = MARGIN_MM;
+          currentY = MARGIN_TOP_MM;
         }
 
         const encStart = performance.now();
@@ -483,7 +514,7 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
         pdf.addImage(
           imgData,
           "PNG",
-          MARGIN_MM,
+           MARGIN_LEFT_MM,
           currentY,
           CONTENT_WIDTH_MM,
           sliceHeightMm,
@@ -492,7 +523,7 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
         );
 
         renderedMm += sliceHeightMm;
-        currentY = MARGIN_MM + sliceHeightMm;
+        currentY = MARGIN_TOP_MM + sliceHeightMm;
       }
 
       currentY += block.gapAfterMm;
@@ -506,19 +537,19 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
     const WHATSAID_URL = "https://whatsaid.lovable.app";
     for (let p = 1; p <= pageCount; p++) {
       pdf.setPage(p);
-      const footerY = PAGE_HEIGHT_MM - MARGIN_MM + 4;
+      const footerY = PAGE_HEIGHT_MM - FOOTER_RESERVE_MM + 6;
       // Subtle divider line
       pdf.setDrawColor(209, 213, 219); // gray-300
       pdf.setLineWidth(0.3);
-      pdf.line(MARGIN_MM, footerY - 2, PAGE_WIDTH_MM - MARGIN_MM, footerY - 2);
+      pdf.line(MARGIN_LEFT_MM, footerY - 2, PAGE_WIDTH_MM - MARGIN_RIGHT_MM, footerY - 2);
 
       // Logo (square, 4mm)
       const logoSize = 4;
       const logoY = footerY - 1;
-      let textStartX = MARGIN_MM;
+      let textStartX = MARGIN_LEFT_MM;
       if (logoData) {
-        pdf.addImage(logoData, "PNG", MARGIN_MM, logoY, logoSize, logoSize, undefined, "FAST");
-        textStartX = MARGIN_MM + logoSize + 1.5;
+        pdf.addImage(logoData, "PNG", MARGIN_LEFT_MM, logoY, logoSize, logoSize, undefined, "FAST");
+        textStartX = MARGIN_LEFT_MM + logoSize + 1.5;
       }
 
       // Brand text — vertically centered with logo
@@ -535,7 +566,7 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
       pdf.link(textStartX, logoY, textWidth, logoSize, { url: WHATSAID_URL });
 
       // Page number
-      pdf.text(`${p} / ${pageCount}`, PAGE_WIDTH_MM - MARGIN_MM, textY, { align: "right" });
+      pdf.text(`${p} / ${pageCount}`, PAGE_WIDTH_MM - MARGIN_RIGHT_MM, textY, { align: "right" });
     }
 
     const totalTimeMs = performance.now() - totalStart;
