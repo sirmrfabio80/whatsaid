@@ -538,9 +538,14 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 );
               })()}
+              {isViewingTranslation && (
+                <div className="px-4 py-2 border-b border-border/40 bg-primary/5">
+                  <p className="text-xs text-primary font-medium">{t("jobResults.viewingTranslation")}</p>
+                </div>
+              )}
               {transcript ? (
                 <TranscriptEditor
-                  content={transcript.content}
+                  content={activeTranscriptContent}
                   speakerNames={speakerNames}
                   allSpeakers={allSpeakers}
                   onSave={handleTranscriptSave}
@@ -551,6 +556,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   onDismissSuggestions={handleDismissSuggestions}
                   onEditedIdsChange={(ids) => { editedIdsRef.current = ids; }}
                   onCreateSpeaker={() => createSpeakerRef.current()}
+                  readOnly={isViewingTranslation}
                 />
               ) : (
                 <div className="p-5 sm:p-6"><p className="text-sm text-muted-foreground">{t("jobResults.noTranscript")}</p></div>
