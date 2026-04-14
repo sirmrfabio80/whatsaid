@@ -1,99 +1,130 @@
 
 
-# Optimize AssemblyAI for Mono iPhone Voice Memo Phone-Call Recordings
+# Audio Preprocessing for Difficult Mono Phone-Call Recordings
 
-## Diagnosis
+## Feasibility Analysis
 
-The primary remaining issue **appears** to be AssemblyAI performance on a specific acoustic pattern: mono iPhone Voice Memo recordings of phone calls, where one voice is local (close to mic) and one is remote (coming through the phone speaker at lower volume and quality).
+### Backend (Edge Function) preprocessing — NOT recommended
 
-However, we also identified at least one real post-processing / editor correctness bug: `reconstructContent` in `TranscriptEditor.tsx` strips `[HH:MM:SS]` timestamp prefixes on edit, permanently losing temporal data.
+Supabase Edge Functions run on Deno Deploy with a **512MB memory limit** and **no ffmpeg binary** available. The options are:
 
-Therefore **both** transcription configuration and post-processing correctness still matter, even if the biggest expected gain is likely from better diarization constraints.
+- **ffmpeg.wasm**: ~30MB WASM binary, high memory usage during processing, slow startup. A 10-minute m4a file decoded to PCM could consume 100-200MB. Combined with the WASM runtime overhead, this risks OOM crashes and adds 15-60 seconds of latency. Unreliable for production.
+- **Pure JS DSP in Deno**: Would require manually decoding m4a (AAC) to PCM without ffmpeg — no mature Deno-native AAC decoder exists. Not feasible.
+- **External microservice (e.g., Cloud Run with ffmpeg)**: Reliable but introduces a new infrastructure dependency, deployment pipeline, and cost. Disproportionate for an optional enhancement.
 
-## Phase 1: Add and test diarization constraints (highest expected impact)
+### Client-side preprocessing — RECOMMENDED
 
-**What**: Add support for `speakers_expected: 2` in the AssemblyAI request payload. Investigate whether AssemblyAI also supports `speaker_count_min` / `speaker_count_max` bounds and, if safe, compare those too.
+The browser's **Web Audio API** provides exactly what we need:
 
-**Why**: `speakers_expected: 2` is the most promising low-risk change for this audio pattern. It is expected to help reduce speaker fragmentation and improve short-interjection attribution, but results must be validated on real files.
+- `OfflineAudioContext` decodes any supported audio format to PCM
+- `DynamicsCompressorNode` applies real-time dynamic range compression (reduces loud/quiet gap)
+- The processed audio can be re-encoded to WAV and uploaded instead of the original
+- No external dependencies, no backend changes, no memory constraints (runs on user's machine)
+- Works on all modern browsers including Safari (iPhone Voice Memo users)
 
-**Files**: `supabase/functions/transcribe/index.ts`
+**Tradeoff**: The uploaded file will be WAV (larger than m4a), but since we delete audio after processing and AssemblyAI accepts WAV, this is acceptable. Typical size increase: a 10-minute mono m4a (~5MB) becomes ~100MB WAV. This increases upload time but is within Supabase Storage limits.
 
-**Changes**:
-- Read `speakers_expected` from `jobs.transcription_config` (column already exists)
-- If present, include it in the AssemblyAI payload
-- Keep `speaker_labels: true` — diarization stays enabled
-- Log the constraint in both routing and completion events
+## Recommended Preprocessing Chain
 
-**Risk**: None — optional parameter, backward compatible, ignored if not set.
+Using Web Audio API's `DynamicsCompressorNode`:
 
-**Test**: Set `transcription_config: {"speakers_expected": 2}` directly on a job row, run the same Italian phone-call audio, compare diarization quality against baseline.
+```text
+Input m4a → AudioContext.decodeAudioData() → OfflineAudioContext
+  → DynamicsCompressorNode (threshold: -24dB, ratio: 12, knee: 10, attack: 0.003, release: 0.25)
+  → destination
+  → renderOffline()
+  → encode to WAV blob
+  → upload WAV instead of original
+```
 
-## Phase 2: Strengthen A/B evaluation logging
+**What this does**: Compresses the dynamic range so the quiet remote voice is brought closer in volume to the loud local voice, without clipping or distortion. The compressor parameters are tuned for speech (fast attack to catch transients, moderate release to avoid pumping).
 
-**What**: Enhance completion logging so we can compare runs cleanly.
+**What this does NOT do**: It does not denoise, filter, or alter frequency content. It only reduces the loudness gap between speakers.
 
-**Why**: Without structured logging we cannot evaluate whether Phase 1 changes actually helped.
+## Expected Benefits and Limitations
 
-**Files**: `supabase/functions/transcribe/index.ts`
+**Benefits**:
+- Quieter remote voice becomes louder relative to local voice
+- AssemblyAI receives audio where both speakers are more equally represented
+- Should improve: missed short segments, faint interjection recovery, speaker attribution
+- Zero backend changes required
 
-**Changes**:
-- Log `speakers_expected`, any min/max bounds, and `profile` in routing and completion events
-- Add `word_count`, `confidence_min`, `confidence_p25` (25th percentile) to completion log
-- Log `words_per_utterance_avg` to help detect dropped content
-- Ensure `transcription_config` on the `jobs` row captures the full config sent
+**Limitations**:
+- Does not fix fundamental acoustic issues (echo, reverberation, noise)
+- Cannot separate speakers — only reduces volume imbalance
+- Increases upload file size (WAV vs compressed m4a)
+- Processing happens on user's device (adds a few seconds before upload)
+- Results are audio-dependent — some recordings may not benefit
 
-**Risk**: None — logging only, no behaviour change.
+## Risks
 
-**Test**: Run a job, verify logs contain new fields. Compare two runs of the same file with different configs.
+| Risk | Mitigation |
+|------|-----------|
+| Compression artifacts damage audio quality | Conservative parameters; original always available as fallback |
+| Large WAV upload fails on slow connections | Show progress; could add optional client-side WAV→PCM encoding at lower sample rate |
+| Browser compatibility edge cases | Web Audio API is well-supported; Safari, Chrome, Firefox all work |
+| User confusion about the option | Keep it off by default, label clearly, hide in advanced settings |
 
-## Phase 3: Fix timestamp preservation bug in TranscriptEditor
+## Implementation Plan
 
-**What**: `reconstructContent()` rebuilds content as `Speaker: text` without the `[HH:MM:SS]` prefix. Any user edit permanently loses timestamps.
+### Phase 1: Audio enhancement utility (new file)
 
-**Files**: `src/components/TranscriptEditor.tsx`
+Create `src/lib/audio-enhance.ts`:
+- Function `enhanceAudioForTranscription(file: File): Promise<File>`
+- Decodes audio via `AudioContext.decodeAudioData()`
+- Applies `DynamicsCompressorNode` via `OfflineAudioContext`
+- Encodes result to WAV `Blob`
+- Returns new `File` object with `.wav` extension
 
-**Changes**:
-- Add `timestamp: string | null` to the `Segment` interface
-- Update `parseSegments` to capture and store the timestamp from the `[HH:MM:SS]` prefix
-- Update `reconstructContent` to re-include the timestamp when present
-- Update `reassignSpeaker`, `splitSegment`, `mergeUp` to preserve timestamps
+### Phase 2: UI toggle in TranscriptionSettings
 
-**Risk**: Medium — touches the editor's core data model, but this is a correctness fix that preserves existing data rather than changing behaviour.
+Update `src/components/TranscriptionSettings.tsx`:
+- Add a `Switch` control: "Enhance audio (phone call recordings)"
+- Help text: "Reduces volume differences between speakers. Recommended for phone calls recorded on speaker."
+- Only visible when strategy is `recovery` or profile is `phone_call` (contextually relevant)
+- Off by default
+- Passes `enhanceAudio: boolean` up via `onSettingsChange`
 
-**Test**: Edit a transcript segment, save, verify timestamps survive. Split/merge segments, verify timestamps survive.
+### Phase 3: Wire into Convert page upload flow
 
-## Phase 4: Profile-based tuning support
+Update `src/pages/Convert.tsx`:
+- When `enhanceAudio` is true, after file selection and before upload:
+  - Show "Enhancing audio..." progress state
+  - Call `enhanceAudioForTranscription(file)`
+  - Upload the returned WAV file instead of the original
+  - Store `audio_enhanced: true` in `transcription_config` for logging
 
-**What**: Add a `profile` field to `transcription_config` (e.g. `"phone_call"`) that activates preset diarization settings. Only implement after Phase 1-2 results show which settings actually help.
+### Phase 4: Localization
 
-**Files**: `supabase/functions/transcribe/index.ts`
+Update `en.json`, `fr.json`, `it.json` with label and help text strings.
 
-**Changes**:
-- Define a `PROFILES` map: `{ phone_call: { speakers_expected: 2 } }`
-- If `tuningConfig.profile` is set, merge profile defaults under explicit overrides
-- Log profile in events
+## Files Touched
 
-**Risk**: None — additive, optional, backward compatible.
+| File | Change |
+|------|--------|
+| `src/lib/audio-enhance.ts` | **New** — Web Audio API preprocessing utility |
+| `src/components/TranscriptionSettings.tsx` | Add enhance toggle |
+| `src/pages/Convert.tsx` | Wire enhancement into upload flow |
+| `src/i18n/locales/en.json` | Add strings |
+| `src/i18n/locales/fr.json` | Add strings |
+| `src/i18n/locales/it.json` | Add strings |
 
-**Test**: Set `transcription_config: {"profile": "phone_call"}` on a job, verify `speakers_expected: 2` is sent.
+No backend changes. No database changes. No edge function changes.
 
-## Phase 5: Audio preprocessing (deferred)
+## A/B Testing Strategy
 
-Deferred unless Phases 1-4 prove insufficient. Dynamic range compression to boost the quieter remote voice is technically possible but high-effort in Deno edge functions and uncertain in benefit.
+Upload the same audio file twice:
+1. With "Enhance audio" OFF → baseline transcript
+2. With "Enhance audio" ON → enhanced transcript
 
-## Scope boundaries
+Compare: utterance count, content length, speaker count, missed interjections. The `transcription_config.audio_enhanced` flag on the job row identifies which is which.
 
-- No UI changes
+## Scope Guardrails
+
+- No backend changes
+- No provider changes
 - No export changes
-- No transcript format changes
-- No provider switch
-- No changes to auth, billing, routing, or unrelated features
-- Backend transcription pipeline, logging, and timestamp bug fix only
-
-## Files touched
-
-| File | Phase | Change |
-|------|-------|--------|
-| `supabase/functions/transcribe/index.ts` | 1, 2, 4 | Diarization constraints, enhanced logging, profile support |
-| `src/components/TranscriptEditor.tsx` | 3 | Fix timestamp preservation through edit lifecycle |
+- Toggle is off by default
+- Only affects the uploaded file, not the transcription pipeline
+- Fully backward compatible
 
