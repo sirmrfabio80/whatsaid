@@ -6,18 +6,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
-import TranscriptionSettings, { type TranscriptionConfig } from "@/components/TranscriptionSettings";
+import type { TranscriptionConfig } from "@/components/TranscriptionSettings";
 import LanguageSelector from "@/components/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
 import { enhanceAudioForTranscription } from "@/lib/audio-enhance";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard, Phone, Settings2, X
+  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
@@ -50,16 +48,12 @@ export default function Convert() {
   const [audioChannels, setAudioChannels] = useState<number | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
-  const [transcriptionConfig, setTranscriptionConfig] = useState<TranscriptionConfig>({});
+  const [transcriptionConfig] = useState<TranscriptionConfig>({ strategy: "recovery", enhanceAudio: true });
   const [processing, setProcessing] = useState(false);
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Auto-detection state
-  const [autoOptimised, setAutoOptimised] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
@@ -79,28 +73,7 @@ export default function Convert() {
     setDuration(dur);
     setFileCreationDate(creationDate);
     setAudioChannels(channels);
-
-    // v1 conservative heuristic: mono .m4a → likely iPhone Voice Memo phone call
-    const ext = f.name.split(".").pop()?.toLowerCase();
-    const isLikelyPhoneCall = channels === 1 && ext === "m4a";
-
-    if (isLikelyPhoneCall) {
-      setTranscriptionConfig({ strategy: "recovery", enhanceAudio: true });
-      setAutoOptimised(true);
-      setAdvancedOpen(false);
-    } else {
-      setTranscriptionConfig({});
-      setAutoOptimised(false);
-    }
   }, []);
-
-  // When user manually changes settings in advanced, dismiss auto badge
-  const handleConfigChange = useCallback((config: TranscriptionConfig) => {
-    setTranscriptionConfig(config);
-    if (autoOptimised) {
-      setAutoOptimised(false);
-    }
-  }, [autoOptimised]);
 
   useEffect(() => {
     if (!jobId || !processing) return;
@@ -250,13 +223,10 @@ export default function Convert() {
     setAudioChannels(null);
     setLanguage("auto");
     setCustomPrompt("");
-    setTranscriptionConfig({});
     setProcessing(false);
     setStep(null);
     setErrorMessage(null);
     setJobId(null);
-    setAutoOptimised(false);
-    setAdvancedOpen(false);
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
@@ -357,44 +327,6 @@ export default function Convert() {
 
                     <div className="space-y-4">
                       <LanguageSelector value={language} onChange={setLanguage} />
-
-                      {/* Auto-optimised badge */}
-                      {autoOptimised && (
-                        <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/15">
-                          <Phone className="w-4 h-4 text-primary shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground">{t("convert.autoOptimisedBadge")}</p>
-                            <p className="text-xs text-muted-foreground">{t("convert.autoOptimisedHint")}</p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setAutoOptimised(false);
-                              setTranscriptionConfig({});
-                            }}
-                            className="p-1 rounded-full hover:bg-muted transition-colors shrink-0"
-                            aria-label={t("common.cancel")}
-                          >
-                            <X className="w-3.5 h-3.5 text-muted-foreground" />
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Advanced transcription options — hidden by default */}
-                      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-                        <CollapsibleTrigger
-                          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                        >
-                          <Settings2 className="w-3.5 h-3.5" />
-                          <span>{t("convert.advancedOptions")}</span>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                          <TranscriptionSettings
-                            value={transcriptionConfig}
-                            onChange={handleConfigChange}
-                            disabled={processing}
-                          />
-                        </CollapsibleContent>
-                      </Collapsible>
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium" htmlFor="custom-prompt">
