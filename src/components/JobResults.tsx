@@ -314,7 +314,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       if (data?.variants) {
         setVariants(data.variants as Record<string, string>);
       }
-      }
     } catch {
       setOutputLang(prevLang);
       setVariants(prevVariants);
