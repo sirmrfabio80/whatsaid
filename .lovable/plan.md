@@ -1,86 +1,99 @@
 
 
-# Pre-opened Tab Pattern for PDF Export
+# Implement Speech-Oriented Audio Enhancement Chain
 
-## How it works
+## File to change
 
-1. **On user click** (`startPdfExport`): immediately call `window.open("", "_blank")` — synchronous within the user gesture, so browsers allow it. Write minimal loading HTML into that tab.
+`src/lib/audio-enhance.ts` — single file, no other changes.
 
-2. **Carry the tab reference** through the existing async flow via a local `pdfTab` variable inside the fire-and-forget IIFE (already scoped per export).
+## Implementation
 
-3. **On success**: get signed URL, then `pdfTab.location.href = signedUrl` to navigate the already-open tab to the PDF. Notification still created as before.
+Replace the current processing logic with this chain:
 
-4. **On failure**: write a generic safe error message into the tab — never inject raw error strings into `document.write`. Notification still created as before.
-
-5. **If `window.open` returns null** (rare — e.g. aggressive blocker): skip the tab, fall back to notification-only.
-
-## Files to change
-
-| File | Change |
-|---|---|
-| `src/contexts/NotificationsContext.tsx` | In `startPdfExport`: pre-open tab before the async IIFE; write loading HTML; on success navigate tab to signed URL; on failure write safe generic error HTML; remove the old `openExport` call at lines 324–328 |
-
-One file only. No changes to other export formats, notification flow, or storage.
-
-## Tab reference flow
+### 1. Add `computeRMS` helper
 
 ```typescript
-// Synchronous — inside startPdfExport, before the async IIFE
-const pdfTab = window.open("", "_blank");
-if (pdfTab) {
-  pdfTab.document.write(`
-    <!DOCTYPE html><html><head><title>WhatSaid</title>
-    <style>body{font-family:Inter,sans-serif;display:flex;align-items:center;
-    justify-content:center;height:100vh;margin:0;background:#0F172A;color:#e2e8f0;}
-    .c{text-align:center}.s{animation:spin 1s linear infinite;width:24px;height:24px;
-    border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 auto 16px}
-    @keyframes spin{to{transform:rotate(360deg)}}</style></head>
-    <body><div class="c"><div class="s"></div><div>Preparing PDF…</div></div></body></html>
-  `);
-  pdfTab.document.close();
-}
-
-// Inside the async IIFE, pdfTab is captured via closure
-
-// On success (replaces lines 324-328):
-if (pdfTab && !pdfTab.closed) {
-  const { data: urlData } = await supabase.storage
-    .from("exports").createSignedUrl(storagePath, 600);
-  if (urlData?.signedUrl) {
-    pdfTab.location.href = urlData.signedUrl;
+function computeRMS(buffer: AudioBuffer): number {
+  let sumSq = 0;
+  let count = 0;
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      sumSq += data[i] * data[i];
+      count++;
+    }
   }
-} else {
-  toast.info(t("notifications.pdfReadyCheckNotifications"));
-}
-
-// On failure — generic safe message, no raw errorMsg injection:
-if (pdfTab && !pdfTab.closed) {
-  pdfTab.document.open();
-  pdfTab.document.write(`
-    <!DOCTYPE html><html><head><title>WhatSaid</title>
-    <style>body{font-family:Inter,sans-serif;display:flex;align-items:center;
-    justify-content:center;height:100vh;margin:0;background:#0F172A;color:#e2e8f0;}
-    .c{text-align:center;max-width:400px}h2{color:#f87171}</style></head>
-    <body><div class="c"><h2>Export failed</h2>
-    <p>Something went wrong while preparing your PDF.</p>
-    <p style="margin-top:12px;color:#94a3b8">Check your notifications for details.</p>
-    </div></body></html>
-  `);
-  pdfTab.document.close();
+  return Math.sqrt(sumSq / count);
 }
 ```
 
-## Success / failure / fallback matrix
+### 2. Noise gate — skip enhancement for near-silent audio
 
-| Scenario | Tab behavior | Notification |
-|---|---|---|
-| Tab opened + export succeeds | Navigates to signed PDF URL | Created as usual |
-| Tab opened + export fails | Shows generic safe error message | Created as usual |
-| Tab blocked (`null`) + export succeeds | Nothing — toast says "check notifications" | Created as usual |
-| Tab blocked (`null`) + export fails | Nothing | Created as usual |
-| User closes tab before completion | Skipped (`pdfTab.closed`) — toast fallback | Created as usual |
+Before building the offline graph, check RMS. If below -50 dBFS (~0.00316), skip enhancement entirely — just WAV-encode the original decoded buffer and return.
 
-## Regression risks
+### 3. Revised compressor settings
 
-**Low risk.** Scope is explicitly limited to PDF export tab behavior only. The only change is replacing `openExport()` at line 324 with pre-opened tab navigation. All other export formats (TXT, JSON, DOCX), the notification pipeline, storage uploads, and async job tracking are completely untouched. The `openExport` function remains available for notification-item clicks where it works because those are direct user gestures.
+| Param | Value | Why |
+|-------|-------|-----|
+| threshold | -30 dB | Catch more dynamic range |
+| ratio | 4:1 | Gentle, avoids pumping |
+| knee | 12 dB | Transparent transition |
+| attack | 5 ms | Preserves consonants |
+| release | 150 ms | Tracks syllables naturally |
+
+### 4. Conservative make-up gain
+
+`GainNode` at +6 dB (factor 2.0) in the offline graph after compressor. This is fixed and conservative — the final normalisation stage handles any remaining shortfall, but with a cap.
+
+### 5. Post-render soft-clip limiter
+
+In-place on rendered buffer. Any sample exceeding ±0.95 is soft-clipped via `tanh`:
+
+```typescript
+if (Math.abs(data[i]) > 0.95) {
+  data[i] = 0.95 * Math.tanh(data[i] / 0.95);
+}
+```
+
+### 6. Capped peak normalisation (safeguard only)
+
+Target: -1 dBFS (0.891). **Hard cap: maximum +9 dB gain** (factor ~2.82).
+
+```typescript
+const TARGET_PEAK = 0.891;
+const MAX_NORM_GAIN = 2.818; // ~+9 dB cap
+let maxSample = 0;
+// ... find peak across all channels ...
+if (maxSample > 0 && maxSample < TARGET_PEAK) {
+  const gain = Math.min(TARGET_PEAK / maxSample, MAX_NORM_GAIN);
+  // ... apply gain in-place ...
+}
+```
+
+If the file needs more than +9 dB of normalisation after compression + make-up gain, it stays quieter rather than amplifying noise.
+
+### Signal flow
+
+```text
+decode → noise gate check
+           ↓ (pass)
+source → compressor (4:1, -30dB) → gain (+6dB) → destination
+           ↓ (render)
+soft-clip limiter (tanh at ±0.95)
+           ↓
+peak normalize (target 0.891, capped at +9dB)
+           ↓
+encodeWav → File
+```
+
+## What stays unchanged
+
+- `encodeWav` function — untouched
+- Function signature of `enhanceAudioForTranscription` — identical
+- File output format — WAV, same as before
+- No UI, API, or edge function changes
+
+## Regression risk
+
+**Low.** Same function signature, same output format. Only internal processing logic changes. The noise gate adds safety for edge-case silent files. The gain cap prevents runaway amplification.
 
