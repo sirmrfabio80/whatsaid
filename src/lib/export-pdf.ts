@@ -271,6 +271,7 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
     });
 
     let currentY = MARGIN_MM;
+    const usableHeight = MAX_CONTENT_Y_MM - MARGIN_MM;
 
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
@@ -284,23 +285,74 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
       const remainingMm = MAX_CONTENT_Y_MM - currentY;
 
-      if (heightMm > remainingMm && currentY > MARGIN_MM) {
+      // Block fits on current page
+      if (heightMm <= remainingMm) {
+        pdf.addImage(
+          canvas.toDataURL("image/png"),
+          "PNG",
+          MARGIN_MM,
+          currentY,
+          CONTENT_WIDTH_MM,
+          heightMm,
+          undefined,
+          "FAST",
+        );
+        currentY += heightMm + block.gapAfterMm;
+        continue;
+      }
+
+      // Block doesn't fit — need to slice across pages
+      // First, move to a new page if we're not at the top
+      if (currentY > MARGIN_MM) {
         pdf.addPage();
         currentY = MARGIN_MM;
       }
 
-      pdf.addImage(
-        canvas.toDataURL("image/png"),
-        "PNG",
-        MARGIN_MM,
-        currentY,
-        CONTENT_WIDTH_MM,
-        heightMm,
-        undefined,
-        "FAST",
-      );
+      // Slice the canvas image across as many pages as needed
+      const pxPerMm = canvas.width / CONTENT_WIDTH_MM;
+      let renderedMm = 0;
 
-      currentY += heightMm + block.gapAfterMm;
+      while (renderedMm < heightMm) {
+        const sliceHeightMm = Math.min(usableHeight, heightMm - renderedMm);
+        const srcY = Math.round(renderedMm * pxPerMm);
+        const srcH = Math.round(sliceHeightMm * pxPerMm);
+
+        // Create a sub-canvas for this page slice
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = srcH;
+        const ctx = sliceCanvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0, srcY, canvas.width, srcH,
+            0, 0, canvas.width, srcH,
+          );
+        }
+
+        if (renderedMm > 0) {
+          pdf.addPage();
+          currentY = MARGIN_MM;
+        }
+
+        pdf.addImage(
+          sliceCanvas.toDataURL("image/png"),
+          "PNG",
+          MARGIN_MM,
+          currentY,
+          CONTENT_WIDTH_MM,
+          sliceHeightMm,
+          undefined,
+          "FAST",
+        );
+
+        renderedMm += sliceHeightMm;
+        currentY = MARGIN_MM + sliceHeightMm;
+      }
+
+      currentY += block.gapAfterMm;
     }
 
     return pdf.output("blob");
