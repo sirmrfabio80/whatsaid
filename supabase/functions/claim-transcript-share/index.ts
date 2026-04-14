@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
   try {
     // GET = validate token, POST = claim
     if (req.method === 'GET' || (req.method === 'POST' && req.headers.get('x-share-token'))) {
-      // Validate token
       const token = req.headers.get('x-share-token') || ''
       if (!token) {
         return new Response(JSON.stringify({ error: 'Token required' }), {
@@ -38,14 +37,12 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Fetch job info separately (no FK relationship)
       const { data: job } = await serviceClient
         .from('jobs')
         .select('title, file_name')
         .eq('id', share.job_id)
         .maybeSingle()
 
-      // Get sender email
       const { data: senderProfile } = await serviceClient
         .from('profiles')
         .select('email')
@@ -83,7 +80,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Fetch share
     const { data: share } = await serviceClient
       .from('transcript_shares')
       .select('*')
@@ -108,7 +104,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Verify email match
     const userEmail = user.email?.toLowerCase().trim()
     if (userEmail !== share.recipient_email.toLowerCase().trim()) {
       return new Response(JSON.stringify({
@@ -118,7 +113,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Fetch original job
     const { data: originalJob } = await serviceClient
       .from('jobs')
       .select('*')
@@ -131,7 +125,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Duplicate job
+    // Duplicate job (including output_language)
     const { data: newJob, error: insertError } = await serviceClient
       .from('jobs')
       .insert({
@@ -153,6 +147,7 @@ Deno.serve(async (req) => {
         metadata_file_lastmodified: originalJob.metadata_file_lastmodified,
         metadata_location_iso6709: originalJob.metadata_location_iso6709,
         location_label: originalJob.location_label,
+        output_language: originalJob.output_language,
         status: 'completed',
         credits_charged: 0,
         audio_deleted_at: originalJob.audio_deleted_at || new Date().toISOString(),
@@ -167,21 +162,61 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Duplicate outputs
+    // Duplicate outputs with positional ID mapping
     const { data: outputs } = await serviceClient
       .from('job_outputs')
-      .select('output_type, content, custom_prompt')
+      .select('id, output_type, content, custom_prompt')
       .eq('job_id', share.job_id)
+      .order('created_at', { ascending: true })
+
+    const idMap: Array<{ oldId: string; newId: string }> = []
 
     if (outputs && outputs.length > 0) {
-      await serviceClient.from('job_outputs').insert(
-        outputs.map(o => ({
-          job_id: newJob.id,
-          output_type: o.output_type,
-          content: o.content,
-          custom_prompt: o.custom_prompt,
-        }))
-      )
+      for (const o of outputs) {
+        const { data: newOutput } = await serviceClient
+          .from('job_outputs')
+          .insert({
+            job_id: newJob.id,
+            output_type: o.output_type,
+            content: o.content,
+            custom_prompt: o.custom_prompt,
+          })
+          .select('id')
+          .single()
+        if (newOutput) {
+          idMap.push({ oldId: o.id, newId: newOutput.id })
+        }
+      }
+    }
+
+    // Copy active-language variants if applicable
+    const activeLang = originalJob.output_language
+    if (activeLang && activeLang !== originalJob.language_detected && idMap.length > 0) {
+      const oldOutputIds = idMap.map(m => m.oldId)
+      const { data: variants } = await serviceClient
+        .from('job_output_variants')
+        .select('job_output_id, language, content, source_hash')
+        .in('job_output_id', oldOutputIds)
+        .eq('language', activeLang)
+
+      if (variants && variants.length > 0) {
+        const variantInserts = variants
+          .map(v => {
+            const mapped = idMap.find(m => m.oldId === v.job_output_id)
+            if (!mapped) return null
+            return {
+              job_output_id: mapped.newId,
+              language: v.language,
+              content: v.content,
+              source_hash: v.source_hash,
+            }
+          })
+          .filter(Boolean)
+
+        if (variantInserts.length > 0) {
+          await serviceClient.from('job_output_variants').insert(variantInserts)
+        }
+      }
     }
 
     // Mark share as claimed
