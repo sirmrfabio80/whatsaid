@@ -30,6 +30,7 @@ interface NotificationsContextType {
   clearAllNotifications: () => Promise<void>;
   startPdfExport: (data: CanonicalExportData, sourceJobId?: string) => void;
   downloadExport: (storagePath: string, filename?: string) => Promise<void>;
+  openExport: (storagePath: string) => Promise<boolean>;
 }
 
 const NotificationsContext = createContext<NotificationsContextType>({
@@ -42,6 +43,7 @@ const NotificationsContext = createContext<NotificationsContextType>({
   clearAllNotifications: async () => {},
   startPdfExport: () => {},
   downloadExport: async () => {},
+  openExport: async () => false,
 });
 
 export const useNotifications = () => useContext(NotificationsContext);
@@ -214,6 +216,19 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     document.body.removeChild(a);
   }, [t]);
 
+  /** Generate a fresh signed URL and open the PDF in a new browser tab */
+  const openExport = useCallback(async (storagePath: string): Promise<boolean> => {
+    const { data, error } = await supabase.storage
+      .from("exports")
+      .createSignedUrl(storagePath, 600);
+    if (error || !data?.signedUrl) {
+      toast.error(t("notifications.downloadFailed"));
+      return false;
+    }
+    const win = window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    return !!win;
+  }, [t]);
+
   /** Start an async PDF export — runs in the App shell context so it survives navigation */
   const startPdfExport = useCallback(
     (data: CanonicalExportData, sourceJobId?: string) => {
@@ -306,8 +321,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             async_job_id: asyncJobId,
           });
 
-          // 6. Auto-download for convenience
-          await downloadExport(storagePath, `${data.title}.pdf`);
+          // 6. Open PDF in new tab for instant viewing
+          const opened = await openExport(storagePath);
+          if (!opened) {
+            toast.info(t("notifications.pdfReadyCheckNotifications"));
+          }
         } catch (err) {
           console.error("[PDF export] Error:", err);
           const errorMsg = err instanceof Error ? err.message : "Export failed";
@@ -341,7 +359,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
       })();
     },
-    [user, t, downloadExport]
+    [user, t, openExport]
   );
 
   return (
