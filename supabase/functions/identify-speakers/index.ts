@@ -72,70 +72,39 @@ function extractSelfIdentification(text: string): Candidate | null {
   // Italian patterns (case-insensitive)
   // "mi chiamo X"
   let m = t.match(/\bmi\s+chiamo\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // "io sono X" — with stopword filter
   m = t.match(/\bio\s+sono\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // "sono il/la dottore/dottoressa/dottor X" or "sono il/la terapista [occupazionale] X" etc.
   m = t.match(/\bsono\s+(?:il|la)\s+(dott(?:or(?:essa)?|\.?)\s+\S+|terapist[ao]\s+(?:occupazionale\s+)?\S+|infermier[aeo]\s+\S+)/i);
   if (m) {
     const parts = m[1].trim().split(/\s+/);
-    const namePart = parts[parts.length - 1];
+    const namePart = cleanName(parts[parts.length - 1]);
     const rolePart = parts.slice(0, -1).join(" ");
-    if (isValidName(namePart)) {
-      return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart) };
-    }
+    if (isValidName(namePart)) return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart) };
   }
 
-  // English patterns
-  // "my name is X"
   m = t.match(/\bmy\s+name\s+is\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // "I am X" — with stopword filter
   m = t.match(/\bI\s+am\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // "I'm X"
   m = t.match(/\bI['']m\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // "this is X" at start of utterance
   m = t.match(/^this\s+is\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // "X speaking" at end
   m = t.match(/(\S+)\s+speaking\s*[.!]?\s*$/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // French patterns
-  // "je m'appelle X"
   m = t.match(/\bje\s+m['']appelle\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
-  // "je suis X" — with stopword filter
   m = t.match(/\bje\s+suis\s+(\S+)/i);
-  if (m && isValidName(m[1])) {
-    return { name: m[1], evidence: [t], capitalised: isCapitalised(m[1]) };
-  }
+  if (m) { const n = cleanName(m[1]); if (isValidName(n)) return { name: n, evidence: [t], capitalised: isCapitalised(n) }; }
 
   return null;
 }
