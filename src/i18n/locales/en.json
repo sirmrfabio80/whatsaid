@@ -171,6 +171,7 @@
     "emailConfirmRequired": "Check your inbox to confirm your new sign-in email.",
     "authEmailChangeFailed": "Email updated, but sign-in email change failed. Try again later.",
     "invalidEmail": "Enter a valid email address.",
+    "emailUnavailable": "This email cannot be used right now.",
     "couldNotUpdate": "Could not update profile.",
     "preferences": "Preferences",
     "interfaceLanguage": "Interface language",
@@ -361,12 +362,7 @@
     "expired": "This share link has expired.",
     "claimFailed": "Could not claim the transcript. Please try again.",
     "genericError": "Something went wrong. Please try again.",
-    "mismatchTitle": "Wrong account",
-    "mismatchDesc": "This transcript was shared with {{recipientEmail}}. You're signed in with a different email.",
-    "mismatchSignedInAs": "You're signed in as:",
-    "mismatchSharedWith": "Shared with:",
-    "switchAccount": "Sign out and switch account",
-    "createAccountForEmail": "Create account with that email"
+    "noAccess": "You don't have access to this transcript. Make sure you're signed in with the correct account."
   },
   "audioUploader": {
     "dropTitle": "Drop your audio file here",

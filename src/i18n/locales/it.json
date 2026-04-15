@@ -171,6 +171,7 @@
     "emailConfirmRequired": "Controlla la tua casella di posta per confermare il cambio dell'email di accesso.",
     "authEmailChangeFailed": "Email aggiornata, ma il cambio dell'email di accesso non è riuscito. Riprova più tardi.",
     "invalidEmail": "Inserisci un indirizzo email valido.",
+    "emailUnavailable": "Questo indirizzo email non può essere utilizzato al momento.",
     "couldNotUpdate": "Impossibile aggiornare il profilo.",
     "preferences": "Preferenze",
     "interfaceLanguage": "Lingua dell'interfaccia",
@@ -361,12 +362,7 @@
     "expired": "Questo link di condivisione è scaduto.",
     "claimFailed": "Impossibile riscattare la trascrizione. Riprova.",
     "genericError": "Qualcosa è andato storto. Riprova.",
-    "mismatchTitle": "Account sbagliato",
-    "mismatchDesc": "Questa trascrizione è stata condivisa con {{recipientEmail}}. Hai effettuato l'accesso con un'email diversa.",
-    "mismatchSignedInAs": "Hai effettuato l'accesso come:",
-    "mismatchSharedWith": "Condivisa con:",
-    "switchAccount": "Esci e cambia account",
-    "createAccountForEmail": "Crea account con quell'email"
+    "noAccess": "Non hai accesso a questa trascrizione. Assicurati di aver effettuato l'accesso con l'account corretto."
   },
   "audioUploader": {
     "dropTitle": "Trascina qui il tuo file audio",

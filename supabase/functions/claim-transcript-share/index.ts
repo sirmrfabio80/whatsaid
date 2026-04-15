@@ -52,7 +52,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         title: job?.title || job?.file_name?.replace(/\.[^.]+$/, '') || 'Transcript',
         senderEmail: senderProfile?.email || 'someone',
-        recipientEmail: share.recipient_email,
         expired: new Date(share.expires_at) < new Date(),
         alreadyClaimed: share.claimed,
       }), {
@@ -118,9 +117,9 @@ Deno.serve(async (req) => {
     const profileMatch = !!profileEmail && profileEmail === recipientEmail
 
     if (!authMatch && !profileMatch) {
-      console.log(`Email mismatch: auth=${userEmail}, profile=${profileEmail}, recipient=${recipientEmail}`)
+      console.log(`Email mismatch — access denied`)
       return new Response(JSON.stringify({
-        error: `This transcript was shared with ${share.recipient_email}. Please sign in with that email address.`
+        error: "You don't have access to this transcript."
       }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

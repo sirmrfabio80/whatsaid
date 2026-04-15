@@ -171,6 +171,7 @@
     "emailConfirmRequired": "Vérifiez votre boîte de réception pour confirmer le changement d'email de connexion.",
     "authEmailChangeFailed": "Email mise à jour, mais le changement d'email de connexion a échoué. Réessayez plus tard.",
     "invalidEmail": "Entrez une adresse email valide.",
+    "emailUnavailable": "Cette adresse email ne peut pas être utilisée pour le moment.",
     "couldNotUpdate": "Impossible de mettre à jour le profil.",
     "preferences": "Préférences",
     "interfaceLanguage": "Langue de l'interface",
@@ -361,12 +362,7 @@
     "expired": "Ce lien de partage a expiré.",
     "claimFailed": "Impossible de réclamer la transcription. Veuillez réessayer.",
     "genericError": "Une erreur est survenue. Veuillez réessayer.",
-    "mismatchTitle": "Mauvais compte",
-    "mismatchDesc": "Cette transcription a été partagée avec {{recipientEmail}}. Vous êtes connecté avec une adresse différente.",
-    "mismatchSignedInAs": "Vous êtes connecté en tant que :",
-    "mismatchSharedWith": "Partagée avec :",
-    "switchAccount": "Se déconnecter et changer de compte",
-    "createAccountForEmail": "Créer un compte avec cette adresse"
+    "noAccess": "Vous n'avez pas accès à cette transcription. Assurez-vous d'être connecté avec le bon compte."
   },
   "audioUploader": {
     "dropTitle": "Déposez votre fichier audio ici",

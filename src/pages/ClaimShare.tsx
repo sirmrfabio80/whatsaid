@@ -5,21 +5,20 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, XCircle, FileText, AlertTriangle, LogOut } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, FileText, AlertTriangle } from "lucide-react";
 
-type ClaimStatus = "loading" | "ready" | "claiming" | "claimed" | "error" | "needsAuth" | "emailMismatch";
+type ClaimStatus = "loading" | "ready" | "claiming" | "claimed" | "error" | "needsAuth";
 
 interface ShareInfo {
   title: string;
   senderEmail: string;
-  recipientEmail: string;
   expired: boolean;
   alreadyClaimed: boolean;
 }
 
 export default function ClaimShare() {
   const { token } = useParams<{ token: string }>();
-  const { user, session, loading: authLoading, signOut } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<ClaimStatus>("loading");
@@ -62,14 +61,8 @@ export default function ClaimShare() {
         if (!user) {
           setStatus("needsAuth");
         } else {
-          // Check email mismatch
-          const authEmail = user.email?.toLowerCase().trim();
-          const recipientEmail = data.recipientEmail?.toLowerCase().trim();
-          if (recipientEmail && authEmail && authEmail !== recipientEmail) {
-            setStatus("emailMismatch");
-          } else {
-            setStatus("ready");
-          }
+          // Let the backend decide access — always attempt claim
+          setStatus("ready");
         }
       } catch {
         setErrorMsg(t("claim.genericError"));
@@ -115,7 +108,7 @@ export default function ClaimShare() {
       }
 
       if (!response.ok) {
-        setErrorMsg(data.error || t("claim.claimFailed"));
+        setErrorMsg(data.error || t("claim.noAccess"));
         setStatus("error");
         return;
       }
@@ -135,16 +128,6 @@ export default function ClaimShare() {
   };
 
   const handleSignUp = () => {
-    navigate(`/signup?redirect=${encodeURIComponent(`/claim/${token}`)}`);
-  };
-
-  const handleSwitchAccount = async () => {
-    await signOut();
-    navigate(`/login?redirect=${encodeURIComponent(`/claim/${token}`)}`);
-  };
-
-  const handleCreateRecipientAccount = async () => {
-    await signOut();
     navigate(`/signup?redirect=${encodeURIComponent(`/claim/${token}`)}`);
   };
 
@@ -182,35 +165,6 @@ export default function ClaimShare() {
                 </Button>
                 <Button onClick={handleSignUp} variant="outline" className="w-full rounded-xl">
                   {t("claim.createAccount")}
-                </Button>
-              </div>
-            </>
-          )}
-
-          {status === "emailMismatch" && shareInfo && (
-            <>
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto">
-                <AlertTriangle className="w-7 h-7 text-amber-500" />
-              </div>
-              <div>
-                <h2 className="font-heading text-xl font-bold">{t("claim.mismatchTitle")}</h2>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {t("claim.mismatchDesc", { recipientEmail: shareInfo.recipientEmail })}
-                </p>
-                <div className="mt-3 px-3 py-2 bg-muted/50 rounded-lg text-left space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("claim.mismatchSignedInAs")}</p>
-                  <p className="text-sm font-medium">{user?.email}</p>
-                  <p className="text-xs text-muted-foreground mt-2">{t("claim.mismatchSharedWith")}</p>
-                  <p className="text-sm font-medium">{shareInfo.recipientEmail}</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Button onClick={handleSwitchAccount} className="w-full rounded-xl">
-                  <LogOut className="w-4 h-4 mr-1.5" />
-                  {t("claim.switchAccount")}
-                </Button>
-                <Button onClick={handleCreateRecipientAccount} variant="outline" className="w-full rounded-xl">
-                  {t("claim.createAccountForEmail")}
                 </Button>
               </div>
             </>
