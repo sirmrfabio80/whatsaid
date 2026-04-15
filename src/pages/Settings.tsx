@@ -182,7 +182,7 @@ export default function Settings() {
                   className="rounded-lg h-11"
                   placeholder="you@example.com"
                 />
-                <p className="text-xs text-muted-foreground">{t("settings.contactEmailDesc")}</p>
+                
                 {emailError && (
                   <div className="flex items-center gap-2 text-destructive text-sm">
                     <AlertCircle className="w-4 h-4" /><span>{emailError}</span>
