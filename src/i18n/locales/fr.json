@@ -361,12 +361,7 @@
     "expired": "Ce lien de partage a expiré.",
     "claimFailed": "Impossible de réclamer la transcription. Veuillez réessayer.",
     "genericError": "Une erreur est survenue. Veuillez réessayer.",
-    "mismatchTitle": "Mauvais compte",
-    "mismatchDesc": "Cette transcription a été partagée avec {{recipientEmail}}. Vous êtes connecté avec une adresse différente.",
-    "mismatchSignedInAs": "Vous êtes connecté en tant que :",
-    "mismatchSharedWith": "Partagée avec :",
-    "switchAccount": "Se déconnecter et changer de compte",
-    "createAccountForEmail": "Créer un compte avec cette adresse"
+    "noAccess": "Vous n'avez pas accès à cette transcription. Assurez-vous d'être connecté avec le bon compte."
   },
   "audioUploader": {
     "dropTitle": "Déposez votre fichier audio ici",

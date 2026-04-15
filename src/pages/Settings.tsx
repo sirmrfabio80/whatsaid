@@ -95,6 +95,25 @@ export default function Settings() {
     setSaving(true);
     const trimmedEmail = contactEmail.trim();
 
+    // Check email uniqueness before saving
+    const emailChanged = trimmedEmail.toLowerCase() !== (profile?.email || "").toLowerCase();
+    if (emailChanged) {
+      try {
+        const { data: validation, error: valError } = await supabase.functions.invoke("validate-profile-email", {
+          body: { email: trimmedEmail },
+        });
+        if (valError || !validation || validation.available === false) {
+          setEmailError(t("settings.emailUnavailable"));
+          setSaving(false);
+          return;
+        }
+      } catch {
+        setEmailError(t("settings.emailUnavailable"));
+        setSaving(false);
+        return;
+      }
+    }
+
     // Update profiles
     const { error: profileError } = await supabase
       .from("profiles")
@@ -108,9 +127,9 @@ export default function Settings() {
     }
 
     // Conditionally trigger auth email change for email-password users
-    const emailChanged = hasEmailAuth && trimmedEmail.toLowerCase() !== (user.email || "").toLowerCase();
+    const authEmailChanged = hasEmailAuth && trimmedEmail.toLowerCase() !== (user.email || "").toLowerCase();
 
-    if (emailChanged) {
+    if (authEmailChanged) {
       const { error: authError } = await supabase.auth.updateUser({ email: trimmedEmail });
       if (authError) {
         toast.warning(t("settings.authEmailChangeFailed"));
