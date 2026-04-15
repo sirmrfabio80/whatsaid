@@ -196,6 +196,9 @@
     "deleteConfirmTitle": "Êtes-vous absolument sûr ?",
     "deleteConfirmDesc": "Cela supprimera définitivement votre compte, vos crédits et tout l'historique de conversion. Cette action est irréversible.",
     "deleteMyAccount": "Supprimer mon compte",
+    "deletingAccount": "Suppression...",
+    "deleteError": "Impossible de supprimer votre compte. Veuillez réessayer.",
+    "deleteSuccess": "Votre compte a été supprimé.",
     "admin": {
       "title": "Inviter des utilisateurs",
       "desc": "Invitez des utilisateurs sur WhatSaid et offrez-leur un pack de crédits.",

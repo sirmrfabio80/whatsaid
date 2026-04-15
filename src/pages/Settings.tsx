@@ -16,7 +16,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe, Info } from "lucide-react";
+import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe, Info, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
 
 const UI_LANGUAGES = [
@@ -50,6 +51,7 @@ export default function Settings() {
   const [setupConfirmPassword, setSetupConfirmPassword] = useState("");
   const [setupError, setSetupError] = useState<string | null>(null);
   const [setupSaving, setSetupSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
 
@@ -307,7 +309,24 @@ export default function Settings() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel className="rounded-lg">{t("common.cancel")}</AlertDialogCancel>
-                    <AlertDialogAction className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("settings.deleteMyAccount")}</AlertDialogAction>
+                    <AlertDialogAction
+                      className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={deleting}
+                      onClick={async () => {
+                        setDeleting(true);
+                        const { error } = await supabase.functions.invoke("delete-account");
+                        if (error) {
+                          toast.error(t("settings.deleteError"));
+                          setDeleting(false);
+                          return;
+                        }
+                        toast.success(t("settings.deleteSuccess"));
+                        await signOut();
+                        navigate("/");
+                      }}
+                    >
+                      {deleting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{t("settings.deletingAccount")}</> : t("settings.deleteMyAccount")}
+                    </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
