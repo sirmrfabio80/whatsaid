@@ -26,7 +26,7 @@ export function initPaddle(): void {
   paddle.Initialize({
     token: PADDLE_CLIENT_TOKEN,
     // For sandbox testing, uncomment:
-    // environment: "sandbox",
+    environment: "sandbox",
   });
   initialised = true;
 }
@@ -40,12 +40,7 @@ export function initPaddle(): void {
  * @param email    Pre-fill the customer email field (optional).
  * @param onSuccess Called after a successful purchase.
  */
-export function openCheckout(opts: {
-  priceId: string;
-  userId: string;
-  email?: string;
-  onSuccess?: () => void;
-}): void {
+export function openCheckout(opts: { priceId: string; userId: string; email?: string; onSuccess?: () => void }): void {
   initPaddle();
   const paddle = getPaddle();
   if (!paddle) {
