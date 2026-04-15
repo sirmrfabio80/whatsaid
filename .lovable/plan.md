@@ -1,118 +1,46 @@
 
 
-# Refined Plan: Three Scoped Fixes
+# Update Pricing Memory Files
 
----
+## Summary
+Update `mem://features/pricing` and `mem://index.md` to reflect approved unit economics analysis (GBP only). Mark cost estimates as working estimates pending provider confirmation. Mark implementation details (tiers, credit system, file caps) as current truth.
 
-## 1. Root Cause Analysis
+## Changes
 
-### A) Page-enter animation
-The `page-enter` keyframe in `src/index.css` includes `translateY(8px)` → `translateY(0)`. The class `animate-page-enter` exists in exactly 13 non-homepage files today. `Signup.tsx`, `ClaimShare.tsx`, `SharedPdfDownload.tsx`, and `Notifications.tsx` do **not** use it and will not be touched.
+### File 1: `mem://features/pricing`
 
-### B) Non-homepage top spacing
-Pages use generous vertical padding between navbar and content. Each page type has a different pattern.
+**Structure:**
+1. **Current Tiers** — marked as implementation truth
+2. **Credit System** — marked as implementation truth (1 credit = 15 min, etc.)
+3. **File Constraints** — marked as implementation truth (100MB, 60 min max)
+4. **Regeneration Rules** — marked as implementation truth (3× summary, 10× questions)
+5. **Cost Model** — marked as **working estimates pending provider confirmation**:
+   - AssemblyAI: £0.19/hr → £0.048 per 15-min credit (estimate, not yet verified from invoice)
+   - Lovable AI: ~£0.001 per credit (estimate)
+   - Paddle fee: 5% + £0.40 (estimate, not yet confirmed from dashboard)
+   - Total variable cost: ~£0.049 per credit (estimate)
+6. **Fixed Costs** — marked as implementation truth (Lovable Pro £22, domain £0.83)
+7. **Unit Economics** — marked as **working estimates** with disclaimer that margins depend on confirmed provider pricing
+8. **Risks and Assumptions** — explicit list of unconfirmed items
+9. **Architecture Notes** — implementation truths (atomic credit deduction, audio deletion, Paddle as provider)
+10. **Currency Support** — implementation truth (GBP for analysis, GBP/USD/EUR for UI)
 
-### C) Summary tab internal spacing
-Two spacing layers are too generous: section card padding (`p-4` — 1rem all sides) and SectionBody paragraph gap (`space-y-2` — 0.5rem). The heading-to-body gap (`mb-1.5`) and between-section gap (`space-y-4`) are correct.
+### File 2: `mem://index.md`
 
----
+**Update pricing memory description:**
+- From: "Guest pricing, credit packs, regeneration costs"
+- To: "Tiers (£4.99/£14.99/£39.99), credit system, cost model (GBP), unit economics (working estimates pending provider confirmation)"
 
-## 2. Recommended Fix
+## Wording Strategy
 
-### A) Animation
-1. Add `page-enter-flat` keyframe (opacity only) and `.animate-page-enter-flat` class to `src/index.css`.
-2. Replace `animate-page-enter` → `animate-page-enter-flat` **only** in the 13 non-homepage files listed below. No additions to files that don't already animate.
+**Implementation truth** sections use present-tense statements ("Current tiers are...", "Defined in...").
 
-### B) Top spacing
-Reduce padding on non-homepage pages that have excessive spacing:
-- `py-10 sm:py-14` → `py-6 sm:py-10` (content pages)
-- `py-12` → `py-8` (auth pages that use it: Login, ResetPassword)
-- `py-12 sm:py-16` → `py-8 sm:py-12` (legal pages)
+**Working estimate** sections include explicit status disclaimers:
+- "**Status**: Estimate based on published pricing; not yet verified from actual AssemblyAI invoice"
+- "**Status**: Not yet confirmed from actual Paddle dashboard; should be validated"
+- "**Status**: These margins are projections only. Actual margins depend on confirmed provider pricing."
 
-Pages without explicit top padding (SetPassword, Pricing, Notifications) are left as-is. Signup, ClaimShare, SharedPdfDownload also get their spacing reduced where applicable.
+## No Code Changes
 
-### C) Summary spacing
-- Card padding: `p-4` → `p-3 sm:p-4`
-- SectionBody gaps: `space-y-2` → `space-y-1.5` (2 occurrences)
-
----
-
-## 3. Exact Files/Components/Classes to Touch
-
-### A) Animation — swap `animate-page-enter` → `animate-page-enter-flat`
-
-| File | Occurrences |
-|------|-------------|
-| `src/index.css` | Add new keyframe + class |
-| `src/pages/Profile.tsx` | 1 |
-| `src/pages/Settings.tsx` | 1 |
-| `src/pages/Convert.tsx` | 1 |
-| `src/pages/History.tsx` | 2 |
-| `src/pages/JobDetail.tsx` | 1 |
-| `src/pages/Login.tsx` | 2 |
-| `src/pages/ResetPassword.tsx` | 2 |
-| `src/pages/SetPassword.tsx` | 1 |
-| `src/pages/Pricing.tsx` | 1 |
-| `src/pages/Terms.tsx` | 1 |
-| `src/pages/Privacy.tsx` | 1 |
-| `src/pages/RefundPolicy.tsx` | 1 |
-| `src/components/JobResults.tsx` | 1 |
-
-**Not touched (no existing animation):** `Signup.tsx`, `ClaimShare.tsx`, `SharedPdfDownload.tsx`, `Notifications.tsx`
-**Not touched (homepage):** `Index.tsx`
-
-### B) Top spacing
-
-| File | From | To |
-|------|------|----|
-| `src/pages/Profile.tsx` | `py-10 sm:py-14` | `py-6 sm:py-10` |
-| `src/pages/Settings.tsx` | `py-10 sm:py-14` | `py-6 sm:py-10` |
-| `src/pages/Convert.tsx` | `py-10 sm:py-14` | `py-6 sm:py-10` |
-| `src/pages/History.tsx` (×2) | `py-10 sm:py-14` | `py-6 sm:py-10` |
-| `src/pages/JobDetail.tsx` | `py-10 sm:py-14` | `py-6 sm:py-10` |
-| `src/pages/Login.tsx` (×2) | `py-12` | `py-8` |
-| `src/pages/ResetPassword.tsx` (×2) | `py-12` | `py-8` |
-| `src/pages/Signup.tsx` (×2) | `py-12` | `py-8` |
-| `src/pages/Terms.tsx` | `py-12 sm:py-16` | `py-8 sm:py-12` |
-| `src/pages/Privacy.tsx` | `py-12 sm:py-16` | `py-8 sm:py-12` |
-| `src/pages/RefundPolicy.tsx` | `py-12 sm:py-16` | `py-8 sm:py-12` |
-| `src/pages/ClaimShare.tsx` | `py-16` | `py-10` |
-| `src/pages/SharedPdfDownload.tsx` | `py-16` | `py-10` |
-
-**Not touched (own layout):** SetPassword (flex center, no py), Pricing (hero sections), Notifications (sticky header)
-
-### C) Summary spacing
-
-| File | Line | From | To |
-|------|------|------|----|
-| `src/components/StructuredSummary.tsx` | ~195 | `p-4` | `p-3 sm:p-4` |
-| `src/components/StructuredSummary.tsx` | ~139 | `space-y-2` | `space-y-1.5` |
-| `src/components/StructuredSummary.tsx` | ~160 | `space-y-2` | `space-y-1.5` |
-
----
-
-## 4. Regression Risks
-
-| Risk | Mitigation |
-|------|-----------|
-| Homepage animation changes | `Index.tsx` not touched; existing keyframe preserved |
-| New animation on non-animated pages | Only swapping where class already exists — verified via search |
-| Transcript tab affected | StructuredSummary is Summary-tab only |
-| Pages feel cramped on desktop | Responsive values keep desktop comfortable |
-
----
-
-## 5. QA Checklist
-
-1. Homepage: slide-up + fade animation identical to current
-2. 13 non-homepage files: fade in without upward shift
-3. Signup, ClaimShare, SharedPdfDownload, Notifications: no animation added, behaviour unchanged
-4. Content pages (Profile, Settings, Convert, History, JobDetail): reduced top spacing
-5. Auth pages (Login, Signup, ResetPassword): reduced vertical padding
-6. Legal pages (Terms, Privacy, RefundPolicy): reduced vertical padding
-7. ClaimShare, SharedPdfDownload: reduced vertical padding
-8. Summary tab mobile: tighter card padding
-9. Summary tab: tighter paragraph/list spacing within sections
-10. Summary tab desktop: cards retain `p-4` padding
-11. Transcript tab: zero visual changes
+No functional code, UI, or billing logic touched. Memory files only.
 
