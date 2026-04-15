@@ -355,7 +355,7 @@ border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 aut
             toast.info(t("notifications.pdfReadyCheckNotifications"));
           }
         } catch (err) {
-          clearInterval(heartbeat);
+          if (heartbeat) clearInterval(heartbeat);
           console.error("[PDF export] Error:", err);
           const errorMsg = err instanceof Error ? err.message : "Export failed";
 
