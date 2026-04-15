@@ -319,7 +319,8 @@ border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 aut
 
           if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
 
-          // 4. Update async_jobs to completed
+          // 4. Stop heartbeat & update async_jobs to completed
+          if (heartbeat) clearInterval(heartbeat);
           await supabase
             .from("async_jobs")
             .update({
