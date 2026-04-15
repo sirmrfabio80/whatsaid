@@ -165,6 +165,7 @@
     "account": "Account",
     "displayName": "Display name",
     "emailLabel": "Email",
+    "saveChanges": "Save changes",
     "contactEmailDesc": "Used for sharing, notifications, and display. You can change this independently from your sign-in email.",
     "contactEmailSaved": "Email updated",
     "saveEmail": "Save email",

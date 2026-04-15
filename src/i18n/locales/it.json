@@ -165,6 +165,7 @@
     "account": "Account",
     "displayName": "Nome visualizzato",
     "emailLabel": "Email",
+    "saveChanges": "Salva modifiche",
     "contactEmailDesc": "Utilizzata per condivisioni, notifiche e visualizzazione. Puoi cambiarla indipendentemente dall'email di accesso.",
     "contactEmailSaved": "Email aggiornata",
     "saveEmail": "Salva email",

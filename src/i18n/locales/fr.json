@@ -165,6 +165,7 @@
     "account": "Compte",
     "displayName": "Nom d'affichage",
     "emailLabel": "Email",
+    "saveChanges": "Enregistrer les modifications",
     "contactEmailDesc": "Utilisée pour les partages, notifications et l'affichage. Vous pouvez la modifier indépendamment de votre email de connexion.",
     "contactEmailSaved": "Email mise à jour",
     "saveEmail": "Enregistrer l'email",
