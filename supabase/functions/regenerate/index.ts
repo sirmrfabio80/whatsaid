@@ -228,12 +228,28 @@ async function handleSummaryOrCustom(
 ) {
   const { data: job, error: jobError } = await supabase
     .from("jobs")
-    .select("id, status, regeneration_count, language_detected")
+    .select("id, status, regeneration_count, language_detected, question_generation_count")
     .eq("id", jobId)
     .single();
 
   if (jobError || !job) throw Object.assign(new Error("Job not found"), { statusCode: 404 });
   if (job.status !== "completed") throw Object.assign(new Error("Job is not completed"), { statusCode: 400 });
+
+  // ── Question generation limit (custom outputs only) ──
+  if (outputType === "custom") {
+    // Atomic increment with guard
+    const { data: limitRow, error: limitErr } = await supabase
+      .from("jobs")
+      .update({ question_generation_count: (job.question_generation_count ?? 0) + 1 })
+      .eq("id", jobId)
+      .lt("question_generation_count", 10)
+      .select("question_generation_count")
+      .maybeSingle();
+
+    if (limitErr || !limitRow) {
+      throw Object.assign(new Error("question_limit_reached"), { statusCode: 403 });
+    }
+  }
 
   // Read transcript
   const { data: txRow, error: txError } = await supabase
@@ -286,7 +302,20 @@ Rules:
   }
 
   const model = outputType === "summary" ? MODEL_SUMMARY : MODEL_CUSTOM;
-  const content = await callAI(apiKey, model, systemPrompt, userPrompt);
+
+  let content: string;
+  try {
+    content = await callAI(apiKey, model, systemPrompt, userPrompt);
+  } catch (aiError) {
+    // Rollback question counter on AI failure
+    if (outputType === "custom") {
+      await supabase
+        .from("jobs")
+        .update({ question_generation_count: Math.max(0, (job.question_generation_count ?? 0)) })
+        .eq("id", jobId);
+    }
+    throw aiError;
+  }
 
   const { data: insertedOutput, error: insertError } = await supabase
     .from("job_outputs")
