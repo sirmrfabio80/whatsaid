@@ -277,6 +277,7 @@ border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 aut
       // Fire-and-forget — runs even if the originating component unmounts
       (async () => {
         let asyncJobId: string | null = null;
+        let heartbeat: ReturnType<typeof setInterval> | null = null;
         try {
           // 1. Create async_jobs row
           const { data: jobRow, error: insertErr } = await supabase
@@ -295,7 +296,7 @@ border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 aut
           asyncJobId = jobRow.id;
 
           // Start heartbeat — bump updated_at every 30s so cleanup-stale-jobs doesn't kill us
-          const heartbeat = setInterval(async () => {
+          heartbeat = setInterval(async () => {
             await supabase
               .from("async_jobs")
               .update({ updated_at: new Date().toISOString() })
