@@ -69,8 +69,8 @@ function stripHeading(line: string): { text: string; isHeading: boolean } {
 }
 
 function renderLine(line: string): ReactNode {
-  // Combined regex: bold **text**, inline code `code`, links [text](url)
-  const regex = /\*\*(.+?)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g;
+  // Order matters: bold+italic (***) before bold (**) before italic (*)
+  const regex = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*]+)\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g;
   const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match;
@@ -81,20 +81,26 @@ function renderLine(line: string): ReactNode {
       parts.push(line.slice(lastIndex, match.index));
     }
     if (match[1] !== undefined) {
-      // Bold
-      parts.push(<strong key={key++}>{match[1]}</strong>);
+      // Bold + Italic
+      parts.push(<strong key={key++}><em>{match[1]}</em></strong>);
     } else if (match[2] !== undefined) {
+      // Bold
+      parts.push(<strong key={key++}>{match[2]}</strong>);
+    } else if (match[3] !== undefined) {
+      // Italic
+      parts.push(<em key={key++}>{match[3]}</em>);
+    } else if (match[4] !== undefined) {
       // Inline code
       parts.push(
         <code key={key++} className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-foreground/80">
-          {match[2]}
+          {match[4]}
         </code>
       );
-    } else if (match[3] !== undefined) {
+    } else if (match[5] !== undefined) {
       // Link
       parts.push(
-        <a key={key++} href={match[4]} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
-          {match[3]}
+        <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
+          {match[5]}
         </a>
       );
     }
