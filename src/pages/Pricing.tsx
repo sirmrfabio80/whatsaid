@@ -235,7 +235,21 @@ export default function Pricing() {
   ];
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat relative">
+      {/* Processing purchase overlay */}
+      {processingPurchase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 shadow-lg">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-lg font-medium text-foreground">
+              {t("pricing.processingPurchase", "Processing purchase…")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("pricing.processingPurchaseDesc", "Your credits will appear shortly.")}
+            </p>
+          </div>
+        </div>
+      )}
       {/* 1 — Hero */}
       <section ref={heroReveal.ref} className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent pointer-events-none" />
