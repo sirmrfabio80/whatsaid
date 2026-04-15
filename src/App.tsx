@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,27 +7,29 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import Navbar from "@/components/Navbar";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import ResetPassword from "./pages/ResetPassword";
-
-import Convert from "./pages/Convert";
-import SetPassword from "./pages/SetPassword";
-import Pricing from "./pages/Pricing";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-
-import History from "./pages/History";
-import JobDetail from "./pages/JobDetail";
-import NotFound from "./pages/NotFound";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import RefundPolicy from "./pages/RefundPolicy";
-import Signup from "./pages/Signup";
-import ClaimShare from "./pages/ClaimShare";
-import SharedPdfDownload from "./pages/SharedPdfDownload";
-import Notifications from "./pages/Notifications";
 import Footer from "@/components/Footer";
+
+// Eagerly load the landing page for fast FCP/LCP
+import Index from "./pages/Index";
+
+// Lazy-load all other routes
+const Login = lazy(() => import("./pages/Login"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Convert = lazy(() => import("./pages/Convert"));
+const SetPassword = lazy(() => import("./pages/SetPassword"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const History = lazy(() => import("./pages/History"));
+const JobDetail = lazy(() => import("./pages/JobDetail"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ClaimShare = lazy(() => import("./pages/ClaimShare"));
+const SharedPdfDownload = lazy(() => import("./pages/SharedPdfDownload"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 
 const queryClient = new QueryClient();
 
@@ -38,6 +41,7 @@ const App = () => (
         <AuthProvider>
           <NotificationsProvider>
           <Navbar />
+          <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -60,6 +64,7 @@ const App = () => (
             <Route path="/notifications" element={<Notifications />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           <Footer />
           </NotificationsProvider>
         </AuthProvider>
