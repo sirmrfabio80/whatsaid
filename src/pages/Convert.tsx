@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
 import type { TranscriptionConfig } from "@/components/TranscriptionSettings";
