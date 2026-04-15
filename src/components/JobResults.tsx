@@ -17,6 +17,7 @@ import SpeakerChips from "@/components/SpeakerChips";
 import SpeakerIdentificationBanner from "@/components/SpeakerIdentificationBanner";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import TranscriptEditor, { parseSegments, type SpeakerSuggestion } from "@/components/TranscriptEditor";
+import ParticipantsPanel from "@/components/ParticipantsPanel";
 import { toast } from "sonner";
 import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/speaker-identification";
 
@@ -686,6 +687,16 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       <span className="text-xs text-muted-foreground">{t("jobResults.summaryRegenLimitReached")}</span>
                     )}
                   </div>
+                </div>
+              )}
+              {/* Participants panel */}
+              {transcript && !regeneratingLang && (
+                <div className="px-5 sm:px-6 pt-5 sm:pt-6">
+                  <ParticipantsPanel
+                    segments={parseSegments(activeTranscriptContent)}
+                    speakerNames={speakerNames}
+                    durationSeconds={meta?.duration_seconds ?? null}
+                  />
                 </div>
               )}
               <div className="p-5 sm:p-6">

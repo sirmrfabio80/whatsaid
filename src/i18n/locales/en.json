@@ -650,5 +650,12 @@
     "undo": "Undo rename",
     "edit": "Edit name",
     "suggested": "suggested"
+  },
+  "participants": {
+    "title": "Participants",
+    "overview": "Participation overview",
+    "spoken": "Spoken",
+    "share": "Share",
+    "noData": "No participation data available"
   }
 }

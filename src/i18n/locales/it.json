@@ -602,5 +602,12 @@
     "undo": "Annulla rinomina",
     "edit": "Modifica nome",
     "suggested": "suggerito"
+  },
+  "participants": {
+    "title": "Partecipanti",
+    "overview": "Panoramica partecipazione",
+    "spoken": "Parlato",
+    "share": "Quota",
+    "noData": "Nessun dato di partecipazione disponibile"
   }
 }

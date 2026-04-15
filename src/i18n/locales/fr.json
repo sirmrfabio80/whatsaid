@@ -602,5 +602,12 @@
     "undo": "Annuler le renommage",
     "edit": "Modifier le nom",
     "suggested": "suggéré"
+  },
+  "participants": {
+    "title": "Participants",
+    "overview": "Aperçu de la participation",
+    "spoken": "Temps de parole",
+    "share": "Part",
+    "noData": "Aucune donnée de participation disponible"
   }
 }
