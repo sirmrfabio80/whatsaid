@@ -75,12 +75,27 @@ Deno.serve(async (req) => {
     }
 
     const userEmail = user.email?.toLowerCase().trim()
-    if (!userEmail || userEmail !== share.recipient_email.toLowerCase().trim()) {
+    const recipientEmail = share.recipient_email.toLowerCase().trim()
+
+    const { data: profile } = await serviceClient
+      .from('profiles')
+      .select('email')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    const profileEmail = profile?.email?.toLowerCase().trim()
+
+    const authMatch = !!userEmail && userEmail === recipientEmail
+    const profileMatch = !!profileEmail && profileEmail === recipientEmail
+
+    if (!authMatch && !profileMatch) {
+      console.log(`Email mismatch: auth=${userEmail}, profile=${profileEmail}, recipient=${recipientEmail}`)
       return new Response(JSON.stringify({ error: `This PDF was shared with ${share.recipient_email}. Please sign in with that email address.` }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    console.log(`Access granted via ${authMatch ? 'auth' : 'profile'} email match`)
 
     if (!pdf_storage_path.startsWith(`${share.job_id}/`) || pdf_storage_path.includes('..')) {
       return new Response(JSON.stringify({ error: 'Invalid PDF path.' }), {
