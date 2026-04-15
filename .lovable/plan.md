@@ -1,45 +1,49 @@
 
 
-## Delete Account — Full Implementation
+## Plan: Dual-email check in edge functions
 
-### Problem
-The "Delete my account" button has no handler. It needs to securely delete the user and all their data.
+### What changes
 
-### Data to delete (in order, to respect dependencies)
-1. **job_output_variants** — via job_outputs → jobs owned by user
-2. **job_outputs** — via jobs owned by user
-3. **job_tags** — where job belongs to user
-4. **jobs** — where user_id = user
-5. **tags** — where user_id = user
-6. **transcript_shares** — where shared_by = user
-7. **credit_transactions** — where user_id = user
-8. **credit_balances** — where user_id = user
-9. **notifications** — where user_id = user
-10. **async_jobs** — where user_id = user
-11. **user_roles** — where user_id = user
-12. **profiles** — where user_id = user
-13. **Storage**: avatars bucket (user folder), shared-pdfs, exports
-14. **Auth user**: `auth.admin.deleteUser(userId)` via service role
+Both `claim-transcript-share` and `download-shared-pdf` currently check only `user.email` (auth email) against `share.recipient_email`. We'll add a `profiles.email` lookup and accept access if **either** matches.
 
-### Implementation
+### Changes per file
 
-**1. Create edge function `supabase/functions/delete-account/index.ts`**
-- Authenticates via JWT from the request
-- Uses service role client to delete all rows from the tables listed above
-- Deletes storage objects in avatars/shared-pdfs/exports buckets belonging to the user
-- Calls `auth.admin.deleteUser(userId)` last
-- Returns 200 on success
+**1. `supabase/functions/claim-transcript-share/index.ts` (lines ~107-114)**
+- After getting `userEmail` from auth, query `profiles.email` via `serviceClient` using `user.id`
+- Accept if either `userEmail` or `profileEmail` matches `share.recipient_email`
+- Log which email matched (auth vs profile)
+- Keep 403 with clear message if neither matches
 
-**2. Update `src/pages/Settings.tsx`**
-- Add `onClick` to the `AlertDialogAction` button
-- Call `supabase.functions.invoke('delete-account')`
-- On success: call `signOut()`, navigate to `/`
-- Add loading state, show toast on error
+**2. `supabase/functions/download-shared-pdf/index.ts` (lines ~77-83)**
+- Same pattern: fetch `profiles.email`, dual-check, log match type
+- Keep 403 if neither matches
 
-**3. Add locale strings** to `en.json`, `it.json`, `fr.json`
-- `settings.deletingAccount`, `settings.deleteError`, `settings.deleteSuccess`
+### Pattern (applied identically in both files)
 
-### Files
-- **Create**: `supabase/functions/delete-account/index.ts`
-- **Edit**: `src/pages/Settings.tsx`, `src/i18n/locales/en.json`, `it.json`, `fr.json`
+```typescript
+const userEmail = user.email?.toLowerCase().trim()
+const recipientEmail = share.recipient_email.toLowerCase().trim()
+
+const { data: profile } = await serviceClient
+  .from('profiles')
+  .select('email')
+  .eq('user_id', user.id)
+  .maybeSingle()
+const profileEmail = profile?.email?.toLowerCase().trim()
+
+const authMatch = userEmail === recipientEmail
+const profileMatch = !!profileEmail && profileEmail === recipientEmail
+
+if (!authMatch && !profileMatch) {
+  console.log(`Email mismatch: auth=${userEmail}, profile=${profileEmail}, recipient=${recipientEmail}`)
+  return new Response(JSON.stringify({ error: `...shared with ${share.recipient_email}...` }), { status: 403 })
+}
+
+console.log(`Access granted via ${authMatch ? 'auth' : 'profile'} email match`)
+```
+
+### No other changes
+- No frontend files touched
+- No unrelated refactoring
+- No database migrations needed (`profiles.email` column already exists)
 
