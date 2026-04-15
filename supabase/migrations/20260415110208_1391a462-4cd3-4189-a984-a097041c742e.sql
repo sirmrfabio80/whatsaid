@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN question_generation_count integer NOT NULL DEFAULT 0;

@@ -323,7 +323,13 @@
     "summaryRegenLimitReached": "Limite di rigenerazione raggiunto (0 rimanenti)",
     "regeneratingSummary": "Rigenerazione riassunto…",
     "summaryRegenerated": "Riassunto rigenerato dalla trascrizione modificata",
-    "summaryRegenFailed": "Impossibile rigenerare il riassunto. Riprova."
+    "summaryRegenFailed": "Impossibile rigenerare il riassunto. Riprova.",
+    "questionsLeft_one": "{{count}} domanda rimanente",
+    "questionsLeft_other": "{{count}} domande rimanenti",
+    "noQuestionsLeft": "Nessuna domanda rimanente",
+    "editQuestion": "Modifica domanda",
+    "deleteQuestion": "Elimina domanda",
+    "regeneratingAnswer": "Rigenerazione risposta…"
   },
   "share": {
     "share": "Condividi",
