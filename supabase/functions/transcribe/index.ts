@@ -330,19 +330,25 @@ Deno.serve(async (req) => {
     const sanitizedResponse = { ...transcript };
     delete sanitizedResponse.audio_url;
 
-    // 10. Update job with metadata
-    await supabase
+    // 10. Update job with metadata + store AssemblyAI transcript ID for cleanup
+    const { error: updateJobErr } = await supabase
       .from("jobs")
       .update({
         language_detected: detectedLanguage,
         duration_seconds: audioDuration,
         speech_model: "universal-3-pro",
         status: "processing", // still processing (post-processing next)
+        assemblyai_transcript_id: transcriptId,
+        assemblyai_delete_status: "pending",
       })
       .eq("id", job_id);
 
+    if (updateJobErr) {
+      throw new Error(`Failed to update job metadata: ${updateJobErr.message}`);
+    }
+
     // 11. Insert transcript output with raw response and structured metadata
-    await supabase.from("job_outputs").insert({
+    const { error: insertOutputErr } = await supabase.from("job_outputs").insert({
       job_id,
       output_type: "transcript",
       content: transcriptText,
@@ -357,7 +363,41 @@ Deno.serve(async (req) => {
       },
     });
 
-    // 12. Delete audio file from storage
+    if (insertOutputErr) {
+      throw new Error(`Failed to persist transcript output: ${insertOutputErr.message}`);
+    }
+
+    // 12. Delete AssemblyAI transcript (retention cleanup)
+    // Only after our DB persistence is confirmed successful
+    try {
+      const deleteRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
+        method: "DELETE",
+        headers: { Authorization: ASSEMBLYAI_API_KEY },
+      });
+
+      if (deleteRes.ok) {
+        console.log(`[transcribe] AssemblyAI transcript deleted: ${transcriptId}`);
+        await supabase
+          .from("jobs")
+          .update({ assemblyai_delete_status: "deleted" })
+          .eq("id", job_id);
+      } else {
+        const errText = await deleteRes.text();
+        console.error(`[transcribe] AssemblyAI DELETE failed [${deleteRes.status}]: ${errText}`);
+        await supabase
+          .from("jobs")
+          .update({ assemblyai_delete_status: "failed" })
+          .eq("id", job_id);
+      }
+    } catch (delError) {
+      console.error(`[transcribe] AssemblyAI DELETE error:`, delError);
+      await supabase
+        .from("jobs")
+        .update({ assemblyai_delete_status: "failed" })
+        .eq("id", job_id);
+    }
+
+    // 13. Delete audio file from storage
     const { error: deleteError } = await supabase.storage
       .from("temp-audio")
       .remove([job.temp_file_path]);
@@ -368,7 +408,7 @@ Deno.serve(async (req) => {
       console.log(`[transcribe] Audio file deleted: ${job.temp_file_path}`);
     }
 
-    // 13. Mark audio as deleted
+    // 14. Mark audio as deleted
     await supabase
       .from("jobs")
       .update({ audio_deleted_at: new Date().toISOString() })

@@ -311,6 +311,8 @@ export type Database = {
       }
       jobs: {
         Row: {
+          assemblyai_delete_status: string | null
+          assemblyai_transcript_id: string | null
           audio_channels: number | null
           audio_deleted_at: string | null
           created_at: string
@@ -349,6 +351,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          assemblyai_delete_status?: string | null
+          assemblyai_transcript_id?: string | null
           audio_channels?: number | null
           audio_deleted_at?: string | null
           created_at?: string
@@ -387,6 +391,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          assemblyai_delete_status?: string | null
+          assemblyai_transcript_id?: string | null
           audio_channels?: number | null
           audio_deleted_at?: string | null
           created_at?: string
