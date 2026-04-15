@@ -689,6 +689,16 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 </div>
               )}
+              {/* Participants panel */}
+              {transcript && !regeneratingLang && (
+                <div className="px-5 sm:px-6 pt-5 sm:pt-6">
+                  <ParticipantsPanel
+                    segments={parseSegments(activeTranscriptContent)}
+                    speakerNames={speakerNames}
+                    durationSeconds={meta?.duration_seconds ?? null}
+                  />
+                </div>
+              )}
               <div className="p-5 sm:p-6">
                 {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.translatingContent")}</div>
                   : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
