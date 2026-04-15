@@ -54,15 +54,15 @@ const SECTION_GAP_MM = 3.5;
 const PARAGRAPH_GAP_MM = 1;
 
 /** Typography (px) — optimised for handheld PDF reading */
-const BODY_FONT_PX = 15;
-const TRANSCRIPT_FONT_PX = 15;
-const TIMESTAMP_FONT_PX = 12;
-const META_FONT_PX = 13;
-const H1_FONT_PX = 30;
-const H2_FONT_PX = 20;
-const H3_FONT_PX = 18;
-const H4_FONT_PX = 17;
-const QA_PROMPT_FONT_PX = 15;
+const BODY_FONT_PX = 20;
+const TRANSCRIPT_FONT_PX = 20;
+const TIMESTAMP_FONT_PX = 16;
+const META_FONT_PX = 17;
+const H1_FONT_PX = 40;
+const H2_FONT_PX = 26;
+const H3_FONT_PX = 24;
+const H4_FONT_PX = 22;
+const QA_PROMPT_FONT_PX = 20;
 const BULLET_FONT_PX = BODY_FONT_PX;
 
 /** Colours */
