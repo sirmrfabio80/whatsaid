@@ -120,11 +120,14 @@ export function SectionBody({ body }: { body: string }) {
           </p>
         )}
         <ul className="space-y-1.5 list-disc list-outside pl-4 marker:text-primary/40">
-          {bullets.map((b, i) => (
-            <li key={i} className="text-sm leading-relaxed text-foreground/90">
-              {renderLine(b)}
-            </li>
-          ))}
+          {bullets.map((b, i) => {
+            const { text, isHeading } = stripHeading(b);
+            return (
+              <li key={i} className={`text-sm leading-relaxed text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+                {renderLine(text)}
+              </li>
+            );
+          })}
         </ul>
       </div>
     );
