@@ -88,8 +88,8 @@ Deno.serve(async (req) => {
     const profileMatch = !!profileEmail && profileEmail === recipientEmail
 
     if (!authMatch && !profileMatch) {
-      console.log(`Email mismatch: auth=${userEmail}, profile=${profileEmail}, recipient=${recipientEmail}`)
-      return new Response(JSON.stringify({ error: `This PDF was shared with ${share.recipient_email}. Please sign in with that email address.` }), {
+      console.log(`Email mismatch — access denied`)
+      return new Response(JSON.stringify({ error: "You don't have access to this PDF." }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

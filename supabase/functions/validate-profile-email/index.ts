@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Check profiles.email for other users
+    // 1. Check if another user's profile already uses this email
     const { data: profileMatch } = await serviceClient
       .from('profiles')
       .select('user_id')
@@ -56,43 +56,15 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Check auth.users for other users
-    const { data: { users } } = await serviceClient.auth.admin.listUsers({
-      perPage: 1,
-      page: 1,
-    })
+    // 2. Check if another auth user has this email
+    // Use admin.listUsers and filter — Supabase admin API doesn't support email filter directly
+    // For small user bases this is fine; for larger ones a DB function would be better
+    const { data: listing } = await serviceClient.auth.admin.listUsers({ perPage: 1000, page: 1 })
+    const authEmailTaken = listing?.users?.some(
+      u => u.id !== user.id && u.email?.toLowerCase() === email
+    ) ?? false
 
-    // listUsers doesn't filter by email, so use a targeted approach
-    const { data: authUsers, error: authListError } = await serviceClient
-      .rpc('has_role', { _user_id: user.id, _role: 'admin' }) // dummy call to warm up
-      .then(() =>
-        // Query auth.users by email using admin API
-        serviceClient.auth.admin.listUsers({ perPage: 1000, page: 1 })
-      )
-
-    // Simpler: just check if any auth user with this email exists that isn't the current user
-    // Use the admin getUserByEmail-like approach
-    // Unfortunately listUsers doesn't support email filter, so we'll check via a different approach
-    // We can try to look up by email in identities
-    const { data: existingAuthUser } = await serviceClient.auth.admin.listUsers({ perPage: 50, page: 1 })
-
-    // Better approach: just try to find users with matching email
-    // Since admin.listUsers doesn't filter, let's use a direct approach
-    let authEmailTaken = false
-    if (existingAuthUser?.users) {
-      authEmailTaken = existingAuthUser.users.some(
-        u => u.id !== user.id && u.email?.toLowerCase() === email
-      )
-    }
-
-    if (authEmailTaken) {
-      return new Response(JSON.stringify({ available: false }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    return new Response(JSON.stringify({ available: true }), {
+    return new Response(JSON.stringify({ available: !authEmailTaken }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
