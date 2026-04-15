@@ -66,6 +66,10 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [summaryNeedsRegen, setSummaryNeedsRegen] = useState(false);
   const [summaryRegenCount, setSummaryRegenCount] = useState(0);
   const [regeneratingSummary, setRegeneratingSummary] = useState(false);
+  const [questionGenCount, setQuestionGenCount] = useState(0);
+  const [editingQAId, setEditingQAId] = useState<string | null>(null);
+  const [editingQAText, setEditingQAText] = useState("");
+  const [regeneratingQAId, setRegeneratingQAId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
