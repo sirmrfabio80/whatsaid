@@ -15,8 +15,8 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe, Info, Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Save, Lock, Trash2, AlertCircle, Globe, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
 
@@ -25,6 +25,8 @@ const UI_LANGUAGES = [
   { code: "it", label: "Italiano" },
   { code: "fr", label: "Français" },
 ] as const;
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Settings() {
   const { user, loading, signOut, needsPasswordSetup } = useAuth();
@@ -38,11 +40,6 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const [contactEmailSaved, setContactEmailSaved] = useState(false);
-  const [contactEmailError, setContactEmailError] = useState<string | null>(null);
-  const [contactEmailLoading, setContactEmailLoading] = useState(false);
-  const [profileSaved, setProfileSaved] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [setupPassword, setSetupPassword] = useState("");
@@ -50,8 +47,12 @@ export default function Settings() {
   const [setupError, setSetupError] = useState<string | null>(null);
   const [setupSaving, setSetupSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
+
+  const hasEmailAuth = user?.identities?.some(i => i.provider === 'email') ?? false;
 
   const { data: isAdmin } = useQuery({
     queryKey: ["is-admin", user?.id],
@@ -81,33 +82,54 @@ export default function Settings() {
     }
   }, [profile, user?.email]);
 
-  const updateProfile = useMutation({
-    mutationFn: async () => {
-      if (!user) return;
-      const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("user_id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["profile"] }); setProfileSaved(true); setProfileError(null); setTimeout(() => setProfileSaved(false), 3000); },
-    onError: () => { setProfileError(t("settings.couldNotUpdate")); setProfileSaved(false); },
-  });
+  const saveChanges = async () => {
+    if (!user) return;
+    setEmailError(null);
+
+    // Validate email
+    if (!contactEmail || !EMAIL_REGEX.test(contactEmail.trim())) {
+      setEmailError(t("settings.invalidEmail"));
+      return;
+    }
+
+    setSaving(true);
+    const trimmedEmail = contactEmail.trim();
+
+    // Update profiles
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ display_name: displayName, email: trimmedEmail })
+      .eq("user_id", user.id);
+
+    if (profileError) {
+      toast.error(t("settings.couldNotUpdate"));
+      setSaving(false);
+      return;
+    }
+
+    // Conditionally trigger auth email change for email-password users
+    const emailChanged = hasEmailAuth && trimmedEmail.toLowerCase() !== (user.email || "").toLowerCase();
+
+    if (emailChanged) {
+      const { error: authError } = await supabase.auth.updateUser({ email: trimmedEmail });
+      if (authError) {
+        toast.warning(t("settings.authEmailChangeFailed"));
+      } else {
+        toast.info(t("settings.emailConfirmRequired"));
+      }
+    } else {
+      toast.success(t("common.saved"));
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    setSaving(false);
+  };
 
   const handleLanguageChange = async (val: string) => {
     setUiLanguage(val);
     i18n.changeLanguage(val);
     if (user) {
       await supabase.from("profiles").update({ ui_language: val }).eq("user_id", user.id);
-    }
-  };
-
-  const saveContactEmail = async () => {
-    setContactEmailError(null); setContactEmailSaved(false); setContactEmailLoading(true);
-    if (!contactEmail || !contactEmail.includes("@")) { setContactEmailError(t("settings.invalidEmail")); setContactEmailLoading(false); return; }
-    const { error } = await supabase.from("profiles").update({ email: contactEmail.trim() }).eq("user_id", user!.id);
-    if (error) { setContactEmailError(t("settings.couldNotUpdate")); setContactEmailLoading(false); }
-    else {
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      setContactEmailSaved(true); setContactEmailLoading(false);
-      setTimeout(() => setContactEmailSaved(false), 3000);
     }
   };
 
@@ -131,7 +153,6 @@ export default function Settings() {
     queryClient.invalidateQueries({ queryKey: ["profile"] });
     setSetupSaving(false);
     setSetupPassword(""); setSetupConfirmPassword("");
-    // Force a page reload to clear the needsPasswordSetup state
     window.location.reload();
   };
 
@@ -150,38 +171,36 @@ export default function Settings() {
               <h2 className="font-heading font-semibold text-lg">{t("settings.account")}</h2>
               <div className="space-y-2">
                 <Label htmlFor="display-name">{t("settings.displayName")}</Label>
-                <Input id="display-name" value={displayName} onChange={(e) => { setDisplayName(e.target.value); setProfileSaved(false); setProfileError(null); }} className="rounded-lg h-11" />
+                <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-lg h-11" />
               </div>
               <div className="space-y-2">
-                <Label>{t("settings.emailLabel")}</Label>
+                <Label htmlFor="contact-email">{t("settings.emailLabel")}</Label>
                 <Input
+                  id="contact-email"
                   value={contactEmail}
-                  onChange={(e) => { setContactEmail(e.target.value); setContactEmailSaved(false); setContactEmailError(null); }}
+                  onChange={(e) => { setContactEmail(e.target.value); setEmailError(null); }}
                   className="rounded-lg h-11"
                   placeholder="you@example.com"
                 />
                 <p className="text-xs text-muted-foreground">{t("settings.contactEmailDesc")}</p>
-                {contactEmailError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{contactEmailError}</span></div>}
-                {contactEmailSaved && <div className="flex items-center gap-2 text-primary text-sm"><Check className="w-4 h-4" /><span>{t("settings.contactEmailSaved")}</span></div>}
-              </div>
-              <div className="space-y-2">
-                <Label>{t("settings.authEmail")}</Label>
-                <Input value={authEmail} disabled className="rounded-lg h-11 opacity-60" />
-                <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-                  <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  {t("settings.authEmailDesc")}
-                </p>
+                {emailError && (
+                  <div className="flex items-center gap-2 text-destructive text-sm">
+                    <AlertCircle className="w-4 h-4" /><span>{emailError}</span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
-                  <Save className="w-4 h-4 mr-1.5" />{t("settings.saveChanges")}
+                <Button className="rounded-lg" size="sm" onClick={saveChanges} disabled={saving}>
+                  {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
+                  {t("settings.saveChanges")}
                 </Button>
-                <Button variant="outline" className="rounded-lg" size="sm" onClick={saveContactEmail} disabled={contactEmailLoading}>
-                  <Mail className="w-4 h-4 mr-1.5" />{contactEmailLoading ? t("settings.savingEmail") : t("settings.saveEmail")}
-                </Button>
-                {profileSaved && <span className="text-xs text-primary flex items-center gap-1"><Check className="w-3.5 h-3.5" />{t("common.saved")}</span>}
-                {profileError && <span className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{profileError}</span>}
               </div>
+              {authEmail && contactEmail && authEmail.toLowerCase() !== contactEmail.toLowerCase() && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Lock className="w-3 h-3" />
+                  {t("settings.signedInAs", { email: authEmail })}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -253,7 +272,7 @@ export default function Settings() {
                       <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null); }} className="rounded-lg h-11" />
                     </div>
                     {passwordError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{passwordError}</span></div>}
-                    {passwordSaved && <div className="flex items-center gap-2 text-primary text-sm"><Check className="w-4 h-4" /><span>{t("settings.passwordUpdated")}</span></div>}
+                    {passwordSaved && <div className="flex items-center gap-2 text-primary text-sm"><span>✓ {t("settings.passwordUpdated")}</span></div>}
                   </div>
                   <DialogFooter>
                     <Button onClick={changePassword} className="rounded-lg">{t("settings.updatePasswordBtn")}</Button>
