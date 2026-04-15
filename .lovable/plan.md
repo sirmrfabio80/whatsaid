@@ -1,51 +1,66 @@
 
-Root cause identified:
+What I found
 
-- The share flow itself is wired correctly:
-  - `share-transcript-record/index.ts` creates the share and emails `/claim/:token`
-  - `src/pages/ClaimShare.tsx` validates, then auto-POSTs to `claim-transcript-share`
-  - `claim-transcript-share/index.ts` authorizes by comparing `auth user.email` with `transcript_shares.recipient_email`
-- The 403 is caused by an email source-of-truth mismatch:
-  - this share token is addressed to `sirfabio@icloud.com`
-  - the recipient profile row also says `sirfabio@icloud.com`
-  - but the authenticated account email is still different
-- The bug comes from `src/pages/Settings.tsx`, which updates `profiles.email` immediately after `auth.updateUser({ email })`, even though the auth system may still require confirmation and has not actually switched the login email yet.
+- Your sign-in account is still authenticated as `fbpetito@gmail.com`.
+- The recent auth response shows:
+  - `email: fbpetito@gmail.com`
+  - `new_email: sirfabio@icloud.com`
+  - provider = `google`
+- So the app did not truly “change it back”; the primary auth email never became `sirfabio@icloud.com`. The UI let you start an email change that the Google-linked account does not actually complete the way the app currently implies.
+- Security-sensitive flows are correctly using the auth/JWT email, not `profiles.email`. Changing claim/share lookup to `profiles.email` would be insecure.
 
 Plan
 
-1. Fix the email source of truth
-- Treat the authenticated account email as the only authoritative email for security-sensitive checks.
-- Remove the optimistic `profiles.email` write from `src/pages/Settings.tsx`.
-- Keep the claim/download backend checks strict; do not weaken them to trust profile email.
+1. Lock the source of truth
+- Keep auth user email as the only authoritative identity for:
+  - claim-share authorization
+  - shared PDF access
+  - invite redemption / any email-bound access checks
+- Audit the remaining app code so `profiles.email` is treated as display-only metadata, not identity.
 
-2. Repair the confusing account state
-- Add a small database repair step to sync existing `profiles.email` values back to the real auth email for current users.
-- This fixes accounts that currently look like one email in the UI while authenticating as another.
+2. Fix Settings for Google-linked accounts
+- Detect provider-linked users from the auth user metadata/identities.
+- For Google users, remove or disable the “Change email” action.
+- Replace it with clear copy explaining that the sign-in email is controlled by the Google account, so the app cannot safely switch the account identity from Settings.
+- Only allow password setup / normal profile edits there.
 
-3. Tighten account UI behavior
-- Update the settings flow so email-change UX reflects reality:
-  - request change through auth
-  - show confirmation/pending messaging
-  - do not present the new email as active until auth actually reports it
-- Ensure account displays prefer the real authenticated email when relevant.
+3. Stop misleading success states
+- Remove any “email updated” success path unless the live auth session actually reports the new primary email.
+- If there is a pending email change value, show it only as a request state, never as the active account email.
+- Make Profile and Settings consistently show the real signed-in email from auth.
 
-4. Improve share-link error surfacing
-- Update `src/pages/ClaimShare.tsx` to reliably surface the backend’s 403 message instead of leaving this as a vague failed request in the console.
-- Apply the same pattern to `src/pages/SharedPdfDownload.tsx`, since it uses the same recipient-email authorization rule.
+4. Improve mismatch recovery on claim links
+- Update the claim page so when a share was sent to a different email, it clearly shows:
+  - current signed-in email
+  - required recipient email
+- Add recovery actions:
+  - sign out and sign in with the correct account
+  - create an account with the recipient email
+- This removes the dead-end 403 experience.
 
-Files to touch
+5. Clean up the current broken UX state
+- Review whether any local/profile state is still implying `sirfabio@icloud.com` is active.
+- If needed, do a small data cleanup so profile email mirrors the real auth email again for consistency.
+- Do not try to “fix” this by trusting profile email for authorization.
+
+Files to update
+
 - `src/pages/Settings.tsx`
+- `src/pages/Profile.tsx`
 - `src/pages/ClaimShare.tsx`
-- `src/pages/SharedPdfDownload.tsx`
-- small DB migration for existing profile-email repair
+- likely small locale updates in:
+  - `src/i18n/locales/en.json`
+  - `src/i18n/locales/it.json`
+  - `src/i18n/locales/fr.json`
 
-Technical details
-- I will not change the claim authorization rule to trust `profiles.email`, because that would let users spoof access by editing their profile email.
-- The secure fix is consistency: auth email stays authoritative, profile email must mirror it instead of leading it.
-- This is a small, targeted fix and does not require unrelated refactors.
+Technical note
+
+- The correct lookup column for access control is still the authenticated account email from the auth user/JWT.
+- The actual bug is the product behavior around Google-linked accounts: the app offers an email-change flow that should not be presented as a real account-identity change there.
 
 Verification
-- A share sent to the recipient’s real authenticated email can be claimed successfully.
-- A pending/unconfirmed email change no longer makes the UI look fully switched.
-- The current mismatch case produces a clear on-screen message instead of an opaque 403.
-- No regression to share creation, transcript duplication, or shared PDF access.
+
+- Google-linked users no longer see a misleading email-change flow.
+- Settings/Profile always show the real current auth email.
+- Claim/share errors clearly explain the mismatch and offer recovery actions.
+- No regression to share authorization or account security.
