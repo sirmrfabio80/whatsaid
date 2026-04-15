@@ -38,6 +38,7 @@ export default function Settings() {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [emailSaved, setEmailSaved] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailLoading, setEmailLoading] = useState(false);
@@ -79,6 +80,12 @@ export default function Settings() {
     }
   }, [profile]);
 
+  useEffect(() => {
+    if (pendingEmail && user?.email?.toLowerCase().trim() === pendingEmail.toLowerCase().trim()) {
+      setPendingEmail(null);
+    }
+  }, [pendingEmail, user?.email]);
+
   const updateProfile = useMutation({
     mutationFn: async () => {
       if (!user) return;
@@ -103,9 +110,9 @@ export default function Settings() {
     const { error } = await supabase.auth.updateUser({ email: newEmail });
     if (error) { setEmailError(error.message); setEmailLoading(false); }
     else {
-      if (user) { await supabase.from("profiles").update({ email: newEmail }).eq("user_id", user.id); queryClient.invalidateQueries({ queryKey: ["profile"] }); }
+      setPendingEmail(newEmail.trim());
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
       setEmailSaved(true); setEmailLoading(false); setNewEmail("");
-      setTimeout(() => { setEmailOpen(false); setEmailSaved(false); }, 2000);
     }
   };
 
@@ -150,7 +157,10 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label>{t("settings.emailLabel")}</Label>
-                <Input value={profile?.email || user.email || ""} disabled className="rounded-lg h-11 opacity-60" />
+                <Input value={user.email || ""} disabled className="rounded-lg h-11 opacity-60" />
+                {pendingEmail && (
+                  <p className="text-xs text-muted-foreground">{t("settings.emailPendingConfirm", { email: pendingEmail })}</p>
+                )}
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
