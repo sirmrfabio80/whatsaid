@@ -1,52 +1,51 @@
 
+Root cause identified:
 
-## Problem
+- The share flow itself is wired correctly:
+  - `share-transcript-record/index.ts` creates the share and emails `/claim/:token`
+  - `src/pages/ClaimShare.tsx` validates, then auto-POSTs to `claim-transcript-share`
+  - `claim-transcript-share/index.ts` authorizes by comparing `auth user.email` with `transcript_shares.recipient_email`
+- The 403 is caused by an email source-of-truth mismatch:
+  - this share token is addressed to `sirfabio@icloud.com`
+  - the recipient profile row also says `sirfabio@icloud.com`
+  - but the authenticated account email is still different
+- The bug comes from `src/pages/Settings.tsx`, which updates `profiles.email` immediately after `auth.updateUser({ email })`, even though the auth system may still require confirmation and has not actually switched the login email yet.
 
-After a successful Paddle checkout, the code does a single `setTimeout(() => refreshCredits(), 3000)` which is a race condition — the webhook may not have processed yet in 3 seconds.
+Plan
 
-## Fix
+1. Fix the email source of truth
+- Treat the authenticated account email as the only authoritative email for security-sensitive checks.
+- Remove the optimistic `profiles.email` write from `src/pages/Settings.tsx`.
+- Keep the claim/download backend checks strict; do not weaken them to trust profile email.
 
-Replace the single delayed refresh with a polling mechanism that checks for the updated credit balance repeatedly until it changes or a timeout is reached.
+2. Repair the confusing account state
+- Add a small database repair step to sync existing `profiles.email` values back to the real auth email for current users.
+- This fixes accounts that currently look like one email in the UI while authenticating as another.
 
-### Changes
+3. Tighten account UI behavior
+- Update the settings flow so email-change UX reflects reality:
+  - request change through auth
+  - show confirmation/pending messaging
+  - do not present the new email as active until auth actually reports it
+- Ensure account displays prefer the real authenticated email when relevant.
 
-**1. `src/pages/Pricing.tsx`** — Replace the `onSuccess` callback:
-- Capture the current `creditBalance` before opening checkout
-- In `onSuccess`, poll `refreshCredits()` every 2 seconds for up to 20 seconds
-- Stop polling once the balance changes from the pre-purchase value
-- Show a toast on success with the new balance, or a "credits arriving shortly" message if polling times out
+4. Improve share-link error surfacing
+- Update `src/pages/ClaimShare.tsx` to reliably surface the backend’s 403 message instead of leaving this as a vague failed request in the console.
+- Apply the same pattern to `src/pages/SharedPdfDownload.tsx`, since it uses the same recipient-email authorization rule.
 
-**2. `src/lib/paddle-checkout.ts`** — Update the event listener approach:
-- Use `Paddle.Initialize`'s `eventCallback` option instead of `Emitter.on` (which may not work reliably across Paddle SDK versions)
-- Pass `eventCallback` during initialization to capture `checkout.completed` events
+Files to touch
+- `src/pages/Settings.tsx`
+- `src/pages/ClaimShare.tsx`
+- `src/pages/SharedPdfDownload.tsx`
+- small DB migration for existing profile-email repair
 
-### Technical detail
+Technical details
+- I will not change the claim authorization rule to trust `profiles.email`, because that would let users spoof access by editing their profile email.
+- The secure fix is consistency: auth email stays authoritative, profile email must mirror it instead of leading it.
+- This is a small, targeted fix and does not require unrelated refactors.
 
-The polling approach:
-```
-const priorBalance = creditBalance;
-let attempts = 0;
-const poll = setInterval(async () => {
-  attempts++;
-  await refreshCredits();
-  // refreshCredits updates creditBalance in AuthContext
-  // We'll re-read from credit_balances directly
-  const { data } = await supabase
-    .from("credit_balances")
-    .select("balance")
-    .eq("user_id", user.id)
-    .single();
-  if (data && data.balance > priorBalance) {
-    clearInterval(poll);
-    toast.success(t("pricing.purchaseSuccess"));
-    refreshCredits(); // sync context
-  } else if (attempts >= 10) {
-    clearInterval(poll);
-    toast.info("Credits arriving shortly — refresh if needed");
-    refreshCredits();
-  }
-}, 2000);
-```
-
-This ensures the user sees the updated balance without needing a manual refresh.
-
+Verification
+- A share sent to the recipient’s real authenticated email can be claimed successfully.
+- A pending/unconfirmed email change no longer makes the UI look fully switched.
+- The current mismatch case produces a clear on-screen message instead of an opaque 403.
+- No regression to share creation, transcript duplication, or shared PDF access.
