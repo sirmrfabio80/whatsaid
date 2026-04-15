@@ -704,11 +704,16 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">{t("jobResults.askQuestion")}</label>
                 <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
                 <div className="relative">
-                  <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
-                  <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim()} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
+                  <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
+                  <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
                     {askingQuestion ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground text-right mt-1.5">
+                  {isQuestionLimitReached
+                    ? t("jobResults.noQuestionsLeft")
+                    : t("jobResults.questionsLeft", { count: questionsRemaining })}
+                </p>
               </div>
 
               <div role="log" aria-live="polite" aria-label="Saved questions and answers">
@@ -722,6 +727,9 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     {[...questionEntries].reverse().map((entry) => {
                       const isExcluded = excludedQAIds.has(entry.id);
                       const checkboxId = `qa-include-${entry.id}`;
+                      const isRegenerating = regeneratingQAId === entry.id;
+                      const isEditing = editingQAId === entry.id;
+                      const isAnyGenerating = askingQuestion || !!regeneratingQAId;
                       return (
                         <div key={entry.id} className={`rounded-xl bg-muted/40 p-4 transition-opacity ${isExcluded ? "opacity-50" : ""}`}>
                           <div className="space-y-2">
@@ -730,13 +738,41 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                                 <Checkbox id={checkboxId} checked={!isExcluded} onCheckedChange={(checked) => { setExcludedQAIds((prev) => { const next = new Set(prev); if (checked) next.delete(entry.id); else next.add(entry.id); return next; }); }} aria-label={`Include "${entry.custom_prompt ?? "this answer"}" in export`} />
                                 <label htmlFor={checkboxId} className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap select-none">{t("jobResults.includeInExport")}</label>
                               </div>
-                              <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-7" onClick={() => handleCopy(applySpeakerNames(getContent(entry), speakerNames), entry.id)}>
-                                {copiedId === entry.id ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}{copiedId === entry.id ? t("common.copied") : t("common.copy")}
-                              </Button>
+                              <div className="flex items-center gap-0.5">
+                                {!isQuestionLimitReached && !isEditing && (
+                                  <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" disabled={isAnyGenerating} onClick={() => { setEditingQAId(entry.id); setEditingQAText(entry.custom_prompt ?? ""); }} aria-label={t("jobResults.editQuestion")}>
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0 text-destructive/70 hover:text-destructive" disabled={isRegenerating} onClick={() => handleDeleteQA(entry.id)} aria-label={t("jobResults.deleteQuestion")}>
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="rounded-full gap-1.5 text-xs h-7" onClick={() => handleCopy(applySpeakerNames(getContent(entry), speakerNames), entry.id)}>
+                                  {copiedId === entry.id ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}{copiedId === entry.id ? t("common.copied") : t("common.copy")}
+                                </Button>
+                              </div>
                             </div>
                             <div>
-                              {entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>}
-                              <div className="pl-5"><SectionBody body={applySpeakerNames(getContent(entry), speakerNames)} /></div>
+                              {isEditing ? (
+                                <div className="flex items-start gap-2 mb-2">
+                                  <span className="text-xs font-semibold text-primary/70 mt-2.5 shrink-0">Q</span>
+                                  <div className="flex-1 flex items-center gap-1.5">
+                                    <Textarea value={editingQAText} onChange={(e) => setEditingQAText(e.target.value)} className="rounded-lg text-sm min-h-[40px] resize-none flex-1" autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditQA(entry); } }} />
+                                    <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => handleEditQA(entry)} disabled={!editingQAText.trim()}><Check className="w-3.5 h-3.5" /></Button>
+                                    <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => { setEditingQAId(null); setEditingQAText(""); }}><X className="w-3.5 h-3.5" /></Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>
+                              )}
+                              <div className={`pl-5 relative ${isRegenerating ? "opacity-40" : ""}`}>
+                                <SectionBody body={applySpeakerNames(getContent(entry), speakerNames)} />
+                                {isRegenerating && (
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
