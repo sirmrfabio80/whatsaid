@@ -205,7 +205,7 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
               </h3>
             </div>
           )}
-          <div className={section.heading ? "pl-6" : ""}>
+          <div className={section.heading ? "pl-0 sm:pl-6" : ""}>
             <SectionBody body={section.body} />
           </div>
         </section>
