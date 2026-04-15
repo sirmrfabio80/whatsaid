@@ -358,10 +358,68 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     }
   };
 
+  const questionsRemaining = 10 - questionGenCount;
+  const isQuestionLimitReached = questionsRemaining <= 0;
+
   const handleAskQuestion = async () => {
-    const prompt = questionPrompt.trim(); if (!prompt) return;
+    const prompt = questionPrompt.trim(); if (!prompt || isQuestionLimitReached) return;
     setAskingQuestion(true);
-    try { const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: prompt } }); if (error || data?.error) return; if (data?.output) setOutputs((prev) => [...prev, data.output as JobOutput]); else await fetchData(); setQuestionPrompt(""); } catch { return; } finally { setAskingQuestion(false); }
+    try {
+      const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: prompt } });
+      if (error || data?.error) {
+        if (data?.error === "question_limit_reached") toast.error(t("jobResults.noQuestionsLeft"));
+        return;
+      }
+      if (data?.output) setOutputs((prev) => [...prev, data.output as JobOutput]);
+      else await fetchData();
+      setQuestionPrompt("");
+      setQuestionGenCount((c) => c + 1);
+    } catch { return; } finally { setAskingQuestion(false); }
+  };
+
+  const handleDeleteQA = async (id: string) => {
+    if (editingQAId === id) { setEditingQAId(null); setEditingQAText(""); }
+    const prev = outputs;
+    setOutputs((o) => o.filter((x) => x.id !== id));
+    const { error } = await supabase.from("job_outputs").delete().eq("id", id);
+    if (error) { setOutputs(prev); toast.error(t("jobResults.saveFailed")); }
+  };
+
+  const handleEditQA = async (entry: JobOutput) => {
+    const newPrompt = editingQAText.trim();
+    if (!newPrompt || isQuestionLimitReached) return;
+    const originalPrompt = entry.custom_prompt;
+    const originalContent = entry.content;
+    setRegeneratingQAId(entry.id);
+    setEditingQAId(null);
+    // Optimistically show new question text
+    setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: newPrompt } : o));
+    try {
+      // Delete old output
+      await supabase.from("job_outputs").delete().eq("id", entry.id);
+      const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: newPrompt } });
+      if (error || data?.error) {
+        // Revert
+        setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent } : o));
+        if (data?.error === "question_limit_reached") toast.error(t("jobResults.noQuestionsLeft"));
+        else toast.error(t("jobResults.summaryRegenFailed"));
+        // Re-insert old output (best effort)
+        await supabase.from("job_outputs").insert({ id: entry.id, job_id: jobId, output_type: "custom", content: originalContent, custom_prompt: originalPrompt });
+        return;
+      }
+      if (data?.output) {
+        setOutputs((prev) => prev.map((o) => o.id === entry.id ? (data.output as JobOutput) : o));
+      } else {
+        await fetchData();
+      }
+      setQuestionGenCount((c) => c + 1);
+    } catch {
+      setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent } : o));
+      toast.error(t("jobResults.summaryRegenFailed"));
+    } finally {
+      setRegeneratingQAId(null);
+      setEditingQAText("");
+    }
   };
 
   const transcript = outputs.find((o) => o.output_type === "transcript");
