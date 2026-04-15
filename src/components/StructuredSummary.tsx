@@ -62,6 +62,12 @@ function parseSections(content: string): SummarySection[] {
   return sections.filter((s) => s.body.length > 0);
 }
 
+function stripHeading(line: string): { text: string; isHeading: boolean } {
+  const match = line.match(/^#{1,4}\s+(.*)/);
+  if (match) return { text: match[1], isHeading: true };
+  return { text: line, isHeading: false };
+}
+
 function renderLine(line: string): ReactNode {
   // Bold: **text**
   const parts: ReactNode[] = [];
