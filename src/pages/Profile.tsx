@@ -86,7 +86,7 @@ export default function Profile() {
             />
             <div>
               <h1 className="font-heading text-2xl sm:text-3xl font-bold">{profile?.display_name || t("profile.user")}</h1>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
+              <p className="text-sm text-muted-foreground">{user.email ?? ""}</p>
               {memberSince && <p className="text-xs text-muted-foreground mt-0.5">{t("profile.memberSince", { date: memberSince })}</p>}
             </div>
           </div>

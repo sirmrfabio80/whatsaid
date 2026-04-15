@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe } from "lucide-react";
+import { Save, Lock, Trash2, Check, AlertCircle, Mail, Globe, Info } from "lucide-react";
 import AdminInviteCard from "@/components/AdminInviteCard";
 
 const UI_LANGUAGES = [
@@ -140,6 +140,16 @@ export default function Settings() {
     window.location.reload();
   };
 
+  // Detect if the account is OAuth-only (e.g. Google)
+  const isOAuthOnly = useMemo(() => {
+    const identities = user?.identities ?? [];
+    // If all identities are OAuth providers (not "email"), email change is not supported
+    return identities.length > 0 && identities.every(i => i.provider !== "email");
+  }, [user]);
+
+  // Show the real auth email, not profiles.email
+  const authEmail = user?.email ?? "";
+
   if (loading || !user) return null;
 
   return (
@@ -157,8 +167,14 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label>{t("settings.emailLabel")}</Label>
-                <Input value={user.email || ""} disabled className="rounded-lg h-11 opacity-60" />
-                {pendingEmail && (
+                <Input value={authEmail} disabled className="rounded-lg h-11 opacity-60" />
+                {isOAuthOnly && (
+                  <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                    <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    {t("settings.emailOAuthLocked")}
+                  </p>
+                )}
+                {!isOAuthOnly && pendingEmail && (
                   <p className="text-xs text-muted-foreground">{t("settings.emailPendingConfirm", { email: pendingEmail })}</p>
                 )}
               </div>
@@ -166,28 +182,30 @@ export default function Settings() {
                 <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
                   <Save className="w-4 h-4 mr-1.5" />{t("settings.saveChanges")}
                 </Button>
-                <Dialog open={emailOpen} onOpenChange={(open) => { setEmailOpen(open); if (!open) { setEmailError(null); setEmailSaved(false); } }}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="rounded-lg" size="sm"><Mail className="w-4 h-4 mr-1.5" />{t("settings.changeEmail")}</Button>
-                  </DialogTrigger>
-                  <DialogContent className="rounded-xl">
-                    <DialogHeader>
-                      <DialogTitle>{t("settings.changeEmailTitle")}</DialogTitle>
-                      <DialogDescription>{t("settings.changeEmailDesc")}</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-3 py-2">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="new-email">{t("settings.newEmail")}</Label>
-                        <Input id="new-email" type="email" value={newEmail} onChange={(e) => { setNewEmail(e.target.value); setEmailError(null); }} placeholder="you@example.com" className="rounded-lg h-11" />
+                {!isOAuthOnly && (
+                  <Dialog open={emailOpen} onOpenChange={(open) => { setEmailOpen(open); if (!open) { setEmailError(null); setEmailSaved(false); } }}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="rounded-lg" size="sm"><Mail className="w-4 h-4 mr-1.5" />{t("settings.changeEmail")}</Button>
+                    </DialogTrigger>
+                    <DialogContent className="rounded-xl">
+                      <DialogHeader>
+                        <DialogTitle>{t("settings.changeEmailTitle")}</DialogTitle>
+                        <DialogDescription>{t("settings.changeEmailDesc")}</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3 py-2">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="new-email">{t("settings.newEmail")}</Label>
+                          <Input id="new-email" type="email" value={newEmail} onChange={(e) => { setNewEmail(e.target.value); setEmailError(null); }} placeholder="you@example.com" className="rounded-lg h-11" />
+                        </div>
+                        {emailError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{emailError}</span></div>}
+                        {emailSaved && <div className="flex items-center gap-2 text-primary text-sm"><Check className="w-4 h-4" /><span>{t("settings.emailUpdated")}</span></div>}
                       </div>
-                      {emailError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{emailError}</span></div>}
-                      {emailSaved && <div className="flex items-center gap-2 text-primary text-sm"><Check className="w-4 h-4" /><span>{t("settings.emailUpdated")}</span></div>}
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={changeEmail} className="rounded-lg" disabled={emailLoading}>{emailLoading ? t("settings.updatingEmail") : t("settings.updateEmail")}</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                      <DialogFooter>
+                        <Button onClick={changeEmail} className="rounded-lg" disabled={emailLoading}>{emailLoading ? t("settings.updatingEmail") : t("settings.updateEmail")}</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
                 {profileSaved && <span className="text-xs text-primary flex items-center gap-1"><Check className="w-3.5 h-3.5" />{t("common.saved")}</span>}
                 {profileError && <span className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{profileError}</span>}
               </div>
