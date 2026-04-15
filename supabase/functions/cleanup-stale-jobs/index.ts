@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const STALE_MINUTES = 5;
+    const STALE_MINUTES = 10;
 
     // Use updated_at for staleness — gives active jobs more time
     const cutoff = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
