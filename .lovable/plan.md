@@ -1,34 +1,33 @@
 
 
-# Increase PDF Font Sizes for Mobile Readability
+# Fix Raw Markdown Headings Showing in Question Answers
 
-## Analysis
+## Problem
 
-The PDF is A4 (210mm / 595pt wide). On an iPhone Air (~390pt viewport), the PDF viewer scales to fit width at roughly 0.65x. Current body text at 15px renders at ~10px equivalent on screen — below the 13px readability threshold.
+The `SectionBody` component in `StructuredSummary.tsx` renders Q&A answer content. It handles bold/italic inline markdown and bullet lists, but does **not** strip or render heading markers (`###`, `##`, etc.). When the AI returns answers with markdown headings, the raw `###` characters appear in the UI.
 
-**Target**: Body text should appear at ~13–14px on-screen when the A4 PDF is fitted to an iPhone width. This requires body text of ~20–21px in the PDF source, which is a **~1.33x proportional increase** across all type tokens.
+## Fix
 
-## Proposed Font Size Changes
+In `SectionBody` (file: `src/components/StructuredSummary.tsx`, around line 86), add heading detection to the rendering logic:
 
-| Token | Current | New | On-screen equiv (iPhone) |
-|-------|---------|-----|-------------------------|
-| `BODY_FONT_PX` | 15 | 20 | ~13px |
-| `TRANSCRIPT_FONT_PX` | 15 | 20 | ~13px |
-| `BULLET_FONT_PX` | 15 | 20 | ~13px |
-| `QA_PROMPT_FONT_PX` | 15 | 20 | ~13px |
-| `TIMESTAMP_FONT_PX` | 12 | 16 | ~10.5px |
-| `META_FONT_PX` | 13 | 17 | ~11px |
-| `H1_FONT_PX` | 30 | 40 | ~26px |
-| `H2_FONT_PX` | 20 | 26 | ~17px |
-| `H3_FONT_PX` | 18 | 24 | ~16px |
-| `H4_FONT_PX` | 17 | 22 | ~14px |
+1. **Before rendering each line**, check if it starts with `#` markers (e.g. `### Heading`)
+2. Strip the `#` prefix and render the text as a **bold styled span** (since these are inline sub-sections within a card, not page-level headings)
+3. Apply this in both the bullet-list branch and the prose-fallback branch
 
-## File
+Specifically, add a helper like:
 
-`src/lib/export-pdf.ts` — lines 57–66, update the 10 font constant values. No other files affected.
+```typescript
+function stripHeading(line: string): { text: string; isHeading: boolean } {
+  const match = line.match(/^#{1,4}\s+(.*)/);
+  if (match) return { text: match[1], isHeading: true };
+  return { text: line, isHeading: false };
+}
+```
 
-## Risks
+Then in the rendering, heading lines get rendered as `<p className="text-sm font-semibold ...">` instead of regular prose.
 
-- More pages per PDF (text is larger so content wraps more). The pagination logic already handles arbitrary block heights, so no breakage expected.
-- Spacing tokens (`SECTION_GAP_MM`, `PARAGRAPH_GAP_MM`, margins in `markdownToHtml`) remain unchanged — they are already in mm and proportioned correctly.
+## Scope
+
+- **One file**: `src/components/StructuredSummary.tsx`
+- No backend or edge function changes needed — this is purely a rendering fix
 
