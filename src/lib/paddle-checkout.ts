@@ -7,6 +7,7 @@
 const PADDLE_CLIENT_TOKEN = "live_15b20ab2f8cd4d93060b2fc9510";
 
 let initialised = false;
+let checkoutSuccessCallback: (() => void) | null = null;
 
 function getPaddle(): any | null {
   if (typeof window !== "undefined" && (window as any).Paddle) {
@@ -25,21 +26,17 @@ export function initPaddle(): void {
   }
   paddle.Initialize({
     token: PADDLE_CLIENT_TOKEN,
-    // For sandbox testing, uncomment:
-    //environment: "sandbox",
+    eventCallback: (event: any) => {
+      if (event?.name === "checkout.completed" && checkoutSuccessCallback) {
+        const cb = checkoutSuccessCallback;
+        checkoutSuccessCallback = null;
+        cb();
+      }
+    },
   });
   initialised = true;
 }
 
-/**
- * Open the Paddle checkout overlay for a given price.
- *
- * @param priceId  Paddle Price ID (pri_xxx)
- * @param userId   Authenticated user's UUID — passed as custom_data so the
- *                 webhook can credit the correct account.
- * @param email    Pre-fill the customer email field (optional).
- * @param onSuccess Called after a successful purchase.
- */
 export function openCheckout(opts: { priceId: string; userId: string; email?: string; onSuccess?: () => void }): void {
   initPaddle();
   const paddle = getPaddle();
@@ -47,6 +44,8 @@ export function openCheckout(opts: { priceId: string; userId: string; email?: st
     console.error("[paddle-checkout] Paddle.js unavailable");
     return;
   }
+
+  checkoutSuccessCallback = opts.onSuccess ?? null;
 
   paddle.Checkout.open({
     items: [{ priceId: opts.priceId, quantity: 1 }],
@@ -58,15 +57,4 @@ export function openCheckout(opts: { priceId: string; userId: string; email?: st
       successUrl: `${window.location.origin}/convert?purchased=true`,
     },
   });
-
-  // Listen for completed event
-  if (opts.onSuccess) {
-    const handler = (event: any) => {
-      if (event?.name === "checkout.completed") {
-        opts.onSuccess?.();
-        paddle.Emitter?.off?.("checkout.completed", handler);
-      }
-    };
-    paddle.Emitter?.on?.("checkout.completed", handler);
-  }
 }
