@@ -540,6 +540,7 @@
     "finalCtaLoggedIn": "Continuer",
     "comingSoon": "Le système de paiement est en cours de finalisation — revenez bientôt.",
     "purchaseSuccess": "Achat réussi ! Vos crédits ont été ajoutés.",
+    "creditsAddedBanner": "{{count}} crédit(s) ajouté(s) à votre compte",
     "paddleNote": "Les paiements sont traités de manière sécurisée par Paddle, notre revendeur officiel.",
     "consentPrefix": "En achetant, vous acceptez nos",
     "supportLine": "Besoin d'aide ?"

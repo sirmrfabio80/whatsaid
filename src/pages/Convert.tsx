@@ -54,6 +54,7 @@ export default function Convert() {
   const [transcriptionConfig] = useState<TranscriptionConfig>({ strategy: "recovery", enhanceAudio: true });
   const [processing, setProcessing] = useState(false);
   const [processingPurchase, setProcessingPurchase] = useState(false);
+  const [creditsAdded, setCreditsAdded] = useState<number | null>(null);
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -163,6 +164,9 @@ export default function Convert() {
 
       if (!hasPriorBalance || latestBalance > priorBalance) {
         await refreshCredits();
+        if (hasPriorBalance) {
+          setCreditsAdded(latestBalance - priorBalance);
+        }
         finish(latestBalance);
         toast.success(t("pricing.purchaseSuccess"));
         return;
@@ -313,6 +317,21 @@ export default function Convert() {
       )}
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-2xl mx-auto">
+          {creditsAdded !== null && (
+            <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 animate-enter">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                <span>{t("pricing.creditsAddedBanner", { count: creditsAdded })}</span>
+              </div>
+              <button
+                onClick={() => setCreditsAdded(null)}
+                className="text-muted-foreground hover:text-foreground text-xs shrink-0"
+                aria-label={t("common.cancel")}
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <div className="text-center mb-8">
             <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("convert.title")}</h1>
             <p className="text-muted-foreground">{t("convert.subtitle")}</p>
