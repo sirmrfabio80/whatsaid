@@ -171,6 +171,7 @@
     "emailConfirmRequired": "Vérifiez votre boîte de réception pour confirmer le changement d'email de connexion.",
     "authEmailChangeFailed": "Email mise à jour, mais le changement d'email de connexion a échoué. Réessayez plus tard.",
     "invalidEmail": "Entrez une adresse email valide.",
+    "emailUnavailable": "Cette adresse email ne peut pas être utilisée pour le moment.",
     "couldNotUpdate": "Impossible de mettre à jour le profil.",
     "preferences": "Préférences",
     "interfaceLanguage": "Langue de l'interface",

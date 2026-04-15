@@ -171,6 +171,7 @@
     "emailConfirmRequired": "Controlla la tua casella di posta per confermare il cambio dell'email di accesso.",
     "authEmailChangeFailed": "Email aggiornata, ma il cambio dell'email di accesso non è riuscito. Riprova più tardi.",
     "invalidEmail": "Inserisci un indirizzo email valido.",
+    "emailUnavailable": "Questo indirizzo email non può essere utilizzato al momento.",
     "couldNotUpdate": "Impossibile aggiornare il profilo.",
     "preferences": "Preferenze",
     "interfaceLanguage": "Lingua dell'interfaccia",
