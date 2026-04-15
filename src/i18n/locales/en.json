@@ -171,6 +171,7 @@
     "emailConfirmRequired": "Check your inbox to confirm your new sign-in email.",
     "authEmailChangeFailed": "Email updated, but sign-in email change failed. Try again later.",
     "invalidEmail": "Enter a valid email address.",
+    "emailUnavailable": "This email cannot be used right now.",
     "couldNotUpdate": "Could not update profile.",
     "preferences": "Preferences",
     "interfaceLanguage": "Interface language",
