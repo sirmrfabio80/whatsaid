@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe, RefreshCw } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe, RefreshCw, Pencil, Trash2, X } from "lucide-react";
 import ShareButton from "@/components/ShareButton";
 import { LANGUAGES } from "@/lib/languages";
 import { applySpeakerNames } from "@/lib/speaker-names";
