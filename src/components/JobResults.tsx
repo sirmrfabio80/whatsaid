@@ -85,6 +85,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       setOutputLang((prev) => prev || activeLang);
       setSummaryNeedsRegen((jobData as Record<string, unknown>)?.summary_needs_regen === true);
       setSummaryRegenCount(((jobData as Record<string, unknown>)?.summary_regen_count as number) ?? 0);
+      setQuestionGenCount(((jobData as Record<string, unknown>)?.question_generation_count as number) ?? 0);
 
       // Load existing variants if active language differs from original
       const originalLang = m.language_detected || "en";
