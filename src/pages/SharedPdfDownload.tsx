@@ -60,10 +60,17 @@ export default function SharedPdfDownload() {
       if (!response.ok) {
         let message = "Failed to download PDF.";
         try {
-          const data = await response.json();
-          message = data?.error || message;
+          const raw = await response.text();
+          if (raw) {
+            try {
+              const data = JSON.parse(raw);
+              message = data?.error || message;
+            } catch {
+              message = raw;
+            }
+          }
         } catch {
-          // ignore JSON parse errors
+          // ignore response read errors
         }
         throw new Error(message);
       }

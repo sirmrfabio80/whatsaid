@@ -19,7 +19,7 @@ interface ShareInfo {
 
 export default function ClaimShare() {
   const { token } = useParams<{ token: string }>();
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<ClaimStatus>("loading");
@@ -75,23 +75,40 @@ export default function ClaimShare() {
 
   // Auto-claim when user is authenticated and share is ready
   useEffect(() => {
-    if (status === "ready" && user && !claimedRef.current) {
-      claimShare();
+    if (status === "ready" && user && session && !claimedRef.current) {
+      void claimShare();
     }
-  }, [status, user]);
+  }, [status, user, session]);
 
   const claimShare = async () => {
-    if (claimedRef.current) return;
+    if (claimedRef.current || !session || !token) return;
     claimedRef.current = true;
     setStatus("claiming");
 
     try {
-      const { data, error } = await supabase.functions.invoke("claim-transcript-share", {
-        body: { token },
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-transcript-share`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
       });
 
-      if (error || data?.error) {
-        setErrorMsg(data?.error || t("claim.claimFailed"));
+      const raw = await response.text();
+      let data: { error?: string; job_id?: string } = {};
+
+      if (raw) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          data = { error: raw };
+        }
+      }
+
+      if (!response.ok) {
+        setErrorMsg(data.error || t("claim.claimFailed"));
         setStatus("error");
         return;
       }
