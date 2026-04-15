@@ -18,9 +18,8 @@ function buildShareRecordEmail(opts: {
   title: string
   senderLabel: string
   claimUrl: string
-  downloadUrl: string | null
 }): string {
-  const { title, senderLabel, claimUrl, downloadUrl } = opts
+  const { title, senderLabel, claimUrl } = opts
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -35,10 +34,9 @@ function buildShareRecordEmail(opts: {
         <p style="font-size:16px;font-weight:600;color:hsl(220,25%,15%);margin:16px 0 24px;padding:12px 20px;background:hsl(220,20%,97%);border-radius:10px;display:inline-block;">${escapeHtml(title)}</p>
       </div>
       <div style="padding:0 28px 32px;text-align:center;">
-        ${downloadUrl ? `<a href="${downloadUrl}" style="display:inline-block;padding:14px 40px;background:hsl(220,25%,10%);color:#fff;font-size:15px;font-weight:600;border-radius:12px;text-decoration:none;letter-spacing:0.01em;margin:0 8px 12px;">Download PDF</a>` : ''}
         <a href="${claimUrl}" style="display:inline-block;padding:14px 40px;background:hsl(245,50%,48%);color:#fff;font-size:15px;font-weight:600;border-radius:12px;text-decoration:none;letter-spacing:0.01em;margin:0 8px 12px;">Open your copy</a>
         <p style="font-size:13px;color:hsl(220,10%,55%);margin:20px 0 0;line-height:1.5;">
-          Sign in or create a free WhatSaid account first to access this share.${downloadUrl ? ' The PDF download is only available after login.' : ''} This link expires in 2 days.
+          Sign in or create a free WhatSaid account first to access this share. This link expires in 2 days.
         </p>
       </div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
@@ -81,19 +79,8 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const job_id = typeof body?.job_id === 'string' ? body.job_id : ''
     const recipient_email = typeof body?.recipient_email === 'string' ? body.recipient_email : ''
-    const pdf_storage_path = typeof body?.pdf_storage_path === 'string' && body.pdf_storage_path.trim()
-      ? body.pdf_storage_path.trim()
-      : null
-
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    if (pdf_storage_path && (!pdf_storage_path.startsWith(`${job_id}/`) || pdf_storage_path.includes('..'))) {
-      return new Response(JSON.stringify({ error: 'Invalid PDF path' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -146,9 +133,6 @@ Deno.serve(async (req) => {
 
     const title = job.title || job.file_name?.replace(/\.[^.]+$/, '') || 'Transcript'
     const claimUrl = `${SITE_URL}/claim/${share.token}`
-    const downloadUrl = pdf_storage_path
-      ? `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
-      : null
 
     const messageId = crypto.randomUUID()
 
@@ -182,13 +166,10 @@ Deno.serve(async (req) => {
       `"${title}"`,
       '',
       `Open your copy: ${claimUrl}`,
+      '',
+      'Sign in or create a free WhatSaid account first to access this share.',
+      'This link expires in 2 days.',
     ]
-
-    if (downloadUrl) {
-      textParts.push('', `Download PDF after login: ${downloadUrl}`)
-    }
-
-    textParts.push('', 'Sign in or create a free WhatSaid account first to access this share.', 'This link expires in 2 days.')
 
     await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
@@ -200,7 +181,7 @@ Deno.serve(async (req) => {
         reply_to: senderEmail,
         sender_domain: SENDER_DOMAIN,
         subject: subjectLine,
-        html: buildShareRecordEmail({ title, senderLabel, claimUrl, downloadUrl }),
+      html: buildShareRecordEmail({ title, senderLabel, claimUrl }),
         text: textParts.join('\n'),
         purpose: 'transactional',
         label: 'share-transcript-record',
