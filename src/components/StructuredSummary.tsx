@@ -69,9 +69,9 @@ function stripHeading(line: string): { text: string; isHeading: boolean } {
 }
 
 function renderLine(line: string): ReactNode {
-  // Bold: **text**
+  // Combined regex: bold **text**, inline code `code`, links [text](url)
+  const regex = /\*\*(.+?)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g;
   const parts: ReactNode[] = [];
-  const regex = /\*\*(.+?)\*\*/g;
   let lastIndex = 0;
   let match;
   let key = 0;
@@ -80,7 +80,24 @@ function renderLine(line: string): ReactNode {
     if (match.index > lastIndex) {
       parts.push(line.slice(lastIndex, match.index));
     }
-    parts.push(<strong key={key++}>{match[1]}</strong>);
+    if (match[1] !== undefined) {
+      // Bold
+      parts.push(<strong key={key++}>{match[1]}</strong>);
+    } else if (match[2] !== undefined) {
+      // Inline code
+      parts.push(
+        <code key={key++} className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-foreground/80">
+          {match[2]}
+        </code>
+      );
+    } else if (match[3] !== undefined) {
+      // Link
+      parts.push(
+        <a key={key++} href={match[4]} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
+          {match[3]}
+        </a>
+      );
+    }
     lastIndex = regex.lastIndex;
   }
   if (lastIndex < line.length) {
