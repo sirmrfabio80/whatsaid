@@ -195,7 +195,7 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
           className="rounded-xl bg-muted/40 p-4"
         >
           {section.heading && (
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-1.5">
               {section.icon}
               <h3
                 id={`summary-section-${i}`}
