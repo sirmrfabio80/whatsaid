@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -33,16 +33,14 @@ export default function Settings() {
   const queryClient = useQueryClient();
 
   const [displayName, setDisplayName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [uiLanguage, setUiLanguage] = useState(i18n.language?.slice(0, 2) || "en");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const [emailSaved, setEmailSaved] = useState(false);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [emailLoading, setEmailLoading] = useState(false);
+  const [contactEmailSaved, setContactEmailSaved] = useState(false);
+  const [contactEmailError, setContactEmailError] = useState<string | null>(null);
+  const [contactEmailLoading, setContactEmailLoading] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordSaved, setPasswordSaved] = useState(false);
@@ -78,15 +76,10 @@ export default function Settings() {
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || "");
+      setContactEmail(profile.email || user?.email || "");
       if (profile.ui_language) setUiLanguage(profile.ui_language);
     }
-  }, [profile]);
-
-  useEffect(() => {
-    if (pendingEmail && user?.email?.toLowerCase().trim() === pendingEmail.toLowerCase().trim()) {
-      setPendingEmail(null);
-    }
-  }, [pendingEmail, user?.email]);
+  }, [profile, user?.email]);
 
   const updateProfile = useMutation({
     mutationFn: async () => {
@@ -106,15 +99,15 @@ export default function Settings() {
     }
   };
 
-  const changeEmail = async () => {
-    setEmailError(null); setEmailSaved(false); setEmailLoading(true);
-    if (!newEmail || !newEmail.includes("@")) { setEmailError(t("settings.invalidEmail")); setEmailLoading(false); return; }
-    const { error } = await supabase.auth.updateUser({ email: newEmail });
-    if (error) { setEmailError(error.message); setEmailLoading(false); }
+  const saveContactEmail = async () => {
+    setContactEmailError(null); setContactEmailSaved(false); setContactEmailLoading(true);
+    if (!contactEmail || !contactEmail.includes("@")) { setContactEmailError(t("settings.invalidEmail")); setContactEmailLoading(false); return; }
+    const { error } = await supabase.from("profiles").update({ email: contactEmail.trim() }).eq("user_id", user!.id);
+    if (error) { setContactEmailError(t("settings.couldNotUpdate")); setContactEmailLoading(false); }
     else {
-      setPendingEmail(newEmail.trim());
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      setEmailSaved(true); setEmailLoading(false); setNewEmail("");
+      setContactEmailSaved(true); setContactEmailLoading(false);
+      setTimeout(() => setContactEmailSaved(false), 3000);
     }
   };
 
@@ -142,14 +135,6 @@ export default function Settings() {
     window.location.reload();
   };
 
-  // Detect if the account is OAuth-only (e.g. Google)
-  const isOAuthOnly = useMemo(() => {
-    const identities = user?.identities ?? [];
-    // If all identities are OAuth providers (not "email"), email change is not supported
-    return identities.length > 0 && identities.every(i => i.provider !== "email");
-  }, [user]);
-
-  // Show the real auth email, not profiles.email
   const authEmail = user?.email ?? "";
 
   if (loading || !user) return null;
@@ -169,45 +154,31 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label>{t("settings.emailLabel")}</Label>
+                <Input
+                  value={contactEmail}
+                  onChange={(e) => { setContactEmail(e.target.value); setContactEmailSaved(false); setContactEmailError(null); }}
+                  className="rounded-lg h-11"
+                  placeholder="you@example.com"
+                />
+                <p className="text-xs text-muted-foreground">{t("settings.contactEmailDesc")}</p>
+                {contactEmailError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{contactEmailError}</span></div>}
+                {contactEmailSaved && <div className="flex items-center gap-2 text-primary text-sm"><Check className="w-4 h-4" /><span>{t("settings.contactEmailSaved")}</span></div>}
+              </div>
+              <div className="space-y-2">
+                <Label>{t("settings.authEmail")}</Label>
                 <Input value={authEmail} disabled className="rounded-lg h-11 opacity-60" />
-                {isOAuthOnly && (
-                  <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-                    <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    {t("settings.emailOAuthLocked")}
-                  </p>
-                )}
-                {!isOAuthOnly && pendingEmail && (
-                  <p className="text-xs text-muted-foreground">{t("settings.emailPendingConfirm", { email: pendingEmail })}</p>
-                )}
+                <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                  <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  {t("settings.authEmailDesc")}
+                </p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <Button className="rounded-lg" size="sm" onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
                   <Save className="w-4 h-4 mr-1.5" />{t("settings.saveChanges")}
                 </Button>
-                {!isOAuthOnly && (
-                  <Dialog open={emailOpen} onOpenChange={(open) => { setEmailOpen(open); if (!open) { setEmailError(null); setEmailSaved(false); } }}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="rounded-lg" size="sm"><Mail className="w-4 h-4 mr-1.5" />{t("settings.changeEmail")}</Button>
-                    </DialogTrigger>
-                    <DialogContent className="rounded-xl">
-                      <DialogHeader>
-                        <DialogTitle>{t("settings.changeEmailTitle")}</DialogTitle>
-                        <DialogDescription>{t("settings.changeEmailDesc")}</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-3 py-2">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="new-email">{t("settings.newEmail")}</Label>
-                          <Input id="new-email" type="email" value={newEmail} onChange={(e) => { setNewEmail(e.target.value); setEmailError(null); }} placeholder="you@example.com" className="rounded-lg h-11" />
-                        </div>
-                        {emailError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{emailError}</span></div>}
-                        {emailSaved && <div className="flex items-center gap-2 text-primary text-sm"><Check className="w-4 h-4" /><span>{t("settings.emailUpdated")}</span></div>}
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={changeEmail} className="rounded-lg" disabled={emailLoading}>{emailLoading ? t("settings.updatingEmail") : t("settings.updateEmail")}</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                )}
+                <Button variant="outline" className="rounded-lg" size="sm" onClick={saveContactEmail} disabled={contactEmailLoading}>
+                  <Mail className="w-4 h-4 mr-1.5" />{contactEmailLoading ? t("settings.savingEmail") : t("settings.saveEmail")}
+                </Button>
                 {profileSaved && <span className="text-xs text-primary flex items-center gap-1"><Check className="w-3.5 h-3.5" />{t("common.saved")}</span>}
                 {profileError && <span className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{profileError}</span>}
               </div>
