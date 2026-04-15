@@ -59,7 +59,7 @@ function parseSections(content: string): SummarySection[] {
     });
   }
 
-  return sections.filter((s) => s.body.length > 0);
+  return sections.filter((s) => s.body.length > 0 && s.heading.length > 0);
 }
 
 function stripHeading(line: string): { text: string; isHeading: boolean } {
