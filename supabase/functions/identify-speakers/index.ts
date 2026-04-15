@@ -10,29 +10,103 @@ const corsHeaders = {
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-2.5-flash";
 
-// ---- Stopwords ----
+// ---- Expanded stopwords: common words that are never person names ----
 const STOPWORDS = new Set([
-  // Italian
+  // Italian — adjectives, adverbs, pronouns, conjunctions, prepositions, past participles, common words
   "qui", "bene", "pronto", "presente", "sicuro", "contento", "contenta",
   "felice", "stanco", "stanca", "certo", "certa", "solo", "sola",
   "ancora", "anche", "molto", "poco", "tutto", "niente", "sempre",
   "accordo", "vero", "vera", "bravo", "brava", "disponibile",
+  "che", "chi", "cosa", "come", "dove", "quando", "quanto", "quale",
+  "perché", "quello", "quella", "quelli", "quelle", "questo", "questa",
+  "questi", "queste", "ogni", "alcuni", "alcune", "qualche", "nessuno",
+  "nessuna", "troppo", "troppa", "troppi", "troppe", "altro", "altra",
+  "altri", "altre", "stesso", "stessa", "stessi", "stesse",
+  "adesso", "allora", "comunque", "quindi", "perciò", "però", "oppure",
+  "sia", "tra", "fra", "con", "per", "senza", "dopo", "prima", "durante",
+  "dentro", "fuori", "sopra", "sotto", "verso", "circa", "oltre",
+  "già", "mai", "ora", "poi", "così", "proprio", "davvero", "quasi",
+  "subito", "insieme", "magari", "almeno", "appena", "appunto",
+  "tutti", "tutte", "nulla", "tanto", "tanta", "tanti", "tante",
+  "io", "tu", "lui", "lei", "noi", "voi", "loro", "mio", "mia",
+  "tuo", "tua", "suo", "sua", "nostro", "nostra", "vostro", "vostra",
+  // Italian past participles and common verb forms
+  "stato", "stata", "stati", "state", "fatto", "fatta", "detto", "detta",
+  "visto", "vista", "preso", "presa", "messo", "messa", "dato", "data",
+  "andato", "andata", "venuto", "venuta", "tornato", "tornata",
+  "arrivato", "arrivata", "rimasto", "rimasta", "uscito", "uscita",
+  "entrato", "entrata", "iniziato", "iniziata", "finito", "finita",
+  "capito", "capita", "sentito", "sentita", "parlato", "parlata",
+  "pensato", "pensata", "chiamato", "chiamata", "trovato", "trovata",
+  "lavorato", "lavorata", "cambiato", "cambiata", "provato", "provata",
+  "passato", "passata", "preparato", "preparata",
+  "strutturato", "strutturata", "strutturati", "strutturate",
+  "organizzato", "organizzata", "organizzati", "organizzate",
+  "interessato", "interessata", "interessati", "interessate",
+  "preoccupato", "preoccupata", "preoccupati", "preoccupate",
+  // Italian common adjectives
+  "buono", "buona", "cattivo", "cattiva", "grande", "piccolo", "piccola",
+  "nuovo", "nuova", "vecchio", "vecchia", "lungo", "lunga", "corto", "corta",
+  "alto", "alta", "basso", "bassa", "forte", "debole", "pieno", "piena",
+  "vuoto", "vuota", "chiaro", "chiara", "scuro", "scura",
+  "difficile", "facile", "possibile", "impossibile", "necessario", "necessaria",
+  "importante", "normale", "diverso", "diversa", "uguale", "simile",
+  // Italian articles/prepositions
+  "il", "lo", "la", "le", "gli", "un", "uno", "una", "del", "dello",
+  "della", "dei", "degli", "delle", "nel", "nello", "nella", "nei",
+  "negli", "nelle", "sul", "sullo", "sulla", "sui", "sugli", "sulle",
+  "al", "allo", "alla", "ai", "agli", "alle", "dal", "dallo", "dalla",
+  "dai", "dagli", "dalle",
+  // Italian common verbs (infinitive/conjugated)
+  "essere", "avere", "fare", "dire", "andare", "venire", "potere",
+  "volere", "dovere", "sapere", "vedere", "dare", "stare", "prendere",
+  "mettere", "trovare", "parlare", "sentire", "pensare", "chiamare",
+  "lavorare", "giocare", "mangiare", "bere", "dormire", "leggere",
+  "scrivere", "capire", "credere", "vivere", "morire", "nascere",
   // English
   "here", "fine", "ready", "good", "well", "sorry", "sure", "happy",
   "tired", "done", "busy", "back", "home", "glad", "okay", "great",
   "available", "alone", "late", "early", "right", "wrong", "certain",
+  "the", "this", "that", "these", "those", "what", "which", "who",
+  "where", "when", "how", "why", "some", "any", "all", "each", "every",
+  "both", "few", "many", "much", "more", "most", "other", "another",
+  "such", "like", "just", "still", "also", "very", "really", "quite",
+  "about", "above", "after", "again", "against", "before", "between",
+  "through", "during", "from", "into", "over", "under", "with", "without",
+  "yes", "yeah", "yep", "no", "not", "never", "already", "always",
+  "actually", "basically", "currently", "exactly", "finally", "honestly",
+  "absolutely", "definitely", "probably", "certainly", "obviously",
+  "concerned", "interested", "excited", "worried", "confused", "surprised",
+  "pleased", "disappointed", "frustrated", "overwhelmed",
   // French
   "bien", "ici", "content", "contente", "fatigué", "fatiguée",
   "occupé", "occupée", "seul", "seule", "encore", "aussi", "tout",
   "rien", "toujours", "disponible", "accord", "sûr", "sûre",
   "désolé", "désolée", "prêt", "prête",
+  "le", "la", "les", "un", "une", "des", "du", "de", "ce", "cette",
+  "ces", "mon", "ma", "mes", "ton", "ta", "tes", "son", "ses",
+  "notre", "nos", "votre", "vos", "leur", "leurs",
+  "mais", "ou", "et", "donc", "car", "ni", "que", "qui", "quoi",
+  "où", "quand", "comment", "pourquoi", "combien",
+  "très", "trop", "assez", "peu", "beaucoup", "maintenant", "après",
+  "avant", "pendant", "depuis", "jamais", "souvent", "parfois",
   // Spanish
   "aquí", "listo", "lista", "contento", "contenta", "ocupado", "ocupada",
   "cansado", "cansada", "seguro", "segura",
+  "el", "los", "las", "un", "una", "unos", "unas", "del",
+  "este", "esta", "estos", "estas", "ese", "esa", "esos", "esas",
+  "aquel", "aquella", "aquellos", "aquellas",
+  "pero", "sino", "porque", "como", "donde", "cuando", "mientras",
+  "también", "ahora", "después", "antes", "siempre", "nunca",
   // German
   "hier", "gut", "bereit", "müde", "beschäftigt", "sicher", "fertig",
+  "der", "die", "das", "ein", "eine", "dieser", "diese", "dieses",
+  "jeder", "jede", "jedes", "kein", "keine", "mein", "meine",
+  "aber", "oder", "und", "denn", "weil", "wenn", "dass", "als",
+  "auch", "noch", "schon", "jetzt", "immer", "nie", "sehr", "ganz",
   // Portuguese
   "aqui", "pronto", "pronta", "cansado", "cansada", "ocupado", "ocupada",
+  "sim", "não", "talvez", "agora", "depois", "antes", "sempre", "nunca",
 ]);
 
 // ---- Role/profession words — never valid as person names ----
@@ -45,11 +119,15 @@ const ROLE_WORDS = new Set([
   "educatore", "educatrice", "operatore", "operatrice", "medico",
   "primario", "chirurgo", "farmacista", "ostetrica", "ostetrico",
   "tecnico", "tecnica", "professore", "professoressa",
+  "avvocato", "avvocatessa", "ingegnere", "architetto", "commercialista",
+  "consulente", "analista", "ricercatore", "ricercatrice",
   // English
   "doctor", "nurse", "therapist", "manager", "director", "assistant",
   "coordinator", "patient", "colleague", "supervisor", "consultant",
   "specialist", "technician", "professor", "teacher", "counselor",
   "practitioner", "surgeon", "pharmacist", "midwife",
+  "engineer", "analyst", "researcher", "developer", "designer",
+  "accountant", "lawyer", "architect",
   // French
   "docteur", "infirmier", "infirmière", "thérapeute", "directeur",
   "directrice", "assistante", "coordinateur", "coordinatrice",
@@ -66,12 +144,31 @@ const ROLE_WORDS = new Set([
   "diretor", "diretora", "assistente",
 ]);
 
+// ---- Morphological non-name patterns ----
+// Reject words that match common Italian/Spanish/French morphological patterns
+const NON_NAME_PATTERNS = [
+  // Italian past participles (-ato/-uto/-ito and feminine/plural)
+  /^.{3,}(ato|ata|ati|ate|uto|uta|uti|ute|ito|ita|iti|ite)$/i,
+  // Italian common adjective suffixes
+  /^.{3,}(ale|ile|oso|osa|osi|ose|ivo|iva|ivi|ive|abile|ibile)$/i,
+  // Italian adverb suffix
+  /^.{4,}mente$/i,
+  // Italian gerund
+  /^.{3,}(ando|endo)$/i,
+  // Italian infinitives
+  /^.{3,}(are|ere|ire)$/i,
+];
+
+function matchesNonNamePattern(word: string): boolean {
+  return NON_NAME_PATTERNS.some((p) => p.test(word));
+}
+
 interface TranscriptLine {
   speaker: string | null;
   text: string;
 }
 
-type PatternStrength = "compound" | "strong" | "medium" | "broad";
+type PatternStrength = "compound" | "strong" | "medium";
 
 interface Candidate {
   name: string;
@@ -95,7 +192,7 @@ interface Identification {
   confidence: number;
   evidence: string[];
   role?: string;
-  status: "applied" | "suggested";
+  status: "suggested";
   source: "deterministic" | "ai";
   _validation?: ValidationStatus;
   _needsAI?: boolean;
@@ -104,15 +201,15 @@ interface Identification {
 // ---- Helpers ----
 
 function isValidName(token: string): boolean {
-  if (token.length < 2) return false;
+  if (token.length < 3) return false;
   if (STOPWORDS.has(token.toLowerCase())) return false;
   if (ROLE_WORDS.has(token.toLowerCase())) return false;
   if (/^\d+$/.test(token)) return false;
+  if (matchesNonNamePattern(token)) return false;
   return true;
 }
 
 function isCapitalised(token: string): boolean {
-  // Latin + Cyrillic uppercase detection
   return /^[A-ZÀ-ÖØ-ÞĀ-ŽА-ЯЁ]/.test(token);
 }
 
@@ -138,9 +235,11 @@ function mk(name: string, text: string, strength: PatternStrength, role?: string
 function validateCandidate(candidate: Candidate): ValidationResult {
   const nameLower = candidate.name.toLowerCase();
   if (STOPWORDS.has(nameLower)) return { status: "rejected", reason: "stopword" };
-  if (candidate.name.length < 2) return { status: "rejected", reason: "too_short" };
+  if (candidate.name.length < 3) return { status: "rejected", reason: "too_short" };
+  if (matchesNonNamePattern(candidate.name)) return { status: "rejected", reason: "morphological_non_name" };
   if (ROLE_WORDS.has(nameLower)) return { status: "suspicious", reason: "role_word" };
   if (candidate.name.length > 15 || candidate.name.includes(" ")) return { status: "suspicious", reason: "too_long_or_multiword" };
+  if (!candidate.capitalised) return { status: "suspicious", reason: "not_capitalised" };
   return { status: "clean" };
 }
 
@@ -165,7 +264,7 @@ function extractCompoundPatterns(t: string): Candidate | null {
     if (isValidName(namePart)) return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
   }
 
-  // Italian: "sono X la/il [role]" — name first, role after (e.g. "sono Martina la logopedista")
+  // Italian: "sono X la/il [role]" — name first, role after
   m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:il|la)\s+(\S+)/i);
   if (m) {
     const namePart = cleanName(m[1]);
@@ -176,7 +275,7 @@ function extractCompoundPatterns(t: string): Candidate | null {
   }
 
   // Italian: "sono l'[role] X" — elided article
-  m = t.match(/\bsono\s+l[''\u2019](\S+)\s+(\S+)/i);
+  m = t.match(/\bsono\s+l['''\u2019](\S+)\s+(\S+)/i);
   if (m) {
     const possibleRole = cleanName(m[1]);
     const possibleName = cleanName(m[2]);
@@ -186,7 +285,7 @@ function extractCompoundPatterns(t: string): Candidate | null {
   }
 
   // Italian: "sono X della/del ..." — name + org context
-  m = t.match(/\bsono\s+(\S+)\s+del(?:la|l[''\u2019])?\s+/i);
+  m = t.match(/\bsono\s+(\S+)\s+del(?:la|l['''\u2019])?\s+/i);
   if (m) { const c = mk(m[1], t, "compound"); if (c) return c; }
 
   // Italian: "sono il/la [known role pattern] X"
@@ -199,7 +298,7 @@ function extractCompoundPatterns(t: string): Candidate | null {
   }
 
   // English: "I'm X, the [role]" or "I am X, the [role]"
-  m = t.match(/\bI(?:[''\u2019]\s*m|\s+am)\s+(\S+),?\s+the\s+(.+)/i);
+  m = t.match(/\bI(?:['''\u2019]\s*m|\s+am)\s+(\S+),?\s+the\s+(.+)/i);
   if (m) { const c = mk(m[1], t, "compound", m[2]); if (c) return c; }
 
   // English: "this is Dr/Doctor X"
@@ -207,11 +306,11 @@ function extractCompoundPatterns(t: string): Candidate | null {
   if (m) { const c = mk(m[1], t, "compound", "Dr"); if (c) return c; }
 
   // English: "I'm Dr/Doctor X"
-  m = t.match(/\bI(?:[''\u2019]\s*m|\s+am)\s+(?:Dr\.?|Doctor)\s+(\S+)/i);
+  m = t.match(/\bI(?:['''\u2019]\s*m|\s+am)\s+(?:Dr\.?|Doctor)\s+(\S+)/i);
   if (m) { const c = mk(m[1], t, "compound", "Dr"); if (c) return c; }
 
-  // English: "I'm nurse/therapist X" — role-word + name
-  m = t.match(/\bI(?:[''\u2019]\s*m|\s+am)\s+(\S+)\s+(\S+)/i);
+  // English: "I'm [role] X"
+  m = t.match(/\bI(?:['''\u2019]\s*m|\s+am)\s+(\S+)\s+(\S+)/i);
   if (m) {
     const first = cleanName(m[1]);
     const second = cleanName(m[2]);
@@ -232,7 +331,7 @@ function extractCompoundPatterns(t: string): Candidate | null {
   m = t.match(/\bje\s+suis\s+(\S+)[,\s]+(?:le|la)\s+(.+)/i);
   if (m) { const c = mk(m[1], t, "compound", m[2]); if (c) return c; }
 
-  // French: "je suis X le/la [role]" — name first, role after (e.g. "je suis Marie la thérapeute")
+  // French: "je suis X le/la [role]" — name first, role after
   m = t.match(/\bje\s+suis\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:le|la)\s+(\S+)/i);
   if (m) {
     const namePart = cleanName(m[1]);
@@ -250,7 +349,7 @@ function extractCompoundPatterns(t: string): Candidate | null {
     if (isValidName(namePart)) return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
   }
 
-  // Spanish: "soy X el/la [role]" — name first, role after (e.g. "soy Carlos el enfermero")
+  // Spanish: "soy X el/la [role]" — name first, role after
   m = t.match(/\bsoy\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:el|la)\s+(\S+)/i);
   if (m) {
     const namePart = cleanName(m[1]);
@@ -285,7 +384,7 @@ function extractSelfIdentification(text: string): Candidate | null {
   if (m) { const c = mk(m[1], t, "strong"); if (c) return c; }
 
   // French: "je m'appelle X"
-  m = t.match(/\bje\s+m[''\u2019]appelle\s+(\S+)/i);
+  m = t.match(/\bje\s+m['''\u2019]appelle\s+(\S+)/i);
   if (m) { const c = mk(m[1], t, "strong"); if (c) return c; }
 
   // Spanish: "me llamo X"
@@ -328,117 +427,61 @@ function extractSelfIdentification(text: string): Candidate | null {
   m = t.match(/\bjmenuji\s+se\s+(\S+)/i);
   if (m) { const c = mk(m[1], t, "strong"); if (c) return c; }
 
-  // ===== MEDIUM patterns (0.85) =====
+  // ===== MEDIUM patterns (0.85) — require capitalised name =====
 
   // Italian: "mi presento, sono X"
-  m = t.match(/\bmi\s+presento[,\s]+sono\s+(\S+)/i);
+  m = t.match(/\bmi\s+presento[,\s]+sono\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // Italian: "piacere, X"
-  m = t.match(/\bpiacere[,\s]+(\S+)/i);
+  m = t.match(/\bpiacere[,\s]+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // Italian: "qui è X"
-  m = t.match(/\bqui\s+è\s+(\S+)/i);
+  m = t.match(/\bqui\s+è\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // Italian: "parlo io, X"
-  m = t.match(/\bparlo\s+io[,\s]+(\S+)/i);
+  m = t.match(/\bparlo\s+io[,\s]+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // English: "hello/hi, this is X"
-  m = t.match(/\b(?:hello|hi)[,\s]+this\s+is\s+(\S+)/i);
+  m = t.match(/\b(?:hello|hi)[,\s]+this\s+is\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // English: "X speaking"
-  m = t.match(/^(\S+)\s+speaking\s*[.!]?\s*$/i);
+  m = t.match(/^([A-ZÀ-Ö]\S*)\s+speaking\s*[.!]?\s*$/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // English: "speaking, X"
-  m = t.match(/\bspeaking[,\s]+(\S+)/i);
+  m = t.match(/\bspeaking[,\s]+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // French: "bonjour, je suis X"
-  m = t.match(/\bbonjour[,\s]+je\s+suis\s+(\S+)/i);
+  m = t.match(/\bbonjour[,\s]+je\s+suis\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // French: "moi c'est X"
-  m = t.match(/\bmoi\s+c[''\u2019]est\s+(\S+)/i);
+  m = t.match(/\bmoi\s+c['''\u2019]est\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // French: "X à l'appareil"
-  m = t.match(/^(\S+)\s+à\s+l[''\u2019]appareil/i);
+  m = t.match(/^([A-ZÀ-Ö]\S*)\s+à\s+l['''\u2019]appareil/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // Spanish: "hola, soy X"
-  m = t.match(/\bhola[,\s]+soy\s+(\S+)/i);
+  m = t.match(/\bhola[,\s]+soy\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // German: "hier ist X"
-  m = t.match(/\bhier\s+ist\s+(\S+)/i);
+  m = t.match(/\bhier\s+ist\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
   // German: "hier spricht X"
-  m = t.match(/\bhier\s+spricht\s+(\S+)/i);
+  m = t.match(/\bhier\s+spricht\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
-  // ===== BROAD patterns (0.70 → always suggested) =====
-
-  // Italian: "io sono X"
-  m = t.match(/\bio\s+sono\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Italian: "sono X" (without explicit "io" — pro-drop)
-  m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)/);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // English: "I am X"
-  m = t.match(/\bI\s+am\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // English: "I'm X"
-  m = t.match(/\bI[''\u2019]\s*m\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // English: "this is X" (start of utterance)
-  m = t.match(/^this\s+is\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // French: "je suis X"
-  m = t.match(/\bje\s+suis\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Spanish: "soy X"
-  m = t.match(/\bsoy\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // German: "ich bin X"
-  m = t.match(/\bich\s+bin\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Portuguese: "eu sou X" / "sou o/a X"
-  m = t.match(/\b(?:eu\s+)?sou\s+(?:o\s+|a\s+)?(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Dutch: "ik ben X"
-  m = t.match(/\bik\s+ben\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Turkish: "ben X"
-  m = t.match(/\bben\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Polish: "jestem X"
-  m = t.match(/\bjestem\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Romanian: "sunt X"
-  m = t.match(/\bsunt\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-
-  // Czech: "jsem X"
-  m = t.match(/\bjsem\s+(\S+)/i);
-  if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
+  // NO BROAD PATTERNS — removed entirely per plan
 
   return null;
 }
@@ -510,11 +553,10 @@ function runDeterministicExtraction(
       case "compound": confidence = 0.92; break;
       case "strong": confidence = 0.90; break;
       case "medium": confidence = 0.85; break;
-      case "broad": confidence = 0.70; break;
     }
 
-    // Lowercase penalty for non-broad
-    if (!bestCandidate.capitalised && strength !== "broad") {
+    // Lowercase penalty
+    if (!bestCandidate.capitalised) {
       confidence = Math.max(confidence - 0.10, 0.70);
     }
 
@@ -531,23 +573,14 @@ function runDeterministicExtraction(
     if (confidence < 0.80) needsAI = true;
     if (!bestCandidate.capitalised) needsAI = true;
 
-    // Auto-apply: broad patterns can NEVER auto-apply
-    const canAutoApply =
-      strength !== "broad" &&
-      validation.status === "clean" &&
-      !hasMultipleNames &&
-      !hasCrossSpeakerConflict &&
-      bestCandidate.capitalised &&
-      confidence >= 0.85 &&
-      !ROLE_WORDS.has(bestCandidate.name.toLowerCase());
-
+    // NEVER auto-apply — always suggest
     results.push({
       speaker_label: speaker,
       inferred_name: displayName,
       confidence,
       evidence: allEvidence,
       role,
-      status: canAutoApply ? "applied" : "suggested",
+      status: "suggested",
       source: "deterministic",
       _validation: validation.status,
       _needsAI: needsAI,
@@ -562,7 +595,8 @@ function runDeterministicExtraction(
 async function runAIReview(
   escalatedResults: Identification[],
   lines: TranscriptLine[],
-  apiKey: string
+  apiKey: string,
+  language?: string
 ): Promise<Identification[]> {
   if (escalatedResults.length === 0) return [];
 
@@ -577,21 +611,26 @@ async function runAIReview(
     .map((r) => `${r.speaker_label} → candidate: "${r.inferred_name}" (confidence: ${r.confidence}, role: "${r.role ?? "unknown"}", evidence: ${r.evidence.join(" | ")})`)
     .join("\n");
 
-  const systemPrompt = `You are identifying speaker names from a transcript.
+  const langHint = language ? `\nTranscript language: ${language}` : "";
 
-Given transcript segments and candidate extractions, determine the correct person name for each speaker label.
+  const systemPrompt = `You are a SCEPTICAL speaker name verifier for transcripts.
 
-Rules:
-- Extract the PERSON'S NAME (e.g. "Camilla"), never a profession/role word
-- Put roles/titles in the "role" field (e.g. "terapista occupazionale")
-- Handle messy speech: commas, repetitions, false starts, filler words
-- Example: "sono Camilla, sono la terapista occupazionale" → name: "Camilla", role: "terapista occupazionale"
-- "io sono, sono Marco" → name: "Marco"
-- If no clear name is identifiable, set confidence below 0.5
-- Capitalise person names properly even if the transcript has them lowercase
-- Return a JSON array: [{"speaker_label": "...", "inferred_name": "...", "confidence": 0.0-1.0, "role": "..."}]`;
+Given transcript segments and candidate name extractions, verify whether each candidate is a real person name.
+${langHint}
 
-  const userPrompt = `Candidate extractions (may be incorrect):\n${candidateDescription}\n\nRelevant transcript segments:\n${relevantLines}`;
+CRITICAL RULES:
+- You must REJECT any candidate that is NOT clearly a person's proper name
+- Common words, adjectives, verbs, past participles, articles, pronouns, role titles, and profession words are NEVER valid names
+- If no clear person name is identifiable from the evidence, set confidence to 0.0
+- Do NOT infer, guess, or fabricate names — only confirm names with explicit evidence
+- A person name must appear as a self-introduction (e.g. "mi chiamo Marco", "my name is Sarah")
+- "sono strutturati", "sono che", "I am happy" do NOT contain person names
+- Put roles/titles in the "role" field (e.g. "terapista occupazionale"), never in "inferred_name"
+- Capitalise proper names correctly
+- Return a JSON array: [{"speaker_label": "...", "inferred_name": "...", "confidence": 0.0-1.0, "role": "..."}]
+- When in doubt, return confidence 0.0 — it is better to miss a name than to suggest a wrong one`;
+
+  const userPrompt = `Verify these candidate extractions (reject any that are not real person names):\n${candidateDescription}\n\nRelevant transcript segments:\n${relevantLines}`;
 
   try {
     const res = await fetch(AI_GATEWAY, {
@@ -631,8 +670,10 @@ Rules:
     const aiMap = new Map<string, { inferred_name: string; confidence: number; role?: string }>();
     for (const item of parsed) {
       if (item?.speaker_label && item?.inferred_name && typeof item?.confidence === "number") {
-        if (ROLE_WORDS.has(item.inferred_name.toLowerCase())) {
-          console.warn(`[identify-speakers] AI returned role word as name: "${item.inferred_name}", skipping`);
+        // Post-AI blocklist check — AI cannot bypass validation
+        const nameLower = item.inferred_name.toLowerCase();
+        if (STOPWORDS.has(nameLower) || ROLE_WORDS.has(nameLower) || matchesNonNamePattern(item.inferred_name)) {
+          console.warn(`[identify-speakers] AI returned blocked word as name: "${item.inferred_name}", skipping`);
           continue;
         }
         aiMap.set(item.speaker_label, {
@@ -651,7 +692,7 @@ Rules:
         inferred_name: ai.inferred_name,
         confidence: ai.confidence,
         role: ai.role ?? r.role,
-        status: ai.confidence >= 0.85 ? "applied" as const : "suggested" as const,
+        status: "suggested" as const,
         source: "ai" as const,
         _needsAI: false,
       };
@@ -670,7 +711,7 @@ serve(async (req) => {
   }
 
   try {
-    const { job_id, transcript_lines, existing_speaker_names, force } = await req.json();
+    const { job_id, transcript_lines, existing_speaker_names, language, force } = await req.json();
 
     if (!job_id || !Array.isArray(transcript_lines)) {
       return new Response(
@@ -716,13 +757,14 @@ serve(async (req) => {
     let finalResults: Identification[];
     if (needsAI.length > 0 && LOVABLE_API_KEY) {
       console.log(`[identify-speakers] Escalating ${needsAI.length} candidates to AI for job ${job_id}`);
-      const aiResults = await runAIReview(needsAI, lines, LOVABLE_API_KEY);
+      const aiResults = await runAIReview(needsAI, lines, LOVABLE_API_KEY, language);
       finalResults = [...clean, ...aiResults];
     } else {
       finalResults = deterministicResults;
     }
 
-    finalResults = finalResults.filter((r) => r.confidence >= 0.5);
+    // Confidence floor: 0.75 minimum for any suggestion
+    finalResults = finalResults.filter((r) => r.confidence >= 0.75);
 
     const cleanResults = finalResults.map(({ _validation, _needsAI, ...rest }) => rest);
 
@@ -749,22 +791,10 @@ serve(async (req) => {
         metadata: outputData,
       });
 
-    const applied = cleanResults.filter((r) => r.status === "applied");
-    if (applied.length > 0) {
-      const updatedNames = { ...speakerNames };
-      for (const r of applied) {
-        if (!updatedNames[r.speaker_label]) {
-          updatedNames[r.speaker_label] = r.inferred_name;
-        }
-      }
-      await supabase
-        .from("jobs")
-        .update({ speaker_names: updatedNames })
-        .eq("id", job_id);
-    }
+    // No auto-apply — never update speaker_names automatically
 
     console.log(
-      `[identify-speakers] job=${job_id} total=${cleanResults.length} applied=${applied.length} suggested=${cleanResults.length - applied.length} ai_reviewed=${needsAI.length}`
+      `[identify-speakers] job=${job_id} total=${cleanResults.length} suggested=${cleanResults.length} ai_reviewed=${needsAI.length}`
     );
 
     return new Response(
@@ -781,5 +811,5 @@ serve(async (req) => {
 });
 
 // Export for testing
-export { extractSelfIdentification, extractCompoundPatterns, validateCandidate, isValidName, isCapitalised, cleanName, STOPWORDS, ROLE_WORDS };
+export { extractSelfIdentification, extractCompoundPatterns, validateCandidate, isValidName, isCapitalised, cleanName, matchesNonNamePattern, STOPWORDS, ROLE_WORDS };
 export type { Candidate, ValidationResult, PatternStrength };

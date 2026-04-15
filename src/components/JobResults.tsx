@@ -413,7 +413,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     setIdentifyingInProgress(true);
     try {
       const { data, error } = await supabase.functions.invoke("identify-speakers", {
-        body: { job_id: jobId, transcript_lines: lines, existing_speaker_names: speakerNames },
+        body: { job_id: jobId, transcript_lines: lines, existing_speaker_names: speakerNames, language: meta?.language_detected ?? undefined },
       });
       if (error || data?.error) return;
       const result = data?.data as SpeakerIdentificationData | undefined;
@@ -422,11 +422,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       setIdentifications(result.suggestions);
       setIdentificationBannerDismissed(result.banner_dismissed ?? false);
 
-      // If names were auto-applied server-side, refetch
-      if (!data.cached && result.suggestions.some((s: SpeakerIdentification) => s.status === "applied")) {
-        const { data: jobData } = await supabase.from("jobs").select("speaker_names").eq("id", jobId).maybeSingle();
-        if (jobData) setSpeakerNames((jobData.speaker_names as Record<string, string>) ?? {});
-      }
+      // No auto-apply — all suggestions require user acceptance
 
       const { data: outputRow } = await supabase.from("job_outputs").select("id").eq("job_id", jobId).eq("output_type", "speaker_identifications").maybeSingle();
       if (outputRow) setIdentificationOutputId(outputRow.id);
