@@ -601,7 +601,8 @@
     "finalBody": "Start with one file or get credits for repeat use — your results stay saved in your account.",
     "finalCta": "Create account and continue",
     "finalCtaLoggedIn": "Continue",
-    "comingSoon": "Payment system is being finalised — check back soon."
+    "comingSoon": "Payment system is being finalised — check back soon.",
+    "purchaseSuccess": "Purchase complete! Your credits have been added."
   },
   "transcriptionSettings": {
     "title": "Transcription settings",
