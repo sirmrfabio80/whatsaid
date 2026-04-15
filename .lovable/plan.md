@@ -1,88 +1,98 @@
 
 
-# Fix: Mobile Input Focus Zoom Issue
+# Speaker Suggestion Feature: Audit & Rebuild Plan
 
 ## 1. Root Cause Analysis
 
-**Primary cause: iOS Safari auto-zoom on inputs with font-size below 16px.**
+The core bug is in the **"broad" pattern tier** (lines 385–441 of `identify-speakers/index.ts`). These patterns match any word following common verbs:
 
-iOS Safari automatically zooms the viewport when a user focuses an input whose computed font-size is less than 16px. Once zoomed, Safari does not reliably zoom back out when the input loses focus.
+- `sono X` (Italian) — matches "sono **Strutturati**", "sono **che**", "sono **contento**"
+- `io sono X`, `I am X`, `je suis X`, `ich bin X`, etc.
 
-Affected components and their current font sizes on mobile:
+In Italian, "sono" means both "I am" (first person) and "they are" (third person), making `\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)/` catastrophically over-eager. Any capitalised word at sentence start after "sono" gets captured as a name.
 
-| Component | Current mobile font | File |
-|-----------|-------------------|------|
-| `Textarea` | `text-sm` (14px) always | `src/components/ui/textarea.tsx` |
-| `Select` trigger | `text-sm` (14px) always | `src/components/ui/select.tsx` |
-| `CommandInput` (cmdk) | `text-sm` (14px) always | `src/components/ui/command.tsx` |
-| `Input` | `text-base` mobile / `md:text-sm` desktop — **already correct** | `src/components/ui/input.tsx` |
-| `InputOTP` slot | `text-sm` (14px) always | `src/components/ui/input-otp.tsx` |
-| `SidebarInput` | inherits from `Input` — OK | `src/components/ui/sidebar.tsx` |
-| Share email field | overridden to `text-base md:text-sm` — OK | `src/components/ShareButton.tsx` |
+The stopword list covers ~80 words but misses thousands of common Italian words (articles, conjunctions, adjectives, past participles, verbs, etc.). "Che", "Strutturati", "Tutti", "Questo", "Quello", "Appena" — none are in the stopword list but none are names.
 
-**Secondary cause: viewport meta tag missing `maximum-scale=1`.**
+**Secondary issues:**
+- The AI review layer (lines 560–663) receives already-bad candidates and often confirms them because the prompt says "determine the correct person name" — biasing the model toward finding a name even when none exists
+- Broad-tier confidence starts at 0.70, which passes the 0.50 final threshold
+- No language-aware validation — the system doesn't know the transcript language, so it can't apply language-specific word-class filtering
+- No proper-noun plausibility check — any capitalised word passes `isValidName()` if it's not in the tiny stopword/role sets
 
-The current viewport tag is `width=device-width, initial-scale=1.0` — it does not prevent user/auto zoom. Adding `maximum-scale=1` is the nuclear option but harms accessibility (prevents pinch-to-zoom). The font-size fix is preferred and sufficient.
+## 2. Recommendation: **Option A — Conservative Rebuild**
 
-**No transform/layout issues identified.** The Drawer (vaul) uses standard fixed positioning; it does not apply viewport-level transforms that would amplify zoom.
+Rebuild the feature with strict evidence requirements. The deterministic pattern-matching architecture is fundamentally sound for compound and strong patterns (explicit self-introductions like "mi chiamo Marco", "my name is Sarah"). These are high-signal, low-risk. The problem is exclusively in the broad tier and the insufficient validation layer.
 
-## 2. Recommended Fix Strategy
+## 3. Acceptance Criteria
 
-**Apply the same pattern already used in `Input`**: use `text-base` (16px) on mobile, `md:text-sm` on desktop, for every focusable text-input control.
+1. **No suggestion unless explicit self-introduction evidence exists** — patterns like "mi chiamo X", "my name is X", "I'm X, the [role]" are valid; patterns like "sono X", "I am X" alone are NOT valid
+2. **Broad pattern tier is removed entirely** — only compound, strong, and medium tiers remain
+3. **A proper-noun plausibility gate rejects common words** — using a combination of: (a) expanded multilingual stopword list (~500+ words covering articles, conjunctions, prepositions, common adjectives, common verbs, past participles), (b) minimum 3 characters for single-word names, (c) rejection of words that are lowercase in the original transcript
+4. **Confidence floor raised to 0.75** for any suggestion to be shown (up from 0.50)
+5. **Nothing is ever auto-applied** — all identifications are "suggested" status, requiring explicit user acceptance
+6. **AI review prompt is rewritten** to be sceptical by default: "If no clear person name is present, return confidence 0.0. Do NOT infer or guess names."
+7. **Transcript language is passed** to the edge function and used in the AI review prompt for language-aware validation
+8. **Zero false positives on Italian transcripts** that contain no self-introductions
 
-This is the minimal, standards-compliant fix. No viewport meta hacks. No JavaScript workarounds.
+## 4. Exact Product/UI Changes
 
-## 3. Exact Files and Changes
+### Backend — `supabase/functions/identify-speakers/index.ts`
+- **Delete** the entire broad pattern section (lines 385–441)
+- **Expand** STOPWORDS to ~500+ entries covering Italian/English/French/Spanish/German common words (articles, conjunctions, prepositions, common adjectives, verbs, adverbs, pronouns, past participles)
+- **Add** a `COMMON_WORDS` blocklist for words that pass stopword check but are clearly not names: Italian past participles (-ato/-uto/-ito), common adjectives (-ale/-ile/-oso), etc.
+- **Add** a pattern-based non-name detector: reject words matching Italian morphological patterns like `/^(che|chi|cosa|come|dove|quando|perché|quello|questa|questi|quelle|ogni|anche|ancora|adesso|allora|comunque|quindi|perciò|però|oppure|sia|tra|fra|con|per|senza)$/i`
+- **Require** original-text capitalisation for medium-tier patterns (not just compound/strong)
+- **Change** all `status: "applied"` to `status: "suggested"` — remove auto-apply logic entirely
+- **Raise** final filter threshold from `confidence >= 0.5` to `confidence >= 0.75`
+- **Accept** `language` parameter in request body; pass it to AI review prompt
+- **Rewrite** AI review system prompt to be sceptical: instruct it to return confidence 0.0 if no clear name is present, never guess, never use transcript words that aren't proper nouns
 
-### `src/components/ui/textarea.tsx`
-- Change `text-sm` → `text-base md:text-sm` in the className string.
+### Frontend — `src/components/SpeakerIdentificationBanner.tsx`
+- **Remove** the "applied" section rendering (lines 81–166) — since nothing auto-applies, only "suggested" items exist
+- **Simplify** the banner to show only suggestions with accept/reject/edit controls
+- Or: keep the applied rendering for backward compatibility with already-stored data, but no new items will have "applied" status
 
-### `src/components/ui/select.tsx`
-- In `SelectTrigger`, change `text-sm` → `text-base md:text-sm`.
+### Shared types — `src/lib/speaker-identification.ts`
+- **Expand** STOPWORDS and ROLE_WORDS to match the backend lists (keep in sync for any client-side validation)
 
-### `src/components/ui/command.tsx`
-- In `CommandInput`, change `text-sm` → `text-base md:text-sm`.
+### Caller — wherever `identify-speakers` is invoked
+- **Pass** the transcript language (from job metadata) in the request body as `language`
 
-### `src/components/ui/input-otp.tsx`
-- In `InputOTPSlot`, change `text-sm` → `text-base md:text-sm`.
+## 5. Files/Services Affected
 
-### No changes needed:
-- `Input` — already has `text-base md:text-sm`
-- `ShareButton` email field — already overridden to `text-base md:text-sm`
-- `SidebarInput` — inherits from `Input`
-- `AudioUploader` file input — hidden, not focusable
-- `AvatarUpload` file input — hidden, not focusable
-- Auth pages (`Login`, `Signup`, `ResetPassword`, `SetPassword`) — all use `Input` component
-- `SpeakerIdentificationBanner` — uses `Input` component
-- `HistoryFilters` — uses `Input` component
-- `TranscriptionSettings` — uses `Textarea` (covered above)
-- `TranscriptEditor` — uses `Textarea` (covered above)
-- Drawer/Sheet — no input elements of their own; they host the above components
-- `index.html` viewport meta — no change (avoid breaking pinch-to-zoom accessibility)
+| File | Change |
+|------|--------|
+| `supabase/functions/identify-speakers/index.ts` | Major: remove broad patterns, expand blocklists, rewrite AI prompt, remove auto-apply, raise thresholds, accept language param |
+| `supabase/functions/identify-speakers/identify-speakers.test.ts` | Update tests: add Italian non-name rejection cases, remove broad-pattern expectations |
+| `src/lib/speaker-identification.ts` | Expand STOPWORDS/ROLE_WORDS, remove "applied" from status type if desired |
+| `src/components/SpeakerIdentificationBanner.tsx` | Minor: simplify if auto-apply is fully removed |
+| Caller of `identify-speakers` (likely in `post-process` or `JobDetail`) | Pass `language` field |
 
-## 4. Regression Checklist
+## 6. Regression Risks
 
-- Verify desktop `Input`, `Textarea`, `Select`, `CommandInput` still render at `text-sm` (14px) — confirmed by `md:text-sm` breakpoint.
-- Verify no layout shifts on desktop from the 2px font-size difference at mobile widths — these components are already `h-10` / `min-h-[80px]` so height is fixed.
-- Verify `InputOTP` slots still align correctly at 16px — the slot is `w-10 h-10`, font change is minor.
-- Verify no Tailwind class conflicts (no other responsive `text-*` classes on these elements).
+| Risk | Mitigation |
+|------|------------|
+| Legitimate names caught by expanded blocklist (e.g., a person actually named "Felice") | Keep medium/strong patterns which require explicit intro phrases — if someone says "mi chiamo Felice", it will still work because the intro pattern overrides the stopword |
+| Removing auto-apply frustrates users who had names correctly identified | All suggestions still appear in the banner; users just need one tap to accept. This is the correct UX for a trust-sensitive feature |
+| Expanded blocklist maintenance burden | Use morphological patterns (regex for common suffixes) rather than exhaustive word lists |
+| AI review returning garbage despite prompt rewrite | Final validation layer still checks against blocklists after AI response; AI can only upgrade confidence, never bypass blocklist |
 
-## 5. Manual QA Checklist
+## 7. Manual QA Cases
 
-### iPhone Safari
-1. Open the app on an iPhone (or Safari responsive mode at 390×844).
-2. Navigate to the Share sheet — tap the email input. Confirm no zoom occurs. Type, blur, confirm viewport is normal.
-3. Navigate to a job with Q&A — tap the question textarea. Confirm no zoom.
-4. Open Transcription Settings — tap the keyterms textarea. Confirm no zoom.
-5. Open Login / Signup — tap email and password fields. Confirm no zoom.
-6. Open History — tap the search input and tag filter input. Confirm no zoom.
-7. Open any Select dropdown (language selector). Confirm no zoom on trigger focus.
-8. Pinch-to-zoom the page manually — confirm it still works (accessibility preserved).
+1. **Italian transcript, no introductions**: Should produce zero suggestions
+2. **Italian transcript with "mi chiamo Marco"**: Should suggest "Marco" for the correct speaker
+3. **Italian transcript with "sono strutturati"**: Must NOT suggest "Strutturati"
+4. **Italian transcript with "sono che..."**: Must NOT suggest "Che"
+5. **Italian transcript with "sono contenta"**: Must NOT suggest (stopword)
+6. **Italian transcript with "sono il dottore"**: Must NOT suggest "Dottore" (role word)
+7. **Italian compound: "sono Camilla, la terapista"**: Should suggest "Camilla"
+8. **English transcript with "my name is Sarah"**: Should suggest "Sarah"
+9. **English transcript with "I am happy to be here"**: Must NOT suggest "Happy"
+10. **Mixed-language transcript**: Should handle correctly per-pattern language
+11. **Transcript with multiple speakers, one introduces themselves**: Only that speaker gets a suggestion
+12. **Previously stored "applied" results**: Banner still renders them correctly (backward compat)
 
-### Android Chrome
-1. Repeat steps 2–7. Android Chrome is less aggressive about auto-zoom but verify no regressions.
+## 8. Why Option B (Remove Entirely) Was Not Chosen
 
-### Desktop Chrome / Firefox
-1. Verify all inputs render at the smaller `text-sm` size as before.
-2. Verify no visual or spacing changes on any page.
+The feature provides genuine value when transcripts contain explicit self-introductions. The compound and strong pattern tiers (e.g., "mi chiamo X", "my name is X", "I'm X, the therapist") are reliable and high-precision. The problem is localised to the broad tier and insufficient validation — not a fundamental architectural flaw. Removing the entire feature would sacrifice real value to fix a scoped problem. The conservative rebuild eliminates the bad outputs while preserving the good ones, and the shift to suggestion-only (no auto-apply) ensures the user always has final say.
 
