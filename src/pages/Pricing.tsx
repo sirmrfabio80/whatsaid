@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -146,7 +147,7 @@ function PricingCard({
 
 export default function Pricing() {
   const { t } = useTranslation();
-  const { user, refreshCredits } = useAuth();
+  const { user, creditBalance, refreshCredits } = useAuth();
   const navigate = useNavigate();
 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(
