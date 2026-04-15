@@ -181,14 +181,31 @@ export default function Pricing() {
       return;
     }
 
+    const priorBalance = creditBalance;
+
     openCheckout({
       priceId: product.paddlePriceId,
       userId: user.id,
       email: user.email,
       onSuccess: () => {
-        toast.success(t("pricing.purchaseSuccess"));
-        // Delay to allow webhook to process
-        setTimeout(() => refreshCredits(), 3000);
+        let attempts = 0;
+        const poll = setInterval(async () => {
+          attempts++;
+          const { data } = await supabase
+            .from("credit_balances")
+            .select("balance")
+            .eq("user_id", user.id)
+            .single();
+          if (data && data.balance > priorBalance) {
+            clearInterval(poll);
+            toast.success(t("pricing.purchaseSuccess"));
+            refreshCredits();
+          } else if (attempts >= 10) {
+            clearInterval(poll);
+            toast.info(t("pricing.creditsArrivingShortly", "Credits arriving shortly — refresh if needed"));
+            refreshCredits();
+          }
+        }, 2000);
       },
     });
   }
