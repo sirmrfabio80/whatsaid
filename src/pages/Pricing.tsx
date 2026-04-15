@@ -149,6 +149,7 @@ export default function Pricing() {
   const { t } = useTranslation();
   const { user, creditBalance, refreshCredits } = useAuth();
   const navigate = useNavigate();
+  const [processingPurchase, setProcessingPurchase] = useState(false);
 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(
     undefined
@@ -189,6 +190,7 @@ export default function Pricing() {
       userId: user.id,
       email: user.email,
       onSuccess: () => {
+        setProcessingPurchase(true);
         let attempts = 0;
         const poll = setInterval(async () => {
           attempts++;
@@ -199,10 +201,12 @@ export default function Pricing() {
             .single();
           if (data && data.balance > priorBalance) {
             clearInterval(poll);
+            setProcessingPurchase(false);
             toast.success(t("pricing.purchaseSuccess"));
             refreshCredits();
           } else if (attempts >= 10) {
             clearInterval(poll);
+            setProcessingPurchase(false);
             toast.info(t("pricing.creditsArrivingShortly", "Credits arriving shortly — refresh if needed"));
             refreshCredits();
           }
