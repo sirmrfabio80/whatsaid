@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
+import { initPaddle, openCheckout } from "@/lib/paddle-checkout";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -145,7 +146,7 @@ function PricingCard({
 
 export default function Pricing() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, refreshCredits } = useAuth();
   const navigate = useNavigate();
 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(
@@ -154,6 +155,11 @@ export default function Pricing() {
   const { prices, loading, currency, isLocalized } = usePaddlePricing(
     selectedCurrency
   );
+
+  // Initialise Paddle.js on mount
+  useEffect(() => {
+    initPaddle();
+  }, []);
 
   const heroReveal = useScrollReveal();
   const valueReveal = useScrollReveal();
@@ -164,12 +170,27 @@ export default function Pricing() {
   const ctaReveal = useScrollReveal();
 
   function handleCta(productId: PricingProduct["id"]) {
-    if (user) {
-      toast.info(t("pricing.comingSoon"));
-      return;
-    } else {
+    if (!user) {
       navigate(`/signup?intent=purchase&product=${productId}`);
+      return;
     }
+
+    const product = PRICING_PRODUCTS.find((p) => p.id === productId);
+    if (!product?.paddlePriceId) {
+      toast.error(t("pricing.comingSoon"));
+      return;
+    }
+
+    openCheckout({
+      priceId: product.paddlePriceId,
+      userId: user.id,
+      email: user.email,
+      onSuccess: () => {
+        toast.success(t("pricing.purchaseSuccess"));
+        // Delay to allow webhook to process
+        setTimeout(() => refreshCredits(), 3000);
+      },
+    });
   }
 
   function handleGetStarted() {
