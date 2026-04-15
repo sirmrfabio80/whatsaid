@@ -522,6 +522,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     onUndo={handleIdentificationUndo}
                     onEdit={handleIdentificationEdit}
                     onDismiss={handleIdentificationDismiss}
+                    onRerun={() => {
+                      identificationRanRef.current = false;
+                      runSpeakerIdentification();
+                    }}
+                    isRerunning={identifyingInProgress}
                   />
                 </div>
               )}
