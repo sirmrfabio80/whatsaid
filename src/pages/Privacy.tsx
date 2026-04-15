@@ -41,8 +41,8 @@ export default function Privacy() {
   ];
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
-      <div className="container mx-auto px-4 py-12 sm:py-16">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+      <div className="container mx-auto px-4 py-8 sm:py-12">
         <div className="max-w-3xl mx-auto">
           <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground mb-6" asChild>
             <Link to="/"><ArrowLeft className="w-4 h-4" />{t("common.backToHome")}</Link>

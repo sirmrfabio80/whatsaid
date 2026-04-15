@@ -52,7 +52,7 @@ export default function SetPassword() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center animate-page-enter">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center animate-page-enter-flat">
       <div className="w-full max-w-md px-4">
         <Card className="rounded-xl border-border bg-card shadow-sm">
           <CardContent className="p-6 sm:p-8 space-y-6">

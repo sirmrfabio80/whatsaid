@@ -136,7 +136,7 @@ export function SectionBody({ body }: { body: string }) {
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {proseLines.length > 0 && (
           <p className="text-sm leading-relaxed text-foreground/90">
             {renderLine(proseLines.join(" "))}
@@ -157,7 +157,7 @@ export function SectionBody({ body }: { body: string }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {lines.map((line, i) => {
         const { text, isHeading } = stripHeading(line);
         return (
@@ -192,7 +192,7 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
         <section
           key={i}
           aria-labelledby={section.heading ? `summary-section-${i}` : undefined}
-          className="rounded-xl bg-muted/40 p-4"
+          className="rounded-xl bg-muted/40 p-3 sm:p-4"
         >
           {section.heading && (
             <div className="flex items-center gap-2 mb-1.5">

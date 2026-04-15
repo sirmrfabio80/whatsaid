@@ -192,7 +192,7 @@ export default function Pricing() {
   ];
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
       {/* 1 — Hero */}
       <section ref={heroReveal.ref} className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent pointer-events-none" />

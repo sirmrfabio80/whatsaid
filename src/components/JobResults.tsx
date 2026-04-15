@@ -529,7 +529,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   }) : null;
 
   return (
-    <div className="space-y-6 animate-page-enter">
+    <div className="space-y-6 animate-page-enter-flat">
       <Tabs defaultValue="summary" className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <TabsList className="w-auto justify-start rounded-full bg-muted/40 p-1 h-auto gap-0.5">
