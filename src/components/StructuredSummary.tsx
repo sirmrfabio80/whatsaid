@@ -62,6 +62,12 @@ function parseSections(content: string): SummarySection[] {
   return sections.filter((s) => s.body.length > 0);
 }
 
+function stripHeading(line: string): { text: string; isHeading: boolean } {
+  const match = line.match(/^#{1,4}\s+(.*)/);
+  if (match) return { text: match[1], isHeading: true };
+  return { text: line, isHeading: false };
+}
+
 function renderLine(line: string): ReactNode {
   // Bold: **text**
   const parts: ReactNode[] = [];
@@ -114,11 +120,14 @@ export function SectionBody({ body }: { body: string }) {
           </p>
         )}
         <ul className="space-y-1.5 list-disc list-outside pl-4 marker:text-primary/40">
-          {bullets.map((b, i) => (
-            <li key={i} className="text-sm leading-relaxed text-foreground/90">
-              {renderLine(b)}
-            </li>
-          ))}
+          {bullets.map((b, i) => {
+            const { text, isHeading } = stripHeading(b);
+            return (
+              <li key={i} className={`text-sm leading-relaxed text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+                {renderLine(text)}
+              </li>
+            );
+          })}
         </ul>
       </div>
     );
@@ -126,11 +135,14 @@ export function SectionBody({ body }: { body: string }) {
 
   return (
     <div className="space-y-2">
-      {lines.map((line, i) => (
-        <p key={i} className="text-sm leading-relaxed text-foreground/90">
-          {renderLine(line)}
-        </p>
-      ))}
+      {lines.map((line, i) => {
+        const { text, isHeading } = stripHeading(line);
+        return (
+          <p key={i} className={`text-sm leading-relaxed text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+            {renderLine(text)}
+          </p>
+        );
+      })}
     </div>
   );
 }
