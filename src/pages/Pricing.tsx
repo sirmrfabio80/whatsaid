@@ -189,6 +189,7 @@ export default function Pricing() {
       priceId: product.paddlePriceId,
       userId: user.id,
       email: user.email,
+      successUrl: `${window.location.origin}/convert?purchased=true&priorBalance=${encodeURIComponent(String(priorBalance))}`,
       onSuccess: () => {
         setProcessingPurchase(true);
         let attempts = 0;
@@ -198,7 +199,7 @@ export default function Pricing() {
             .from("credit_balances")
             .select("balance")
             .eq("user_id", user.id)
-            .single();
+            .maybeSingle();
           if (data && data.balance > priorBalance) {
             clearInterval(poll);
             setProcessingPurchase(false);

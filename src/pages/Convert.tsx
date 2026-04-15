@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
 import type { TranscriptionConfig } from "@/components/TranscriptionSettings";
@@ -23,9 +24,11 @@ import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 type ProcessingStep = "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 
 export default function Convert() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, refreshCredits } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Fetch credit balance for logged-in users
@@ -50,6 +53,7 @@ export default function Convert() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [transcriptionConfig] = useState<TranscriptionConfig>({ strategy: "recovery", enhanceAudio: true });
   const [processing, setProcessing] = useState(false);
+  const [processingPurchase, setProcessingPurchase] = useState(false);
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -114,6 +118,72 @@ export default function Convert() {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [jobId, processing]);
+
+  useEffect(() => {
+    if (!user || searchParams.get("purchased") !== "true") return;
+
+    const priorBalanceParam = searchParams.get("priorBalance");
+    const priorBalance = Number(priorBalanceParam ?? "NaN");
+    const hasPriorBalance = Number.isFinite(priorBalance);
+    let attempts = 0;
+    let active = true;
+
+    setProcessingPurchase(true);
+
+    const finish = (updatedBalance?: number) => {
+      if (!active) return;
+      active = false;
+      setProcessingPurchase(false);
+      setSearchParams((currentParams) => {
+        const next = new URLSearchParams(currentParams);
+        next.delete("purchased");
+        next.delete("priorBalance");
+        return next;
+      }, { replace: true });
+
+      if (typeof updatedBalance === "number") {
+        queryClient.setQueryData(["credit-balance", user.id], updatedBalance);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["credit-balance", user.id] });
+      }
+    };
+
+    const poll = async () => {
+      attempts += 1;
+
+      const { data } = await supabase
+        .from("credit_balances")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!active) return;
+
+      const latestBalance = data?.balance ?? 0;
+
+      if (!hasPriorBalance || latestBalance > priorBalance) {
+        await refreshCredits();
+        finish(latestBalance);
+        toast.success(t("pricing.purchaseSuccess"));
+        return;
+      }
+
+      if (attempts >= 10) {
+        await refreshCredits();
+        finish();
+        toast.info(t("pricing.creditsArrivingShortly", "Credits arriving shortly — refresh if needed"));
+        return;
+      }
+
+      window.setTimeout(poll, 2000);
+    };
+
+    void poll();
+
+    return () => {
+      active = false;
+    };
+  }, [user, searchParams, setSearchParams, queryClient, refreshCredits, t]);
 
   const handleConvert = async () => {
     if (!file || !user) return;
@@ -228,6 +298,19 @@ export default function Convert() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+      {processingPurchase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 shadow-lg">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-lg font-medium text-foreground">
+              {t("pricing.processingPurchase", "Processing purchase…")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("pricing.processingPurchaseDesc", "Your credits will appear shortly.")}
+            </p>
+          </div>
+        </div>
+      )}
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">

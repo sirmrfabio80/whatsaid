@@ -37,7 +37,13 @@ export function initPaddle(): void {
   initialised = true;
 }
 
-export function openCheckout(opts: { priceId: string; userId: string; email?: string; onSuccess?: () => void }): void {
+export function openCheckout(opts: {
+  priceId: string;
+  userId: string;
+  email?: string;
+  onSuccess?: () => void;
+  successUrl?: string;
+}): void {
   initPaddle();
   const paddle = getPaddle();
   if (!paddle) {
@@ -54,7 +60,7 @@ export function openCheckout(opts: { priceId: string; userId: string; email?: st
     settings: {
       displayMode: "overlay",
       theme: "dark",
-      successUrl: `${window.location.origin}/convert?purchased=true`,
+      successUrl: opts.successUrl ?? `${window.location.origin}/convert?purchased=true`,
     },
   });
 }
