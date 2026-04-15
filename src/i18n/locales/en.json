@@ -196,6 +196,9 @@
     "deleteConfirmTitle": "Are you absolutely sure?",
     "deleteConfirmDesc": "This will permanently delete your account, credits, and all conversion history. This cannot be undone.",
     "deleteMyAccount": "Delete my account",
+    "deletingAccount": "Deleting...",
+    "deleteError": "Could not delete your account. Please try again.",
+    "deleteSuccess": "Your account has been deleted.",
     "admin": {
       "title": "Invite Users",
       "desc": "Invite users to WhatSaid and gift them a credit package.",
