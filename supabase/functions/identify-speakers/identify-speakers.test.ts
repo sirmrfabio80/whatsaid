@@ -2,6 +2,7 @@ import { assertEquals, assertNotEquals } from "https://deno.land/std@0.168.0/tes
 import {
   extractSelfIdentification,
   validateCandidate,
+  matchesNonNamePattern,
   ROLE_WORDS,
   STOPWORDS,
 } from "./index.ts";
@@ -199,9 +200,7 @@ Deno.test("CS: 'jmenuji se Pavel' → Pavel (strong)", () => {
 // ===== NEGATIVE CASES — must NOT extract a name =====
 
 Deno.test("NEG IT: 'sono la terapista occupazionale' → no name (role only)", () => {
-  // This ends with a role word, should not extract "occupazionale" as a name
   const r = extractResult("sono la terapista occupazionale");
-  // Should either be null or the name should not be "occupazionale" or "terapista"
   if (r) {
     assertNotEquals(r.name.toLowerCase(), "occupazionale");
     assertNotEquals(r.name.toLowerCase(), "terapista");
@@ -222,11 +221,7 @@ Deno.test("NEG FR: 'je suis disponible' → no name (stopword)", () => {
 
 Deno.test("NEG IT: 'sono contento' → no name (stopword)", () => {
   const r = extractResult("sono contento");
-  // "io sono contento" would not match since "contento" is a stopword
-  // "sono contento" should not extract via broad patterns either
-  if (r) {
-    assertNotEquals(r.name.toLowerCase(), "contento");
-  }
+  assertEquals(r, null);
 });
 
 Deno.test("NEG EN: 'I am fine' → no name (stopword)", () => {
@@ -241,37 +236,117 @@ Deno.test("NEG ES: 'soy el director' → no name (role only)", () => {
   }
 });
 
-// ===== BROAD PATTERN CASES — must be suggested, never auto-applied =====
+// ===== CRITICAL: Italian false positive cases that MUST be rejected =====
 
-Deno.test("BROAD DE: 'ich bin Thomas' → Thomas (broad)", () => {
-  const r = extractResult("ich bin Thomas");
-  assertEquals(r?.name, "Thomas");
-  assertEquals(r?.patternStrength, "broad");
+Deno.test("NEG IT: 'sono strutturati' → no name (past participle)", () => {
+  const r = extractResult("sono strutturati");
+  assertEquals(r, null);
 });
 
-Deno.test("BROAD ES: 'soy Carlos' → Carlos (broad)", () => {
-  const r = extractResult("soy Carlos");
-  assertEquals(r?.name, "Carlos");
-  assertEquals(r?.patternStrength, "broad");
+Deno.test("NEG IT: 'sono Strutturati' → no name (capitalised past participle)", () => {
+  const r = extractResult("sono Strutturati");
+  assertEquals(r, null);
 });
 
-Deno.test("BROAD PL: 'jestem Anna' → Anna (broad)", () => {
-  const r = extractResult("jestem Anna");
-  assertEquals(r?.name, "Anna");
-  assertEquals(r?.patternStrength, "broad");
+Deno.test("NEG IT: 'sono che...' → no name", () => {
+  const r = extractResult("sono che non capisco");
+  assertEquals(r, null);
 });
 
-Deno.test("BROAD EN: 'I am David' → David (broad)", () => {
+Deno.test("NEG IT: 'Sono interessata' → no name (past participle)", () => {
+  const r = extractResult("Sono interessata");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG IT: 'sono organizzati' → no name (past participle)", () => {
+  const r = extractResult("sono organizzati");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG IT: 'io sono contenta' → no name (stopword)", () => {
+  const r = extractResult("io sono contenta");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG EN: 'I am happy to be here' → no name", () => {
+  const r = extractResult("I am happy to be here");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG EN: 'I'm tired' → no name (stopword)", () => {
+  const r = extractResult("I'm tired");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG FR: 'je suis fatigué' → no name (stopword)", () => {
+  const r = extractResult("je suis fatigué");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG DE: 'ich bin müde' → no name (stopword)", () => {
+  const r = extractResult("ich bin müde");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG ES: 'soy seguro' → no name (stopword)", () => {
+  const r = extractResult("soy seguro");
+  assertEquals(r, null);
+});
+
+Deno.test("NEG IT: 'sono il dottore' → no name (role word only)", () => {
+  const r = extractResult("sono il dottore");
+  if (r) {
+    assertNotEquals(r.name.toLowerCase(), "dottore");
+  }
+});
+
+// ===== BROAD PATTERNS REMOVED — these should now return null =====
+
+Deno.test("REMOVED BROAD: 'sono Marco' → null (broad removed, no intro phrase)", () => {
+  // Without an explicit introduction pattern, bare "sono X" should not match
+  const r = extractResult("sono Marco");
+  assertEquals(r, null);
+});
+
+Deno.test("REMOVED BROAD: 'I am David' → null (broad removed)", () => {
   const r = extractResult("I am David");
-  assertEquals(r?.name, "David");
-  assertEquals(r?.patternStrength, "broad");
+  assertEquals(r, null);
 });
 
-Deno.test("BROAD FR: 'je suis Marie' → Marie (broad)", () => {
-  // Without "bonjour" prefix, falls to broad
+Deno.test("REMOVED BROAD: 'je suis Marie' → null (broad removed, use 'bonjour, je suis' or 'je m'appelle')", () => {
   const r = extractResult("je suis Marie");
-  assertEquals(r?.name, "Marie");
-  assertEquals(r?.patternStrength, "broad");
+  assertEquals(r, null);
+});
+
+Deno.test("REMOVED BROAD: 'ich bin Thomas' → null (broad removed)", () => {
+  const r = extractResult("ich bin Thomas");
+  assertEquals(r, null);
+});
+
+Deno.test("REMOVED BROAD: 'soy Carlos' → null (broad removed, use 'hola, soy' or 'me llamo')", () => {
+  const r = extractResult("soy Carlos");
+  assertEquals(r, null);
+});
+
+// ===== MORPHOLOGICAL PATTERN TESTS =====
+
+Deno.test("MORPH: Italian past participle -ato is rejected", () => {
+  assertEquals(matchesNonNamePattern("strutturato"), true);
+  assertEquals(matchesNonNamePattern("organizzato"), true);
+  assertEquals(matchesNonNamePattern("interessato"), true);
+});
+
+Deno.test("MORPH: Italian adjective -ale/-ile is rejected", () => {
+  assertEquals(matchesNonNamePattern("normale"), true);
+  assertEquals(matchesNonNamePattern("difficile"), true);
+  assertEquals(matchesNonNamePattern("possibile"), true);
+});
+
+Deno.test("MORPH: Real names are NOT rejected by morphology", () => {
+  assertEquals(matchesNonNamePattern("Marco"), false);
+  assertEquals(matchesNonNamePattern("Camilla"), false);
+  assertEquals(matchesNonNamePattern("Sarah"), false);
+  assertEquals(matchesNonNamePattern("Giovanni"), false);
 });
 
 // ===== ROLE EXTRACTION CASES =====
@@ -297,19 +372,19 @@ Deno.test("ROLE: 'je suis le docteur Martin' → name: Martin, role: docteur", (
 // ===== VALIDATION TESTS =====
 
 Deno.test("VALIDATION: role word → suspicious", () => {
-  const c: Candidate = { name: "terapista", evidence: [], capitalised: false, compound: false, patternStrength: "broad" };
+  const c: Candidate = { name: "terapista", evidence: [], capitalised: false, compound: false, patternStrength: "medium" };
   const v = validateCandidate(c);
   assertEquals(v.status, "suspicious");
 });
 
 Deno.test("VALIDATION: stopword → rejected", () => {
-  const c: Candidate = { name: "fine", evidence: [], capitalised: false, compound: false, patternStrength: "broad" };
+  const c: Candidate = { name: "fine", evidence: [], capitalised: false, compound: false, patternStrength: "medium" };
   const v = validateCandidate(c);
   assertEquals(v.status, "rejected");
 });
 
-Deno.test("VALIDATION: short name → rejected", () => {
-  const c: Candidate = { name: "X", evidence: [], capitalised: true, compound: false, patternStrength: "strong" };
+Deno.test("VALIDATION: short name (< 3 chars) → rejected", () => {
+  const c: Candidate = { name: "Xu", evidence: [], capitalised: true, compound: false, patternStrength: "strong" };
   const v = validateCandidate(c);
   assertEquals(v.status, "rejected");
 });
@@ -320,6 +395,18 @@ Deno.test("VALIDATION: clean name → clean", () => {
   assertEquals(v.status, "clean");
 });
 
+Deno.test("VALIDATION: morphological non-name → rejected", () => {
+  const c: Candidate = { name: "Strutturati", evidence: [], capitalised: true, compound: false, patternStrength: "medium" };
+  const v = validateCandidate(c);
+  assertEquals(v.status, "rejected");
+});
+
+Deno.test("VALIDATION: non-capitalised name → suspicious", () => {
+  const c: Candidate = { name: "marco", evidence: [], capitalised: false, compound: false, patternStrength: "strong" };
+  const v = validateCandidate(c);
+  assertEquals(v.status, "suspicious");
+});
+
 // ===== ROLE_WORDS coverage =====
 
 Deno.test("ROLE_WORDS includes expanded ES/DE/PT terms", () => {
@@ -327,4 +414,17 @@ Deno.test("ROLE_WORDS includes expanded ES/DE/PT terms", () => {
   assertEquals(ROLE_WORDS.has("ärztin"), true);
   assertEquals(ROLE_WORDS.has("doutora"), true);
   assertEquals(ROLE_WORDS.has("terapeuta"), true);
+});
+
+// ===== STOPWORDS coverage =====
+
+Deno.test("STOPWORDS includes Italian common words that caused false positives", () => {
+  assertEquals(STOPWORDS.has("che"), true);
+  assertEquals(STOPWORDS.has("strutturati"), true);
+  assertEquals(STOPWORDS.has("tutti"), true);
+  assertEquals(STOPWORDS.has("questo"), true);
+  assertEquals(STOPWORDS.has("quello"), true);
+  assertEquals(STOPWORDS.has("appena"), true);
+  assertEquals(STOPWORDS.has("interessato"), true);
+  assertEquals(STOPWORDS.has("organizzato"), true);
 });
