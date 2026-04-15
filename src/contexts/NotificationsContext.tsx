@@ -294,6 +294,14 @@ border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 aut
           if (insertErr || !jobRow) throw new Error("Could not create export job");
           asyncJobId = jobRow.id;
 
+          // Start heartbeat — bump updated_at every 30s so cleanup-stale-jobs doesn't kill us
+          const heartbeat = setInterval(async () => {
+            await supabase
+              .from("async_jobs")
+              .update({ updated_at: new Date().toISOString() })
+              .eq("id", asyncJobId);
+          }, 30_000);
+
           // 2. Generate PDF blob (client-side)
           const { generatePdfBlob } = await import("@/lib/export-pdf");
           const blob = await generatePdfBlob(data);
