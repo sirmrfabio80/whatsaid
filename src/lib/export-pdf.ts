@@ -47,7 +47,7 @@ const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - FOOTER_RESERVE_MM;
 
 /** Render pipeline */
 const RENDER_WIDTH_PX = 794;
-const RENDER_SCALE = 3;
+const RENDER_SCALE = 2;
 
 /** Spacing between blocks (mm) */
 const SECTION_GAP_MM = 3.5;
@@ -91,7 +91,7 @@ const SPEAKER_COLORS = [
 const WRAPPER_PAD_X_PX = 28;
 
 /** Approximate usable content height in px (at scale 1) used as batch threshold */
-const BATCH_HEIGHT_THRESHOLD_PX = 800;
+const BATCH_HEIGHT_THRESHOLD_PX = 1400;
 
 /* ------------------------------------------------------------------ */
 /*  HTML helpers                                                       */
@@ -500,6 +500,13 @@ async function renderCanvas(el: HTMLDivElement): Promise<HTMLCanvasElement> {
   });
 }
 
+/** Encode canvas to a data URL — JPEG for speed, PNG only when transparency needed */
+function canvasToDataUrl(canvas: HTMLCanvasElement): string {
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+const IMAGE_FORMAT: "JPEG" | "PNG" = "JPEG";
+
 function canvasHeightMm(canvas: HTMLCanvasElement): number {
   return (canvas.height * CONTENT_WIDTH_MM) / canvas.width;
 }
@@ -560,12 +567,12 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
       // Block fits on current page
       if (heightMm <= remainingMm) {
         const encStart = performance.now();
-        const imgData = canvas.toDataURL("image/png");
+        const imgData = canvasToDataUrl(canvas);
         pngEncodeTimeMs += performance.now() - encStart;
 
         pdf.addImage(
           imgData,
-          "PNG",
+          IMAGE_FORMAT,
           MARGIN_LEFT_MM,
           currentY,
           CONTENT_WIDTH_MM,
@@ -612,13 +619,13 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
         }
 
         const encStart = performance.now();
-        const imgData = sliceCanvas.toDataURL("image/png");
+        const imgData = canvasToDataUrl(sliceCanvas);
         pngEncodeTimeMs += performance.now() - encStart;
 
         pdf.addImage(
           imgData,
-          "PNG",
-           MARGIN_LEFT_MM,
+          IMAGE_FORMAT,
+          MARGIN_LEFT_MM,
           currentY,
           CONTENT_WIDTH_MM,
           sliceHeightMm,
