@@ -26,7 +26,7 @@ export function initPaddle(): void {
   paddle.Initialize({
     token: PADDLE_CLIENT_TOKEN,
     // For sandbox testing, uncomment:
-    environment: "sandbox",
+    //environment: "sandbox",
   });
   initialised = true;
 }
