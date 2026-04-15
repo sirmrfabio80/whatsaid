@@ -57,10 +57,9 @@ async function verifyPaddleSignature(
 // ---------------------------------------------------------------------------
 
 const PRICE_TO_CREDITS: Record<string, number> = {
-  // These will be populated once Paddle products are created:
-  // "pri_XXXX": 1,   // One-time transcript
-  // "pri_YYYY": 5,   // 5-credit pack
-  // "pri_ZZZZ": 20,  // 20-credit pack
+  "pri_01kp91g9954gq9a4k080fdgedw": 1,   // One-time transcript
+  "pri_01kp91hv62g2nx9jxqta2766hf": 5,   // 5-credit pack
+  "pri_01kp91m77g15bhgemezzcsvh2n": 20,  // 20-credit pack
 };
 
 // Fallback: derive credits from product custom_data if price ID not mapped

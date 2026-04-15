@@ -41,7 +41,7 @@ export interface PricingState {
 export const PRICING_PRODUCTS: PricingProduct[] = [
   {
     id: "one-time",
-    paddlePriceId: null,
+    paddlePriceId: "pri_01kp91g9954gq9a4k080fdgedw",
     basePriceGBP: 4.99,
     title: "pricing.oneTimeTitle",
     subtitle: "pricing.oneTimeSubtitle",
@@ -57,7 +57,7 @@ export const PRICING_PRODUCTS: PricingProduct[] = [
   },
   {
     id: "5-pack",
-    paddlePriceId: null,
+    paddlePriceId: "pri_01kp91hv62g2nx9jxqta2766hf",
     basePriceGBP: 14.99,
     title: "pricing.fivePackTitle",
     subtitle: "pricing.fivePackSubtitle",
@@ -77,7 +77,7 @@ export const PRICING_PRODUCTS: PricingProduct[] = [
   },
   {
     id: "20-pack",
-    paddlePriceId: null,
+    paddlePriceId: "pri_01kp91m77g15bhgemezzcsvh2n",
     basePriceGBP: 39.99,
     title: "pricing.twentyPackTitle",
     subtitle: "pricing.twentyPackSubtitle",
