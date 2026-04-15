@@ -167,6 +167,7 @@
     "emailLabel": "Email",
     "saveChanges": "Save changes",
     "changeEmail": "Change email",
+    "emailOAuthLocked": "Your sign-in email is managed by your Google account and cannot be changed here.",
     "changeEmailTitle": "Change email address",
     "changeEmailDesc": "Enter your new email address. You may need to verify it before the change takes effect.",
     "newEmail": "New email",
@@ -361,7 +362,13 @@
     "alreadyClaimed": "This transcript has already been claimed.",
     "expired": "This share link has expired.",
     "claimFailed": "Could not claim the transcript. Please try again.",
-    "genericError": "Something went wrong. Please try again."
+    "genericError": "Something went wrong. Please try again.",
+    "mismatchTitle": "Wrong account",
+    "mismatchDesc": "This transcript was shared with {{recipientEmail}}. You're signed in with a different email.",
+    "mismatchSignedInAs": "You're signed in as:",
+    "mismatchSharedWith": "Shared with:",
+    "switchAccount": "Sign out and switch account",
+    "createAccountForEmail": "Create account with that email"
   },
   "audioUploader": {
     "dropTitle": "Drop your audio file here",
