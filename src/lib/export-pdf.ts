@@ -1,10 +1,11 @@
-import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import logoUrl from "@/assets/logo.png";
-
 import type { CanonicalExportData } from "./export-types";
 
-/** Cache the logo as a base64 data URL so we decode it only once per session. */
+/* ------------------------------------------------------------------ */
+/*  Logo cache                                                         */
+/* ------------------------------------------------------------------ */
+
 let _logoDataUrl: string | null = null;
 async function getLogoDataUrl(): Promise<string | null> {
   if (_logoDataUrl) return _logoDataUrl;
@@ -26,675 +27,522 @@ async function getLogoDataUrl(): Promise<string | null> {
 }
 
 /* ------------------------------------------------------------------ */
-/*  PDF Layout Tokens                                                  */
+/*  Layout & typography tokens                                         */
 /* ------------------------------------------------------------------ */
 
-/** Page geometry */
-const PAGE_WIDTH_MM = 210;
-const PAGE_HEIGHT_MM = 297;
+const PAGE_W = 210;
+const PAGE_H = 297;
+const ML = 15;
+const MR = 15;
+const MT = 15;
+const FOOTER_H = 14;
+const CW = PAGE_W - ML - MR;
+const MAX_Y = PAGE_H - FOOTER_H;
 
-/** Page margins — reduced for more content width on mobile screens */
-const MARGIN_LEFT_MM = 10;
-const MARGIN_RIGHT_MM = 10;
-const MARGIN_TOP_MM = 12;
+/** Font sizes in pt — calibrated for readable mobile PDF viewing */
+const F = {
+  h1: 27, h2: 18, h3: 16, h4: 15,
+  body: 13, bullet: 13, qa: 13,
+  transcript: 12, timestamp: 10, meta: 11,
+} as const;
 
-/** Footer reservation — fixed area at page bottom that content must never enter */
-const FOOTER_RESERVE_MM = 14;
-
-/** Derived layout values */
-const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM;
-const MAX_CONTENT_Y_MM = PAGE_HEIGHT_MM - FOOTER_RESERVE_MM;
-
-/** Render pipeline */
-const RENDER_WIDTH_PX = 794;
-const RENDER_SCALE = 2;
-
-/** Spacing between blocks (mm) */
-const SECTION_GAP_MM = 3.5;
-const PARAGRAPH_GAP_MM = 1;
-
-/** Typography (px) — optimised for handheld PDF reading */
-const BODY_FONT_PX = 20;
-const TRANSCRIPT_FONT_PX = 20;
-const TIMESTAMP_FONT_PX = 16;
-const META_FONT_PX = 17;
-const H1_FONT_PX = 40;
-const H2_FONT_PX = 26;
-const H3_FONT_PX = 24;
-const H4_FONT_PX = 22;
-const QA_PROMPT_FONT_PX = 20;
-const BULLET_FONT_PX = BODY_FONT_PX;
+const LH = 1.65;
+const HLH = 1.35;
 
 /** Colours */
-const COLOR_HEADING = "#111827";
-const COLOR_BODY = "#1f2937";
-const COLOR_TIMESTAMP = "#9ca3af";
-const COLOR_SPEAKER = "#111827";
-const COLOR_META = "#6b7280";
-const COLOR_DIVIDER = "#e5e7eb";
-const COLOR_ACCENT = "#6366f1";
-const COLOR_TRANSCRIPT_BG = "#f8f9fa";
+const C = {
+  heading: "#111827",
+  body: "#1f2937",
+  timestamp: "#9ca3af",
+  meta: "#6b7280",
+  accent: "#6366f1",
+  transcriptBg: "#f8f9fa",
+} as const;
 
-/** Palette for per-speaker left-border colours — professional, accessible, distinct */
 const SPEAKER_COLORS = [
-  "#6366f1", // indigo
-  "#0891b2", // cyan
-  "#16a34a", // green
-  "#d97706", // amber
-  "#dc2626", // red
-  "#9333ea", // purple
-  "#0d9488", // teal
-  "#c026d3", // fuchsia
-  "#2563eb", // blue
-  "#ea580c", // orange
+  "#6366f1", "#0891b2", "#16a34a", "#d97706", "#dc2626",
+  "#9333ea", "#0d9488", "#c026d3", "#2563eb", "#ea580c",
 ];
-const WRAPPER_PAD_X_PX = 28;
-
-/** Approximate usable content height in px (at scale 1) used as batch threshold */
-const BATCH_HEIGHT_THRESHOLD_PX = 1400;
 
 /* ------------------------------------------------------------------ */
-/*  HTML helpers                                                       */
+/*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+function ptMm(pt: number): number {
+  return pt * 25.4 / 72;
 }
 
-function inlineMarkdownToHtml(escaped: string): string {
-  let result = escaped.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
-  result = result.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  result = result.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  return result;
+function hexRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.substring(0, 2), 16),
+    parseInt(h.substring(2, 4), 16),
+    parseInt(h.substring(4, 6), 16),
+  ];
 }
 
-/**
- * Split markdown text into sections where each section starts with a heading.
- * Each returned chunk contains the heading AND the content that follows it,
- * so they are always rendered together (preventing orphaned headings).
- */
-function splitMarkdownBySections(text: string): string[] {
-  const lines = text.split("\n");
-  const chunks: string[] = [];
-  let current: string[] = [];
+/* ------------------------------------------------------------------ */
+/*  Inline markdown parser                                             */
+/* ------------------------------------------------------------------ */
 
-  for (const line of lines) {
-    if (/^#{2,4}\s/.test(line) && current.length > 0) {
-      chunks.push(current.join("\n"));
-      current = [];
-    }
-    current.push(line);
+interface TextRun {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+}
+
+function parseInline(s: string): TextRun[] {
+  const runs: TextRun[] = [];
+  const rx = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  let li = 0;
+  let m: RegExpExecArray | null;
+  while ((m = rx.exec(s)) !== null) {
+    if (m.index > li) runs.push({ text: s.slice(li, m.index) });
+    if (m[2]) runs.push({ text: m[2], bold: true, italic: true });
+    else if (m[3]) runs.push({ text: m[3], bold: true });
+    else if (m[4]) runs.push({ text: m[4], italic: true });
+    li = rx.lastIndex;
   }
-  if (current.length > 0) chunks.push(current.join("\n"));
-  return chunks;
+  if (li < s.length) runs.push({ text: s.slice(li) });
+  if (runs.length === 0) runs.push({ text: s });
+  return runs;
 }
 
-function markdownToHtml(text: string): string {
-  const lines = text.split("\n");
-  const htmlParts: string[] = [];
-  let inList = false;
+interface FmtWord {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+}
 
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
-    const bulletMatch = line.match(/^[\s]*[-*]\s+(.*)/);
-
-    if (!bulletMatch && inList) {
-      htmlParts.push("</ul>");
-      inList = false;
+function runsToWords(runs: TextRun[]): FmtWord[] {
+  const words: FmtWord[] = [];
+  for (const r of runs) {
+    for (const t of r.text.split(/\s+/)) {
+      if (t) words.push({ text: t, bold: !!r.bold, italic: !!r.italic });
     }
+  }
+  return words;
+}
 
-    if (line.startsWith("### ")) {
-      htmlParts.push(`<h4 style="font-size:${H4_FONT_PX}px;line-height:1.35;margin:14px 0 6px;font-weight:700;color:${COLOR_HEADING}">${inlineMarkdownToHtml(escapeHtml(line.slice(4)))}</h4>`);
-      continue;
-    }
-    if (line.startsWith("## ")) {
-      htmlParts.push(`<h3 style="font-size:${H3_FONT_PX}px;line-height:1.35;margin:18px 0 8px;font-weight:700;color:${COLOR_HEADING}">${inlineMarkdownToHtml(escapeHtml(line.slice(3)))}</h3>`);
-      continue;
-    }
+/* ------------------------------------------------------------------ */
+/*  PDF text renderer                                                  */
+/* ------------------------------------------------------------------ */
 
-    if (bulletMatch) {
-      if (!inList) {
-        htmlParts.push('<ul style="margin:8px 0 8px 22px;padding:0">');
-        inList = true;
+class Pen {
+  pdf: jsPDF;
+  y = MT;
+
+  constructor(pdf: jsPDF) {
+    this.pdf = pdf;
+  }
+
+  private setF(bold: boolean, italic: boolean, sz: number) {
+    const style = bold && italic ? "bolditalic" : bold ? "bold" : italic ? "italic" : "normal";
+    this.pdf.setFont("helvetica", style);
+    this.pdf.setFontSize(sz);
+  }
+
+  private setC(hex: string) {
+    this.pdf.setTextColor(...hexRgb(hex));
+  }
+
+  private baseline(fontSize: number): number {
+    return this.y + ptMm(fontSize) * 0.78;
+  }
+
+  pageBreak(need: number) {
+    if (this.y + need > MAX_Y) {
+      this.pdf.addPage();
+      this.y = MT;
+    }
+  }
+
+  newPage() {
+    if (this.y > MT + 1) {
+      this.pdf.addPage();
+      this.y = MT;
+    }
+  }
+
+  gap(mm: number) {
+    this.y += mm;
+  }
+
+  /** Render rich text with inline bold/italic and word wrapping */
+  rich(
+    runs: TextRun[],
+    fontSize: number,
+    color: string,
+    x = ML,
+    maxW = CW,
+    lhMul = LH,
+  ): number {
+    const words = runsToWords(runs);
+    if (!words.length) return 0;
+
+    const lineH = ptMm(fontSize) * lhMul;
+    this.setF(false, false, fontSize);
+    const spaceW = this.pdf.getTextWidth(" ");
+
+    // Word-wrap into lines
+    const lines: FmtWord[][] = [];
+    let curLine: FmtWord[] = [];
+    let curW = 0;
+
+    for (const w of words) {
+      this.setF(w.bold, w.italic, fontSize);
+      const ww = this.pdf.getTextWidth(w.text);
+      const need = curLine.length ? spaceW + ww : ww;
+      if (curW + need > maxW && curLine.length) {
+        lines.push(curLine);
+        curLine = [w];
+        curW = ww;
+      } else {
+        curLine.push(w);
+        curW += need;
       }
-      htmlParts.push(`<li style="margin:3px 0;line-height:1.6;font-size:${BULLET_FONT_PX}px">${inlineMarkdownToHtml(escapeHtml(bulletMatch[1]))}</li>`);
-      continue;
     }
+    if (curLine.length) lines.push(curLine);
 
-    if (line.trim() === "") {
-      htmlParts.push('<div style="height:8px"></div>');
-      continue;
-    }
-
-    htmlParts.push(`<p style="margin:5px 0;line-height:1.65;font-size:${BODY_FONT_PX}px;color:${COLOR_BODY}">${inlineMarkdownToHtml(escapeHtml(line))}</p>`);
-  }
-
-  if (inList) htmlParts.push("</ul>");
-  return htmlParts.join("");
-}
-
-function speakerBlockStyle(borderColor: string): string {
-  return `margin:4px 0;padding:8px 12px;background:${COLOR_TRANSCRIPT_BG};border-left:3px solid ${borderColor};border-radius:0 4px 4px 0`;
-}
-
-function speakerParagraphToHtml(line: string, speakerColorMap: Map<string, string>): string {
-  /** Resolve or assign a colour for a speaker name */
-  function colorFor(name: string): string {
-    const key = name.toLowerCase();
-    let color = speakerColorMap.get(key);
-    if (!color) {
-      color = SPEAKER_COLORS[speakerColorMap.size % SPEAKER_COLORS.length];
-      speakerColorMap.set(key, color);
-    }
-    return color;
-  }
-
-  // Match timestamp + speaker: "[00:12:34] Speaker Name: text..."
-  const tsMatch = line.match(/^\[(\d{2}:\d{2}:\d{2})\]\s*(.+?):\s(.*)/);
-  if (tsMatch) {
-    const timestamp = tsMatch[1];
-    const speakerRaw = tsMatch[2];
-    const speaker = escapeHtml(speakerRaw);
-    const text = escapeHtml(tsMatch[3]);
-    const style = speakerBlockStyle(colorFor(speakerRaw));
-    return `<div style="${style}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><span style="font-size:${TIMESTAMP_FONT_PX}px;color:${COLOR_TIMESTAMP};font-family:monospace;letter-spacing:-0.3px">${timestamp}</span>&ensp;<strong style="color:${COLOR_SPEAKER};font-weight:700">${speaker}:</strong> ${text}</p></div>`;
-  }
-  // Fallback: speaker without timestamp
-  const speakerMatch = line.match(/^(.+?):\s/);
-  if (speakerMatch) {
-    const speakerRaw = speakerMatch[1];
-    const label = escapeHtml(`${speakerRaw}:`);
-    const rest = escapeHtml(line.slice(speakerMatch[0].length));
-    const style = speakerBlockStyle(colorFor(speakerRaw));
-    return `<div style="${style}"><p style="margin:0;line-height:1.6;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}"><strong style="color:${COLOR_SPEAKER};font-weight:700">${label}</strong> ${rest}</p></div>`;
-  }
-  if (!line.trim()) {
-    return '<div style="height:6px"></div>';
-  }
-  return `<p style="margin:5px 0;line-height:1.65;font-size:${TRANSCRIPT_FONT_PX}px;color:${COLOR_BODY}">${escapeHtml(line)}</p>`;
-}
-
-/** A thin accent divider + heading combo used before major sections */
-function sectionHeadingHtml(title: string): string {
-  return `<div style="border-top:2px solid ${COLOR_ACCENT};padding-top:10px;margin-top:4px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:${COLOR_HEADING}">${escapeHtml(title)}</h2></div>`;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Section model                                                      */
-/* ------------------------------------------------------------------ */
-
-interface PdfBlock {
-  html: string;
-  /** Force a new page before this block */
-  forceNewPage: boolean;
-  /** Gap after this block (mm) — use smaller gap for paragraphs within a section */
-  gapAfterMm: number;
-}
-
-/**
- * Build an ordered list of atomic blocks for PDF rendering.
- * Each block is the smallest unit that must NOT be split across pages.
- * Long sections (transcript, Q&A) are split into per-paragraph blocks.
- */
-export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
-  const blocks: PdfBlock[] = [];
-
-  // --- Header + Summary (combined so they always appear together on page 1) ---
-  const meta: string[] = [];
-  meta.push(`Date: ${data.createdAt}`);
-  if (data.duration) meta.push(`Duration: ${data.duration}`);
-  if (data.language) meta.push(`Language: ${data.language}`);
-
-  let headerHtml = `<header><h1 style="margin:0 0 5px;font-size:${H1_FONT_PX}px;line-height:1.2;font-weight:700;color:${COLOR_HEADING}">${escapeHtml(data.title)}</h1>`;
-  headerHtml += `<p style="margin:0;color:${COLOR_META};font-size:${META_FONT_PX}px;line-height:1.5">${escapeHtml(meta.join("  •  "))}</p>`;
-  headerHtml += "</header>";
-
-  if (data.summary) {
-    // Split summary into sections so headings always stay with their content
-    const sections = splitMarkdownBySections(data.summary);
-    // First section merges with the header + "Summary" heading
-    const firstSection = sections[0] || "";
-    headerHtml += `<section style="margin-top:20px"><h2 style="margin:0 0 8px;font-size:${H2_FONT_PX}px;line-height:1.3;font-weight:700;color:${COLOR_HEADING}">Summary</h2>${markdownToHtml(firstSection)}</section>`;
-    blocks.push({ html: headerHtml, forceNewPage: false, gapAfterMm: PARAGRAPH_GAP_MM });
-
-    // Remaining summary sections as separate blocks (heading + content kept together)
-    for (let s = 1; s < sections.length; s++) {
-      blocks.push({
-        html: `<section>${markdownToHtml(sections[s])}</section>`,
-        forceNewPage: false,
-        gapAfterMm: s < sections.length - 1 ? PARAGRAPH_GAP_MM : SECTION_GAP_MM,
-      });
-    }
-  } else {
-    blocks.push({ html: headerHtml, forceNewPage: false, gapAfterMm: SECTION_GAP_MM });
-  }
-
-  // --- Questions & Answers (heading + each Q/A as its own block) ---
-  if (data.questions && data.questions.length > 0) {
-    blocks.push({
-      html: sectionHeadingHtml("Questions & Answers"),
-      forceNewPage: true,
-      gapAfterMm: PARAGRAPH_GAP_MM,
-    });
-
-    data.questions.forEach((entry, i) => {
-      const isLast = i === data.questions!.length - 1;
-      const answerSections = splitMarkdownBySections(entry.answer);
-      const promptHtml = entry.prompt
-        ? `<p style="margin:12px 0 5px;font-size:${QA_PROMPT_FONT_PX}px;line-height:1.5;font-weight:700;color:${COLOR_HEADING}">Q: ${escapeHtml(entry.prompt)}</p>`
-        : "";
-
-      // First chunk: prompt + first answer section (kept together to prevent orphaned Q:)
-      const firstChunk = answerSections[0] || "";
-      blocks.push({
-        html: promptHtml + `<div style="margin:0 0 4px">${markdownToHtml(firstChunk)}</div>`,
-        forceNewPage: false,
-        gapAfterMm: answerSections.length > 1 ? PARAGRAPH_GAP_MM : (isLast ? SECTION_GAP_MM : PARAGRAPH_GAP_MM),
-      });
-
-      // Remaining answer sections as separate blocks
-      for (let s = 1; s < answerSections.length; s++) {
-        blocks.push({
-          html: `<div style="margin:0 0 4px">${markdownToHtml(answerSections[s])}</div>`,
-          forceNewPage: false,
-          gapAfterMm: (s === answerSections.length - 1 && isLast) ? SECTION_GAP_MM : PARAGRAPH_GAP_MM,
-        });
+    // Render each line
+    let totalH = 0;
+    for (const ln of lines) {
+      this.pageBreak(lineH);
+      let cx = x;
+      const bl = this.baseline(fontSize);
+      for (let i = 0; i < ln.length; i++) {
+        this.setF(ln[i].bold, ln[i].italic, fontSize);
+        this.setC(color);
+        this.pdf.text(ln[i].text, cx, bl);
+        cx += this.pdf.getTextWidth(ln[i].text);
+        if (i < ln.length - 1) cx += spaceW;
       }
-    });
-  }
-
-  // --- Transcript (heading + each speaker paragraph as its own block) ---
-  if (data.transcript) {
-    blocks.push({
-      html: sectionHeadingHtml("Transcript"),
-      forceNewPage: true,
-      gapAfterMm: PARAGRAPH_GAP_MM,
-    });
-
-    const lines = data.transcript.split("\n");
-    const speakerColorMap = new Map<string, string>();
-    lines.forEach((line, i) => {
-      blocks.push({
-        html: speakerParagraphToHtml(line, speakerColorMap),
-        forceNewPage: false,
-        gapAfterMm: i < lines.length - 1 ? PARAGRAPH_GAP_MM : 0,
-      });
-    });
-  }
-
-  return blocks;
-}
-
-// Keep for backward compat / testing
-export function buildPdfSections(data: CanonicalExportData): { html: string; forceNewPage: boolean }[] {
-  const blocks = buildPdfBlocks(data);
-  const sections: { html: string; forceNewPage: boolean }[] = [];
-  let currentHtml = "";
-  let currentForce = false;
-
-  for (const block of blocks) {
-    if (block.forceNewPage && currentHtml) {
-      sections.push({ html: currentHtml, forceNewPage: currentForce });
-      currentHtml = "";
+      this.y += lineH;
+      totalH += lineH;
     }
-    if (block.forceNewPage) currentForce = true;
-    else if (!currentHtml) currentForce = false;
-    currentHtml += block.html;
-  }
-  if (currentHtml) {
-    sections.push({ html: currentHtml, forceNewPage: currentForce });
-  }
-  return sections;
-}
-
-export function buildPdfDocumentHtml(data: CanonicalExportData): string {
-  return buildPdfBlocks(data).map((b) => b.html).join("");
-}
-
-/* ------------------------------------------------------------------ */
-/*  Performance instrumentation                                        */
-/* ------------------------------------------------------------------ */
-
-interface PdfPerfLog {
-  originalBlockCount: number;
-  batchedBlockCount: number;
-  totalTimeMs: number;
-  layoutMeasureTimeMs: number;
-  html2canvasTimeMs: number;
-  pngEncodeTimeMs: number;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Layout-aware batching                                              */
-/* ------------------------------------------------------------------ */
-
-const WRAPPER_STYLE = `box-sizing:border-box;width:${RENDER_WIDTH_PX}px;background:#ffffff;color:#111827;padding:10px ${WRAPPER_PAD_X_PX}px;font-family:Arial,Helvetica,sans-serif;font-size:${BODY_FONT_PX}px;line-height:1.65;`;
-
-/**
- * Measure each block's rendered height using a single reusable container,
- * then merge consecutive non-forceNewPage blocks until combined height
- * approaches the page height threshold.
- */
-function measureAndBatchBlocks(
-  blocks: PdfBlock[],
-): { batched: PdfBlock[]; layoutMeasureTimeMs: number } {
-  const measureStart = performance.now();
-
-  // Create a single measurement container
-  const container = document.createElement("div");
-  Object.assign(container.style, {
-    position: "fixed",
-    left: "-10000px",
-    top: "0",
-    width: `${RENDER_WIDTH_PX}px`,
-    opacity: "1",
-    pointerEvents: "none",
-    zIndex: "-1",
-  });
-  const inner = document.createElement("div");
-  inner.setAttribute("style", WRAPPER_STYLE);
-  container.appendChild(inner);
-  document.body.appendChild(container);
-
-  // Measure each block's height
-  const heights: number[] = [];
-  for (const block of blocks) {
-    inner.innerHTML = block.html;
-    heights.push(inner.scrollHeight);
+    return totalH;
   }
 
-  // Remove measurement container
-  container.remove();
+  /** Render plain text (single style) — fastest path */
+  plain(
+    text: string,
+    fontSize: number,
+    color: string,
+    bold = false,
+    italic = false,
+    x = ML,
+    maxW = CW,
+    lhMul = LH,
+  ): number {
+    const lineH = ptMm(fontSize) * lhMul;
+    this.setF(bold, italic, fontSize);
+    this.setC(color);
+    const lines: string[] = this.pdf.splitTextToSize(text, maxW);
+    let totalH = 0;
+    for (const l of lines) {
+      this.pageBreak(lineH);
+      this.pdf.text(l, x, this.baseline(fontSize));
+      this.y += lineH;
+      totalH += lineH;
+    }
+    return totalH;
+  }
 
-  // Batch blocks by accumulated height
-  const batched: PdfBlock[] = [];
-  let batchHtml = "";
-  let batchHeight = 0;
-  let batchGap = 0;
+  heading(text: string, level: 1 | 2 | 3 | 4) {
+    const sz = [0, F.h1, F.h2, F.h3, F.h4][level];
+    const before = level === 1 ? 0 : level === 2 ? 5 : 3;
+    const after = level === 1 ? 3 : 2;
+    this.y += before;
+    this.plain(text, sz, C.heading, true, false, ML, CW, HLH);
+    this.y += after;
+  }
 
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i];
+  sectionHeading(text: string) {
+    this.pageBreak(14);
+    this.pdf.setDrawColor(...hexRgb(C.accent));
+    this.pdf.setLineWidth(0.5);
+    this.pdf.line(ML, this.y, PAGE_W - MR, this.y);
+    this.y += 4;
+    this.heading(text, 2);
+  }
 
-    // If this block forces a new page, flush the current batch first
-    if (block.forceNewPage) {
-      if (batchHtml) {
-        batched.push({ html: batchHtml, forceNewPage: false, gapAfterMm: batchGap });
+  bullet(text: string) {
+    const lineH = ptMm(F.bullet) * LH;
+    this.pageBreak(lineH);
+    this.setF(false, false, F.bullet);
+    this.setC(C.body);
+    this.pdf.text("•", ML + 2, this.baseline(F.bullet));
+    this.rich(parseInline(text), F.bullet, C.body, ML + 7, CW - 7);
+  }
+
+  /** Render a transcript speaker line with colored dot, timestamp, bold speaker, and wrapped text */
+  speaker(
+    timestamp: string | null,
+    speakerName: string,
+    text: string,
+    dotColor: string,
+  ) {
+    const lineH = ptMm(F.transcript) * LH;
+    this.pageBreak(lineH);
+    let x = ML;
+
+    // Colored dot
+    this.pdf.setFillColor(...hexRgb(dotColor));
+    this.pdf.circle(x + 1.5, this.y + ptMm(F.transcript) * 0.45, 1.2, "F");
+    x += 5;
+
+    // Timestamp
+    if (timestamp) {
+      this.pdf.setFont("courier", "normal");
+      this.pdf.setFontSize(F.timestamp);
+      this.setC(C.timestamp);
+      this.pdf.text(timestamp, x, this.baseline(F.transcript));
+      x += this.pdf.getTextWidth(timestamp) + 2;
+    }
+
+    // Speaker name (bold)
+    this.setF(true, false, F.transcript);
+    this.setC(C.heading);
+    const label = `${speakerName}: `;
+    this.pdf.text(label, x, this.baseline(F.transcript));
+    x += this.pdf.getTextWidth(label);
+
+    // Body text — first line after prefix, subsequent lines wrap at ML+5
+    this.setF(false, false, F.transcript);
+    this.setC(C.body);
+
+    const firstMax = ML + CW - x;
+    const wrapX = ML + 5;
+    const wrapMax = CW - 5;
+
+    // If prefix is too wide, start text on next line
+    if (firstMax < 15) {
+      this.y += lineH;
+      this.plain(text, F.transcript, C.body, false, false, wrapX, wrapMax);
+      this.y += 0.5;
+      return;
+    }
+
+    const words = text.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      this.y += lineH;
+      this.y += 0.5;
+      return;
+    }
+
+    const sw = this.pdf.getTextWidth(" ");
+    let lineWords: string[] = [];
+    let lineW = 0;
+    let isFirst = true;
+
+    for (const word of words) {
+      const ww = this.pdf.getTextWidth(word);
+      const maxW = isFirst ? firstMax : wrapMax;
+      const need = lineWords.length ? sw + ww : ww;
+
+      if (lineW + need > maxW && lineWords.length) {
+        // Flush current line
+        const lineText = lineWords.join(" ");
+        if (isFirst) {
+          this.pdf.text(lineText, x, this.baseline(F.transcript));
+          isFirst = false;
+        } else {
+          this.pdf.text(lineText, wrapX, this.baseline(F.transcript));
+        }
+        this.y += lineH;
+        this.pageBreak(lineH);
+        lineWords = [word];
+        lineW = ww;
+      } else {
+        lineWords.push(word);
+        lineW += need;
       }
-      // Start a new batch with this block
-      batchHtml = block.html;
-      batchHeight = heights[i];
-      batchGap = block.gapAfterMm;
-      // Mark the batch as forceNewPage
-      // We'll flush it either when the next forceNewPage comes or when height exceeds threshold
-      batched.push({ html: batchHtml, forceNewPage: true, gapAfterMm: batchGap });
-      batchHtml = "";
-      batchHeight = 0;
-      batchGap = 0;
-      continue;
     }
 
-    // Would adding this block exceed the threshold?
-    if (batchHtml && batchHeight + heights[i] > BATCH_HEIGHT_THRESHOLD_PX) {
-      // Flush current batch
-      batched.push({ html: batchHtml, forceNewPage: false, gapAfterMm: batchGap });
-      batchHtml = "";
-      batchHeight = 0;
+    // Flush remaining
+    if (lineWords.length) {
+      const lineText = lineWords.join(" ");
+      if (isFirst) {
+        this.pdf.text(lineText, x, this.baseline(F.transcript));
+      } else {
+        this.pdf.text(lineText, wrapX, this.baseline(F.transcript));
+      }
+      this.y += lineH;
     }
 
-    batchHtml += block.html;
-    batchHeight += heights[i];
-    batchGap = block.gapAfterMm;
+    this.y += 0.5;
   }
 
-  // Flush remaining
-  if (batchHtml) {
-    batched.push({ html: batchHtml, forceNewPage: false, gapAfterMm: batchGap });
-  }
-
-  const layoutMeasureTimeMs = performance.now() - measureStart;
-  return { batched, layoutMeasureTimeMs };
-}
-
-/* ------------------------------------------------------------------ */
-/*  DOM + Canvas helpers                                               */
-/* ------------------------------------------------------------------ */
-
-function createBlockElement(html: string): HTMLDivElement {
-  const el = document.createElement("div");
-  el.setAttribute("data-export-pdf-block", "true");
-  Object.assign(el.style, {
-    position: "fixed",
-    left: "-10000px",
-    top: "0",
-    width: `${RENDER_WIDTH_PX}px`,
-    opacity: "1",
-    pointerEvents: "none",
-    zIndex: "-1",
-  });
-  el.innerHTML = `<div style="${WRAPPER_STYLE}">${html}</div>`;
-  document.body.appendChild(el);
-  return el;
-}
-
-async function waitForLayout(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  if ("fonts" in document && document.fonts?.ready) {
-    await document.fonts.ready.catch(() => undefined);
+  /** Render a plain transcript line (no speaker match) */
+  transcriptLine(text: string) {
+    this.plain(text, F.transcript, C.body, false, false, ML + 5, CW - 5);
   }
 }
 
-async function renderCanvas(el: HTMLDivElement): Promise<HTMLCanvasElement> {
-  const content = el.firstElementChild as HTMLElement;
-  return html2canvas(content, {
-    backgroundColor: "#ffffff",
-    logging: false,
-    scale: RENDER_SCALE,
-    useCORS: true,
-    width: content.scrollWidth,
-    height: content.scrollHeight,
-    windowWidth: content.scrollWidth,
-    windowHeight: content.scrollHeight,
-  });
-}
+/* ------------------------------------------------------------------ */
+/*  Markdown → PDF rendering                                           */
+/* ------------------------------------------------------------------ */
 
-/** Encode canvas to a data URL — JPEG for speed, PNG only when transparency needed */
-function canvasToDataUrl(canvas: HTMLCanvasElement): string {
-  return canvas.toDataURL("image/jpeg", 0.92);
-}
-
-const IMAGE_FORMAT: "JPEG" | "PNG" = "JPEG";
-
-function canvasHeightMm(canvas: HTMLCanvasElement): number {
-  return (canvas.height * CONTENT_WIDTH_MM) / canvas.width;
+function renderMarkdown(pen: Pen, text: string) {
+  for (const raw of text.split("\n")) {
+    const line = raw.trimEnd();
+    if (/^####\s/.test(line)) {
+      pen.heading(line.slice(5), 4);
+    } else if (/^###\s/.test(line)) {
+      pen.heading(line.slice(4), 4);
+    } else if (/^##\s/.test(line)) {
+      pen.heading(line.slice(3), 3);
+    } else if (/^#\s/.test(line)) {
+      pen.heading(line.slice(2), 2);
+    } else if (/^\s*[-*]\s+/.test(line)) {
+      pen.bullet(line.replace(/^\s*[-*]\s+/, ""));
+    } else if (line.trim() === "") {
+      pen.gap(2);
+    } else {
+      pen.rich(parseInline(line), F.body, C.body);
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */
-/*  PDF export                                                         */
+/*  Public API                                                         */
 /* ------------------------------------------------------------------ */
 
 export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> {
-  const totalStart = performance.now();
-  const originalBlocks = buildPdfBlocks(data);
+  const t0 = performance.now();
 
-  // Measure and batch
-  const { batched: blocks, layoutMeasureTimeMs } = measureAndBatchBlocks(originalBlocks);
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    compress: true,
+  });
+  pdf.setProperties({
+    title: data.title,
+    subject: "WhatSaid export",
+    creator: "WhatSaid",
+    author: "WhatSaid",
+  });
 
-  // Create render elements only for batched blocks
-  const elements = blocks.map((b) => createBlockElement(b.html));
+  const pen = new Pen(pdf);
 
-  let html2canvasTimeMs = 0;
-  let pngEncodeTimeMs = 0;
+  // ── Header ──
+  pen.heading(data.title, 1);
+  const metaParts: string[] = [`Date: ${data.createdAt}`];
+  if (data.duration) metaParts.push(`Duration: ${data.duration}`);
+  if (data.language) metaParts.push(`Language: ${data.language}`);
+  pen.plain(metaParts.join("  •  "), F.meta, C.meta);
+  pen.gap(4);
 
-  try {
-    await waitForLayout();
+  // ── Summary ──
+  if (data.summary) {
+    pen.heading("Summary", 2);
+    renderMarkdown(pen, data.summary);
+    pen.gap(4);
+  }
 
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-      compress: true,
-    });
-
-    pdf.setProperties({
-      title: data.title,
-      subject: "WhatSaid export",
-      creator: "WhatSaid",
-      author: "WhatSaid",
-    });
-
-    let currentY = MARGIN_TOP_MM;
-    const usableHeight = MAX_CONTENT_Y_MM - MARGIN_TOP_MM;
-
-    for (let i = 0; i < blocks.length; i++) {
-      const block = blocks[i];
-
-      const h2cStart = performance.now();
-      const canvas = await renderCanvas(elements[i]);
-      html2canvasTimeMs += performance.now() - h2cStart;
-
-      const heightMm = canvasHeightMm(canvas);
-
-      if (block.forceNewPage && currentY > MARGIN_TOP_MM) {
-        pdf.addPage();
-        currentY = MARGIN_TOP_MM;
-      }
-
-      const remainingMm = MAX_CONTENT_Y_MM - currentY;
-
-      // Block fits on current page
-      if (heightMm <= remainingMm) {
-        const encStart = performance.now();
-        const imgData = canvasToDataUrl(canvas);
-        pngEncodeTimeMs += performance.now() - encStart;
-
-        pdf.addImage(
-          imgData,
-          IMAGE_FORMAT,
-          MARGIN_LEFT_MM,
-          currentY,
-          CONTENT_WIDTH_MM,
-          heightMm,
-          undefined,
-          "FAST",
+  // ── Questions & Answers ──
+  if (data.questions?.length) {
+    pen.newPage();
+    pen.sectionHeading("Questions & Answers");
+    for (const qa of data.questions) {
+      if (qa.prompt) {
+        pen.gap(3);
+        pen.rich(
+          [{ text: "Q: ", bold: true }, { text: qa.prompt, bold: true }],
+          F.qa,
+          C.heading,
         );
-        currentY += heightMm + block.gapAfterMm;
+        pen.gap(1);
+      }
+      renderMarkdown(pen, qa.answer);
+      pen.gap(3);
+    }
+  }
+
+  // ── Transcript ──
+  if (data.transcript) {
+    pen.newPage();
+    pen.sectionHeading("Transcript");
+
+    const speakerColorMap = new Map<string, string>();
+
+    for (const line of data.transcript.split("\n")) {
+      if (!line.trim()) {
+        pen.gap(1);
         continue;
       }
 
-      // Block doesn't fit — need to slice across pages
-      if (currentY > MARGIN_TOP_MM) {
-        pdf.addPage();
-        currentY = MARGIN_TOP_MM;
+      // [HH:MM:SS] Speaker: text
+      const tsMatch = line.match(/^\[(\d{2}:\d{2}:\d{2})\]\s*(.+?):\s(.*)/);
+      if (tsMatch) {
+        const [, ts, spk, txt] = tsMatch;
+        const key = spk.toLowerCase();
+        if (!speakerColorMap.has(key))
+          speakerColorMap.set(key, SPEAKER_COLORS[speakerColorMap.size % SPEAKER_COLORS.length]);
+        pen.speaker(ts, spk, txt, speakerColorMap.get(key)!);
+        continue;
       }
 
-      // Slice the canvas image across as many pages as needed
-      const pxPerMm = canvas.width / CONTENT_WIDTH_MM;
-      let renderedMm = 0;
-
-      while (renderedMm < heightMm) {
-        const sliceHeightMm = Math.min(usableHeight, heightMm - renderedMm);
-        const srcY = Math.round(renderedMm * pxPerMm);
-        const srcH = Math.round(sliceHeightMm * pxPerMm);
-
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = srcH;
-        const ctx = sliceCanvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-          ctx.drawImage(
-            canvas,
-            0, srcY, canvas.width, srcH,
-            0, 0, canvas.width, srcH,
-          );
-        }
-
-        if (renderedMm > 0) {
-          pdf.addPage();
-          currentY = MARGIN_TOP_MM;
-        }
-
-        const encStart = performance.now();
-        const imgData = canvasToDataUrl(sliceCanvas);
-        pngEncodeTimeMs += performance.now() - encStart;
-
-        pdf.addImage(
-          imgData,
-          IMAGE_FORMAT,
-          MARGIN_LEFT_MM,
-          currentY,
-          CONTENT_WIDTH_MM,
-          sliceHeightMm,
-          undefined,
-          "FAST",
-        );
-
-        renderedMm += sliceHeightMm;
-        currentY = MARGIN_TOP_MM + sliceHeightMm;
+      // Speaker: text (no timestamp)
+      const spkMatch = line.match(/^(.+?):\s(.*)/);
+      if (spkMatch) {
+        const [, spk, txt] = spkMatch;
+        const key = spk.toLowerCase();
+        if (!speakerColorMap.has(key))
+          speakerColorMap.set(key, SPEAKER_COLORS[speakerColorMap.size % SPEAKER_COLORS.length]);
+        pen.speaker(null, spk, txt, speakerColorMap.get(key)!);
+        continue;
       }
 
-      currentY += block.gapAfterMm;
+      // Plain line
+      pen.transcriptLine(line);
     }
-
-    // Load logo for footer
-    const logoData = await getLogoDataUrl();
-
-    // Draw branded footer on every page
-    const pageCount = pdf.getNumberOfPages();
-    const WHATSAID_URL = "https://whatsaid.lovable.app";
-    for (let p = 1; p <= pageCount; p++) {
-      pdf.setPage(p);
-      const footerY = PAGE_HEIGHT_MM - FOOTER_RESERVE_MM + 6;
-      // Subtle divider line
-      pdf.setDrawColor(209, 213, 219); // gray-300
-      pdf.setLineWidth(0.3);
-      pdf.line(MARGIN_LEFT_MM, footerY - 2, PAGE_WIDTH_MM - MARGIN_RIGHT_MM, footerY - 2);
-
-      // Logo (square, 4mm)
-      const logoSize = 4;
-      const logoY = footerY - 1;
-      let textStartX = MARGIN_LEFT_MM;
-      if (logoData) {
-        pdf.addImage(logoData, "PNG", MARGIN_LEFT_MM, logoY, logoSize, logoSize, undefined, "FAST");
-        textStartX = MARGIN_LEFT_MM + logoSize + 1.5;
-      }
-
-      // Brand text — vertically centered with logo
-      // Logo center = logoY + logoSize/2. For 8pt text, baseline ≈ center + 1mm
-      const textY = logoY + logoSize / 2 + 1;
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(8);
-      pdf.setTextColor(156, 163, 175); // gray-400
-      const footerText = "Generated by WhatSaid  ·  whatsaid.app";
-      pdf.text(footerText, textStartX, textY);
-
-      // Clickable link over the footer text area
-      const textWidth = pdf.getTextWidth(footerText);
-      pdf.link(textStartX, logoY, textWidth, logoSize, { url: WHATSAID_URL });
-
-      // Page number
-      pdf.text(`${p} / ${pageCount}`, PAGE_WIDTH_MM - MARGIN_RIGHT_MM, textY, { align: "right" });
-    }
-
-    const totalTimeMs = performance.now() - totalStart;
-    const perfLog: PdfPerfLog = {
-      originalBlockCount: originalBlocks.length,
-      batchedBlockCount: blocks.length,
-      totalTimeMs: Math.round(totalTimeMs),
-      layoutMeasureTimeMs: Math.round(layoutMeasureTimeMs),
-      html2canvasTimeMs: Math.round(html2canvasTimeMs),
-      pngEncodeTimeMs: Math.round(pngEncodeTimeMs),
-    };
-    console.info("[PDF perf]", perfLog);
-
-    return pdf.output("blob");
-  } finally {
-    elements.forEach((el) => el.remove());
   }
+
+  // ── Footers ──
+  const logoData = await getLogoDataUrl();
+  const pageCount = pdf.getNumberOfPages();
+  const WHATSAID_URL = "https://whatsaid.lovable.app";
+
+  for (let p = 1; p <= pageCount; p++) {
+    pdf.setPage(p);
+    const footerY = PAGE_H - FOOTER_H + 6;
+
+    // Divider line
+    pdf.setDrawColor(209, 213, 219);
+    pdf.setLineWidth(0.3);
+    pdf.line(ML, footerY - 2, PAGE_W - MR, footerY - 2);
+
+    // Logo
+    const logoSize = 4;
+    const logoY = footerY - 1;
+    let textStartX = ML;
+    if (logoData) {
+      pdf.addImage(logoData, "PNG", ML, logoY, logoSize, logoSize, undefined, "FAST");
+      textStartX = ML + logoSize + 1.5;
+    }
+
+    // Footer text
+    const textY = logoY + logoSize / 2 + 1;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(156, 163, 175);
+    const footerText = "Generated by WhatSaid  ·  whatsaid.app";
+    pdf.text(footerText, textStartX, textY);
+    const textWidth = pdf.getTextWidth(footerText);
+    pdf.link(textStartX, logoY, textWidth, logoSize, { url: WHATSAID_URL });
+
+    // Page number
+    pdf.text(`${p} / ${pageCount}`, PAGE_W - MR, textY, { align: "right" });
+  }
+
+  console.info("[PDF perf]", {
+    totalTimeMs: Math.round(performance.now() - t0),
+    pages: pageCount,
+  });
+
+  return pdf.output("blob");
 }
 
 export async function exportPdf(data: CanonicalExportData): Promise<void> {
@@ -711,4 +559,76 @@ function downloadBlob(blob: Blob, filename: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Content model (used by tests and external callers)                 */
+/* ------------------------------------------------------------------ */
+
+interface PdfBlock {
+  html: string;
+  forceNewPage: boolean;
+  gapAfterMm: number;
+}
+
+/**
+ * Build a structured list of content blocks from the export data.
+ * Returns simplified text-based blocks (not HTML) for testing/inspection.
+ */
+export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
+  const blocks: PdfBlock[] = [];
+
+  // Header
+  const meta = [`Date: ${data.createdAt}`];
+  if (data.duration) meta.push(`Duration: ${data.duration}`);
+  if (data.language) meta.push(`Language: ${data.language}`);
+  blocks.push({
+    html: `Title: ${data.title}\n${meta.join(" • ")}`,
+    forceNewPage: false,
+    gapAfterMm: 3,
+  });
+
+  // Summary
+  if (data.summary) {
+    blocks.push({
+      html: `Summary\n${data.summary}`,
+      forceNewPage: false,
+      gapAfterMm: 3,
+    });
+  }
+
+  // Q&A
+  if (data.questions?.length) {
+    blocks.push({
+      html: "Questions & Answers",
+      forceNewPage: true,
+      gapAfterMm: 1,
+    });
+    for (const q of data.questions) {
+      blocks.push({
+        html: `Q: ${q.prompt}\n${q.answer}`,
+        forceNewPage: false,
+        gapAfterMm: 1,
+      });
+    }
+  }
+
+  // Transcript
+  if (data.transcript) {
+    blocks.push({
+      html: `Transcript\n${data.transcript}`,
+      forceNewPage: true,
+      gapAfterMm: 0,
+    });
+  }
+
+  return blocks;
+}
+
+export function buildPdfSections(data: CanonicalExportData): { html: string; forceNewPage: boolean }[] {
+  return buildPdfBlocks(data).map((b) => ({ html: b.html, forceNewPage: b.forceNewPage }));
+}
+
+export function buildPdfDocumentHtml(data: CanonicalExportData): string {
+  return buildPdfBlocks(data).map((b) => b.html).join("\n");
 }

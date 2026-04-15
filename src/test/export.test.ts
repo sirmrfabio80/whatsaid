@@ -61,19 +61,18 @@ describe("export naming", () => {
 });
 
 describe("pdf content rendering", () => {
-  it("renders markdown-rich sections and transcript speaker labels", () => {
-    const html = buildPdfDocumentHtml(makeCanonical());
+  it("includes title, summary content, Q&A, and transcript speaker labels", () => {
+    const content = buildPdfDocumentHtml(makeCanonical());
 
-    expect(html).toContain("<h1");
-    expect(html).toContain("Board Meeting Notes");
-    expect(html).toContain("<strong>Budget</strong>");
-    expect(html).toContain("<em>Timeline</em>");
-    expect(html).toContain("Questions &amp; Answers");
-    expect(html).toContain("Speaker A:</strong>");
+    expect(content).toContain("Board Meeting Notes");
+    expect(content).toContain("Budget");
+    expect(content).toContain("Timeline");
+    expect(content).toContain("Questions & Answers");
+    expect(content).toContain("Speaker A:");
   });
 
   it("omits excluded qa items when they are not passed in payload", () => {
-    const html = buildPdfDocumentHtml(
+    const content = buildPdfDocumentHtml(
       makeCanonical({
         questions: [
           { prompt: "Keep this?", answer: "Included answer" },
@@ -81,19 +80,19 @@ describe("pdf content rendering", () => {
       }),
     );
 
-    expect(html).toContain("Included answer");
-    expect(html).not.toContain("Excluded answer");
+    expect(content).toContain("Included answer");
+    expect(content).not.toContain("Excluded answer");
   });
 
   it("omits Q&A section when questions is null", () => {
-    const html = buildPdfDocumentHtml(makeCanonical({ questions: null }));
-    expect(html).not.toContain("Questions");
+    const content = buildPdfDocumentHtml(makeCanonical({ questions: null }));
+    expect(content).not.toContain("Questions");
   });
 
   it("section order: Summary before Transcript", () => {
-    const html = buildPdfDocumentHtml(makeCanonical());
-    const summaryIdx = html.indexOf("Summary");
-    const transcriptIdx = html.indexOf("Transcript");
+    const content = buildPdfDocumentHtml(makeCanonical());
+    const summaryIdx = content.indexOf("Summary");
+    const transcriptIdx = content.indexOf("Transcript");
     expect(summaryIdx).toBeLessThan(transcriptIdx);
   });
 });
