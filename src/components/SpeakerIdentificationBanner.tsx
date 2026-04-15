@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, X, Pencil, Undo2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, X, Pencil, Undo2, Sparkles, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SpeakerIdentification } from "@/lib/speaker-identification";
 
@@ -13,6 +13,8 @@ interface SpeakerIdentificationBannerProps {
   onUndo: (speakerLabel: string) => void;
   onEdit: (speakerLabel: string, newName: string) => void;
   onDismiss: () => void;
+  onRerun?: () => void;
+  isRerunning?: boolean;
 }
 
 export default function SpeakerIdentificationBanner({
@@ -22,6 +24,8 @@ export default function SpeakerIdentificationBanner({
   onUndo,
   onEdit,
   onDismiss,
+  onRerun,
+  isRerunning,
 }: SpeakerIdentificationBannerProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
@@ -66,14 +70,28 @@ export default function SpeakerIdentificationBanner({
             <ChevronDown className="w-3 h-3 text-muted-foreground" />
           )}
         </button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full"
-          onClick={onDismiss}
-        >
-          {t("speakerIdentification.dismissAll")}
-        </Button>
+        <div className="flex items-center gap-1">
+          {onRerun && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full"
+              onClick={onRerun}
+              disabled={isRerunning}
+            >
+              <RefreshCw className={`w-3 h-3 mr-1 ${isRerunning ? "animate-spin" : ""}`} />
+              {t("speakerIdentification.rerun", "Re-analyse")}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full"
+            onClick={onDismiss}
+          >
+            {t("speakerIdentification.dismissAll")}
+          </Button>
+        </div>
       </div>
 
       {expanded && (
