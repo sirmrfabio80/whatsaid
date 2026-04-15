@@ -323,7 +323,13 @@
     "summaryRegenLimitReached": "Regeneration limit reached (0 remaining)",
     "regeneratingSummary": "Regenerating summary…",
     "summaryRegenerated": "Summary regenerated from edited transcript",
-    "summaryRegenFailed": "Could not regenerate summary. Please try again."
+    "summaryRegenFailed": "Could not regenerate summary. Please try again.",
+    "questionsLeft_one": "{{count}} question left",
+    "questionsLeft_other": "{{count}} questions left",
+    "noQuestionsLeft": "No questions left",
+    "editQuestion": "Edit question",
+    "deleteQuestion": "Delete question",
+    "regeneratingAnswer": "Regenerating answer…"
   },
   "share": {
     "share": "Share",
