@@ -603,7 +603,8 @@
     "finalCta": "Create account and continue",
     "finalCtaLoggedIn": "Continue",
     "comingSoon": "Payment system is being finalised — check back soon.",
-    "purchaseSuccess": "Purchase complete! Your credits have been added."
+    "purchaseSuccess": "Purchase complete! Your credits have been added.",
+    "creditsAddedBanner": "{{count}} credit(s) added to your account"
   },
   "transcriptionSettings": {
     "title": "Transcription settings",
