@@ -135,11 +135,14 @@ export function SectionBody({ body }: { body: string }) {
 
   return (
     <div className="space-y-2">
-      {lines.map((line, i) => (
-        <p key={i} className="text-sm leading-relaxed text-foreground/90">
-          {renderLine(line)}
-        </p>
-      ))}
+      {lines.map((line, i) => {
+        const { text, isHeading } = stripHeading(line);
+        return (
+          <p key={i} className={`text-sm leading-relaxed text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+            {renderLine(text)}
+          </p>
+        );
+      })}
     </div>
   );
 }
