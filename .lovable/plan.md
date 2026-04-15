@@ -1,66 +1,88 @@
 
 
-# Fix: Missing Italian "sono X" Speaker Identification Patterns
+# Fix: Mobile Input Focus Zoom Issue
 
-## Root cause
+## 1. Root Cause Analysis
 
-Two regex gaps in `supabase/functions/identify-speakers/index.ts`:
+**Primary cause: iOS Safari auto-zoom on inputs with font-size below 16px.**
 
-1. **No compound pattern for "sono [Name] la/il [Role]"** — the name-first word order used in natural Italian ("sono Martina la logopedista"). Existing patterns only handle the reverse: "sono il/la [role] [Name]".
+iOS Safari automatically zooms the viewport when a user focuses an input whose computed font-size is less than 16px. Once zoomed, Safari does not reliably zoom back out when the input loses focus.
 
-2. **No broad pattern for bare "sono X"** without "io". Italian is a pro-drop language — speakers routinely omit the subject pronoun. The existing `\bio\s+sono\s+(\S+)` pattern requires the explicit "io", missing most real-world self-introductions.
+Affected components and their current font sizes on mobile:
 
-## File to change
+| Component | Current mobile font | File |
+|-----------|-------------------|------|
+| `Textarea` | `text-sm` (14px) always | `src/components/ui/textarea.tsx` |
+| `Select` trigger | `text-sm` (14px) always | `src/components/ui/select.tsx` |
+| `CommandInput` (cmdk) | `text-sm` (14px) always | `src/components/ui/command.tsx` |
+| `Input` | `text-base` mobile / `md:text-sm` desktop — **already correct** | `src/components/ui/input.tsx` |
+| `InputOTP` slot | `text-sm` (14px) always | `src/components/ui/input-otp.tsx` |
+| `SidebarInput` | inherits from `Input` — OK | `src/components/ui/sidebar.tsx` |
+| Share email field | overridden to `text-base md:text-sm` — OK | `src/components/ShareButton.tsx` |
 
-`supabase/functions/identify-speakers/index.ts` — `extractCompoundPatterns()` and `extractSelfIdentification()` functions only.
+**Secondary cause: viewport meta tag missing `maximum-scale=1`.**
 
-## Changes
+The current viewport tag is `width=device-width, initial-scale=1.0` — it does not prevent user/auto zoom. Adding `maximum-scale=1` is the nuclear option but harms accessibility (prevents pinch-to-zoom). The font-size fix is preferred and sufficient.
 
-### 1. Add compound pattern: "sono [Name] la/il [Role]" (name-first)
+**No transform/layout issues identified.** The Drawer (vaul) uses standard fixed positioning; it does not apply viewport-level transforms that would amplify zoom.
 
-Insert in `extractCompoundPatterns()` (after line ~166, before the elided-article pattern):
+## 2. Recommended Fix Strategy
 
-```typescript
-// Italian: "sono X la/il [role]" — name first, role after (e.g. "sono Martina la logopedista")
-m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:il|la)\s+(\S+)/i);
-if (m) {
-  const namePart = cleanName(m[1]);
-  const rolePart = cleanName(m[2]);
-  if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
-    return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
-  }
-}
-```
+**Apply the same pattern already used in `Input`**: use `text-base` (16px) on mobile, `md:text-sm` on desktop, for every focusable text-input control.
 
-This explicitly checks that the word after "la/il" is a known `ROLE_WORD`, ensuring we don't misfire on non-role phrases. With the input text, it matches `sono (Martina) la (logopedista)` — "logopedista" is in the `ROLE_WORDS` set.
+This is the minimal, standards-compliant fix. No viewport meta hacks. No JavaScript workarounds.
 
-### 2. Add broad pattern: bare "sono X" (without "io")
+## 3. Exact Files and Changes
 
-Insert in `extractSelfIdentification()` broad section (after the "io sono X" pattern at line ~359):
+### `src/components/ui/textarea.tsx`
+- Change `text-sm` → `text-base md:text-sm` in the className string.
 
-```typescript
-// Italian: "sono X" (without explicit "io" — pro-drop)
-m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)/);
-if (m) { const c = mk(m[1], t, "broad"); if (c) return c; }
-```
+### `src/components/ui/select.tsx`
+- In `SelectTrigger`, change `text-sm` → `text-base md:text-sm`.
 
-This requires the name to start with a capital letter (case-sensitive regex, no `i` flag) to avoid false positives on phrases like "sono contenta". Combined with `isValidName()` filtering out stopwords and role words, this is safe as a broad/suggested pattern.
+### `src/components/ui/command.tsx`
+- In `CommandInput`, change `text-sm` → `text-base md:text-sm`.
 
-### Why this order matters
+### `src/components/ui/input-otp.tsx`
+- In `InputOTPSlot`, change `text-sm` → `text-base md:text-sm`.
 
-The compound pattern is checked first (in `extractCompoundPatterns`). So "sono Martina la logopedista" will match as a **compound** hit with high confidence and the role captured. If the text were just "sono Martina" without a role, it would fall through to the **broad** pattern and be suggested rather than auto-applied.
+### No changes needed:
+- `Input` — already has `text-base md:text-sm`
+- `ShareButton` email field — already overridden to `text-base md:text-sm`
+- `SidebarInput` — inherits from `Input`
+- `AudioUploader` file input — hidden, not focusable
+- `AvatarUpload` file input — hidden, not focusable
+- Auth pages (`Login`, `Signup`, `ResetPassword`, `SetPassword`) — all use `Input` component
+- `SpeakerIdentificationBanner` — uses `Input` component
+- `HistoryFilters` — uses `Input` component
+- `TranscriptionSettings` — uses `Textarea` (covered above)
+- `TranscriptEditor` — uses `Textarea` (covered above)
+- Drawer/Sheet — no input elements of their own; they host the above components
+- `index.html` viewport meta — no change (avoid breaking pinch-to-zoom accessibility)
 
-## Expected result for the failing text
+## 4. Regression Checklist
 
-- Pattern matched: compound `sono (Martina) la (logopedista)`
-- Name: "Martina"
-- Role: "logopedista"
-- Confidence: high (compound pattern)
-- Status: applied (capitalised + compound)
+- Verify desktop `Input`, `Textarea`, `Select`, `CommandInput` still render at `text-sm` (14px) — confirmed by `md:text-sm` breakpoint.
+- Verify no layout shifts on desktop from the 2px font-size difference at mobile widths — these components are already `h-10` / `min-h-[80px]` so height is fixed.
+- Verify `InputOTP` slots still align correctly at 16px — the slot is `w-10 h-10`, font change is minor.
+- Verify no Tailwind class conflicts (no other responsive `text-*` classes on these elements).
 
-## Scope
+## 5. Manual QA Checklist
 
-- One edge function file only
-- No UI, API, or database changes
-- No changes to confidence scoring, validation, or AI fallback logic
+### iPhone Safari
+1. Open the app on an iPhone (or Safari responsive mode at 390×844).
+2. Navigate to the Share sheet — tap the email input. Confirm no zoom occurs. Type, blur, confirm viewport is normal.
+3. Navigate to a job with Q&A — tap the question textarea. Confirm no zoom.
+4. Open Transcription Settings — tap the keyterms textarea. Confirm no zoom.
+5. Open Login / Signup — tap email and password fields. Confirm no zoom.
+6. Open History — tap the search input and tag filter input. Confirm no zoom.
+7. Open any Select dropdown (language selector). Confirm no zoom on trigger focus.
+8. Pinch-to-zoom the page manually — confirm it still works (accessibility preserved).
+
+### Android Chrome
+1. Repeat steps 2–7. Android Chrome is less aggressive about auto-zoom but verify no regressions.
+
+### Desktop Chrome / Firefox
+1. Verify all inputs render at the smaller `text-sm` size as before.
+2. Verify no visual or spacing changes on any page.
 
