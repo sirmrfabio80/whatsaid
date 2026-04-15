@@ -112,8 +112,8 @@ export default function History() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
-         <div className="container mx-auto px-5 sm:px-6 py-10 sm:py-14">
+      <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+         <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
           <div className="max-w-3xl mx-auto space-y-3">
             <div className="h-8 w-64 bg-muted rounded-lg animate-pulse mb-8" />
             {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}
@@ -124,8 +124,8 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
-      <div className="container mx-auto px-5 sm:px-6 py-10 sm:py-14">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+      <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-3xl mx-auto">
           <h1 className="font-heading text-2xl sm:text-3xl font-bold mb-6">{t("history.title")}</h1>
 

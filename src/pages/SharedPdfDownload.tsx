@@ -90,7 +90,7 @@ export default function SharedPdfDownload() {
   const redirectTarget = `${location.pathname}${location.search}`;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-16">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md">
         <CardContent className="pt-8 pb-8 px-6 text-center space-y-6">
           {status === "loading" && (

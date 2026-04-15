@@ -53,7 +53,7 @@ export default function Signup() {
 
   if (success) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8">
         <Card className="w-full max-w-md rounded-xl border-border/50">
           <CardContent className="p-8 text-center space-y-4">
             <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
@@ -67,7 +67,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8">
       <Card className="w-full max-w-md rounded-xl border-border/50">
         <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />

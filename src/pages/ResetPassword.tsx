@@ -42,7 +42,7 @@ export default function ResetPassword() {
 
   if (!isRecovery) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12 animate-page-enter">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8 animate-page-enter-flat">
         <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
           <CardHeader className="text-center">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -62,7 +62,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12 animate-page-enter">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8 animate-page-enter-flat">
       <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
         <CardHeader className="text-center">
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
