@@ -1,98 +1,119 @@
 
 
-# Speaker Suggestion Feature: Audit & Rebuild Plan
+# Questions Tab Enhancement Plan (Revised)
 
-## 1. Root Cause Analysis
+## 1. Behaviour Spec
 
-The core bug is in the **"broad" pattern tier** (lines 385–441 of `identify-speakers/index.ts`). These patterns match any word following common verbs:
+**Ask a new question**: Works as today, but decrements remaining count. Disabled at 0.
 
-- `sono X` (Italian) — matches "sono **Strutturati**", "sono **che**", "sono **contento**"
-- `io sono X`, `I am X`, `je suis X`, `ich bin X`, etc.
+**Edit a question**: User clicks an edit icon on a Q&A card → the question text becomes editable inline. On confirm, the card enters a "regenerating" state (spinner overlay on the answer area, question text updated). The existing answer remains visible but dimmed behind the spinner. The `regenerate` edge function is called. On success, the answer content is replaced in place. On failure, the card reverts to its original question text and answer — nothing is lost. This counts as one generation.
 
-In Italian, "sono" means both "I am" (first person) and "they are" (third person), making `\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)/` catastrophically over-eager. Any capitalised word at sentence start after "sono" gets captured as a name.
+**Delete a Q&A card**: User clicks a delete icon → the `job_outputs` row is deleted. Does NOT restore a generation credit.
 
-The stopword list covers ~80 words but misses thousands of common Italian words (articles, conjunctions, adjectives, past participles, verbs, etc.). "Che", "Strutturati", "Tutti", "Questo", "Quello", "Appena" — none are in the stopword list but none are names.
+**Generation limit**: 10 per transcript. Stored as `question_generation_count` (integer, used-count) on the `jobs` table. Incremented server-side by the `regenerate` edge function when `output_type === "custom"`. Remaining = `10 - question_generation_count`.
 
-**Secondary issues:**
-- The AI review layer (lines 560–663) receives already-bad candidates and often confirms them because the prompt says "determine the correct person name" — biasing the model toward finding a name even when none exists
-- Broad-tier confidence starts at 0.70, which passes the 0.50 final threshold
-- No language-aware validation — the system doesn't know the transcript language, so it can't apply language-specific word-class filtering
-- No proper-noun plausibility check — any capitalised word passes `isValidName()` if it's not in the tiny stopword/role sets
+**At limit (0 remaining)**:
+- Ask input disabled with brief explanation
+- Edit buttons hidden/disabled
+- Include/exclude checkboxes and delete buttons remain functional
 
-## 2. Recommendation: **Option A — Conservative Rebuild**
+## 2. Data Model / Storage Plan
 
-Rebuild the feature with strict evidence requirements. The deterministic pattern-matching architecture is fundamentally sound for compound and strong patterns (explicit self-introductions like "mi chiamo Marco", "my name is Sarah"). These are high-signal, low-risk. The problem is exclusively in the broad tier and the insufficient validation layer.
+**Migration**: Add `question_generation_count integer NOT NULL DEFAULT 0` to `jobs` table.
 
-## 3. Acceptance Criteria
+**Server-side enforcement** in `regenerate` edge function for `output_type === "custom"`:
+1. Atomic update: `UPDATE jobs SET question_generation_count = question_generation_count + 1 WHERE id = $jobId AND question_generation_count < 10 RETURNING question_generation_count`
+2. Zero rows returned → 403 `{ error: "question_limit_reached" }`
+3. Increment happens before AI call; if AI fails, decrement back (`SET question_generation_count = question_generation_count - 1`)
 
-1. **No suggestion unless explicit self-introduction evidence exists** — patterns like "mi chiamo X", "my name is X", "I'm X, the [role]" are valid; patterns like "sono X", "I am X" alone are NOT valid
-2. **Broad pattern tier is removed entirely** — only compound, strong, and medium tiers remain
-3. **A proper-noun plausibility gate rejects common words** — using a combination of: (a) expanded multilingual stopword list (~500+ words covering articles, conjunctions, prepositions, common adjectives, common verbs, past participles), (b) minimum 3 characters for single-word names, (c) rejection of words that are lowercase in the original transcript
-4. **Confidence floor raised to 0.75** for any suggestion to be shown (up from 0.50)
-5. **Nothing is ever auto-applied** — all identifications are "suggested" status, requiring explicit user acceptance
-6. **AI review prompt is rewritten** to be sceptical by default: "If no clear person name is present, return confidence 0.0. Do NOT infer or guess names."
-7. **Transcript language is passed** to the edge function and used in the AI review prompt for language-aware validation
-8. **Zero false positives on Italian transcripts** that contain no self-introductions
+This approach prevents race conditions (atomic WHERE guard) while ensuring failed generations don't consume credits (rollback on failure).
 
-## 4. Exact Product/UI Changes
+## 3. UI/UX Plan
 
-### Backend — `supabase/functions/identify-speakers/index.ts`
-- **Delete** the entire broad pattern section (lines 385–441)
-- **Expand** STOPWORDS to ~500+ entries covering Italian/English/French/Spanish/German common words (articles, conjunctions, prepositions, common adjectives, verbs, adverbs, pronouns, past participles)
-- **Add** a `COMMON_WORDS` blocklist for words that pass stopword check but are clearly not names: Italian past participles (-ato/-uto/-ito), common adjectives (-ale/-ile/-oso), etc.
-- **Add** a pattern-based non-name detector: reject words matching Italian morphological patterns like `/^(che|chi|cosa|come|dove|quando|perché|quello|questa|questi|quelle|ogni|anche|ancora|adesso|allora|comunque|quindi|perciò|però|oppure|sia|tra|fra|con|per|senza)$/i`
-- **Require** original-text capitalisation for medium-tier patterns (not just compound/strong)
-- **Change** all `status: "applied"` to `status: "suggested"` — remove auto-apply logic entirely
-- **Raise** final filter threshold from `confidence >= 0.5` to `confidence >= 0.75`
-- **Accept** `language` parameter in request body; pass it to AI review prompt
-- **Rewrite** AI review system prompt to be sceptical: instruct it to return confidence 0.0 if no clear name is present, never guess, never use transcript words that aren't proper nouns
+### Remaining-count indicator
 
-### Frontend — `src/components/SpeakerIdentificationBanner.tsx`
-- **Remove** the "applied" section rendering (lines 81–166) — since nothing auto-applies, only "suggested" items exist
-- **Simplify** the banner to show only suggestions with accept/reject/edit controls
-- Or: keep the applied rendering for backward compatibility with already-stored data, but no new items will have "applied" status
+Displayed below the Ask textarea, right-aligned, `text-xs text-muted-foreground`.
 
-### Shared types — `src/lib/speaker-identification.ts`
-- **Expand** STOPWORDS and ROLE_WORDS to match the backend lists (keep in sync for any client-side validation)
+**Wording** (same on mobile and desktop):
+- Normal state: **"3 questions left"** — e.g. "7 questions left", "1 question left"
+- At limit: **"No questions left"**
+- Singular handled naturally: "1 question left"
 
-### Caller — wherever `identify-speakers` is invoked
-- **Pass** the transcript language (from job metadata) in the request body as `language`
+i18n keys:
 
-## 5. Files/Services Affected
+| Key | EN | FR | IT |
+|-----|----|----|-----|
+| `jobResults.questionsLeft` | `"{{count}} questions left"` | `"{{count}} questions restantes"` | `"{{count}} domande rimanenti"` |
+| `jobResults.questionsLeftOne` | `"{{count}} question left"` | `"{{count}} question restante"` | `"{{count}} domanda rimanente"` |
+| `jobResults.noQuestionsLeft` | `"No questions left"` | `"Plus de questions disponibles"` | `"Nessuna domanda rimanente"` |
+
+Uses i18next plural interpolation (`_one` / default plural suffix) so a single key handles singular/plural automatically.
+
+### Q&A card actions
+
+Add two icon buttons per card in the header row (between checkbox and copy):
+- **Edit** (Pencil icon) — disabled when remaining = 0 or any generation in progress
+- **Delete** (Trash2 icon) — always active; immediate delete with undo toast
+
+### Edit-in-place flow
+
+1. Click edit → question text becomes an editable input, pre-filled with current text. Two buttons: confirm (Check) and cancel (X).
+2. On confirm → card enters "regenerating" state:
+   - Question text updates immediately to the new text
+   - Answer area shows a subtle spinner/skeleton overlay; existing answer text remains visible but at reduced opacity
+   - All card actions (edit, delete, checkbox) disabled during regeneration
+3. `regenerate` is called with the edited prompt text
+4. **On success**: answer content smoothly replaces the old content; opacity returns to normal; spinner removed
+5. **On failure**: question text reverts to original; answer remains unchanged; toast with error message; card returns to normal state
+
+This ensures the user never sees a blank/missing card during regeneration.
+
+### Mobile
+
+Same layout. Icons use min 32px tap targets. Remaining-count text wraps naturally.
+
+## 4. Failure and Edge Cases
+
+| Case | Handling |
+|------|----------|
+| AI generation fails | Counter rolled back server-side. Card reverts to original question + answer. Error toast. |
+| Double-tap / concurrent submit | `askingQuestion` state prevents concurrent asks. Per-card `regeneratingId` lock. Atomic server-side guard. |
+| Edit while another generation in progress | All edit buttons disabled while any generation is active. |
+| Page reload mid-generation | Counter was incremented; if AI fails, edge function rolls it back. If the response completed server-side, `fetchData` picks up the new output on reload. |
+| `question_generation_count` null for existing jobs | Migration default 0. Edge function treats null as 0. |
+| Delete during edit | Cancel edit state first, then delete. |
+
+## 5. Files/Components Affected
 
 | File | Change |
 |------|--------|
-| `supabase/functions/identify-speakers/index.ts` | Major: remove broad patterns, expand blocklists, rewrite AI prompt, remove auto-apply, raise thresholds, accept language param |
-| `supabase/functions/identify-speakers/identify-speakers.test.ts` | Update tests: add Italian non-name rejection cases, remove broad-pattern expectations |
-| `src/lib/speaker-identification.ts` | Expand STOPWORDS/ROLE_WORDS, remove "applied" from status type if desired |
-| `src/components/SpeakerIdentificationBanner.tsx` | Minor: simplify if auto-apply is fully removed |
-| Caller of `identify-speakers` (likely in `post-process` or `JobDetail`) | Pass `language` field |
+| **New migration** | Add `question_generation_count` column to `jobs` |
+| `supabase/functions/regenerate/index.ts` | Limit check + atomic increment for `output_type === "custom"`, rollback on failure |
+| `src/components/JobResults.tsx` | Fetch `question_generation_count` in job query. Add edit/delete handlers. Regenerating card state (spinner overlay, dimmed answer). Remaining count display. Disabled states at limit. |
+| `src/i18n/locales/en.json` | Keys: `questionsLeft`, `questionsLeftOne`, `noQuestionsLeft`, `deleteQuestion`, `editQuestion`, `regeneratingAnswer` |
+| `src/i18n/locales/fr.json` | Same keys, French |
+| `src/i18n/locales/it.json` | Same keys, Italian |
 
 ## 6. Regression Risks
 
 | Risk | Mitigation |
 |------|------------|
-| Legitimate names caught by expanded blocklist (e.g., a person actually named "Felice") | Keep medium/strong patterns which require explicit intro phrases — if someone says "mi chiamo Felice", it will still work because the intro pattern overrides the stopword |
-| Removing auto-apply frustrates users who had names correctly identified | All suggestions still appear in the banner; users just need one tap to accept. This is the correct UX for a trust-sensitive feature |
-| Expanded blocklist maintenance burden | Use morphological patterns (regex for common suffixes) rather than exhaustive word lists |
-| AI review returning garbage despite prompt rewrite | Final validation layer still checks against blocklists after AI response; AI can only upgrade confidence, never bypass blocklist |
+| Existing Q&A cards break | New buttons are additive; checkbox/copy untouched |
+| Export includes deleted items | Delete removes from DB; export reads current state |
+| Summary regeneration accidentally gated | Limit scoped to `output_type === "custom"` only |
+| Counter desync on failure | Server-side rollback ensures accuracy |
+| Old jobs missing column | Migration default 0 |
 
-## 7. Manual QA Cases
+## 7. QA Plan
 
-1. **Italian transcript, no introductions**: Should produce zero suggestions
-2. **Italian transcript with "mi chiamo Marco"**: Should suggest "Marco" for the correct speaker
-3. **Italian transcript with "sono strutturati"**: Must NOT suggest "Strutturati"
-4. **Italian transcript with "sono che..."**: Must NOT suggest "Che"
-5. **Italian transcript with "sono contenta"**: Must NOT suggest (stopword)
-6. **Italian transcript with "sono il dottore"**: Must NOT suggest "Dottore" (role word)
-7. **Italian compound: "sono Camilla, la terapista"**: Should suggest "Camilla"
-8. **English transcript with "my name is Sarah"**: Should suggest "Sarah"
-9. **English transcript with "I am happy to be here"**: Must NOT suggest "Happy"
-10. **Mixed-language transcript**: Should handle correctly per-pattern language
-11. **Transcript with multiple speakers, one introduces themselves**: Only that speaker gets a suggestion
-12. **Previously stored "applied" results**: Banner still renders them correctly (backward compat)
-
-## 8. Why Option B (Remove Entirely) Was Not Chosen
-
-The feature provides genuine value when transcripts contain explicit self-introductions. The compound and strong pattern tiers (e.g., "mi chiamo X", "my name is X", "I'm X, the therapist") are reliable and high-precision. The problem is localised to the broad tier and insufficient validation — not a fundamental architectural flaw. Removing the entire feature would sacrifice real value to fix a scoped problem. The conservative rebuild eliminates the bad outputs while preserving the good ones, and the shift to suggestion-only (no auto-apply) ensures the user always has final say.
+1. Ask a question → answer appears, remaining count decrements
+2. Edit question text, confirm → card shows spinner over dimmed answer, new answer replaces old on success, count decrements
+3. Edit question, simulate AI failure → original question and answer restored, count unchanged
+4. Delete a card → disappears, remaining count unchanged
+5. Ask 10 questions → input disabled, edit buttons disabled, delete and include/exclude still work
+6. Rapid double-click Ask → only one generation fires
+7. Page reload → count persists correctly
+8. Mobile → all actions work, tap targets adequate
+9. Export → deleted cards excluded, include/exclude works at limit
+10. Verify "1 question left" singular copy
 
