@@ -25,6 +25,84 @@ function countDistinctNonEmpty(values: Array<unknown>): number {
   ).size;
 }
 
+interface DiarUtterance {
+  speaker: string;
+  start: number;
+  end: number;
+  text: string;
+  confidence: number;
+  words?: Array<{ start: number; end: number; text: string; confidence: number; speaker: string }>;
+}
+
+/**
+ * Merge spurious speaker flips in mono diarization output.
+ *
+ * Heuristic: if a speaker change occurs and the next utterance looks like a
+ * mid-sentence continuation (short gap, starts lowercase or with a common
+ * continuation token, very few words), absorb it into the previous speaker's
+ * turn. This fixes AssemblyAI's occasional false diarization splits inside a
+ * single speaker's sentence in mono audio.
+ */
+function mergeFalseSpeakerFlips(utterances: DiarUtterance[]): DiarUtterance[] {
+  if (utterances.length <= 1) return utterances;
+
+  const MAX_GAP_MS = 1500;
+  const MAX_CONTINUATION_WORDS = 8;
+
+  const startsLowerOrContinuation = (text: string): boolean => {
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+    const firstChar = trimmed[0];
+    // Starts with lowercase letter → likely mid-sentence
+    if (firstChar === firstChar.toLowerCase() && firstChar !== firstChar.toUpperCase()) return true;
+    // Starts with common continuation punctuation
+    if (",;".includes(firstChar)) return true;
+    return false;
+  };
+
+  const wordCount = (text: string): number =>
+    text.trim().split(/\s+/).filter(Boolean).length;
+
+  const merged: DiarUtterance[] = [utterances[0]];
+
+  for (let i = 1; i < utterances.length; i++) {
+    const prev = merged[merged.length - 1];
+    const curr = utterances[i];
+
+    const speakerChanged = curr.speaker !== prev.speaker;
+    const gap = curr.start - prev.end;
+    const isContinuation = startsLowerOrContinuation(curr.text);
+    const isShort = wordCount(curr.text) <= MAX_CONTINUATION_WORDS;
+
+    if (speakerChanged && gap <= MAX_GAP_MS && isContinuation && isShort) {
+      // Merge: absorb into previous utterance, keep previous speaker
+      console.log(JSON.stringify({
+        event: "diarization_merge",
+        from_speaker: curr.speaker,
+        into_speaker: prev.speaker,
+        gap_ms: gap,
+        merged_text: curr.text.substring(0, 60),
+        word_count: wordCount(curr.text),
+      }));
+
+      prev.text = prev.text.trimEnd() + " " + curr.text.trimStart();
+      prev.end = curr.end;
+      if (curr.confidence < prev.confidence) {
+        prev.confidence = curr.confidence;
+      }
+      if (prev.words && curr.words) {
+        // Re-tag merged words with the absorbing speaker
+        const retagged = curr.words.map((w) => ({ ...w, speaker: prev.speaker }));
+        prev.words = [...prev.words, ...retagged];
+      }
+    } else {
+      merged.push(curr);
+    }
+  }
+
+  return merged;
+}
+
 async function submitAndPollTranscript(
   apiKey: string,
   payload: Record<string, unknown>,
