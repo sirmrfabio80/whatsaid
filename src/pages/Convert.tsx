@@ -204,15 +204,13 @@ export default function Convert() {
     try {
       let uploadFile = file;
 
-      // Apply audio enhancement if enabled
-      if (transcriptionConfig.enhanceAudio) {
-        setStep("enhancing");
-        try {
-          uploadFile = await enhanceAudioForTranscription(file);
-        } catch (enhanceError) {
-          console.warn("Audio enhancement failed, uploading original:", enhanceError);
-          // Fall back to original file silently
-        }
+      // Audio optimisation is always on (normalise + volume boost, no compression).
+      setStep("enhancing");
+      try {
+        uploadFile = await enhanceAudioForTranscription(file);
+      } catch (enhanceError) {
+        console.warn("Audio enhancement failed, uploading original:", enhanceError);
+        uploadFile = file;
       }
 
       setStep("uploading");
@@ -235,12 +233,11 @@ export default function Convert() {
         ? fileCreationDate.source
         : "file_last_modified";
 
-      // Build transcription_config from UI settings
-      const txConfig: Record<string, unknown> = {};
-      if (transcriptionConfig.strategy) txConfig.strategy = transcriptionConfig.strategy;
-      if (transcriptionConfig.speakers_expected) txConfig.speakers_expected = transcriptionConfig.speakers_expected;
-      if (transcriptionConfig.keyterms && transcriptionConfig.keyterms.length > 0) txConfig.keyterms = transcriptionConfig.keyterms;
-      if (transcriptionConfig.enhanceAudio) txConfig.audio_enhanced = true;
+      // Build transcription_config from UI settings (picker is hidden — only
+      // channel analysis metadata is attached; backend defaults handle strategy).
+      const txConfig: Record<string, unknown> = {
+        audio_enhanced: true,
+      };
       if (channelAnalysis) {
         txConfig.channel_analysis = {
           detected_channel_count: channelAnalysis.detectedChannelCount,
