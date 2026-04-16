@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
-import type { TranscriptionConfig } from "@/components/TranscriptionSettings";
+
 import LanguageSelector from "@/components/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,7 +52,7 @@ export default function Convert() {
   const [channelAnalysis, setChannelAnalysis] = useState<AudioChannelAnalysis | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
-  const [transcriptionConfig] = useState<TranscriptionConfig>({});
+  
   const [processing, setProcessing] = useState(false);
   const [processingPurchase, setProcessingPurchase] = useState(false);
   const [creditsAdded, setCreditsAdded] = useState<number | null>(null);
