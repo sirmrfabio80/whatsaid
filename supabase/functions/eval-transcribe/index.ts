@@ -112,6 +112,7 @@ async function submitTranscription(
     audio_url: audioUrl,
     speaker_labels: true,
     speech_threshold: 0.05,
+    speech_models: ["universal-3-pro", "universal-2"],
   };
 
   if (config.language_code) {
@@ -126,7 +127,7 @@ async function submitTranscription(
   }
 
   if (config.prompt) {
-    body.custom_prompt = config.prompt;
+    body.prompt = config.prompt;
   }
 
   if (config.disfluencies) {
@@ -212,7 +213,7 @@ interface ConfigResult {
   config_id: number;
   config_label: string;
   language_detected: string | null;
-  speech_model: string | null;
+  speech_model_used: string | null;
   overall_confidence: number | null;
   window_utterances: WindowUtterance[];
   window_words: WindowWord[];
@@ -297,7 +298,7 @@ function extractWindow(
     config_id: config.id,
     config_label: config.label,
     language_detected: (data.language_code as string) || null,
-    speech_model: (data.speech_model as string) || null,
+    speech_model_used: (data.speech_model_used as string) || null,
     overall_confidence: (data.confidence as number) || null,
     window_utterances: windowUtterances,
     window_words: windowWords,
@@ -371,7 +372,7 @@ Deno.serve(async (req) => {
               config_id: config.id,
               config_label: config.label,
               language_detected: null,
-              speech_model: null,
+              speech_model_used: null,
               overall_confidence: null,
               window_utterances: [],
               window_words: [],
@@ -406,7 +407,7 @@ Deno.serve(async (req) => {
           config_id: config.id,
           config_label: config.label,
           language_detected: null,
-          speech_model: null,
+          speech_model_used: null,
           overall_confidence: null,
           window_utterances: [],
           window_words: [],
