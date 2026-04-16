@@ -482,7 +482,7 @@ Deno.serve(async (req) => {
         language_detected: detectedLanguage,
         duration_seconds: audioDuration,
         speaker_count: route === "multichannel"
-          ? (transcript.audio_channels as number) ?? uniqueSpeakers || null
+          ? ((transcript.audio_channels as number) ?? (uniqueSpeakers > 0 ? uniqueSpeakers : null))
           : uniqueSpeakers > 0 ? uniqueSpeakers : null,
       }),
       {
