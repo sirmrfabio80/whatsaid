@@ -1,103 +1,112 @@
 
 
-# AssemblyAI Quality Improvements
+# Test Matrix Runner — Implementation Plan
 
-## Phase 1 — Config Levers (DEPLOYED)
+## Approach
+Create a single new edge function `eval-transcribe` that:
+1. Accepts an audio file path in `temp-audio` storage
+2. Runs all 8 configs sequentially against AssemblyAI (same audio, different params)
+3. For each run, extracts the 34–38s window (utterances, words, speakers, confidences)
+4. Returns a compact JSON comparison report
 
-Applied to `supabase/functions/transcribe/index.ts`:
+This is internal-only — no UI, no product code changes. Invoked via the edge function curl tool or a direct HTTP call.
 
-1. EU endpoint (`api.eu.assemblyai.com/v2`)
-2. `speech_threshold: 0.05`
-3. `language_confidence_threshold: 0.4` (auto-detect only)
-4. `speakers_expected` → `speaker_options` migration (omitted when no count specified)
-5. `disfluencies: true` for recovery strategy
-6. Code-switching instruction in recovery + review prompts only
-7. Structured logging for all new params
-8. `speech_model` persisted from AssemblyAI response
+## Why edge function over script
+- Already has `ASSEMBLYAI_API_KEY` and Supabase access
+- Deploys instantly, testable via curl
+- No local environment setup needed
+- Can be deleted after evaluation
 
-## Phase 2 — Transcript Quality Investigation
+## Edge function: `supabase/functions/eval-transcribe/index.ts`
 
-### A. What Exactly Failed (regression fixture)
+### Input
+```json
+{
+  "storage_path": "path/to/file/in/temp-audio",
+  "configs": [1,2,3,4,5,6,7,8]  // optional subset
+}
+```
 
-#### 1. Speaker Split Failure
-The raw AssemblyAI response already contains the wrong speaker boundary. The sentence "Scusa, ma dove? Stai chiamando direttamente dalla Romania, lei?" is one continuous phrase from one speaker, split across two speakers at 36703ms. The acoustic cause: the near-mic speaker asks a question, and the volume/timbre shift (phone speaker audio) **most likely triggered** a false speaker-switch in the diarization model.
+### Config matrix (hardcoded)
+| # | Strategy | Language | Speaker Options | Extra |
+|---|----------|----------|-----------------|-------|
+| 1 | balanced | auto | none | baseline |
+| 2 | balanced | auto | {min:2,max:2} | |
+| 3 | balanced | it | {min:2,max:2} | |
+| 4 | recovery | auto | {min:2,max:2} | disfluencies:true |
+| 5 | review | auto | {min:2,max:2} | |
+| 6 | balanced | auto | {min:2,max:2} | keyterms_prompt:["Romania"] |
+| 7 | balanced | it | {min:2,max:2} | note: "enhanced audio" |
+| 8 | balanced | it | {min:2,max:2} | note: "raw audio" |
 
-#### 2. Wrong Words
-The raw AssemblyAI response already contains "alla vagomania" with word-level confidences ~0.50. Ground truth is "dalla Romania". This is ASR misrecognition of a quiet, compressed phone-speaker voice. The 'd' of "dalla" was lost in noise, and "Romania" was garbled into the non-word "vagomania".
+Configs 7 and 8 use the same API params as config 3 — the difference is which audio file was uploaded (enhanced vs raw). The function will accept an optional `storage_path_raw` for config 8.
 
-#### 3. Our App's Role
-- The raw recognition error and speaker split failure **originate upstream** in the AssemblyAI output
-- Our app currently **renders that output faithfully** — no downstream corruption
-- Our app **does not currently detect, contain, or repair** suspicious low-confidence spans or suspicious speaker-boundary splits
-- This means our product has no safety net for upstream ASR failures, which is a gap worth evaluating separately from the ASR config
+### Processing per config
+1. Submit to AssemblyAI EU endpoint with the config's params
+2. Poll until complete (5s intervals, 120 max)
+3. Extract from the completed response:
+   - All utterances overlapping 30–42s (wider window for context)
+   - Word-level data in that window (text, confidence, speaker, start/end)
+   - Whether "dalla Romania" or "vagomania" appears
+   - Speaker labels and boundaries around the split point (~36.7s)
+   - `language_code`, `speech_model`, overall `confidence`
+4. Delete the AssemblyAI transcript immediately after extraction
 
-### B. AssemblyAI Configuration Review
+### Output
+A JSON report with:
+```json
+{
+  "ground_truth": "dalla Romania",
+  "target_window_ms": [34000, 38000],
+  "results": [
+    {
+      "config_id": 1,
+      "config_label": "balanced, auto, no speaker hint",
+      "language_detected": "it",
+      "speech_model": "...",
+      "overall_confidence": 0.744,
+      "window_utterances": [...],
+      "window_words": [...],
+      "contains_dalla_romania": false,
+      "contains_vagomania": true,
+      "speaker_split_at_36s": true,
+      "unique_speakers_in_window": 2,
+      "suspicious_span_avg_confidence": 0.50
+    },
+    ...
+  ],
+  "summary": {
+    "best_for_phrase": 3,
+    "best_for_speaker_split": 2,
+    "best_overall_confidence": 3
+  }
+}
+```
 
-#### Most directly relevant lever: `speaker_options`
-`speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 }` is the **most direct config lever** for the speaker-split problem. Constraining the diarization model to exactly 2 speakers forces it to reconsider boundary decisions. Highest-priority config change to test.
+### Safety
+- No product tables touched — purely reads from storage, calls AssemblyAI, returns JSON
+- Deletes all AssemblyAI transcripts after extraction
+- Long timeout needed (~15 min for 8 sequential runs) — will set function timeout accordingly
+- Auth: requires service role or admin token (internal use only)
 
-#### Test hypothesis: explicit `language_code: "it"`
-The audio was already auto-detected as Italian. Explicit language forcing **may or may not** improve word recognition — treat as a **test hypothesis**, not a presumed fix. The regression test matrix will determine whether it makes a measurable difference.
+### Timeout handling
+Each config takes ~60–90s to process. 8 configs = ~8–12 min total. The edge function will:
+- Run configs sequentially (parallel would be faster but risks rate limits)
+- Use a 900s (15 min) timeout via `supabase/config.toml`
+- Return partial results if any config fails
 
-#### Baseline evaluation: no prompt (U3P defaults)
-AssemblyAI recommends starting with **no prompt** and evaluating prompted variants against that baseline. The "balanced" strategy (no prompt, no keyterms_prompt) should be the **primary baseline** in all testing.
+### Files created
+1. `supabase/functions/eval-transcribe/index.ts` — the evaluation harness
+2. Update `supabase/config.toml` — add `[functions.eval-transcribe]` with `verify_jwt = false`
 
-#### `custom_spelling`
-Useful for **recurring domain terms, proper nouns, names, and stable jargon**. **Not a fix for arbitrary one-off misrecognitions** like "vagomania" → "Romania".
+### Files NOT changed
+- `supabase/functions/transcribe/index.ts` — untouched
+- No UI files
+- No schema changes
 
-#### What will NOT help for this specific failure
-- `speech_threshold` — audio has plenty of speech
-- `disfluencies` — irrelevant to word recognition
-- `language_confidence_threshold` — language was correctly detected
-- `multichannel` — single-channel recording
-- `code_switching` prompt — monolingual Italian audio
-- `format_text` / `punctuate` — not related to word recognition
+### How to run
+After deploy, invoke via curl with the storage path to the regression audio file. The function returns the comparison report directly.
 
-### C. Recommended Action Order
+### Cleanup
+After evaluation is complete and results are reviewed, the function can be deleted — it has no product dependencies.
 
-#### Step 1: Run the test matrix (validate before committing)
-
-| # | Config | Tests |
-|---|--------|-------|
-| 1 | **Balanced strategy, auto language, no speaker hint** | U3P defaults baseline |
-| 2 | Balanced, auto language, `speaker_options: {min:2, max:2}` | Does speaker constraint fix the split? |
-| 3 | Balanced, `language_code: "it"`, `speaker_options: {min:2, max:2}` | Does explicit Italian improve word recognition? |
-| 4 | Recovery, auto language, `speaker_options: {min:2, max:2}` | Current strategy + speaker fix |
-| 5 | Review, auto language, `speaker_options: {min:2, max:2}` | Does review grammar-check catch "vagomania"? |
-| 6 | Keyterms with `keyterms_prompt: ["Romania"]`, `speaker_options: {min:2, max:2}` | Does keyterm hint fix the proper noun? |
-| 7 | Config #3 + enhanced audio | Does preprocessing help the quiet speaker? |
-| 8 | Config #3 + raw audio (no enhancement) | Is enhancement helping or hurting? |
-
-Test #1 is critical — establishes the U3P default baseline. All other configs must be compared against it.
-
-#### Step 2: Diarization constraint changes
-Based on test matrix results, implement `speaker_options` improvements:
-- When user selects explicit speaker count → send exact min/max
-- When phone_call profile → consider defaulting to `{min:2, max:2}` if test confirms improvement
-- When no count specified → omit `speaker_options` entirely (already implemented)
-
-#### Step 3: Strategy / prompt comparisons
-Based on test matrix results, evaluate whether:
-- Default strategy for phone_call profile should change
-- Any prompt variant demonstrably outperforms the no-prompt baseline
-- Do NOT change strategy defaults without evidence
-
-#### Step 4: Confidence-based repair layer (only if needed)
-Only pursue if Steps 1-3 leave residual quality gaps:
-- Scan word-level confidences for contiguous spans with avg < 0.5
-- Targeted AI repair using surrounding sentence context
-- Apply corrections only when AI confidence is high; mark in metadata
-- Highest-complexity, highest-risk option — introduces hallucination vector
-
-### D. Verdict
-
-This is primarily an **acoustic challenge** (quiet phone-speaker voice) compounded by **missing diarization constraints**.
-
-- Recognition and speaker-split failures originate upstream in AssemblyAI
-- Our app renders faithfully but has no safety net for upstream failures
-- `speaker_options` with exact speaker count is the most direct lever for diarization
-- Explicit language forcing is a hypothesis to test, not a presumed fix
-- U3P defaults (no prompt) must be the evaluation baseline
-- Confidence-based repair is a last resort, not a first move
-
-**Implementation order:** test matrix → diarization constraints → strategy/prompt changes → confidence-based repair (only if needed)
