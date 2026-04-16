@@ -1,71 +1,64 @@
 
 
-## Fix Claim Flow: Privacy & Correctness
+# AssemblyAI Quality Improvements — Implementation Plan
 
-### Summary
-Remove all recipient-email disclosure from frontend and backend. Remove client-side email mismatch gating so the backend is the sole authority on claim access. Add profile email uniqueness validation. Fix SITE_URL domain.
+## Summary
+Apply the highest-impact, lowest-risk quality levers to `supabase/functions/transcribe/index.ts`. One file changed, one deploy.
 
-### Changes
+## Changes (all in `supabase/functions/transcribe/index.ts`)
 
-**1. `supabase/functions/_shared/constants.ts`**
-- Change `SITE_URL` from `'https://whatsaid.lovable.app'` to `'https://whatsaid.app'`
+### 1. Switch to EU endpoint
+- Line 9: Change `ASSEMBLYAI_BASE` from `https://api.assemblyai.com/v2` to `https://api.eu.assemblyai.com/v2`
+- Also update the DELETE call (line 373) which already uses `ASSEMBLYAI_BASE`, so it inherits automatically
 
-**2. `supabase/functions/validate-profile-email/index.ts`** (new)
-- Auth-required edge function accepting `{ email: string }`
-- Uses service role to check if any *other* user has that email in `profiles.email` or `auth.users`
-- Returns `{ available: true/false }` — never reveals who or where
-- Generic CORS headers
+### 2. Add `speech_threshold: 0.05`
+- Add to `transcriptPayload` object (after line 83)
+- Add error handling in the poll loop: if AssemblyAI returns an error mentioning insufficient speech, surface a user-friendly error message like "Not enough speech detected in the audio"
 
-**3. `src/pages/Settings.tsx`**
-- Before updating `profiles.email`, call `validate-profile-email`
-- If `available: false`, set `emailError` to `t("settings.emailUnavailable")` and block save
-- No other Settings UI changes
+### 3. Add `language_confidence_threshold: 0.4`
+- Add to `transcriptPayload` only when `language_detection: true` (inside the else block, ~line 89)
+- Handle the error case: if transcription fails due to low confidence, set a clear error message suggesting manual language selection
 
-**4. `supabase/functions/claim-transcript-share/index.ts`**
-- **GET handler (line 55)**: Remove `recipientEmail` from response — return only `{ title, senderEmail, expired, alreadyClaimed }`
-- **POST handler (line 122-123)**: Replace `"This transcript was shared with ${share.recipient_email}..."` with `"You don't have access to this transcript."`
+### 4. Migrate `speakers_expected` → `speaker_options`
+- Replace lines 147-149: instead of `transcriptPayload.speakers_expected = N`, send `transcriptPayload.speaker_options = { min_speakers_expected: N, max_speakers_expected: N }`
+- When no speaker count is specified, send `speaker_options: { min_speakers_expected: 1 }` as a harmless default hint
+- Update the legacy `phone_call` profile (line 133) to use the new shape
+- Update the structured log and saved `transcription_config` to reflect the new param name
 
-**5. `supabase/functions/download-shared-pdf/index.ts`**
-- **Line 92**: Replace `"This PDF was shared with ${share.recipient_email}..."` with `"You don't have access to this PDF."`
+### 5. Add `disfluencies: true` for recovery strategy
+- When strategy is `"recovery"`, add `transcriptPayload.disfluencies = true`
+- Simplify the recovery prompt: remove the disfluency-specific instruction (line 100: "Mandatory: Preserve linguistic speech patterns including disfluencies, filler words, hesitations, repetitions, stutters, false starts...") since the API param now handles this
+- Keep the code-switching and best-guess instructions in the recovery prompt
 
-**6. `src/pages/ClaimShare.tsx`**
-- Remove `"emailMismatch"` from `ClaimStatus` union
-- Remove `recipientEmail` from `ShareInfo` interface
-- Remove client-side mismatch check (lines 65-72) — if authenticated, always set `"ready"` and let POST decide
-- Remove entire mismatch UI block (lines 190-216)
-- Remove `handleSwitchAccount` and `handleCreateRecipientAccount` functions
-- Remove unused imports (`LogOut`, `AlertTriangle` if no longer used)
-- When POST returns non-OK, show `t("claim.noAccess")` as errorMsg
+### 6. Add code-switching instruction to review prompt only
+- Prepend `"Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.\n\n"` to the existing review prompt
+- **Do NOT add any prompt to balanced/default strategy** — U3P's built-in default prompt already handles multilingual code-switching
+- **Do NOT modify keyterms strategy** — `keyterms_prompt` is appended to the default prompt automatically
 
-**7. Locale files (`en.json`, `it.json`, `fr.json`)**
-- **Add**:
-  - `claim.noAccess`: "You don't have access to this transcript. Make sure you're signed in with the correct account." / IT / FR equivalents
-  - `settings.emailUnavailable`: "This email cannot be used right now." / IT / FR equivalents
-- **Remove**: `mismatchTitle`, `mismatchDesc`, `mismatchSignedInAs`, `mismatchSharedWith`, `switchAccount`, `createAccountForEmail`
+### 7. Update structured logging
+- Add new params to the routing log: `speech_threshold`, `language_confidence_threshold`, `speaker_options`, `disfluencies`
+- Update saved `transcription_config` object to include the new params
 
-### Implementation order
-1. Constants fix (SITE_URL)
-2. New `validate-profile-email` edge function
-3. Settings uniqueness check
-4. Backend privacy fixes (claim-transcript-share + download-shared-pdf)
-5. ClaimShare.tsx frontend cleanup
-6. Locale updates
-7. Deploy edge functions: `validate-profile-email`, `claim-transcript-share`, `download-shared-pdf`
+## Prompt state after changes
 
-### Edge cases to test
-1. Google-auth user with matching `profiles.email` → auto-claims successfully
-2. Auth email mismatch but profile email matches → claims successfully
-3. Both emails mismatch → generic 403, no email leaked
-4. Unauthenticated → sign-in prompt, no recipient shown
-5. Already-claimed share → generic error
-6. Expired share → generic error
-7. Profile email change to in-use email → blocked with generic message
+| Strategy | `prompt` | `keyterms_prompt` | `disfluencies` |
+|----------|----------|-------------------|----------------|
+| balanced | omitted | omitted | omitted |
+| recovery | code-switch + best-guess instructions (no disfluency text) | omitted | `true` |
+| review | code-switch + review instructions | omitted | omitted |
+| keyterms | omitted | user terms | omitted |
 
-### Not touched
-- `share-transcript-record`, `share-transcript` edge functions (they create shares, don't validate claims)
-- Profile.tsx, security card, preferences card, danger zone
-- No schema migration needed
+## Not changed
+- No UI changes
+- No new edge functions
+- No schema migrations
+- No changes to post-process, identify-speakers, or any other function
+- No region selection UI anywhere
 
-### Note on confirmed vs pending profile email
-The `profiles` table has no `email_confirmed_at` column. Profile email changes take effect immediately. With uniqueness validation added, this is acceptable for now. A confirmed-email model would be a separate follow-up if needed.
+## Risk assessment
+- All changes are additive params to an existing working request
+- `speech_threshold: 0.05` is very conservative (rejects only near-silent files)
+- `language_confidence_threshold: 0.4` is conservative
+- `speaker_options` is the official replacement for `speakers_expected`
+- EU endpoint has full feature parity per AssemblyAI docs
 
