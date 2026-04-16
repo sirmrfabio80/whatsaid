@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
 
   try {
     // Auth disabled for test-only function — DELETE this function after evaluation
-    
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const body = await req.json();
     const storagePath: string = body.storage_path;
