@@ -351,13 +351,8 @@ export default function Convert() {
               <CardContent className="p-8 sm:p-12">
                 <div className="flex flex-col items-center text-center space-y-6">
                   <div className="w-full max-w-sm space-y-4">
-                    {(transcriptionConfig.enhanceAudio
-                      ? ["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]
-                      : ["uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]
-                    ).map((s) => {
-                      const allSteps = transcriptionConfig.enhanceAudio
-                        ? ["enhancing", "uploading", "transcribing", "summarising", "completed"]
-                        : ["uploading", "transcribing", "summarising", "completed"];
+                    {(["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
+                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "transcribing", "summarising", "completed"];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         allSteps.indexOf(step!) > allSteps.indexOf(s)
