@@ -51,7 +51,7 @@ export default function Convert() {
   const [audioChannels, setAudioChannels] = useState<number | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
-  const [transcriptionConfig] = useState<TranscriptionConfig>({ strategy: "recovery", enhanceAudio: true });
+  const [transcriptionConfig] = useState<TranscriptionConfig>({});
   const [processing, setProcessing] = useState(false);
   const [processingPurchase, setProcessingPurchase] = useState(false);
   const [creditsAdded, setCreditsAdded] = useState<number | null>(null);
