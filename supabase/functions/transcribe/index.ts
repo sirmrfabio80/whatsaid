@@ -237,7 +237,10 @@ Deno.serve(async (req) => {
 
     const tuningConfig = (job.transcription_config as Record<string, unknown>) ?? {};
 
-    const strategy = (tuningConfig.strategy as string) ?? "balanced";
+    // Permanent default: "recovery" strategy is always on unless an explicit
+    // alternative strategy is provided in transcription_config. This injects
+    // the recovery prompt and enables `disfluencies: true` for every job.
+    const strategy = (tuningConfig.strategy as string) ?? "recovery";
     const requestedAudioChannels = typeof job.audio_channels === "number" && job.audio_channels > 1
       ? job.audio_channels
       : null;

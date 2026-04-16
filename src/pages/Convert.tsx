@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AudioUploader from "@/components/AudioUploader";
 import JobResults from "@/components/JobResults";
-import type { TranscriptionConfig } from "@/components/TranscriptionSettings";
+
 import LanguageSelector from "@/components/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,7 +52,7 @@ export default function Convert() {
   const [channelAnalysis, setChannelAnalysis] = useState<AudioChannelAnalysis | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
-  const [transcriptionConfig] = useState<TranscriptionConfig>({});
+  
   const [processing, setProcessing] = useState(false);
   const [processingPurchase, setProcessingPurchase] = useState(false);
   const [creditsAdded, setCreditsAdded] = useState<number | null>(null);
@@ -204,15 +204,13 @@ export default function Convert() {
     try {
       let uploadFile = file;
 
-      // Apply audio enhancement if enabled
-      if (transcriptionConfig.enhanceAudio) {
-        setStep("enhancing");
-        try {
-          uploadFile = await enhanceAudioForTranscription(file);
-        } catch (enhanceError) {
-          console.warn("Audio enhancement failed, uploading original:", enhanceError);
-          // Fall back to original file silently
-        }
+      // Audio optimisation is always on (normalise + volume boost, no compression).
+      setStep("enhancing");
+      try {
+        uploadFile = await enhanceAudioForTranscription(file);
+      } catch (enhanceError) {
+        console.warn("Audio enhancement failed, uploading original:", enhanceError);
+        uploadFile = file;
       }
 
       setStep("uploading");
@@ -235,12 +233,11 @@ export default function Convert() {
         ? fileCreationDate.source
         : "file_last_modified";
 
-      // Build transcription_config from UI settings
-      const txConfig: Record<string, unknown> = {};
-      if (transcriptionConfig.strategy) txConfig.strategy = transcriptionConfig.strategy;
-      if (transcriptionConfig.speakers_expected) txConfig.speakers_expected = transcriptionConfig.speakers_expected;
-      if (transcriptionConfig.keyterms && transcriptionConfig.keyterms.length > 0) txConfig.keyterms = transcriptionConfig.keyterms;
-      if (transcriptionConfig.enhanceAudio) txConfig.audio_enhanced = true;
+      // Build transcription_config from UI settings (picker is hidden — only
+      // channel analysis metadata is attached; backend defaults handle strategy).
+      const txConfig: Record<string, unknown> = {
+        audio_enhanced: true,
+      };
       if (channelAnalysis) {
         txConfig.channel_analysis = {
           detected_channel_count: channelAnalysis.detectedChannelCount,
@@ -354,13 +351,8 @@ export default function Convert() {
               <CardContent className="p-8 sm:p-12">
                 <div className="flex flex-col items-center text-center space-y-6">
                   <div className="w-full max-w-sm space-y-4">
-                    {(transcriptionConfig.enhanceAudio
-                      ? ["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]
-                      : ["uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]
-                    ).map((s) => {
-                      const allSteps = transcriptionConfig.enhanceAudio
-                        ? ["enhancing", "uploading", "transcribing", "summarising", "completed"]
-                        : ["uploading", "transcribing", "summarising", "completed"];
+                    {(["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
+                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "transcribing", "summarising", "completed"];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         allSteps.indexOf(step!) > allSteps.indexOf(s)
