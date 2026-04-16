@@ -204,13 +204,32 @@ export default function Convert() {
     try {
       let uploadFile = file;
 
-      // Audio optimisation is always on (normalise + volume boost, no compression).
-      setStep("enhancing");
+      // Detect channel count first. For mono diarization jobs we skip the
+      // client-side WebAudio enhancement entirely (it appears to collapse
+      // AssemblyAI's diarizer down to 1 speaker on quiet single-mic recordings).
+      // Stereo recordings still get the normalise + boost pass.
+      let isMono = false;
       try {
-        uploadFile = await enhanceAudioForTranscription(file);
-      } catch (enhanceError) {
-        console.warn("Audio enhancement failed, uploading original:", enhanceError);
+        const probeBuf = await file.slice(0).arrayBuffer();
+        const probeCtx = new AudioContext();
+        const decoded = await probeCtx.decodeAudioData(probeBuf);
+        isMono = decoded.numberOfChannels === 1;
+        await probeCtx.close();
+      } catch (probeError) {
+        console.warn("Channel probe failed, assuming stereo:", probeError);
+      }
+
+      if (isMono) {
+        console.info("[convert] mono detected — skipping client-side audio enhancement (raw upload)");
         uploadFile = file;
+      } else {
+        setStep("enhancing");
+        try {
+          uploadFile = await enhanceAudioForTranscription(file);
+        } catch (enhanceError) {
+          console.warn("Audio enhancement failed, uploading original:", enhanceError);
+          uploadFile = file;
+        }
       }
 
       setStep("uploading");
