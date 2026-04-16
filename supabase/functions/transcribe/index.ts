@@ -324,6 +324,17 @@ Deno.serve(async (req) => {
             min_speakers_expected: resolvedSpeakers,
             max_speakers_expected: resolvedSpeakers,
           };
+        } else {
+          // Default for mono recordings: bias AssemblyAI toward a single speaker.
+          // Same-mic conversational mono audio frequently confuses diarization
+          // and produces spurious Speaker B turns. Setting min=1 lets the model
+          // collapse ambiguous turns; max=2 keeps the door open for clearly
+          // separated voices but discourages over-splitting. The post-process
+          // mergeFalseSpeakerFlips heuristic provides an additional safety net.
+          payload.speaker_options = {
+            min_speakers_expected: 1,
+            max_speakers_expected: 2,
+          };
         }
       }
 
