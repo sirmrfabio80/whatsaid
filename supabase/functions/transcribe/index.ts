@@ -75,8 +75,8 @@ Deno.serve(async (req) => {
 
     const transcriptPayload: Record<string, unknown> = {
       audio_url: signedUrlData.signedUrl,
-      speech_models: ["universal-3-pro", "universal-2"],
-      temperature: 0.1,
+      speech_models: ["universal-3-pro"],
+      temperature: 0,
       speech_threshold: 0.05,
       ...(isMultichannel
         ? { multichannel: true }
@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
       unique_speakers_or_channels: uniqueSpeakers,
       duration_seconds: Math.round((transcript.audio_duration as number) ?? 0),
       language_detected: (transcript.language_code as string) ?? null,
-      speech_model_actual: (transcript.speech_model as string) ?? null,
+      speech_model_actual: (transcript.speech_model_used as string) ?? null,
       avg_confidence: avgConfidence ? Math.round(avgConfidence * 1000) / 1000 : null,
       confidence_min: confidenceMin ? Math.round(confidenceMin * 1000) / 1000 : null,
       confidence_p25: confidenceP25 ? Math.round(confidenceP25 * 1000) / 1000 : null,
@@ -385,7 +385,7 @@ Deno.serve(async (req) => {
 
     // 10. Update job with metadata + store AssemblyAI transcript ID for cleanup
     // Read the actual model used from the AssemblyAI response instead of hardcoding
-    const actualSpeechModel = (transcript.speech_model as string) ?? "universal-3-pro";
+    const actualSpeechModel = (transcript.speech_model_used as string) ?? "universal-3-pro";
 
     const { error: updateJobErr } = await supabase
       .from("jobs")

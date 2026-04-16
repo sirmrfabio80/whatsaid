@@ -17,18 +17,7 @@ const corsHeaders = {
 
 const AAI_BASE = "https://api.eu.assemblyai.com/v2";
 
-// ── Strategy prompts (match production transcribe function) ──────────
-const RECOVERY_PROMPT =
-  "This audio may contain overlapping speech, background noise, or quiet speakers. " +
-  "Transcribe every audible word as accurately as possible, even if faint or unclear. " +
-  "If you detect more than one language being spoken, transcribe each segment in its original language.";
-
-const REVIEW_PROMPT =
-  "This is a review pass. Fix any grammar, punctuation, or obvious word errors " +
-  "while preserving the original meaning and speaker intent. " +
-  "If you detect more than one language being spoken, keep each segment in its original language.";
-
-// ── Config matrix ────────────────────────────────────────────────────
+// ── Config matrix — 4 targeted configs from investigation plan ──────
 interface MatrixConfig {
   id: number;
   label: string;
@@ -38,52 +27,36 @@ interface MatrixConfig {
   disfluencies?: boolean;
   keyterms_prompt?: string[];
   useRawAudio?: boolean;
+  // Production-match overrides
+  speech_models?: string[];
+  temperature?: number;
 }
 
 const CONFIGS: MatrixConfig[] = [
-  { id: 1, label: "balanced, auto, no speaker hint" },
+  {
+    id: 1,
+    label: "baseline-A: raw M4A, U3P, auto lang, temp=0, no prompt",
+    useRawAudio: true,
+  },
   {
     id: 2,
-    label: "balanced, auto, speakers {2,2}",
-    speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 },
+    label: "baseline-B: raw M4A, U3P, lang=it, temp=0, no prompt",
+    language_code: "it",
+    useRawAudio: true,
   },
   {
     id: 3,
-    label: "balanced, it, speakers {2,2}",
-    language_code: "it",
-    speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 },
+    label: "enhanced-control: enhanced WAV, U3P, auto lang, temp=0, no prompt",
   },
   {
     id: 4,
-    label: "recovery, auto, speakers {2,2}",
-    prompt: RECOVERY_PROMPT,
+    label: "current-whatsaid: enhanced WAV, U3P+U2 fallback, temp=0.1, recovery prompt, disfluencies",
+    speech_models: ["universal-3-pro", "universal-2"],
+    temperature: 0.1,
+    prompt:
+      "Required: Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.\n\n" +
+      "Always: Transcribe speech with your best guess based on context in all possible scenarios where speech is present in the audio.",
     disfluencies: true,
-    speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 },
-  },
-  {
-    id: 5,
-    label: "review, auto, speakers {2,2}",
-    prompt: REVIEW_PROMPT,
-    speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 },
-  },
-  {
-    id: 6,
-    label: "keyterms [Romania], auto, speakers {2,2}",
-    keyterms_prompt: ["Romania"],
-    speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 },
-  },
-  {
-    id: 7,
-    label: "balanced, it, speakers {2,2} (enhanced audio)",
-    language_code: "it",
-    speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 },
-  },
-  {
-    id: 8,
-    label: "balanced, it, speakers {2,2} (raw audio)",
-    language_code: "it",
-    speaker_options: { min_speakers_expected: 2, max_speakers_expected: 2 },
-    useRawAudio: true,
   },
 ];
 
@@ -112,7 +85,8 @@ async function submitTranscription(
     audio_url: audioUrl,
     speaker_labels: true,
     speech_threshold: 0.05,
-    speech_models: ["universal-3-pro", "universal-2"],
+    speech_models: config.speech_models || ["universal-3-pro"],
+    temperature: config.temperature ?? 0,
   };
 
   if (config.language_code) {
@@ -188,7 +162,7 @@ async function deleteTranscript(transcriptId: string, apiKey: string) {
       method: "DELETE",
       headers: { Authorization: apiKey },
     });
-    await res.text(); // consume
+    await res.text();
   } catch {
     // best-effort cleanup
   }
@@ -223,12 +197,14 @@ interface ConfigResult {
   speaker_split_in_window: boolean;
   unique_speakers_in_window: number;
   suspicious_span_avg_confidence: number | null;
+  request_params: Record<string, unknown>;
   error?: string;
 }
 
 function extractWindow(
   data: Record<string, unknown>,
   config: MatrixConfig,
+  requestParams: Record<string, unknown>,
 ): ConfigResult {
   const WINDOW_START = 30000;
   const WINDOW_END = 42000;
@@ -265,13 +241,11 @@ function extractWindow(
   const windowText = windowUtterances.map((u) => `[${u.speaker}] ${u.text}`).join(" | ");
   const fullWindowText = windowText.toLowerCase();
 
-  // Check for the target phrases
   const containsDallaRomania =
     fullWindowText.includes("dalla romania") ||
     fullWindowText.includes("dalla romania,");
   const containsVagomania = fullWindowText.includes("vagomania");
 
-  // Check speaker split: are there multiple speakers in a tight window around 36s?
   const splitCheckWords = windowWords.filter(
     (w) => w.start >= 34000 && w.end <= 39000,
   );
@@ -284,7 +258,6 @@ function extractWindow(
     windowWords.map((w) => w.speaker).filter(Boolean),
   );
 
-  // Compute avg confidence for suspicious words (around "vagomania" / "dalla Romania" area)
   const suspiciousWords = windowWords.filter(
     (w) => w.start >= 35000 && w.end <= 38500,
   );
@@ -310,6 +283,7 @@ function extractWindow(
     suspicious_span_avg_confidence: suspiciousAvg
       ? Math.round(suspiciousAvg * 1000) / 1000
       : null,
+    request_params: requestParams,
   };
 }
 
@@ -321,7 +295,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: require service role key
     const authHeader = req.headers.get("Authorization") || "";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     if (!authHeader.includes(serviceKey)) {
@@ -334,7 +307,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const storagePath: string = body.storage_path;
     const storagePathRaw: string | null = body.storage_path_raw || null;
-    const configIds: number[] = body.configs || [1, 2, 3, 4, 5, 6, 7, 8];
+    const configIds: number[] = body.configs || [1, 2, 3, 4];
 
     if (!storagePath) {
       return new Response(
@@ -350,7 +323,6 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get("ASSEMBLYAI_API_KEY")!;
 
-    // Get signed URLs
     const audioUrl = await getSignedUrl(supabase, "temp-audio", storagePath);
     const rawAudioUrl = storagePathRaw
       ? await getSignedUrl(supabase, "temp-audio", storagePathRaw)
@@ -364,7 +336,6 @@ Deno.serve(async (req) => {
       const startTime = Date.now();
 
       try {
-        // Choose audio URL
         let url = audioUrl;
         if (config.useRawAudio) {
           if (!rawAudioUrl) {
@@ -382,6 +353,7 @@ Deno.serve(async (req) => {
               speaker_split_in_window: false,
               unique_speakers_in_window: 0,
               suspicious_span_avg_confidence: null,
+              request_params: {},
               error: "No storage_path_raw provided for raw audio config",
             });
             continue;
@@ -389,17 +361,30 @@ Deno.serve(async (req) => {
           url = rawAudioUrl;
         }
 
+        // Build the exact request params for audit trail
+        const requestParams: Record<string, unknown> = {
+          speech_models: config.speech_models || ["universal-3-pro"],
+          temperature: config.temperature ?? 0,
+          speaker_labels: true,
+          speech_threshold: 0.05,
+          language_code: config.language_code || null,
+          language_detection: !config.language_code,
+          prompt: config.prompt || null,
+          disfluencies: config.disfluencies || false,
+          speaker_options: config.speaker_options || null,
+          audio_source: config.useRawAudio ? "raw" : "enhanced",
+        };
+
         const transcriptId = await submitTranscription(url, config, apiKey);
         console.log(`[eval] Config #${config.id} submitted: ${transcriptId}`);
 
         const data = await pollTranscription(transcriptId, apiKey);
         const elapsed = Math.round((Date.now() - startTime) / 1000);
-        console.log(`[eval] Config #${config.id} completed in ${elapsed}s`);
+        console.log(`[eval] Config #${config.id} completed in ${elapsed}s, model: ${(data.speech_model_used as string) || "unknown"}`);
 
-        const result = extractWindow(data, config);
+        const result = extractWindow(data, config, requestParams);
         results.push(result);
 
-        // Cleanup
         await deleteTranscript(transcriptId, apiKey);
       } catch (err) {
         console.error(`[eval] Config #${config.id} failed:`, err);
@@ -417,6 +402,7 @@ Deno.serve(async (req) => {
           speaker_split_in_window: false,
           unique_speakers_in_window: 0,
           suspicious_span_avg_confidence: null,
+          request_params: {},
           error: (err as Error).message,
         });
       }
@@ -424,33 +410,32 @@ Deno.serve(async (req) => {
 
     // Build summary
     const successful = results.filter((r) => !r.error);
-    const bestPhrase = successful.find((r) => r.contains_dalla_romania)?.config_id || null;
-    const bestSplit = successful.find((r) => !r.speaker_split_in_window)?.config_id || null;
-    const bestConfidence = successful.length > 0
-      ? successful.reduce((best, r) =>
-          (r.suspicious_span_avg_confidence || 0) >
-          (best.suspicious_span_avg_confidence || 0)
-            ? r
-            : best
-        ).config_id
-      : null;
-
     const report = {
-      ground_truth: "dalla Romania",
+      ground_truth: "direttamente dalla Romania",
       target_window_ms: [34000, 38000],
       context_window_ms: [30000, 42000],
       configs_run: configIds,
       results,
       summary: {
-        best_for_phrase: bestPhrase,
-        best_for_speaker_split: bestSplit,
-        best_overall_confidence: bestConfidence,
         phrase_correct_configs: successful
           .filter((r) => r.contains_dalla_romania)
-          .map((r) => r.config_id),
+          .map((r) => ({ id: r.config_id, label: r.config_label })),
+        phrase_incorrect_configs: successful
+          .filter((r) => !r.contains_dalla_romania)
+          .map((r) => ({ id: r.config_id, label: r.config_label, text: r.window_text })),
         split_correct_configs: successful
           .filter((r) => !r.speaker_split_in_window)
-          .map((r) => r.config_id),
+          .map((r) => ({ id: r.config_id, label: r.config_label })),
+        models_used: successful.map((r) => ({
+          id: r.config_id,
+          model: r.speech_model_used,
+        })),
+        confidence_comparison: successful.map((r) => ({
+          id: r.config_id,
+          label: r.config_label,
+          suspicious_span_avg: r.suspicious_span_avg_confidence,
+          overall: r.overall_confidence,
+        })),
       },
     };
 
