@@ -125,8 +125,14 @@ export async function enhanceAudioForTranscription(
   }
 
   // --- Stage 2: Capped peak normalisation (volume boost) ---
+  // Mono recordings (single mic, multiple people) need a stronger lift so the
+  // diarizer can resolve quieter second-speaker turns. Empirically (see
+  // Fatebenefratelli matrix) +12 dB on mono left Speaker B below the
+  // diarization threshold; +18 dB recovers the second voice without clipping
+  // because the soft-clip limiter and -1 dBFS ceiling still apply.
   const TARGET_PEAK = 0.891; // -1 dBFS
-  const MAX_NORM_GAIN = 3.981; // +12 dB cap — meaningful boost for quiet recordings
+  const isMono = audioBuffer.numberOfChannels === 1;
+  const MAX_NORM_GAIN = isMono ? 7.943 : 3.981; // +18 dB mono / +12 dB stereo
   let maxSample = 0;
   for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
     const data = audioBuffer.getChannelData(ch);
