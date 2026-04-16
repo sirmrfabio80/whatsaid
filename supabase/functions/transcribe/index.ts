@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
         "After the first output, review the transcript again.",
         "Pay close attention to hallucinations, misspellings, or errors, and revise them like a computer performing spell and grammar checks.",
         "Ensure words and phrases make grammatical sense in sentences.",
-      ].join(" "),
+      ].join("\n"),
     };
 
     if (strategy === "keyterms") {
@@ -157,15 +157,14 @@ Deno.serve(async (req) => {
     }
 
     // Build speaker_options from speakers_expected (user-provided or profile-derived)
+    // Only send speaker_options when a real speaker count is known — omitting lets
+    // AssemblyAI use its own diarization defaults without unnecessary constraints.
     const resolvedSpeakers = tuningConfig.speakers_expected;
     if (resolvedSpeakers && typeof resolvedSpeakers === "number" && resolvedSpeakers > 0) {
       transcriptPayload.speaker_options = {
         min_speakers_expected: resolvedSpeakers,
         max_speakers_expected: resolvedSpeakers,
       };
-    } else {
-      // Safe default hint — does not constrain the model
-      transcriptPayload.speaker_options = { min_speakers_expected: 1 };
     }
 
     // Structured routing log
@@ -256,12 +255,26 @@ Deno.serve(async (req) => {
 
       if (pollData.status === "error") {
         const rawError = String(pollData.error ?? "");
+        const errorLower = rawError.toLowerCase();
 
-        // Surface user-friendly messages for known threshold rejections
-        if (rawError.toLowerCase().includes("speech") && rawError.toLowerCase().includes("threshold")) {
+        // Log the raw error for debugging before mapping to user-friendly messages
+        console.error(JSON.stringify({ event: "assemblyai_error", job_id, raw_error: rawError }));
+
+        // Surface user-friendly messages for known threshold rejections.
+        // Match specific known AssemblyAI error patterns rather than broad keyword combos.
+        const isSpeechThresholdError =
+          errorLower.includes("speech_threshold") ||
+          errorLower.includes("not enough speech") ||
+          errorLower.includes("audio does not contain enough speech");
+        if (isSpeechThresholdError) {
           throw new Error("Not enough speech detected in the audio. Please upload a recording with clearer speech.");
         }
-        if (rawError.toLowerCase().includes("language") && rawError.toLowerCase().includes("confidence")) {
+
+        const isLanguageConfidenceError =
+          errorLower.includes("language_confidence_threshold") ||
+          errorLower.includes("language confidence") ||
+          errorLower.includes("could not determine the language");
+        if (isLanguageConfidenceError) {
           throw new Error("Could not reliably detect the spoken language. Please select the language manually and try again.");
         }
 
@@ -315,12 +328,13 @@ Deno.serve(async (req) => {
       unique_speakers_or_channels: uniqueSpeakers,
       duration_seconds: Math.round((transcript.audio_duration as number) ?? 0),
       language_detected: (transcript.language_code as string) ?? null,
+      speech_model_actual: (transcript.speech_model as string) ?? null,
       avg_confidence: avgConfidence ? Math.round(avgConfidence * 1000) / 1000 : null,
       confidence_min: confidenceMin ? Math.round(confidenceMin * 1000) / 1000 : null,
       confidence_p25: confidenceP25 ? Math.round(confidenceP25 * 1000) / 1000 : null,
       word_count: totalWords,
       words_per_utterance_avg: wordsPerUtteranceAvg,
-      speech_models: transcriptPayload.speech_models,
+      speech_models_requested: transcriptPayload.speech_models,
       temperature: transcriptPayload.temperature,
       speech_threshold: transcriptPayload.speech_threshold,
       language_confidence_threshold: transcriptPayload.language_confidence_threshold ?? null,
@@ -370,12 +384,15 @@ Deno.serve(async (req) => {
     delete sanitizedResponse.audio_url;
 
     // 10. Update job with metadata + store AssemblyAI transcript ID for cleanup
+    // Read the actual model used from the AssemblyAI response instead of hardcoding
+    const actualSpeechModel = (transcript.speech_model as string) ?? "universal-3-pro";
+
     const { error: updateJobErr } = await supabase
       .from("jobs")
       .update({
         language_detected: detectedLanguage,
         duration_seconds: audioDuration,
-        speech_model: "universal-3-pro",
+        speech_model: actualSpeechModel,
         status: "processing", // still processing (post-processing next)
         assemblyai_transcript_id: transcriptId,
         assemblyai_delete_status: "pending",
