@@ -456,8 +456,9 @@ Deno.serve(async (req) => {
         transcriptText = (transcript.text as string) ?? "";
       }
     } else {
-      const diarUtterances = (transcript.utterances as Array<{ speaker: string; start: number; text: string }>) ?? [];
-      if (diarUtterances.length > 0) {
+      const rawDiarUtterances = (transcript.utterances as DiarUtterance[]) ?? [];
+      if (rawDiarUtterances.length > 0) {
+        const diarUtterances = mergeFalseSpeakerFlips(rawDiarUtterances);
         transcriptText = diarUtterances
           .map((u) => `${formatTimestamp(u.start)} Speaker ${u.speaker}: ${u.text}`)
           .join("\n\n");
