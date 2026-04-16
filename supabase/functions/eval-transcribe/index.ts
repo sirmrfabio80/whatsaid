@@ -299,18 +299,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const body = await req.json();
-
-    // One-off storage cleanup action
-    if (body.action === "delete_storage_file") {
-      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
-      const { data, error } = await supabase.storage
-        .from(body.bucket || "temp-audio")
-        .remove([body.file_path]);
-      return new Response(JSON.stringify({ deleted: data, error: error?.message || null }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const storagePath: string = body.storage_path;
     const storagePathRaw: string | null = body.storage_path_raw || null;
     const configIds: number[] = body.configs || [1, 2, 3, 4];
