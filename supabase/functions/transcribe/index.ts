@@ -17,6 +17,96 @@ function formatTimestamp(ms: number): string {
   return `[${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}]`;
 }
 
+function countDistinctNonEmpty(values: Array<unknown>): number {
+  return new Set(
+    values
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean)
+  ).size;
+}
+
+async function submitAndPollTranscript(
+  apiKey: string,
+  payload: Record<string, unknown>,
+  jobId: string,
+): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
+  const submitRes = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
+    method: "POST",
+    headers: {
+      Authorization: apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!submitRes.ok) {
+    const errText = await submitRes.text();
+    throw new Error(`AssemblyAI submit failed [${submitRes.status}]: ${errText}`);
+  }
+
+  const submitData = await submitRes.json();
+  const transcriptId = String(submitData.id ?? "");
+
+  if (!transcriptId) {
+    throw new Error("AssemblyAI did not return a transcript ID");
+  }
+
+  console.log(`[transcribe] AssemblyAI transcript ID: ${transcriptId}`);
+
+  const maxPolls = 120;
+
+  for (let i = 0; i < maxPolls; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    const pollRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
+      headers: { Authorization: apiKey },
+    });
+
+    if (!pollRes.ok) {
+      const errText = await pollRes.text();
+      throw new Error(`AssemblyAI poll failed [${pollRes.status}]: ${errText}`);
+    }
+
+    const pollData = await pollRes.json();
+
+    if (pollData.status === "completed") {
+      return {
+        transcript: pollData as Record<string, unknown>,
+        transcriptId,
+      };
+    }
+
+    if (pollData.status === "error") {
+      const rawError = String(pollData.error ?? "");
+      const errorLower = rawError.toLowerCase();
+
+      console.error(JSON.stringify({ event: "assemblyai_error", job_id: jobId, raw_error: rawError }));
+
+      const isSpeechThresholdError =
+        errorLower.includes("speech_threshold") ||
+        errorLower.includes("not enough speech") ||
+        errorLower.includes("audio does not contain enough speech");
+      if (isSpeechThresholdError) {
+        throw new Error("Not enough speech detected in the audio. Please upload a recording with clearer speech.");
+      }
+
+      const isLanguageConfidenceError =
+        errorLower.includes("language_confidence_threshold") ||
+        errorLower.includes("language confidence") ||
+        errorLower.includes("could not determine the language");
+      if (isLanguageConfidenceError) {
+        throw new Error("Could not reliably detect the spoken language. Please select the language manually and try again.");
+      }
+
+      throw new Error(`AssemblyAI error: ${rawError}`);
+    }
+
+    console.log(`[transcribe] Polling... status: ${pollData.status} (attempt ${i + 1})`);
+  }
+
+  throw new Error("Transcription timed out after 10 minutes");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -32,7 +122,9 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { job_id } = await req.json();
+    const requestBody = await req.json().catch(() => ({}));
+    const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
+
     if (!job_id) {
       return new Response(JSON.stringify({ error: "job_id is required" }), {
         status: 400,
@@ -40,7 +132,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Fetch job row
     const { data: job, error: jobError } = await supabase
       .from("jobs")
       .select("*")
@@ -55,7 +146,6 @@ Deno.serve(async (req) => {
       throw new Error("Job has no temp_file_path");
     }
 
-    // 2. Create a signed URL for the audio file
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from("temp-audio")
       .createSignedUrl(job.temp_file_path, 3600);
@@ -67,33 +157,32 @@ Deno.serve(async (req) => {
     const fileExt = (job.file_name ?? "").split(".").pop()?.toLowerCase() ?? "unknown";
     console.log(`[transcribe] Starting transcription for job ${job_id}, file: ${job.file_name}`);
 
-    // 3. Build AssemblyAI payload with optimised settings
-    const isMultichannel = false; // Kept dormant — diarization-first is the safe default
-
-    // Read optional tuning config from job row (set by process-job if provided)
     const tuningConfig = (job.transcription_config as Record<string, unknown>) ?? {};
 
-    const transcriptPayload: Record<string, unknown> = {
-      audio_url: signedUrlData.signedUrl,
-      speech_models: ["universal-3-pro"],
-      temperature: 0,
-      speech_threshold: 0.05,
-      ...(isMultichannel
-        ? { multichannel: true }
-        : { speaker_labels: true }),
+    const PROFILES: Record<string, Record<string, unknown>> = {
+      phone_call: { speakers_expected: 2 },
+      meeting: {},
     };
 
-    // Language handling: manual selection → explicit, otherwise auto-detect
-    if (job.language_selected && job.language_selected !== "auto") {
-      transcriptPayload.language_code = job.language_selected;
-    } else {
-      transcriptPayload.language_detection = true;
-      transcriptPayload.language_confidence_threshold = 0.4;
+    if (tuningConfig.profile && typeof tuningConfig.profile === "string" && PROFILES[tuningConfig.profile]) {
+      const profileDefaults = PROFILES[tuningConfig.profile];
+      for (const [key, value] of Object.entries(profileDefaults)) {
+        if (!(key in tuningConfig)) {
+          tuningConfig[key] = value;
+        }
+      }
     }
 
-    // --- Strategy-based prompt routing ---
-    // prompt and keyterms_prompt are mutually exclusive at the AssemblyAI API level.
     const strategy = (tuningConfig.strategy as string) ?? "balanced";
+    const requestedAudioChannels = typeof job.audio_channels === "number" && job.audio_channels > 1
+      ? job.audio_channels
+      : null;
+
+    // Prefer multichannel when the uploaded file is actually multichannel.
+    // This fixes phone-call recordings where each speaker is isolated on a separate channel.
+    const route: "multichannel" | "diarization" = requestedAudioChannels && requestedAudioChannels > 1
+      ? "multichannel"
+      : "diarization";
 
     const CODE_SWITCH_INSTRUCTION = "Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.";
 
@@ -113,61 +202,58 @@ Deno.serve(async (req) => {
       ].join("\n"),
     };
 
-    if (strategy === "keyterms") {
-      // Keyterms mode: send keyterms_prompt only, no prompt
-      const keyterms = tuningConfig.keyterms;
-      if (Array.isArray(keyterms) && keyterms.length > 0) {
-        transcriptPayload.keyterms_prompt = keyterms;
+    const buildTranscriptPayload = (): Record<string, unknown> => {
+      const payload: Record<string, unknown> = {
+        audio_url: signedUrlData.signedUrl,
+        speech_models: ["universal-3-pro"],
+        temperature: 0,
+        speech_threshold: 0.05,
+        ...(route === "multichannel"
+          ? { multichannel: true }
+          : { speaker_labels: true }),
+      };
+
+      if (job.language_selected && job.language_selected !== "auto") {
+        payload.language_code = job.language_selected;
+      } else {
+        payload.language_detection = true;
+        payload.language_confidence_threshold = 0.4;
       }
-    } else if (strategy in STRATEGY_PROMPTS) {
-      // Recovery or review: send prompt, no keyterms_prompt
-      transcriptPayload.prompt = STRATEGY_PROMPTS[strategy];
-    }
-    // balanced: no prompt, no keyterms_prompt — U3P's built-in default prompt handles multilingual/code-switching
 
-    // Recovery strategy: enable disfluencies at API level
-    if (strategy === "recovery") {
-      transcriptPayload.disfluencies = true;
-    }
-
-    // Legacy fallback: old jobs with keyterms_prompt string (pre-strategy era)
-    if (!transcriptPayload.prompt && !transcriptPayload.keyterms_prompt) {
-      if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
-        transcriptPayload.keyterms_prompt = tuningConfig.keyterms_prompt;
+      if (strategy === "keyterms") {
+        const keyterms = tuningConfig.keyterms;
+        if (Array.isArray(keyterms) && keyterms.length > 0) {
+          payload.keyterms_prompt = keyterms;
+        }
+      } else if (strategy in STRATEGY_PROMPTS) {
+        payload.prompt = STRATEGY_PROMPTS[strategy];
       }
-    }
 
-    // --- Speaker options ---
-    // Use the newer speaker_options API (replaces legacy speakers_expected)
-    const speakersExpected = tuningConfig.speakers_expected;
+      if (strategy === "recovery") {
+        payload.disfluencies = true;
+      }
 
-    // Profile-based tuning presets (legacy, kept for backward compatibility)
-    const PROFILES: Record<string, Record<string, unknown>> = {
-      phone_call: { speakers_expected: 2 },
-      meeting: {},
-    };
-
-    if (tuningConfig.profile && typeof tuningConfig.profile === "string" && PROFILES[tuningConfig.profile]) {
-      const profileDefaults = PROFILES[tuningConfig.profile];
-      for (const [key, value] of Object.entries(profileDefaults)) {
-        if (!(key in tuningConfig)) {
-          tuningConfig[key] = value;
+      if (!payload.prompt && !payload.keyterms_prompt) {
+        if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
+          payload.keyterms_prompt = tuningConfig.keyterms_prompt;
         }
       }
-    }
 
-    // Build speaker_options from speakers_expected (user-provided or profile-derived)
-    // Only send speaker_options when a real speaker count is known — omitting lets
-    // AssemblyAI use its own diarization defaults without unnecessary constraints.
-    const resolvedSpeakers = tuningConfig.speakers_expected;
-    if (resolvedSpeakers && typeof resolvedSpeakers === "number" && resolvedSpeakers > 0) {
-      transcriptPayload.speaker_options = {
-        min_speakers_expected: resolvedSpeakers,
-        max_speakers_expected: resolvedSpeakers,
-      };
-    }
+      if (route === "diarization") {
+        const resolvedSpeakers = tuningConfig.speakers_expected;
+        if (typeof resolvedSpeakers === "number" && resolvedSpeakers > 0) {
+          payload.speaker_options = {
+            min_speakers_expected: resolvedSpeakers,
+            max_speakers_expected: resolvedSpeakers,
+          };
+        }
+      }
 
-    // Structured routing log
+      return payload;
+    };
+
+    const transcriptPayload = buildTranscriptPayload();
+
     console.log(JSON.stringify({
       event: "transcription_routing",
       job_id,
@@ -175,7 +261,8 @@ Deno.serve(async (req) => {
       file_ext: fileExt,
       file_size_bytes: job.file_size_bytes ?? null,
       audio_channels: job.audio_channels ?? null,
-      route: isMultichannel ? "multichannel" : "diarization",
+      requested_audio_channels: requestedAudioChannels,
+      route,
       strategy,
       has_prompt: !!transcriptPayload.prompt,
       has_keyterms: !!transcriptPayload.keyterms_prompt,
@@ -188,7 +275,6 @@ Deno.serve(async (req) => {
       profile: tuningConfig.profile ?? null,
     }));
 
-    // 4. Save transcription config to jobs table for evaluation
     await supabase
       .from("jobs")
       .update({
@@ -207,98 +293,26 @@ Deno.serve(async (req) => {
           speaker_options: transcriptPayload.speaker_options ?? null,
           disfluencies: transcriptPayload.disfluencies ?? false,
           profile: tuningConfig.profile ?? null,
+          route,
         },
       })
       .eq("id", job_id);
 
-    // 5. Submit to AssemblyAI
-    const submitRes = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
-      method: "POST",
-      headers: {
-        Authorization: ASSEMBLYAI_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(transcriptPayload),
-    });
+    const { transcript, transcriptId } = await submitAndPollTranscript(
+      ASSEMBLYAI_API_KEY,
+      transcriptPayload,
+      job_id,
+    );
 
-    if (!submitRes.ok) {
-      const errText = await submitRes.text();
-      throw new Error(`AssemblyAI submit failed [${submitRes.status}]: ${errText}`);
-    }
-
-    const submitData = await submitRes.json();
-    const transcriptId = submitData.id;
-    console.log(`[transcribe] AssemblyAI transcript ID: ${transcriptId}`);
-
-    // 6. Poll for completion
-    let transcript: Record<string, unknown> | null = null;
-    const maxPolls = 120; // 10 minutes max (5s * 120)
-
-    for (let i = 0; i < maxPolls; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-
-      const pollRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
-        headers: { Authorization: ASSEMBLYAI_API_KEY },
-      });
-
-      if (!pollRes.ok) {
-        const errText = await pollRes.text();
-        throw new Error(`AssemblyAI poll failed [${pollRes.status}]: ${errText}`);
-      }
-
-      const pollData = await pollRes.json();
-
-      if (pollData.status === "completed") {
-        transcript = pollData;
-        break;
-      }
-
-      if (pollData.status === "error") {
-        const rawError = String(pollData.error ?? "");
-        const errorLower = rawError.toLowerCase();
-
-        // Log the raw error for debugging before mapping to user-friendly messages
-        console.error(JSON.stringify({ event: "assemblyai_error", job_id, raw_error: rawError }));
-
-        // Surface user-friendly messages for known threshold rejections.
-        // Match specific known AssemblyAI error patterns rather than broad keyword combos.
-        const isSpeechThresholdError =
-          errorLower.includes("speech_threshold") ||
-          errorLower.includes("not enough speech") ||
-          errorLower.includes("audio does not contain enough speech");
-        if (isSpeechThresholdError) {
-          throw new Error("Not enough speech detected in the audio. Please upload a recording with clearer speech.");
-        }
-
-        const isLanguageConfidenceError =
-          errorLower.includes("language_confidence_threshold") ||
-          errorLower.includes("language confidence") ||
-          errorLower.includes("could not determine the language");
-        if (isLanguageConfidenceError) {
-          throw new Error("Could not reliably detect the spoken language. Please select the language manually and try again.");
-        }
-
-        throw new Error(`AssemblyAI error: ${rawError}`);
-      }
-
-      console.log(`[transcribe] Polling... status: ${pollData.status} (attempt ${i + 1})`);
-    }
-
-    if (!transcript) {
-      throw new Error("Transcription timed out after 10 minutes");
-    }
-
-    // 7. Extract structured data
     const utterances = (transcript.utterances as Array<Record<string, unknown>>) ?? [];
-    const uniqueSpeakers = isMultichannel
-      ? new Set(utterances.map((u) => String(u.channel ?? ""))).size
-      : new Set(utterances.map((u) => String(u.speaker ?? ""))).size;
+    const uniqueSpeakers = route === "multichannel"
+      ? countDistinctNonEmpty(utterances.map((u) => u.channel))
+      : countDistinctNonEmpty(utterances.map((u) => u.speaker));
 
     const avgConfidence = utterances.length > 0
       ? utterances.reduce((sum, u) => sum + (Number(u.confidence) || 0), 0) / utterances.length
       : null;
 
-    // Compute enhanced evaluation metrics
     const allConfidences = utterances
       .map((u) => Number(u.confidence) || 0)
       .filter((c) => c > 0)
@@ -311,18 +325,17 @@ Deno.serve(async (req) => {
 
     const totalWords = utterances.reduce((sum, u) => {
       const words = (u.words as unknown[]);
-      return sum + (Array.isArray(words) ? words.length : (String(u.text ?? "").split(/\s+/).filter(Boolean).length));
+      return sum + (Array.isArray(words) ? words.length : String(u.text ?? "").split(/\s+/).filter(Boolean).length);
     }, 0);
 
     const wordsPerUtteranceAvg = utterances.length > 0
       ? Math.round((totalWords / utterances.length) * 10) / 10
       : null;
 
-    // Structured completion log with evaluation signals
     console.log(JSON.stringify({
       event: "transcription_completed",
       job_id,
-      route: isMultichannel ? "multichannel" : "diarization",
+      route,
       audio_channels: job.audio_channels ?? null,
       utterance_count: utterances.length,
       unique_speakers_or_channels: uniqueSpeakers,
@@ -344,10 +357,9 @@ Deno.serve(async (req) => {
       profile: tuningConfig.profile ?? null,
     }));
 
-    // 8. Build rendered transcript text with timestamps
     let transcriptText: string;
 
-    if (isMultichannel) {
+    if (route === "multichannel") {
       const mcUtterances = (transcript.utterances as Array<{ channel: string; start: number; text: string }>) ?? [];
       if (mcUtterances.length > 0) {
         const channelToSpeaker: Record<string, string> = {};
@@ -379,12 +391,9 @@ Deno.serve(async (req) => {
     const detectedLanguage = (transcript.language_code as string) ?? null;
     const audioDuration = Math.round((transcript.audio_duration as number) ?? 0);
 
-    // 9. Sanitize raw response — remove audio_url for security
     const sanitizedResponse = { ...transcript };
     delete sanitizedResponse.audio_url;
 
-    // 10. Update job with metadata + store AssemblyAI transcript ID for cleanup
-    // Read the actual model used from the AssemblyAI response instead of hardcoding
     const actualSpeechModel = (transcript.speech_model_used as string) ?? "universal-3-pro";
 
     const { error: updateJobErr } = await supabase
@@ -393,7 +402,7 @@ Deno.serve(async (req) => {
         language_detected: detectedLanguage,
         duration_seconds: audioDuration,
         speech_model: actualSpeechModel,
-        status: "processing", // still processing (post-processing next)
+        status: "processing",
         assemblyai_transcript_id: transcriptId,
         assemblyai_delete_status: "pending",
       })
@@ -403,19 +412,19 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to update job metadata: ${updateJobErr.message}`);
     }
 
-    // 11. Insert transcript output with raw response and structured metadata
     const { error: insertOutputErr } = await supabase.from("job_outputs").insert({
       job_id,
       output_type: "transcript",
       content: transcriptText,
       raw_response: sanitizedResponse,
       metadata: {
-        utterances: utterances,
+        utterances,
         confidence: transcript.confidence ?? null,
         audio_duration: transcript.audio_duration ?? null,
         language_code: detectedLanguage,
         utterance_count: utterances.length,
         unique_speakers: uniqueSpeakers,
+        route,
       },
     });
 
@@ -423,8 +432,6 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to persist transcript output: ${insertOutputErr.message}`);
     }
 
-    // 12. Delete AssemblyAI transcript (retention cleanup)
-    // Only after our DB persistence is confirmed successful
     try {
       const deleteRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
         method: "DELETE",
@@ -453,7 +460,6 @@ Deno.serve(async (req) => {
         .eq("id", job_id);
     }
 
-    // 13. Delete audio file from storage
     const { error: deleteError } = await supabase.storage
       .from("temp-audio")
       .remove([job.temp_file_path]);
@@ -464,7 +470,6 @@ Deno.serve(async (req) => {
       console.log(`[transcribe] Audio file deleted: ${job.temp_file_path}`);
     }
 
-    // 14. Mark audio as deleted
     await supabase
       .from("jobs")
       .update({ audio_deleted_at: new Date().toISOString() })
@@ -476,8 +481,8 @@ Deno.serve(async (req) => {
         job_id,
         language_detected: detectedLanguage,
         duration_seconds: audioDuration,
-        speaker_count: isMultichannel
-          ? (transcript.audio_channels as number) ?? null
+        speaker_count: route === "multichannel"
+          ? ((transcript.audio_channels as number) ?? (uniqueSpeakers > 0 ? uniqueSpeakers : null))
           : uniqueSpeakers > 0 ? uniqueSpeakers : null,
       }),
       {
@@ -488,7 +493,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error(`[transcribe] Error:`, error);
 
-    // Try to mark job as failed
     try {
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
