@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
+const ASSEMBLYAI_BASE = "https://api.eu.assemblyai.com/v2";
 
 /** Format milliseconds as [HH:MM:SS] */
 function formatTimestamp(ms: number): string {
@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
       audio_url: signedUrlData.signedUrl,
       speech_models: ["universal-3-pro", "universal-2"],
       temperature: 0.1,
+      speech_threshold: 0.05,
       ...(isMultichannel
         ? { multichannel: true }
         : { speaker_labels: true }),
@@ -87,21 +88,24 @@ Deno.serve(async (req) => {
       transcriptPayload.language_code = job.language_selected;
     } else {
       transcriptPayload.language_detection = true;
+      transcriptPayload.language_confidence_threshold = 0.4;
     }
 
     // --- Strategy-based prompt routing ---
     // prompt and keyterms_prompt are mutually exclusive at the AssemblyAI API level.
     const strategy = (tuningConfig.strategy as string) ?? "balanced";
 
+    const CODE_SWITCH_INSTRUCTION = "Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.";
+
     const STRATEGY_PROMPTS: Record<string, string> = {
       recovery: [
-        "Required: Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.",
-        "",
-        "Mandatory: Preserve linguistic speech patterns including disfluencies, filler words, hesitations, repetitions, stutters, false starts, and colloquialisms in the spoken language.",
+        `Required: ${CODE_SWITCH_INSTRUCTION}`,
         "",
         "Always: Transcribe speech with your best guess based on context in all possible scenarios where speech is present in the audio.",
       ].join("\n"),
       review: [
+        CODE_SWITCH_INSTRUCTION,
+        "",
         "Always: Transcribe speech exactly as heard. If uncertain or audio is unclear, mark as [unclear].",
         "After the first output, review the transcript again.",
         "Pay close attention to hallucinations, misspellings, or errors, and revise them like a computer performing spell and grammar checks.",
@@ -119,7 +123,12 @@ Deno.serve(async (req) => {
       // Recovery or review: send prompt, no keyterms_prompt
       transcriptPayload.prompt = STRATEGY_PROMPTS[strategy];
     }
-    // balanced: no prompt, no keyterms_prompt — AssemblyAI default system prompt applies
+    // balanced: no prompt, no keyterms_prompt — U3P's built-in default prompt handles multilingual/code-switching
+
+    // Recovery strategy: enable disfluencies at API level
+    if (strategy === "recovery") {
+      transcriptPayload.disfluencies = true;
+    }
 
     // Legacy fallback: old jobs with keyterms_prompt string (pre-strategy era)
     if (!transcriptPayload.prompt && !transcriptPayload.keyterms_prompt) {
@@ -127,6 +136,10 @@ Deno.serve(async (req) => {
         transcriptPayload.keyterms_prompt = tuningConfig.keyterms_prompt;
       }
     }
+
+    // --- Speaker options ---
+    // Use the newer speaker_options API (replaces legacy speakers_expected)
+    const speakersExpected = tuningConfig.speakers_expected;
 
     // Profile-based tuning presets (legacy, kept for backward compatibility)
     const PROFILES: Record<string, Record<string, unknown>> = {
@@ -143,9 +156,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Diarization constraints: speakers_expected
-    if (tuningConfig.speakers_expected && typeof tuningConfig.speakers_expected === "number") {
-      transcriptPayload.speakers_expected = tuningConfig.speakers_expected;
+    // Build speaker_options from speakers_expected (user-provided or profile-derived)
+    const resolvedSpeakers = tuningConfig.speakers_expected;
+    if (resolvedSpeakers && typeof resolvedSpeakers === "number" && resolvedSpeakers > 0) {
+      transcriptPayload.speaker_options = {
+        min_speakers_expected: resolvedSpeakers,
+        max_speakers_expected: resolvedSpeakers,
+      };
+    } else {
+      // Safe default hint — does not constrain the model
+      transcriptPayload.speaker_options = { min_speakers_expected: 1 };
     }
 
     // Structured routing log
@@ -162,7 +182,10 @@ Deno.serve(async (req) => {
       has_keyterms: !!transcriptPayload.keyterms_prompt,
       speech_models: transcriptPayload.speech_models,
       temperature: transcriptPayload.temperature,
-      speakers_expected: transcriptPayload.speakers_expected ?? null,
+      speech_threshold: transcriptPayload.speech_threshold,
+      language_confidence_threshold: transcriptPayload.language_confidence_threshold ?? null,
+      speaker_options: transcriptPayload.speaker_options ?? null,
+      disfluencies: transcriptPayload.disfluencies ?? false,
       profile: tuningConfig.profile ?? null,
     }));
 
@@ -174,13 +197,16 @@ Deno.serve(async (req) => {
           strategy,
           speech_models: transcriptPayload.speech_models,
           temperature: transcriptPayload.temperature,
+          speech_threshold: transcriptPayload.speech_threshold,
           speaker_labels: transcriptPayload.speaker_labels ?? false,
           multichannel: transcriptPayload.multichannel ?? false,
           language_code: transcriptPayload.language_code ?? null,
           language_detection: transcriptPayload.language_detection ?? false,
+          language_confidence_threshold: transcriptPayload.language_confidence_threshold ?? null,
           prompt: transcriptPayload.prompt ?? null,
           keyterms_prompt: transcriptPayload.keyterms_prompt ?? null,
-          speakers_expected: transcriptPayload.speakers_expected ?? null,
+          speaker_options: transcriptPayload.speaker_options ?? null,
+          disfluencies: transcriptPayload.disfluencies ?? false,
           profile: tuningConfig.profile ?? null,
         },
       })
@@ -229,7 +255,17 @@ Deno.serve(async (req) => {
       }
 
       if (pollData.status === "error") {
-        throw new Error(`AssemblyAI error: ${pollData.error}`);
+        const rawError = String(pollData.error ?? "");
+
+        // Surface user-friendly messages for known threshold rejections
+        if (rawError.toLowerCase().includes("speech") && rawError.toLowerCase().includes("threshold")) {
+          throw new Error("Not enough speech detected in the audio. Please upload a recording with clearer speech.");
+        }
+        if (rawError.toLowerCase().includes("language") && rawError.toLowerCase().includes("confidence")) {
+          throw new Error("Could not reliably detect the spoken language. Please select the language manually and try again.");
+        }
+
+        throw new Error(`AssemblyAI error: ${rawError}`);
       }
 
       console.log(`[transcribe] Polling... status: ${pollData.status} (attempt ${i + 1})`);
@@ -286,8 +322,11 @@ Deno.serve(async (req) => {
       words_per_utterance_avg: wordsPerUtteranceAvg,
       speech_models: transcriptPayload.speech_models,
       temperature: transcriptPayload.temperature,
+      speech_threshold: transcriptPayload.speech_threshold,
+      language_confidence_threshold: transcriptPayload.language_confidence_threshold ?? null,
+      speaker_options: transcriptPayload.speaker_options ?? null,
+      disfluencies: transcriptPayload.disfluencies ?? false,
       has_keyterms: !!transcriptPayload.keyterms_prompt,
-      speakers_expected: transcriptPayload.speakers_expected ?? null,
       profile: tuningConfig.profile ?? null,
     }));
 
