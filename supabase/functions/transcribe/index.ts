@@ -274,9 +274,16 @@ Deno.serve(async (req) => {
     };
 
     const buildTranscriptPayload = (): Record<string, unknown> => {
+      // When disfluencies are requested, AssemblyAI requires universal-2 to be
+      // declared alongside universal-3-pro (universal-3-pro alone rejects it).
+      const wantsDisfluencies = strategy === "recovery";
+      const speechModels = wantsDisfluencies
+        ? ["universal-3-pro", "universal-2"]
+        : ["universal-3-pro"];
+
       const payload: Record<string, unknown> = {
         audio_url: signedUrlData.signedUrl,
-        speech_models: ["universal-3-pro"],
+        speech_models: speechModels,
         temperature: 0,
         speech_threshold: 0.05,
         ...(route === "multichannel"
