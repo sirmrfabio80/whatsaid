@@ -324,18 +324,12 @@ Deno.serve(async (req) => {
             min_speakers_expected: resolvedSpeakers,
             max_speakers_expected: resolvedSpeakers,
           };
-        } else {
-          // Default for mono recordings: bias AssemblyAI toward a single speaker.
-          // Same-mic conversational mono audio frequently confuses diarization
-          // and produces spurious Speaker B turns. Setting min=1 lets the model
-          // collapse ambiguous turns; max=2 keeps the door open for clearly
-          // separated voices but discourages over-splitting. The post-process
-          // mergeFalseSpeakerFlips heuristic provides an additional safety net.
-          payload.speaker_options = {
-            min_speakers_expected: 1,
-            max_speakers_expected: 2,
-          };
         }
+        // No speaker_options default — let AssemblyAI use its native diarizer
+        // without artificial caps. Empirically (jobs 331aa78f, 0273ac4e) this
+        // is what correctly identified the two speakers in real 2-person
+        // recordings; capping max=2 plus the merge heuristic was suppressing
+        // legitimate Speaker B turns.
       }
 
       return payload;
@@ -471,8 +465,12 @@ Deno.serve(async (req) => {
     } else {
       const rawDiarUtterances = (transcript.utterances as DiarUtterance[]) ?? [];
       if (rawDiarUtterances.length > 0) {
-        const diarUtterances = mergeFalseSpeakerFlips(rawDiarUtterances);
-        transcriptText = diarUtterances
+        // Trust AssemblyAI's diarization output verbatim. The previous
+        // mergeFalseSpeakerFlips heuristic was collapsing genuine speaker
+        // turns in 2-person recordings (e.g. Fatebenefratelli) and is now
+        // disabled. If a real-world false-flip case re-emerges, address it
+        // with provider-side speaker_options rather than text post-processing.
+        transcriptText = rawDiarUtterances
           .map((u) => `${formatTimestamp(u.start)} Speaker ${u.speaker}: ${u.text}`)
           .join("\n\n");
       } else {
