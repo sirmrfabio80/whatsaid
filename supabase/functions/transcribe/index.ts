@@ -274,12 +274,13 @@ Deno.serve(async (req) => {
     };
 
     const buildTranscriptPayload = (): Record<string, unknown> => {
-      // When disfluencies are requested, AssemblyAI requires universal-2 to be
-      // declared alongside universal-3-pro (universal-3-pro alone rejects it).
-      const wantsDisfluencies = strategy === "recovery";
-      const speechModels = wantsDisfluencies
-        ? ["universal-3-pro", "universal-2"]
-        : ["universal-3-pro"];
+      // Always pin to universal-3-pro. Empirically (Fatebenefratelli matrix)
+      // the universal-2 fallback collapses 2-person mono recordings into a
+      // single speaker, so we no longer declare it — even for the recovery
+      // strategy. The trade-off is that AssemblyAI rejects `disfluencies`
+      // on universal-3-pro alone, so we drop disfluencies below to keep
+      // diarization quality intact.
+      const speechModels = ["universal-3-pro"];
 
       const payload: Record<string, unknown> = {
         audio_url: signedUrlData.signedUrl,
@@ -307,9 +308,9 @@ Deno.serve(async (req) => {
         payload.prompt = STRATEGY_PROMPTS[strategy];
       }
 
-      if (strategy === "recovery") {
-        payload.disfluencies = true;
-      }
+      // Note: `disfluencies: true` is intentionally NOT set. It would force
+      // AssemblyAI to fall back to universal-2 (which loses Speaker B on
+      // mono recordings). Diarization quality > disfluency markers.
 
       if (!payload.prompt && !payload.keyterms_prompt) {
         if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
