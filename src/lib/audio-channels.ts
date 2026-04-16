@@ -160,6 +160,235 @@ function detectM4aChannels(buffer: ArrayBuffer): number | null {
   return channels;
 }
 
+type ChannelRouteHint = "multichannel" | "diarization";
+
+export interface AudioChannelAnalysis {
+  detectedChannelCount: number | null;
+  decodedChannelCount: number | null;
+  routeHint: ChannelRouteHint;
+  reason: string;
+  correlation: number | null;
+  activeWindowCount: number | null;
+  dominantWindowRatio: number | null;
+}
+
+async function decodeAudioBuffer(file: File): Promise<AudioBuffer | null> {
+  const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextCtor) return null;
+
+  const context = new AudioContextCtor();
+  try {
+    const buffer = await file.arrayBuffer();
+    return await context.decodeAudioData(buffer.slice(0));
+  } catch {
+    return null;
+  } finally {
+    await context.close().catch(() => undefined);
+  }
+}
+
+function analyzeDecodedChannelIsolation(audioBuffer: AudioBuffer): Omit<AudioChannelAnalysis, "detectedChannelCount" | "decodedChannelCount"> {
+  if (audioBuffer.numberOfChannels <= 1) {
+    return {
+      routeHint: "diarization",
+      reason: "decoded_mono",
+      correlation: null,
+      activeWindowCount: null,
+      dominantWindowRatio: null,
+    };
+  }
+
+  const left = audioBuffer.getChannelData(0);
+  const right = audioBuffer.getChannelData(1);
+  const sampleCount = Math.min(left.length, right.length);
+  const step = Math.max(1, Math.floor(sampleCount / 20000));
+
+  let sumX = 0;
+  let sumY = 0;
+  let sumXX = 0;
+  let sumYY = 0;
+  let sumXY = 0;
+  let samplePairs = 0;
+
+  for (let i = 0; i < sampleCount; i += step) {
+    const x = left[i];
+    const y = right[i];
+    sumX += x;
+    sumY += y;
+    sumXX += x * x;
+    sumYY += y * y;
+    sumXY += x * y;
+    samplePairs++;
+  }
+
+  const numerator = samplePairs * sumXY - sumX * sumY;
+  const denominator = Math.sqrt(
+    Math.max(samplePairs * sumXX - sumX * sumX, 0) * Math.max(samplePairs * sumYY - sumY * sumY, 0)
+  );
+  const correlation = denominator > 0 ? Math.abs(numerator / denominator) : 1;
+
+  const targetWindows = 120;
+  const windowSize = Math.max(2048, Math.floor(sampleCount / targetWindows));
+  const activeFloor = 0.003;
+  const dominanceRatioThreshold = 2;
+
+  let activeWindowCount = 0;
+  let leftDominant = 0;
+  let rightDominant = 0;
+
+  for (let start = 0; start < sampleCount; start += windowSize) {
+    const end = Math.min(sampleCount, start + windowSize);
+    let leftEnergy = 0;
+    let rightEnergy = 0;
+
+    for (let i = start; i < end; i++) {
+      leftEnergy += left[i] * left[i];
+      rightEnergy += right[i] * right[i];
+    }
+
+    const windowLength = Math.max(end - start, 1);
+    const leftRms = Math.sqrt(leftEnergy / windowLength);
+    const rightRms = Math.sqrt(rightEnergy / windowLength);
+    const peak = Math.max(leftRms, rightRms);
+
+    if (peak < activeFloor) continue;
+    activeWindowCount++;
+
+    const weaker = Math.max(Math.min(leftRms, rightRms), 1e-6);
+    const stronger = Math.max(leftRms, rightRms);
+    const dominanceRatio = stronger / weaker;
+
+    if (dominanceRatio >= dominanceRatioThreshold) {
+      if (leftRms > rightRms) leftDominant++;
+      else rightDominant++;
+    }
+  }
+
+  const dominantWindowCount = leftDominant + rightDominant;
+  const dominantWindowRatio = activeWindowCount > 0 ? dominantWindowCount / activeWindowCount : 0;
+  const hasBidirectionalDominance = leftDominant > 0 && rightDominant > 0;
+
+  if (correlation >= 0.95) {
+    return {
+      routeHint: "diarization",
+      reason: "high_channel_correlation",
+      correlation,
+      activeWindowCount,
+      dominantWindowRatio,
+    };
+  }
+
+  if (!hasBidirectionalDominance || dominantWindowRatio < 0.45) {
+    return {
+      routeHint: "diarization",
+      reason: "mixed_or_non_isolated_stereo",
+      correlation,
+      activeWindowCount,
+      dominantWindowRatio,
+    };
+  }
+
+  return {
+    routeHint: "multichannel",
+    reason: "isolated_channel_speech_detected",
+    correlation,
+    activeWindowCount,
+    dominantWindowRatio,
+  };
+}
+
+async function detectChannelCountFromHeaders(file: File): Promise<number | null> {
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+
+  if (ext === "wav" || file.type === "audio/wav" || file.type === "audio/x-wav") {
+    const header = await readSlice(file, 0, 44);
+    const result = detectWavChannels(header);
+    console.log("[audio-channels] WAV detected channels:", result);
+    return result;
+  }
+
+  if (ext === "mp3" || file.type === "audio/mpeg" || file.type === "audio/mp3") {
+    const preHeader = await readSlice(file, 0, 10);
+    const preView = new DataView(preHeader);
+    let readSize = 4096;
+
+    if (
+      preView.getUint8(0) === 0x49 &&
+      preView.getUint8(1) === 0x44 &&
+      preView.getUint8(2) === 0x33
+    ) {
+      const b6 = preView.getUint8(6);
+      const b7 = preView.getUint8(7);
+      const b8 = preView.getUint8(8);
+      const b9 = preView.getUint8(9);
+      const tagSize = ((b6 & 0x7f) << 21) | ((b7 & 0x7f) << 14) | ((b8 & 0x7f) << 7) | (b9 & 0x7f);
+      readSize = 10 + tagSize + 4;
+    }
+
+    const header = await readSlice(file, 0, Math.min(readSize, file.size));
+    const result = detectMp3Channels(header);
+    console.log("[audio-channels] MP3 detected channels:", result);
+    return result;
+  }
+
+  const mp4Types = ["m4a", "mp4", "mov", "aac"];
+  if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
+    const buffer = await file.arrayBuffer();
+    const result = detectM4aChannels(buffer);
+    console.log("[audio-channels] M4A/MP4 header detected channels:", result);
+    return result;
+  }
+
+  console.log("[audio-channels] Unknown format, returning null");
+  return null;
+}
+
+export async function analyzeAudioChannels(file: File): Promise<AudioChannelAnalysis> {
+  try {
+    const headerChannelCount = await detectChannelCountFromHeaders(file);
+    const decodedBuffer = await decodeAudioBuffer(file);
+
+    if (decodedBuffer) {
+      const decodedChannelCount = decodedBuffer.numberOfChannels;
+      const isolation = analyzeDecodedChannelIsolation(decodedBuffer);
+      console.log("[audio-channels] Decoded channel analysis:", {
+        headerChannelCount,
+        decodedChannelCount,
+        routeHint: isolation.routeHint,
+        reason: isolation.reason,
+        correlation: isolation.correlation,
+        dominantWindowRatio: isolation.dominantWindowRatio,
+      });
+      return {
+        detectedChannelCount: decodedChannelCount,
+        decodedChannelCount,
+        ...isolation,
+      };
+    }
+
+    return {
+      detectedChannelCount: headerChannelCount,
+      decodedChannelCount: null,
+      routeHint: "diarization",
+      reason: headerChannelCount && headerChannelCount > 1 ? "header_only_multichannel_unverified" : "header_mono_or_unknown",
+      correlation: null,
+      activeWindowCount: null,
+      dominantWindowRatio: null,
+    };
+  } catch (error) {
+    console.warn("[audio-channels] Analysis failed:", error);
+    return {
+      detectedChannelCount: null,
+      decodedChannelCount: null,
+      routeHint: "diarization",
+      reason: "analysis_failed",
+      correlation: null,
+      activeWindowCount: null,
+      dominantWindowRatio: null,
+    };
+  }
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -172,56 +401,6 @@ function detectM4aChannels(buffer: ArrayBuffer): number | null {
  * Returns null if detection fails — caller should treat as mono (safe default).
  */
 export async function detectChannelCount(file: File): Promise<number | null> {
-  try {
-    const ext = file.name.toLowerCase().split(".").pop() ?? "";
-
-    // WAV — only need 44 bytes
-    if (ext === "wav" || file.type === "audio/wav" || file.type === "audio/x-wav") {
-      const header = await readSlice(file, 0, 44);
-      const result = detectWavChannels(header);
-      console.log("[audio-channels] WAV detected channels:", result);
-      return result;
-    }
-
-    // MP3 — need up to 4KB to skip ID3v2 and find frame sync
-    if (ext === "mp3" || file.type === "audio/mpeg" || file.type === "audio/mp3") {
-      // ID3v2 tags can be large; read enough to get the tag size, then the frame header
-      const preHeader = await readSlice(file, 0, 10);
-      const preView = new DataView(preHeader);
-      let readSize = 4096;
-
-      if (
-        preView.getUint8(0) === 0x49 && // I
-        preView.getUint8(1) === 0x44 && // D
-        preView.getUint8(2) === 0x33    // 3
-      ) {
-        const b6 = preView.getUint8(6);
-        const b7 = preView.getUint8(7);
-        const b8 = preView.getUint8(8);
-        const b9 = preView.getUint8(9);
-        const tagSize = ((b6 & 0x7f) << 21) | ((b7 & 0x7f) << 14) | ((b8 & 0x7f) << 7) | (b9 & 0x7f);
-        readSize = 10 + tagSize + 4; // tag + first frame header
-      }
-
-      const header = await readSlice(file, 0, Math.min(readSize, file.size));
-      const result = detectMp3Channels(header);
-      console.log("[audio-channels] MP3 detected channels:", result);
-      return result;
-    }
-
-    // M4A / MP4 — full file buffer (already loaded for creation-date extraction)
-    const mp4Types = ["m4a", "mp4", "mov", "aac"];
-    if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
-      const buffer = await file.arrayBuffer();
-      const result = detectM4aChannels(buffer);
-      console.log("[audio-channels] M4A/MP4 detected channels:", result);
-      return result;
-    }
-
-    console.log("[audio-channels] Unknown format, returning null");
-    return null;
-  } catch (error) {
-    console.warn("[audio-channels] Detection failed:", error);
-    return null;
-  }
+  const analysis = await analyzeAudioChannels(file);
+  return analysis.detectedChannelCount;
 }

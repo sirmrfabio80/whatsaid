@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
+import type { AudioChannelAnalysis } from "@/lib/audio-channels";
 
 type ProcessingStep = "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 
@@ -48,7 +49,7 @@ export default function Convert() {
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [fileCreationDate, setFileCreationDate] = useState<AudioCreationDateResult | null>(null);
-  const [audioChannels, setAudioChannels] = useState<number | null>(null);
+  const [channelAnalysis, setChannelAnalysis] = useState<AudioChannelAnalysis | null>(null);
   const [language, setLanguage] = useState("auto");
   const [customPrompt, setCustomPrompt] = useState("");
   const [transcriptionConfig] = useState<TranscriptionConfig>({});
@@ -73,11 +74,11 @@ export default function Convert() {
     failed: t("convert.stepFailed"),
   };
 
-  const handleFileSelected = useCallback((f: File, dur: number, creationDate: AudioCreationDateResult | null, channels: number | null) => {
+  const handleFileSelected = useCallback((f: File, dur: number, creationDate: AudioCreationDateResult | null, analysis: AudioChannelAnalysis | null) => {
     setFile(f);
     setDuration(dur);
     setFileCreationDate(creationDate);
-    setAudioChannels(channels);
+    setChannelAnalysis(analysis);
   }, []);
 
   useEffect(() => {
@@ -240,6 +241,17 @@ export default function Convert() {
       if (transcriptionConfig.speakers_expected) txConfig.speakers_expected = transcriptionConfig.speakers_expected;
       if (transcriptionConfig.keyterms && transcriptionConfig.keyterms.length > 0) txConfig.keyterms = transcriptionConfig.keyterms;
       if (transcriptionConfig.enhanceAudio) txConfig.audio_enhanced = true;
+      if (channelAnalysis) {
+        txConfig.channel_analysis = {
+          detected_channel_count: channelAnalysis.detectedChannelCount,
+          decoded_channel_count: channelAnalysis.decodedChannelCount,
+          route_hint: channelAnalysis.routeHint,
+          reason: channelAnalysis.reason,
+          correlation: channelAnalysis.correlation,
+          active_window_count: channelAnalysis.activeWindowCount,
+          dominant_window_ratio: channelAnalysis.dominantWindowRatio,
+        };
+      }
       const hasConfig = Object.keys(txConfig).length > 0;
 
       const { error: jobError } = await supabase
@@ -260,7 +272,7 @@ export default function Convert() {
           metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
           metadata_file_lastmodified: fileLastModifiedIso,
           metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
-          audio_channels: audioChannels,
+          audio_channels: channelAnalysis?.detectedChannelCount ?? null,
           transcription_config: hasConfig ? txConfig : null,
         } as any);
 
@@ -290,7 +302,7 @@ export default function Convert() {
     setFile(null);
     setDuration(0);
     setFileCreationDate(null);
-    setAudioChannels(null);
+    setChannelAnalysis(null);
     setLanguage("auto");
     setCustomPrompt("");
     setProcessing(false);
