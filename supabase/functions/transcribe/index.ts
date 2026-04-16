@@ -305,7 +305,20 @@ Deno.serve(async (req) => {
           payload.keyterms_prompt = keyterms;
         }
       } else if (strategy in STRATEGY_PROMPTS) {
-        payload.prompt = STRATEGY_PROMPTS[strategy];
+        // Skip the recovery/review prompt on the diarization path. The
+        // controlled A/B matrix (config C3) showed that adding any prompt to
+        // a mono diarization request collapses Speaker B back into Speaker A
+        // on universal-3-pro. Multichannel runs are unaffected by the prompt
+        // so we keep it there.
+        if (route === "multichannel") {
+          payload.prompt = STRATEGY_PROMPTS[strategy];
+        } else {
+          console.log(JSON.stringify({
+            event: "diarization_prompt_skipped",
+            strategy,
+            reason: "C3 matrix: prompts collapse mono diarization to 1 speaker",
+          }));
+        }
       }
 
       // Note: `disfluencies: true` is intentionally NOT set. It would force
