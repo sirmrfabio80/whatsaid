@@ -4,10 +4,10 @@ import { Upload, FileAudio, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isValidAudioFile, MAX_FILE_SIZE, ACCEPTED_EXTENSIONS, formatDuration } from "@/lib/pricing";
 import { extractAudioCreationDate, type AudioCreationDateResult } from "@/lib/audio-creation-date";
-import { detectChannelCount } from "@/lib/audio-channels";
+import { analyzeAudioChannels, type AudioChannelAnalysis } from "@/lib/audio-channels";
 
 interface AudioUploaderProps {
-  onFileSelected: (file: File, durationSeconds: number, creationDate: AudioCreationDateResult | null, channels: number | null) => void;
+  onFileSelected: (file: File, durationSeconds: number, creationDate: AudioCreationDateResult | null, channelAnalysis: AudioChannelAnalysis | null) => void;
   disabled?: boolean;
 }
 
@@ -36,11 +36,11 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
       });
       if (dur > 3600) { setError(t("audioUploader.fileTooLong")); setSelectedFile(null); setDetecting(false); return; }
       setDuration(dur); setDetecting(false);
-      const [creationDate, channels] = await Promise.all([
+      const [creationDate, channelAnalysis] = await Promise.all([
         extractAudioCreationDate(file),
-        detectChannelCount(file),
+        analyzeAudioChannels(file),
       ]);
-      onFileSelected(file, dur, creationDate, channels);
+      onFileSelected(file, dur, creationDate, channelAnalysis);
     } catch { setError(t("audioUploader.couldNotRead")); setSelectedFile(null); setDetecting(false); }
   }, [onFileSelected, t]);
 

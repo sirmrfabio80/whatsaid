@@ -237,28 +237,18 @@ Deno.serve(async (req) => {
 
     const tuningConfig = (job.transcription_config as Record<string, unknown>) ?? {};
 
-    const PROFILES: Record<string, Record<string, unknown>> = {
-      phone_call: { speakers_expected: 2 },
-      meeting: {},
-    };
-
-    if (tuningConfig.profile && typeof tuningConfig.profile === "string" && PROFILES[tuningConfig.profile]) {
-      const profileDefaults = PROFILES[tuningConfig.profile];
-      for (const [key, value] of Object.entries(profileDefaults)) {
-        if (!(key in tuningConfig)) {
-          tuningConfig[key] = value;
-        }
-      }
-    }
-
     const strategy = (tuningConfig.strategy as string) ?? "balanced";
     const requestedAudioChannels = typeof job.audio_channels === "number" && job.audio_channels > 1
       ? job.audio_channels
       : null;
+    const channelAnalysis = tuningConfig.channel_analysis && typeof tuningConfig.channel_analysis === "object"
+      ? tuningConfig.channel_analysis as Record<string, unknown>
+      : null;
+    const channelRouteHint = channelAnalysis?.route_hint === "multichannel" ? "multichannel" : "diarization";
 
-    // Prefer multichannel when the uploaded file is actually multichannel.
-    // This fixes phone-call recordings where each speaker is isolated on a separate channel.
-    const route: "multichannel" | "diarization" = requestedAudioChannels && requestedAudioChannels > 1
+    // Only use multichannel when we have positive evidence that speakers are
+    // actually isolated on separate channels. Channel count alone is not enough.
+    const route: "multichannel" | "diarization" = requestedAudioChannels && channelRouteHint === "multichannel"
       ? "multichannel"
       : "diarization";
 
@@ -340,6 +330,7 @@ Deno.serve(async (req) => {
       file_size_bytes: job.file_size_bytes ?? null,
       audio_channels: job.audio_channels ?? null,
       requested_audio_channels: requestedAudioChannels,
+      channel_analysis: channelAnalysis,
       route,
       strategy,
       has_prompt: !!transcriptPayload.prompt,
@@ -371,6 +362,7 @@ Deno.serve(async (req) => {
           speaker_options: transcriptPayload.speaker_options ?? null,
           disfluencies: transcriptPayload.disfluencies ?? false,
           profile: tuningConfig.profile ?? null,
+          channel_analysis: channelAnalysis,
           route,
         },
       })
