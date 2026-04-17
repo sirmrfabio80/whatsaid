@@ -240,7 +240,7 @@ export default function TranscriptEditor({
     if (!activeMatch) return;
     const el = segmentRefs.current.get(activeMatch.segIndex);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [activeMatch?.segIndex, activeMatch?.offset]);
+  }, [safeActiveMatch, activeMatch?.segIndex, activeMatch?.offset, activeMatch?.type]);
 
   const goPrevMatch = useCallback(() => {
     if (totalMatches === 0) return;
