@@ -551,7 +551,7 @@ export default function TranscriptEditor({
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
+      <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50 flex-wrap">
         <div className="flex items-center gap-2">
           {transcriptEdited && !editing && (
             <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
@@ -560,17 +560,78 @@ export default function TranscriptEditor({
             </span>
           )}
         </div>
-        {!readOnly && (
-          <Button
-            variant={editing ? "default" : "outline"}
-            size="sm"
-            className="rounded-full gap-1.5 text-xs h-8"
-            onClick={toggleEditing}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2 ml-auto">
+          {!readOnly && (
+            <Button
+              variant={editing ? "default" : "outline"}
+              size="sm"
+              className="rounded-full gap-1.5 text-xs h-8"
+              onClick={toggleEditing}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
+            </Button>
+          )}
+          {/* Search */}
+          <div className="relative flex items-center">
+            <Search className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (e.shiftKey) goPrevMatch(); else goNextMatch();
+                } else if (e.key === "Escape") {
+                  setSearchQuery("");
+                }
+              }}
+              placeholder={t("jobResults.searchTranscriptPlaceholder")}
+              aria-label={t("jobResults.searchTranscriptPlaceholder")}
+              className="h-8 w-44 sm:w-52 pl-7 pr-7 text-xs rounded-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 inline-flex items-center justify-center w-5 h-5 rounded text-muted-foreground hover:text-foreground"
+                aria-label={t("jobResults.searchClear")}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          {searchQuery.trim() && (
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] tabular-nums text-muted-foreground min-w-[3.5rem] text-center">
+                {totalMatches > 0
+                  ? t("jobResults.searchMatchCount", { current: safeActiveMatch + 1, total: totalMatches })
+                  : t("jobResults.searchNoMatches")}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-full"
+                onClick={goPrevMatch}
+                disabled={totalMatches === 0}
+                aria-label={t("jobResults.searchPrev")}
+              >
+                <ChevronUp className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-full"
+                onClick={goNextMatch}
+                disabled={totalMatches === 0}
+                aria-label={t("jobResults.searchNext")}
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Suggestion bar */}
