@@ -14,11 +14,126 @@ import {
   TranscribeTemplateConfig,
   DefaultStrategy,
 } from "@/lib/transcribe-template";
+import { cn } from "@/lib/utils";
 
 interface Props {
   value: TranscribeTemplateConfig;
   onChange: (next: TranscribeTemplateConfig) => void;
   disabled?: boolean;
+}
+
+type DisabledInfo = { disabled: boolean; reason?: string };
+type DisabledMap = {
+  us_base_url: DisabledInfo;
+  apply_prompt_on_diarization: DisabledInfo;
+  recovery_prompt: DisabledInfo;
+  review_prompt: DisabledInfo;
+  apply_to_mono: DisabledInfo;
+  apply_to_stereo: DisabledInfo;
+  audio_normalise: DisabledInfo;
+  audio_target_peak_dbfs: DisabledInfo;
+  audio_max_gain_db_mono: DisabledInfo;
+  audio_max_gain_db_stereo: DisabledInfo;
+  audio_noise_floor_dbfs: DisabledInfo;
+  audio_soft_clip_threshold: DisabledInfo;
+};
+
+const MASTER_OFF_REASON =
+  "Audio enhancement is OFF — enable the master switch above to configure.";
+const NORMALISE_OFF_REASON = "Active only when normalisation is ON.";
+
+function computeDisabled(value: TranscribeTemplateConfig): DisabledMap {
+  const masterOff = !value.audio_enhancement_enabled;
+  const normaliseOff = !value.audio_normalise;
+  const monoOff = !value.audio_enhancement_apply_to_mono;
+  const stereoOff = !value.audio_enhancement_apply_to_stereo;
+
+  // Mono/stereo gain caps: most-specific-wins (mono/stereo-off reason beats normalise reason).
+  const monoGainDisabled = masterOff || normaliseOff || monoOff;
+  const monoGainReason = masterOff
+    ? MASTER_OFF_REASON
+    : monoOff
+      ? "Apply-to-mono is OFF — this gain cap has no effect."
+      : normaliseOff
+        ? NORMALISE_OFF_REASON
+        : undefined;
+
+  const stereoGainDisabled = masterOff || normaliseOff || stereoOff;
+  const stereoGainReason = masterOff
+    ? MASTER_OFF_REASON
+    : stereoOff
+      ? "Apply-to-stereo is OFF — this gain cap has no effect."
+      : normaliseOff
+        ? NORMALISE_OFF_REASON
+        : undefined;
+
+  const promptlessStrategy =
+    value.default_strategy === "keyterms" || value.default_strategy === "none";
+
+  return {
+    us_base_url: {
+      disabled: !value.geo_routing_enabled,
+      reason: !value.geo_routing_enabled
+        ? "Geo-routing is OFF — all requests use the default base URL."
+        : undefined,
+    },
+    apply_prompt_on_diarization: {
+      disabled: promptlessStrategy,
+      reason: promptlessStrategy
+        ? "No prose prompt configured — diarization-route policy has no effect."
+        : undefined,
+    },
+    recovery_prompt: {
+      disabled: value.default_strategy !== "recovery",
+      reason:
+        value.default_strategy !== "recovery"
+          ? "Active only when Default strategy is Recovery."
+          : undefined,
+    },
+    review_prompt: {
+      disabled: value.default_strategy !== "review",
+      reason:
+        value.default_strategy !== "review"
+          ? "Active only when Default strategy is Review."
+          : undefined,
+    },
+    apply_to_mono: {
+      disabled: masterOff,
+      reason: masterOff ? MASTER_OFF_REASON : undefined,
+    },
+    apply_to_stereo: {
+      disabled: masterOff,
+      reason: masterOff ? MASTER_OFF_REASON : undefined,
+    },
+    audio_normalise: {
+      disabled: masterOff,
+      reason: masterOff ? MASTER_OFF_REASON : undefined,
+    },
+    audio_target_peak_dbfs: {
+      disabled: masterOff || normaliseOff,
+      reason: masterOff
+        ? MASTER_OFF_REASON
+        : normaliseOff
+          ? NORMALISE_OFF_REASON
+          : undefined,
+    },
+    audio_max_gain_db_mono: {
+      disabled: monoGainDisabled,
+      reason: monoGainReason,
+    },
+    audio_max_gain_db_stereo: {
+      disabled: stereoGainDisabled,
+      reason: stereoGainReason,
+    },
+    audio_noise_floor_dbfs: {
+      disabled: masterOff,
+      reason: masterOff ? MASTER_OFF_REASON : undefined,
+    },
+    audio_soft_clip_threshold: {
+      disabled: masterOff,
+      reason: masterOff ? MASTER_OFF_REASON : undefined,
+    },
+  };
 }
 
 /**
@@ -37,6 +152,8 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
       const n = Number(e.target.value);
       if (Number.isFinite(n)) set(key, n as never);
     };
+
+  const d = computeDisabled(value);
 
   return (
     <div className="space-y-8">
@@ -61,11 +178,13 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
         <Field
           label="US base URL"
           hint="Used for US-detected requests when geo-routing is ON."
+          disabledReason={d.us_base_url.reason}
+          isDisabled={d.us_base_url.disabled}
         >
           <Input
             value={value.us_base_url}
             onChange={(e) => set("us_base_url", e.target.value)}
-            disabled={disabled || !value.geo_routing_enabled}
+            disabled={disabled || d.us_base_url.disabled}
           />
         </Field>
       </Section>
@@ -186,27 +305,36 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
             hint="Off by default — prompts collapse Speaker B in mono diarization."
             checked={value.apply_prompt_on_diarization}
             onChange={(v) => set("apply_prompt_on_diarization", v)}
-            disabled={disabled}
+            disabled={disabled || d.apply_prompt_on_diarization.disabled}
+            disabledReason={d.apply_prompt_on_diarization.reason}
           />
         </div>
         <EffectiveBehaviourBlock
           strategy={value.default_strategy}
           applyOnDiarization={value.apply_prompt_on_diarization}
         />
-        <Field label="Recovery prompt">
+        <Field
+          label="Recovery prompt"
+          isDisabled={d.recovery_prompt.disabled}
+          disabledReason={d.recovery_prompt.reason}
+        >
           <Textarea
             value={value.recovery_prompt}
             onChange={(e) => set("recovery_prompt", e.target.value)}
             rows={5}
-            disabled={disabled}
+            disabled={disabled || d.recovery_prompt.disabled}
           />
         </Field>
-        <Field label="Review prompt">
+        <Field
+          label="Review prompt"
+          isDisabled={d.review_prompt.disabled}
+          disabledReason={d.review_prompt.reason}
+        >
           <Textarea
             value={value.review_prompt}
             onChange={(e) => set("review_prompt", e.target.value)}
             rows={6}
-            disabled={disabled}
+            disabled={disabled || d.review_prompt.disabled}
           />
         </Field>
         <ToggleField
@@ -238,14 +366,16 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
             hint="Off by default — risks collapsing diarization on quiet single-mic audio."
             checked={value.audio_enhancement_apply_to_mono}
             onChange={(v) => set("audio_enhancement_apply_to_mono", v)}
-            disabled={disabled || !value.audio_enhancement_enabled}
+            disabled={disabled || d.apply_to_mono.disabled}
+            disabledReason={d.apply_to_mono.reason}
           />
           <ToggleField
             label="Apply to stereo"
             hint="Recommended — stereo recordings benefit from the volume lift."
             checked={value.audio_enhancement_apply_to_stereo}
             onChange={(v) => set("audio_enhancement_apply_to_stereo", v)}
-            disabled={disabled || !value.audio_enhancement_enabled}
+            disabled={disabled || d.apply_to_stereo.disabled}
+            disabledReason={d.apply_to_stereo.reason}
           />
         </div>
         <ToggleField
@@ -253,28 +383,44 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
           hint="When OFF, only the soft-clip safety limiter runs — no volume change."
           checked={value.audio_normalise}
           onChange={(v) => set("audio_normalise", v)}
-          disabled={disabled || !value.audio_enhancement_enabled}
+          disabled={disabled || d.audio_normalise.disabled}
+          disabledReason={d.audio_normalise.reason}
         />
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Target peak (dBFS)" hint="Normalise pushes the loudest sample up to this level. -1 dBFS is a safe ceiling.">
+          <Field
+            label="Target peak (dBFS)"
+            hint="Normalise pushes the loudest sample up to this level. -1 dBFS is a safe ceiling."
+            isDisabled={d.audio_target_peak_dbfs.disabled}
+            disabledReason={d.audio_target_peak_dbfs.reason}
+          >
             <Input
               type="number"
               step="0.5"
               value={value.audio_target_peak_dbfs}
               onChange={onNumber("audio_target_peak_dbfs")}
-              disabled={disabled || !value.audio_enhancement_enabled || !value.audio_normalise}
+              disabled={disabled || d.audio_target_peak_dbfs.disabled}
             />
           </Field>
-          <Field label="Noise floor (dBFS)" hint="Below this RMS the file is considered near-silent and the enhancer skips processing.">
+          <Field
+            label="Noise floor (dBFS)"
+            hint="Below this RMS the file is considered near-silent and the enhancer skips processing."
+            isDisabled={d.audio_noise_floor_dbfs.disabled}
+            disabledReason={d.audio_noise_floor_dbfs.reason}
+          >
             <Input
               type="number"
               step="1"
               value={value.audio_noise_floor_dbfs}
               onChange={onNumber("audio_noise_floor_dbfs")}
-              disabled={disabled || !value.audio_enhancement_enabled}
+              disabled={disabled || d.audio_noise_floor_dbfs.disabled}
             />
           </Field>
-          <Field label="Max gain — mono (dB)" hint="Cap on the volume boost applied to mono uploads.">
+          <Field
+            label="Max gain — mono (dB)"
+            hint="Cap on the volume boost applied to mono uploads."
+            isDisabled={d.audio_max_gain_db_mono.disabled}
+            disabledReason={d.audio_max_gain_db_mono.reason}
+          >
             <Input
               type="number"
               step="1"
@@ -282,10 +428,15 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
               max={36}
               value={value.audio_max_gain_db_mono}
               onChange={onNumber("audio_max_gain_db_mono")}
-              disabled={disabled || !value.audio_enhancement_enabled || !value.audio_normalise}
+              disabled={disabled || d.audio_max_gain_db_mono.disabled}
             />
           </Field>
-          <Field label="Max gain — stereo (dB)" hint="Cap on the volume boost applied to stereo uploads.">
+          <Field
+            label="Max gain — stereo (dB)"
+            hint="Cap on the volume boost applied to stereo uploads."
+            isDisabled={d.audio_max_gain_db_stereo.disabled}
+            disabledReason={d.audio_max_gain_db_stereo.reason}
+          >
             <Input
               type="number"
               step="1"
@@ -293,10 +444,15 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
               max={36}
               value={value.audio_max_gain_db_stereo}
               onChange={onNumber("audio_max_gain_db_stereo")}
-              disabled={disabled || !value.audio_enhancement_enabled || !value.audio_normalise}
+              disabled={disabled || d.audio_max_gain_db_stereo.disabled}
             />
           </Field>
-          <Field label="Soft-clip threshold" hint="Linear, 0.5–1.0. Samples above this are tanh-shaped to prevent harsh clipping.">
+          <Field
+            label="Soft-clip threshold"
+            hint="Linear, 0.5–1.0. Samples above this are tanh-shaped to prevent harsh clipping."
+            isDisabled={d.audio_soft_clip_threshold.disabled}
+            disabledReason={d.audio_soft_clip_threshold.reason}
+          >
             <Input
               type="number"
               step="0.05"
@@ -304,7 +460,7 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
               max={1.0}
               value={value.audio_soft_clip_threshold}
               onChange={onNumber("audio_soft_clip_threshold")}
-              disabled={disabled || !value.audio_enhancement_enabled}
+              disabled={disabled || d.audio_soft_clip_threshold.disabled}
             />
           </Field>
         </div>
@@ -357,16 +513,23 @@ function Field({
   label,
   hint,
   children,
+  isDisabled,
+  disabledReason,
 }: {
   label: string;
   hint?: string;
   children: React.ReactNode;
+  isDisabled?: boolean;
+  disabledReason?: string;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", isDisabled && "opacity-80")}>
       <Label className="text-sm font-medium">{label}</Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {isDisabled && disabledReason && (
+        <p className="text-xs italic text-muted-foreground/80">{disabledReason}</p>
+      )}
     </div>
   );
 }
@@ -377,18 +540,30 @@ function ToggleField({
   checked,
   onChange,
   disabled,
+  disabledReason,
 }: {
   label: string;
   hint?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
   disabled?: boolean;
+  disabledReason?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 p-3">
-      <div className="space-y-1">
+    <div
+      className={cn(
+        "flex items-start justify-between gap-4 rounded-lg border border-border/60 p-3",
+        disabled && "bg-muted/20",
+      )}
+    >
+      <div className={cn("space-y-1", disabled && "opacity-80")}>
         <Label className="text-sm font-medium">{label}</Label>
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        {disabled && disabledReason && (
+          <p className="text-xs italic text-muted-foreground/80">
+            {disabledReason}
+          </p>
+        )}
       </div>
       <Switch
         checked={checked}
