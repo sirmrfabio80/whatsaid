@@ -942,7 +942,14 @@ export default function TranscriptEditor({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[15px] leading-[1.7] flex-1">
-                      {displayedText}
+                      {searchQuery.trim()
+                        ? renderHighlighted(
+                            displayedText,
+                            searchQuery.trim(),
+                            perSegMatches[i] ?? [],
+                            activeMatch && activeMatch.segIndex === i ? activeMatch.offset : null,
+                          )
+                        : displayedText}
                     </p>
                     {hasSuggestionHighlight && (
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
