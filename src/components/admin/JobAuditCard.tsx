@@ -126,8 +126,68 @@ export default function JobAuditCard({ job }: { job: JobRow }) {
             )}
           </div>
         </div>
+
+        {/* Audio enhancement audit */}
+        <AudioEnhancementAudit cfg={cfg} />
       </CardContent>
     </Card>
+  );
+}
+
+function AudioEnhancementAudit({ cfg }: { cfg: Record<string, unknown> }) {
+  const ae = cfg.audio_enhancement;
+  const legacyApplied = cfg.audio_enhanced;
+
+  let summary: string;
+  let tone: "ok" | "skipped" | "failed" | "legacy" = "ok";
+
+  if (ae && typeof ae === "object") {
+    const a = ae as Record<string, unknown>;
+    const eligible = !!a.eligible;
+    const attempted = !!a.attempted;
+    const applied = !!a.applied;
+    const reason = String(a.reason ?? "");
+    const measured = (a.measured ?? null) as Record<string, unknown> | null;
+    const gainDb = measured && typeof measured.applied_gain_db === "number"
+      ? (measured.applied_gain_db as number)
+      : null;
+
+    if (!eligible) {
+      summary = `Not eligible — ${reason || "skipped by template"}`;
+      tone = "skipped";
+    } else if (!attempted) {
+      summary = `Eligible, not attempted — ${reason || "unknown"}`;
+      tone = "skipped";
+    } else if (applied) {
+      const gainStr = gainDb != null && Number.isFinite(gainDb)
+        ? ` (${gainDb >= 0 ? "+" : ""}${gainDb.toFixed(1)} dB)`
+        : "";
+      summary = `Eligible, attempted, applied${gainStr}`;
+      tone = "ok";
+    } else {
+      summary = `Eligible, attempted, not applied — ${reason || "unknown"}`;
+      tone = reason === "failed" ? "failed" : "skipped";
+    }
+  } else if (legacyApplied !== undefined) {
+    summary = `Legacy field: audio_enhanced=${String(legacyApplied)} (pre-runtime-metadata job)`;
+    tone = "legacy";
+  } else {
+    summary = "No audio enhancement metadata recorded";
+    tone = "skipped";
+  }
+
+  const toneClasses: Record<typeof tone, string> = {
+    ok: "border-primary/40 bg-primary/5",
+    skipped: "border-border bg-muted/30",
+    failed: "border-destructive/50 bg-destructive/10",
+    legacy: "border-amber-500/40 bg-amber-500/5",
+  };
+
+  return (
+    <div className={cn("rounded-lg border p-3 space-y-1", toneClasses[tone])}>
+      <h4 className="text-sm font-semibold">Audio enhancement</h4>
+      <p className="text-xs text-muted-foreground">{summary}</p>
+    </div>
   );
 }
 

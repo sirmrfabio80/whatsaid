@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
-import { enhanceAudioForTranscription } from "@/lib/audio-enhance";
+import { enhanceAudioForTranscription, type AudioEnhanceMetadata } from "@/lib/audio-enhance";
+import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard
@@ -204,31 +205,107 @@ export default function Convert() {
     try {
       let uploadFile = file;
 
-      // Detect channel count first. For mono diarization jobs we skip the
-      // client-side WebAudio enhancement entirely (it appears to collapse
-      // AssemblyAI's diarizer down to 1 speaker on quiet single-mic recordings).
-      // Stereo recordings still get the normalise + boost pass.
-      let isMono = false;
+      // Load the active template to get audio-enhancement policy + knobs.
+      let activeCfg: TranscribeTemplateConfig = DEFAULT_TEMPLATE_CONFIG;
+      try {
+        const { data: tplRow } = await supabase
+          .from("transcribe_settings_templates")
+          .select("config")
+          .eq("is_active", true)
+          .maybeSingle();
+        if (tplRow?.config) {
+          activeCfg = parseTemplateConfig(tplRow.config);
+        }
+      } catch (tplErr) {
+        console.warn("Could not load active template, using defaults:", tplErr);
+      }
+
+      // Detect channel count first.
+      let inputChannels: 1 | 2 = 2;
       try {
         const probeBuf = await file.slice(0).arrayBuffer();
         const probeCtx = new AudioContext();
         const decoded = await probeCtx.decodeAudioData(probeBuf);
-        isMono = decoded.numberOfChannels === 1;
+        inputChannels = decoded.numberOfChannels === 1 ? 1 : 2;
         await probeCtx.close();
       } catch (probeError) {
         console.warn("Channel probe failed, assuming stereo:", probeError);
       }
 
-      if (isMono) {
-        console.info("[convert] mono detected — skipping client-side audio enhancement (raw upload)");
-        uploadFile = file;
+      // Decide eligibility from the active template.
+      const featureEnabled = activeCfg.audio_enhancement_enabled;
+      const channelAllowed = inputChannels === 1
+        ? activeCfg.audio_enhancement_apply_to_mono
+        : activeCfg.audio_enhancement_apply_to_stereo;
+      const eligible = featureEnabled && channelAllowed;
+
+      const settingsSnapshot = {
+        normalise: activeCfg.audio_normalise,
+        target_peak_dbfs: activeCfg.audio_target_peak_dbfs,
+        max_gain_db_mono: activeCfg.audio_max_gain_db_mono,
+        max_gain_db_stereo: activeCfg.audio_max_gain_db_stereo,
+        noise_floor_dbfs: activeCfg.audio_noise_floor_dbfs,
+        soft_clip_threshold: activeCfg.audio_soft_clip_threshold,
+      };
+
+      type EnhancementMeta = {
+        eligible: boolean;
+        attempted: boolean;
+        applied: boolean;
+        reason: string;
+        input_channels: 1 | 2;
+        duration_ms: number;
+        settings_snapshot: typeof settingsSnapshot | null;
+        measured: AudioEnhanceMetadata["measured"] | null;
+      };
+
+      let enhancementMeta: EnhancementMeta;
+
+      if (!eligible) {
+        const reason = !featureEnabled
+          ? "feature_disabled_by_template"
+          : inputChannels === 1
+            ? "mono_disabled_by_template"
+            : "stereo_disabled_by_template";
+        console.info(`[convert] audio enhancement skipped — ${reason}`);
+        enhancementMeta = {
+          eligible: false,
+          attempted: false,
+          applied: false,
+          reason,
+          input_channels: inputChannels,
+          duration_ms: 0,
+          settings_snapshot: null,
+          measured: null,
+        };
       } else {
         setStep("enhancing");
         try {
-          uploadFile = await enhanceAudioForTranscription(file);
+          const result = await enhanceAudioForTranscription(file, undefined, settingsSnapshot);
+          uploadFile = result.file;
+          enhancementMeta = {
+            eligible: true,
+            attempted: true,
+            applied: result.metadata.applied,
+            reason: result.metadata.reason,
+            input_channels: result.metadata.input_channels,
+            duration_ms: result.metadata.duration_ms,
+            settings_snapshot: settingsSnapshot,
+            measured: result.metadata.measured,
+          };
         } catch (enhanceError) {
           console.warn("Audio enhancement failed, uploading original:", enhanceError);
           uploadFile = file;
+          enhancementMeta = {
+            eligible: true,
+            attempted: true,
+            applied: false,
+            reason: "failed",
+            input_channels: inputChannels,
+            duration_ms: 0,
+            settings_snapshot: settingsSnapshot,
+            measured: null,
+          };
         }
       }
 
@@ -255,7 +332,7 @@ export default function Convert() {
       // Build transcription_config from UI settings (picker is hidden — only
       // channel analysis metadata is attached; backend defaults handle strategy).
       const txConfig: Record<string, unknown> = {
-        audio_enhanced: true,
+        audio_enhancement: enhancementMeta,
       };
       if (channelAnalysis) {
         txConfig.channel_analysis = {

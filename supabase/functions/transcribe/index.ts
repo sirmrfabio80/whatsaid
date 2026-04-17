@@ -502,6 +502,10 @@ Deno.serve(async (req) => {
 
     const transcriptPayload = buildTranscriptPayload();
 
+    const audioEnhancement = (tuningConfig.audio_enhancement && typeof tuningConfig.audio_enhancement === "object")
+      ? tuningConfig.audio_enhancement
+      : null;
+
     console.log(JSON.stringify({
       event: "transcription_routing",
       job_id,
@@ -525,6 +529,7 @@ Deno.serve(async (req) => {
       speaker_options: transcriptPayload.speaker_options ?? null,
       disfluencies: transcriptPayload.disfluencies ?? false,
       profile: tuningConfig.profile ?? null,
+      audio_enhancement: audioEnhancement,
     }));
 
     await supabase
@@ -547,6 +552,7 @@ Deno.serve(async (req) => {
           profile: tuningConfig.profile ?? null,
           channel_analysis: channelAnalysis,
           route,
+          audio_enhancement: audioEnhancement,
         },
       })
       .eq("id", job_id);
@@ -613,6 +619,7 @@ Deno.serve(async (req) => {
       disfluencies: transcriptPayload.disfluencies ?? false,
       has_keyterms: !!transcriptPayload.keyterms_prompt,
       profile: tuningConfig.profile ?? null,
+      audio_enhancement: audioEnhancement,
     }));
 
     let transcriptText: string;
