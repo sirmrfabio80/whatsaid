@@ -186,6 +186,7 @@ export default function TranscriptEditor({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const pendingFocusRef = useRef<{ index: number; cursorPos: number } | null>(null);
   const isPointerFine = usePointerFine();
@@ -200,26 +201,33 @@ export default function TranscriptEditor({
     setRejectedSuggestionIds(new Set());
   }, [suggestions]);
 
-  // Search index: per-segment match offsets + flat list of (segIndex, offset) for nav
-  const { perSegMatches, flatMatches } = useMemo(() => {
+  // Search index: per-segment text-match offsets + flat nav list (text matches + speaker matches)
+  const { perSegMatches, segSpeakerMatch, flatMatches } = useMemo(() => {
     const perSeg: Record<number, number[]> = {};
-    const flat: Array<{ segIndex: number; offset: number }> = [];
+    const speakerHit: Record<number, boolean> = {};
+    const flat: Array<{ segIndex: number; offset: number; type: "text" | "speaker" }> = [];
     const q = searchQuery.trim();
-    if (!q) return { perSegMatches: perSeg, flatMatches: flat };
+    if (!q) return { perSegMatches: perSeg, segSpeakerMatch: speakerHit, flatMatches: flat };
     const re = new RegExp(escapeRegExp(q), "gi");
+    const ql = q.toLowerCase();
     segments.forEach((seg, i) => {
+      const speakerDisplay = seg.speaker ? (speakerNames[seg.speaker] || seg.speaker) : "";
+      if (speakerDisplay && speakerDisplay.toLowerCase().includes(ql)) {
+        speakerHit[i] = true;
+        flat.push({ segIndex: i, offset: -1, type: "speaker" });
+      }
       const text = applySpeakerNamesToText(seg.text, speakerNames);
       const offsets: number[] = [];
       let m: RegExpExecArray | null;
       re.lastIndex = 0;
       while ((m = re.exec(text)) !== null) {
         offsets.push(m.index);
-        flat.push({ segIndex: i, offset: m.index });
+        flat.push({ segIndex: i, offset: m.index, type: "text" });
         if (m[0].length === 0) re.lastIndex++;
       }
       if (offsets.length) perSeg[i] = offsets;
     });
-    return { perSegMatches: perSeg, flatMatches: flat };
+    return { perSegMatches: perSeg, segSpeakerMatch: speakerHit, flatMatches: flat };
   }, [searchQuery, segments, speakerNames]);
 
   const totalMatches = flatMatches.length;
@@ -232,7 +240,7 @@ export default function TranscriptEditor({
     if (!activeMatch) return;
     const el = segmentRefs.current.get(activeMatch.segIndex);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [activeMatch?.segIndex, activeMatch?.offset]);
+  }, [safeActiveMatch, activeMatch?.segIndex, activeMatch?.offset, activeMatch?.type]);
 
   const goPrevMatch = useCallback(() => {
     if (totalMatches === 0) return;
@@ -244,6 +252,18 @@ export default function TranscriptEditor({
     setActiveMatchIndex((i) => (i + 1) % totalMatches);
   }, [totalMatches]);
 
+  // Cmd/Ctrl+F focuses the search input (only while this editor is mounted, i.e. Transcript tab)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
   const contentSpeakers = getUniqueSpeakers(segments);
   const speakers = allSpeakersProp
     ? [...new Set([...contentSpeakers, ...allSpeakersProp])]
@@ -576,6 +596,7 @@ export default function TranscriptEditor({
           <div className="relative flex items-center">
             <Search className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <Input
+              ref={searchInputRef}
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -866,6 +887,12 @@ export default function TranscriptEditor({
             // Read-only segment card
             const displayedText = applySpeakerNamesToText(seg.text, speakerNames);
 
+            const isSpeakerMatch = !!segSpeakerMatch[i];
+            const isActiveSpeakerMatch =
+              isSpeakerMatch &&
+              activeMatch?.type === "speaker" &&
+              activeMatch.segIndex === i;
+
             return (
               <div
                 key={seg.id}
@@ -884,6 +911,8 @@ export default function TranscriptEditor({
                   isDragOver ? " ring-2 ring-primary/50 border-primary/40" : ""
                 }${
                   isDropSuccess ? " ring-2 ring-green-500/40" : ""
+                }${
+                  isActiveSpeakerMatch ? " ring-2 ring-primary/60" : isSpeakerMatch ? " ring-1 ring-primary/30" : ""
                 }`}
                 style={{ '--seg-color': color ? (hasSuggestionHighlight ? color.border : color.border + (editing ? "80" : "60")) : 'transparent', borderLeftColor: 'var(--seg-color)' } as React.CSSProperties}
                 onDragOver={editing ? (e) => { e.preventDefault(); setDragOverIndex(i); } : undefined}
