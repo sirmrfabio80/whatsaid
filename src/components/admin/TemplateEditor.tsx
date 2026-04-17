@@ -31,7 +31,9 @@ type DisabledMap = {
   apply_to_mono: DisabledInfo;
   apply_to_stereo: DisabledInfo;
   audio_normalise: DisabledInfo;
+  audio_normalise_mode: DisabledInfo;
   audio_target_peak_dbfs: DisabledInfo;
+  audio_target_rms_dbfs: DisabledInfo;
   audio_max_gain_db_mono: DisabledInfo;
   audio_max_gain_db_stereo: DisabledInfo;
   audio_noise_floor_dbfs: DisabledInfo;
@@ -109,6 +111,14 @@ function computeDisabled(value: TranscribeTemplateConfig): DisabledMap {
       disabled: masterOff,
       reason: masterOff ? MASTER_OFF_REASON : undefined,
     },
+    audio_normalise_mode: {
+      disabled: masterOff || normaliseOff,
+      reason: masterOff
+        ? MASTER_OFF_REASON
+        : normaliseOff
+          ? NORMALISE_OFF_REASON
+          : undefined,
+    },
     audio_target_peak_dbfs: {
       disabled: masterOff || normaliseOff,
       reason: masterOff
@@ -116,6 +126,16 @@ function computeDisabled(value: TranscribeTemplateConfig): DisabledMap {
         : normaliseOff
           ? NORMALISE_OFF_REASON
           : undefined,
+    },
+    audio_target_rms_dbfs: {
+      disabled: masterOff || normaliseOff || value.audio_normalise_mode !== "rms",
+      reason: masterOff
+        ? MASTER_OFF_REASON
+        : normaliseOff
+          ? NORMALISE_OFF_REASON
+          : value.audio_normalise_mode !== "rms"
+            ? "Active only when normalisation mode is RMS."
+            : undefined,
     },
     audio_max_gain_db_mono: {
       disabled: monoGainDisabled,

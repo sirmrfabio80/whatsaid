@@ -241,7 +241,9 @@ export default function Convert() {
 
       const settingsSnapshot = {
         normalise: activeCfg.audio_normalise,
+        normalise_mode: activeCfg.audio_normalise_mode,
         target_peak_dbfs: activeCfg.audio_target_peak_dbfs,
+        target_rms_dbfs: activeCfg.audio_target_rms_dbfs,
         max_gain_db_mono: activeCfg.audio_max_gain_db_mono,
         max_gain_db_stereo: activeCfg.audio_max_gain_db_stereo,
         noise_floor_dbfs: activeCfg.audio_noise_floor_dbfs,
