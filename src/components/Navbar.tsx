@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown } from "lucide-react";
+import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown, Shield } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "@/components/NotificationBell";
@@ -107,6 +107,12 @@ export default function Navbar() {
                     <Settings className="w-4 h-4 mr-2" />
                     {t("nav.settings")}
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")} className="rounded-lg">
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="rounded-lg">
                     <LogOut className="w-4 h-4 mr-2" />
@@ -181,6 +187,13 @@ export default function Navbar() {
                   <Settings className="w-5 h-5" />{t("nav.settings")}
                 </Button>
               </Link>
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "350ms", animationFillMode: "forwards" }}>
+                  <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
+                    <Shield className="w-5 h-5" />Admin
+                  </Button>
+                </Link>
+              )}
               <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "370ms", animationFillMode: "forwards" }} />
               <div className="opacity-0 animate-fade-in" style={{ animationDelay: "400ms", animationFillMode: "forwards" }}>
                 <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3" onClick={() => { signOut(); setMobileOpen(false); }}>

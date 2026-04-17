@@ -6,7 +6,117 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ASSEMBLYAI_BASE = "https://api.eu.assemblyai.com/v2";
+// Hardcoded fallbacks if no active template row exists. These mirror the
+// "Default" template seeded in the database.
+const FALLBACK_BASE_URL = "https://api.eu.assemblyai.com/v2";
+const FALLBACK_POLL_INTERVAL_MS = 5000;
+const FALLBACK_MAX_POLLS = 120;
+
+interface ActiveTemplateConfig {
+  base_url: string;
+  speech_models: string[];
+  temperature: number;
+  speech_threshold: number;
+  speaker_labels: boolean;
+  multichannel: boolean;
+  language_detection: boolean;
+  language_confidence_threshold: number;
+  default_strategy: string;
+  recovery_prompt: string;
+  review_prompt: string;
+  disfluencies: boolean;
+  apply_prompt_on_diarization: boolean;
+  poll_interval_ms: number;
+  max_polls: number;
+}
+
+const FALLBACK_CONFIG: ActiveTemplateConfig = {
+  base_url: FALLBACK_BASE_URL,
+  speech_models: ["universal-3-pro"],
+  temperature: 0,
+  speech_threshold: 0.05,
+  speaker_labels: true,
+  multichannel: true,
+  language_detection: true,
+  language_confidence_threshold: 0.4,
+  default_strategy: "recovery",
+  recovery_prompt: [
+    "Required: Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.",
+    "",
+    "Always: Transcribe speech with your best guess based on context in all possible scenarios where speech is present in the audio.",
+  ].join("\n"),
+  review_prompt: [
+    "Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.",
+    "",
+    "Always: Transcribe speech exactly as heard. If uncertain or audio is unclear, mark as [unclear].",
+    "After the first output, review the transcript again.",
+    "Pay close attention to hallucinations, misspellings, or errors, and revise them like a computer performing spell and grammar checks.",
+    "Ensure words and phrases make grammatical sense in sentences.",
+  ].join("\n"),
+  disfluencies: false,
+  apply_prompt_on_diarization: false,
+  poll_interval_ms: FALLBACK_POLL_INTERVAL_MS,
+  max_polls: FALLBACK_MAX_POLLS,
+};
+
+/**
+ * Coerce raw JSON config from the active template row into a complete,
+ * typed ActiveTemplateConfig. Missing/invalid fields fall back to the
+ * hardcoded defaults. Never throws.
+ */
+function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const f = FALLBACK_CONFIG;
+  const asString = (v: unknown, fb: string): string => typeof v === "string" ? v : fb;
+  const asBool = (v: unknown, fb: boolean): boolean => typeof v === "boolean" ? v : fb;
+  const asNum = (v: unknown, fb: number): number => typeof v === "number" && Number.isFinite(v) ? v : fb;
+  const speech_models = Array.isArray(r.speech_models)
+    ? (r.speech_models.filter((x) => typeof x === "string") as string[])
+    : f.speech_models;
+  const default_strategy = (() => {
+    const s = r.default_strategy;
+    return s === "recovery" || s === "review" || s === "keyterms" || s === "none"
+      ? (s as string)
+      : f.default_strategy;
+  })();
+  return {
+    base_url: asString(r.base_url, f.base_url),
+    speech_models: speech_models.length > 0 ? speech_models : f.speech_models,
+    temperature: asNum(r.temperature, f.temperature),
+    speech_threshold: asNum(r.speech_threshold, f.speech_threshold),
+    speaker_labels: asBool(r.speaker_labels, f.speaker_labels),
+    multichannel: asBool(r.multichannel, f.multichannel),
+    language_detection: asBool(r.language_detection, f.language_detection),
+    language_confidence_threshold: asNum(r.language_confidence_threshold, f.language_confidence_threshold),
+    default_strategy,
+    recovery_prompt: asString(r.recovery_prompt, f.recovery_prompt),
+    review_prompt: asString(r.review_prompt, f.review_prompt),
+    disfluencies: asBool(r.disfluencies, f.disfluencies),
+    apply_prompt_on_diarization: asBool(r.apply_prompt_on_diarization, f.apply_prompt_on_diarization),
+    poll_interval_ms: asNum(r.poll_interval_ms, f.poll_interval_ms),
+    max_polls: asNum(r.max_polls, f.max_polls),
+  };
+}
+
+async function loadActiveConfig(supabase: ReturnType<typeof createClient>): Promise<ActiveTemplateConfig> {
+  try {
+    const { data, error } = await supabase
+      .from("transcribe_settings_templates")
+      .select("config, name")
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error || !data) {
+      console.log(JSON.stringify({ event: "active_template_missing", error: error?.message ?? null }));
+      return FALLBACK_CONFIG;
+    }
+    const cfg = parseActiveConfig((data as { config: unknown }).config);
+    console.log(JSON.stringify({ event: "active_template_loaded", name: (data as { name: string }).name }));
+    return cfg;
+  } catch (e) {
+    console.log(JSON.stringify({ event: "active_template_load_error", error: String(e) }));
+    return FALLBACK_CONFIG;
+  }
+}
 
 /** Format milliseconds as [HH:MM:SS] */
 function formatTimestamp(ms: number): string {
@@ -107,8 +217,9 @@ async function submitAndPollTranscript(
   apiKey: string,
   payload: Record<string, unknown>,
   jobId: string,
+  cfg: ActiveTemplateConfig,
 ): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
-  const submitRes = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
+  const submitRes = await fetch(`${cfg.base_url}/transcript`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
@@ -131,12 +242,13 @@ async function submitAndPollTranscript(
 
   console.log(`[transcribe] AssemblyAI transcript ID: ${transcriptId}`);
 
-  const maxPolls = 120;
+  const maxPolls = cfg.max_polls;
+  const pollIntervalMs = cfg.poll_interval_ms;
 
   for (let i = 0; i < maxPolls; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
-    const pollRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
+    const pollRes = await fetch(`${cfg.base_url}/transcript/${transcriptId}`, {
       headers: { Authorization: apiKey },
     });
 
@@ -182,7 +294,7 @@ async function submitAndPollTranscript(
     console.log(`[transcribe] Polling... status: ${pollData.status} (attempt ${i + 1})`);
   }
 
-  throw new Error("Transcription timed out after 10 minutes");
+  throw new Error(`Transcription timed out after ${Math.round((maxPolls * pollIntervalMs) / 60000)} minutes`);
 }
 
 Deno.serve(async (req) => {
@@ -199,6 +311,11 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Load active provider template (with safe fallback). Per-job tuning
+    // (job.transcription_config, job.language_selected, etc.) still wins
+    // over these admin defaults further down.
+    const cfg = await loadActiveConfig(supabase);
 
     const requestBody = await req.json().catch(() => ({}));
     const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
@@ -240,7 +357,7 @@ Deno.serve(async (req) => {
     // Permanent default: "recovery" strategy is always on unless an explicit
     // alternative strategy is provided in transcription_config. This injects
     // the recovery prompt and enables `disfluencies: true` for every job.
-    const strategy = (tuningConfig.strategy as string) ?? "recovery";
+    const strategy = (tuningConfig.strategy as string) ?? cfg.default_strategy;
     const requestedAudioChannels = typeof job.audio_channels === "number" && job.audio_channels > 1
       ? job.audio_channels
       : null;
@@ -251,52 +368,38 @@ Deno.serve(async (req) => {
 
     // Only use multichannel when we have positive evidence that speakers are
     // actually isolated on separate channels. Channel count alone is not enough.
-    const route: "multichannel" | "diarization" = requestedAudioChannels && channelRouteHint === "multichannel"
+    // Also requires the active template to permit each route.
+    const wantMultichannel = !!(requestedAudioChannels && channelRouteHint === "multichannel");
+    const route: "multichannel" | "diarization" = wantMultichannel && cfg.multichannel
       ? "multichannel"
       : "diarization";
 
-    const CODE_SWITCH_INSTRUCTION = "Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.";
-
     const STRATEGY_PROMPTS: Record<string, string> = {
-      recovery: [
-        `Required: ${CODE_SWITCH_INSTRUCTION}`,
-        "",
-        "Always: Transcribe speech with your best guess based on context in all possible scenarios where speech is present in the audio.",
-      ].join("\n"),
-      review: [
-        CODE_SWITCH_INSTRUCTION,
-        "",
-        "Always: Transcribe speech exactly as heard. If uncertain or audio is unclear, mark as [unclear].",
-        "After the first output, review the transcript again.",
-        "Pay close attention to hallucinations, misspellings, or errors, and revise them like a computer performing spell and grammar checks.",
-        "Ensure words and phrases make grammatical sense in sentences.",
-      ].join("\n"),
+      recovery: cfg.recovery_prompt,
+      review: cfg.review_prompt,
     };
 
     const buildTranscriptPayload = (): Record<string, unknown> => {
-      // Always pin to universal-3-pro. Empirically (Fatebenefratelli matrix)
-      // the universal-2 fallback collapses 2-person mono recordings into a
-      // single speaker, so we no longer declare it — even for the recovery
-      // strategy. The trade-off is that AssemblyAI rejects `disfluencies`
-      // on universal-3-pro alone, so we drop disfluencies below to keep
-      // diarization quality intact.
-      const speechModels = ["universal-3-pro"];
+      // Speech models come from the active template. We pin to universal-3-pro
+      // by default (Fatebenefratelli matrix: universal-2 collapses 2-person
+      // mono recordings into a single speaker) but admins can override.
+      const speechModels = cfg.speech_models;
 
       const payload: Record<string, unknown> = {
         audio_url: signedUrlData.signedUrl,
         speech_models: speechModels,
-        temperature: 0,
-        speech_threshold: 0.05,
+        temperature: cfg.temperature,
+        speech_threshold: cfg.speech_threshold,
         ...(route === "multichannel"
           ? { multichannel: true }
-          : { speaker_labels: true }),
+          : { speaker_labels: cfg.speaker_labels }),
       };
 
       if (job.language_selected && job.language_selected !== "auto") {
         payload.language_code = job.language_selected;
-      } else {
+      } else if (cfg.language_detection) {
         payload.language_detection = true;
-        payload.language_confidence_threshold = 0.4;
+        payload.language_confidence_threshold = cfg.language_confidence_threshold;
       }
 
       if (strategy === "keyterms") {
@@ -305,12 +408,10 @@ Deno.serve(async (req) => {
           payload.keyterms_prompt = keyterms;
         }
       } else if (strategy in STRATEGY_PROMPTS) {
-        // Skip the recovery/review prompt on the diarization path. The
-        // controlled A/B matrix (config C3) showed that adding any prompt to
-        // a mono diarization request collapses Speaker B back into Speaker A
-        // on universal-3-pro. Multichannel runs are unaffected by the prompt
-        // so we keep it there.
-        if (route === "multichannel") {
+        // On the diarization route, prompts can collapse Speaker B back into
+        // Speaker A on universal-3-pro (C3 matrix). Skip unless the active
+        // template explicitly opts in via apply_prompt_on_diarization.
+        if (route === "multichannel" || cfg.apply_prompt_on_diarization) {
           payload.prompt = STRATEGY_PROMPTS[strategy];
         } else {
           console.log(JSON.stringify({
@@ -321,9 +422,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Note: `disfluencies: true` is intentionally NOT set. It would force
-      // AssemblyAI to fall back to universal-2 (which loses Speaker B on
-      // mono recordings). Diarization quality > disfluency markers.
+      if (cfg.disfluencies) {
+        payload.disfluencies = true;
+      }
 
       if (!payload.prompt && !payload.keyterms_prompt) {
         if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
@@ -401,6 +502,7 @@ Deno.serve(async (req) => {
       ASSEMBLYAI_API_KEY,
       transcriptPayload,
       job_id,
+      cfg,
     );
 
     const utterances = (transcript.utterances as Array<Record<string, unknown>>) ?? [];
@@ -537,7 +639,7 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const deleteRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
+      const deleteRes = await fetch(`${cfg.base_url}/transcript/${transcriptId}`, {
         method: "DELETE",
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });
