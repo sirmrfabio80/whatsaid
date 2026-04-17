@@ -428,3 +428,64 @@ Deno.test("STOPWORDS includes Italian common words that caused false positives",
   assertEquals(STOPWORDS.has("interessato"), true);
   assertEquals(STOPWORDS.has("organizzato"), true);
 });
+
+// ===== NEW: bare self-id (no punct/capital gate) + role-only suggestions =====
+
+Deno.test("IT (NEW): 'Sono Martina, la logopedista.' → Martina + role logopedista (compound)", () => {
+  const r = extractResult("Sono Martina, la logopedista. Vi racconto una cosa.");
+  assertEquals(r?.name, "Martina");
+  assertEquals(r?.role, "logopedista");
+  assertEquals(r?.patternStrength, "compound");
+});
+
+Deno.test("IT (NEW): 'sono martina' lowercase, no punct → Martina (name-only)", () => {
+  const r = extractResult("sono martina");
+  assertEquals(r?.name?.toLowerCase(), "martina");
+  assertEquals(r?.patternStrength, "name-only");
+});
+
+Deno.test("IT (NEW): 'sono pronto' → null (stopword)", () => {
+  const r = extractResult("sono pronto");
+  assertEquals(r, null);
+});
+
+Deno.test("IT (NEW): 'sono un fisiatra' → role-only Fisiatra", () => {
+  const r = extractResult("sono un fisiatra");
+  assertEquals(r?.name, "Fisiatra");
+  assertEquals(r?.role, "fisiatra");
+  assertEquals(r?.patternStrength, "role-only");
+});
+
+Deno.test("IT (NEW): 'sono il fisioterapista' → role-only Fisioterapista", () => {
+  const r = extractResult("sono il fisioterapista");
+  assertEquals(r?.name, "Fisioterapista");
+  assertEquals(r?.role, "fisioterapista");
+  assertEquals(r?.patternStrength, "role-only");
+});
+
+Deno.test("IT (NEW): 'adesso sono in fisioterapista' → role-only Fisioterapista", () => {
+  const r = extractResult("adesso sono in fisioterapista");
+  assertEquals(r?.name, "Fisioterapista");
+  assertEquals(r?.role, "fisioterapista");
+  assertEquals(r?.patternStrength, "role-only");
+});
+
+Deno.test("IT (NEW): two utterances 'sono un fisiatra' both extract role-only (no dedupe in extractor)", () => {
+  const r1 = extractResult("sono un fisiatra");
+  const r2 = extractResult("io sono un fisiatra, mi occupo di...");
+  assertEquals(r1?.name, "Fisiatra");
+  assertEquals(r2?.name, "Fisiatra");
+});
+
+Deno.test("EN (NEW): \"I'm Sarah, the nurse\" → Sarah + nurse", () => {
+  const r = extractResult("I'm Sarah, the nurse");
+  assertEquals(r?.name, "Sarah");
+  assertEquals(r?.role?.toLowerCase(), "nurse");
+});
+
+Deno.test("EN (NEW): 'I am the doctor' → role-only Doctor", () => {
+  const r = extractResult("I am the doctor");
+  assertEquals(r?.name, "Doctor");
+  assertEquals(r?.role, "doctor");
+  assertEquals(r?.patternStrength, "role-only");
+});
