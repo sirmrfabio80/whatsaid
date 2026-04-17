@@ -14,6 +14,8 @@ const FALLBACK_MAX_POLLS = 120;
 
 interface ActiveTemplateConfig {
   base_url: string;
+  geo_routing_enabled: boolean;
+  us_base_url: string;
   speech_models: string[];
   temperature: number;
   speech_threshold: number;
@@ -32,6 +34,8 @@ interface ActiveTemplateConfig {
 
 const FALLBACK_CONFIG: ActiveTemplateConfig = {
   base_url: FALLBACK_BASE_URL,
+  geo_routing_enabled: false,
+  us_base_url: "https://api.assemblyai.com/v2",
   speech_models: ["universal-3-pro"],
   temperature: 0,
   speech_threshold: 0.05,
@@ -60,6 +64,36 @@ const FALLBACK_CONFIG: ActiveTemplateConfig = {
 };
 
 /**
+ * Detect the requesting client's country from common edge/proxy headers.
+ * Returns an uppercase ISO-3166-1 alpha-2 code, or null if unknown.
+ */
+function detectCountry(req: Request): string | null {
+  const headers = req.headers;
+  const candidates = [
+    headers.get("cf-ipcountry"),
+    headers.get("x-vercel-ip-country"),
+    headers.get("x-country-code"),
+  ];
+  for (const c of candidates) {
+    const v = (c ?? "").trim().toUpperCase();
+    if (v && v !== "XX" && v !== "T1") return v;
+  }
+  return null;
+}
+
+/**
+ * Mirror of `resolveBaseUrl` in src/lib/transcribe-template.ts.
+ * Returns the AssemblyAI base URL to use for this request, given the
+ * template's geo-routing configuration and the detected country.
+ */
+function resolveBaseUrl(cfg: ActiveTemplateConfig, country: string | null): string {
+  if (cfg.geo_routing_enabled && country === "US") {
+    return cfg.us_base_url;
+  }
+  return cfg.base_url;
+}
+
+/**
  * Coerce raw JSON config from the active template row into a complete,
  * typed ActiveTemplateConfig. Missing/invalid fields fall back to the
  * hardcoded defaults. Never throws.
@@ -81,6 +115,8 @@ function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
   })();
   return {
     base_url: asString(r.base_url, f.base_url),
+    geo_routing_enabled: asBool(r.geo_routing_enabled, f.geo_routing_enabled),
+    us_base_url: asString(r.us_base_url, f.us_base_url),
     speech_models: speech_models.length > 0 ? speech_models : f.speech_models,
     temperature: asNum(r.temperature, f.temperature),
     speech_threshold: asNum(r.speech_threshold, f.speech_threshold),
@@ -218,8 +254,9 @@ async function submitAndPollTranscript(
   payload: Record<string, unknown>,
   jobId: string,
   cfg: ActiveTemplateConfig,
+  baseUrl: string,
 ): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
-  const submitRes = await fetch(`${cfg.base_url}/transcript`, {
+  const submitRes = await fetch(`${baseUrl}/transcript`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
@@ -248,7 +285,7 @@ async function submitAndPollTranscript(
   for (let i = 0; i < maxPolls; i++) {
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
-    const pollRes = await fetch(`${cfg.base_url}/transcript/${transcriptId}`, {
+    const pollRes = await fetch(`${baseUrl}/transcript/${transcriptId}`, {
       headers: { Authorization: apiKey },
     });
 
@@ -316,6 +353,19 @@ Deno.serve(async (req) => {
     // (job.transcription_config, job.language_selected, etc.) still wins
     // over these admin defaults further down.
     const cfg = await loadActiveConfig(supabase);
+
+    // Per-request region routing. Detect the caller's country from edge
+    // proxy headers and resolve the AssemblyAI base URL according to the
+    // template's geo_routing settings.
+    const detectedCountry = detectCountry(req);
+    const resolvedBaseUrl = resolveBaseUrl(cfg, detectedCountry);
+    console.log(JSON.stringify({
+      event: "region_routing_resolved",
+      country: detectedCountry,
+      base_url: resolvedBaseUrl,
+      geo_routing_enabled: cfg.geo_routing_enabled,
+    }));
+    console.log(`[transcribe] country=${detectedCountry ?? "unknown"} base_url=${resolvedBaseUrl}`);
 
     const requestBody = await req.json().catch(() => ({}));
     const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
@@ -503,6 +553,7 @@ Deno.serve(async (req) => {
       transcriptPayload,
       job_id,
       cfg,
+      resolvedBaseUrl,
     );
 
     const utterances = (transcript.utterances as Array<Record<string, unknown>>) ?? [];
@@ -639,7 +690,7 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const deleteRes = await fetch(`${cfg.base_url}/transcript/${transcriptId}`, {
+      const deleteRes = await fetch(`${resolvedBaseUrl}/transcript/${transcriptId}`, {
         method: "DELETE",
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });
