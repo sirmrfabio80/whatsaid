@@ -466,6 +466,7 @@ export default function TranscribeTemplatesTab() {
         <CardContent>
           {draft ? (
             <>
+              <AudioEnhancementSummary cfg={draft} />
               <TemplateEditor
                 value={draft}
                 onChange={setDraft}

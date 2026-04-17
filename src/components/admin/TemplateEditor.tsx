@@ -214,6 +214,98 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
         />
       </Section>
 
+      <Section title="Audio enhancement">
+        <p className="text-xs text-muted-foreground -mt-2">
+          Runs in the browser before upload. Decodes the audio with the Web Audio API,
+          applies a soft-clip safety limiter, and (optionally) peak-normalises with a
+          capped gain. Mono uploads are skipped by default because client-side
+          normalisation can collapse AssemblyAI's diarizer on quiet single-mic audio.
+        </p>
+        <ToggleField
+          label="Audio enhancement enabled"
+          hint="Master switch. When OFF, audio is uploaded untouched regardless of channel layout."
+          checked={value.audio_enhancement_enabled}
+          onChange={(v) => set("audio_enhancement_enabled", v)}
+          disabled={disabled}
+        />
+        <div className="grid sm:grid-cols-2 gap-4">
+          <ToggleField
+            label="Apply to mono"
+            hint="Off by default — risks collapsing diarization on quiet single-mic audio."
+            checked={value.audio_enhancement_apply_to_mono}
+            onChange={(v) => set("audio_enhancement_apply_to_mono", v)}
+            disabled={disabled || !value.audio_enhancement_enabled}
+          />
+          <ToggleField
+            label="Apply to stereo"
+            hint="Recommended — stereo recordings benefit from the volume lift."
+            checked={value.audio_enhancement_apply_to_stereo}
+            onChange={(v) => set("audio_enhancement_apply_to_stereo", v)}
+            disabled={disabled || !value.audio_enhancement_enabled}
+          />
+        </div>
+        <ToggleField
+          label="Run normalisation (peak boost)"
+          hint="When OFF, only the soft-clip safety limiter runs — no volume change."
+          checked={value.audio_normalise}
+          onChange={(v) => set("audio_normalise", v)}
+          disabled={disabled || !value.audio_enhancement_enabled}
+        />
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Target peak (dBFS)" hint="Normalise pushes the loudest sample up to this level. -1 dBFS is a safe ceiling.">
+            <Input
+              type="number"
+              step="0.5"
+              value={value.audio_target_peak_dbfs}
+              onChange={onNumber("audio_target_peak_dbfs")}
+              disabled={disabled || !value.audio_enhancement_enabled || !value.audio_normalise}
+            />
+          </Field>
+          <Field label="Noise floor (dBFS)" hint="Below this RMS the file is considered near-silent and the enhancer skips processing.">
+            <Input
+              type="number"
+              step="1"
+              value={value.audio_noise_floor_dbfs}
+              onChange={onNumber("audio_noise_floor_dbfs")}
+              disabled={disabled || !value.audio_enhancement_enabled}
+            />
+          </Field>
+          <Field label="Max gain — mono (dB)" hint="Cap on the volume boost applied to mono uploads.">
+            <Input
+              type="number"
+              step="1"
+              min={0}
+              max={36}
+              value={value.audio_max_gain_db_mono}
+              onChange={onNumber("audio_max_gain_db_mono")}
+              disabled={disabled || !value.audio_enhancement_enabled || !value.audio_normalise}
+            />
+          </Field>
+          <Field label="Max gain — stereo (dB)" hint="Cap on the volume boost applied to stereo uploads.">
+            <Input
+              type="number"
+              step="1"
+              min={0}
+              max={36}
+              value={value.audio_max_gain_db_stereo}
+              onChange={onNumber("audio_max_gain_db_stereo")}
+              disabled={disabled || !value.audio_enhancement_enabled || !value.audio_normalise}
+            />
+          </Field>
+          <Field label="Soft-clip threshold" hint="Linear, 0.5–1.0. Samples above this are tanh-shaped to prevent harsh clipping.">
+            <Input
+              type="number"
+              step="0.05"
+              min={0.5}
+              max={1.0}
+              value={value.audio_soft_clip_threshold}
+              onChange={onNumber("audio_soft_clip_threshold")}
+              disabled={disabled || !value.audio_enhancement_enabled}
+            />
+          </Field>
+        </div>
+      </Section>
+
       <Section title="Polling">
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Poll interval (ms)">
