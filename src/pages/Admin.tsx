@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminGuard from "@/components/admin/AdminGuard";
 import TranscribeTemplatesTab from "@/components/admin/TranscribeTemplatesTab";
+import LogsTab from "@/components/admin/LogsTab";
 
 export default function Admin() {
   return (
@@ -18,9 +19,13 @@ export default function Admin() {
         <Tabs defaultValue="transcribe" className="space-y-6">
           <TabsList>
             <TabsTrigger value="transcribe">Transcribe settings</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
             <TranscribeTemplatesTab />
+          </TabsContent>
+          <TabsContent value="logs" className="space-y-6">
+            <LogsTab />
           </TabsContent>
         </Tabs>
       </main>
