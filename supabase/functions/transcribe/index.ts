@@ -637,6 +637,7 @@ Deno.serve(async (req) => {
     }));
 
     let transcriptText: string;
+    let inlineLanguageTagsStripped = 0;
 
     if (route === "multichannel") {
       const mcUtterances = (transcript.utterances as Array<{ channel: string; start: number; text: string }>) ?? [];
@@ -649,6 +650,11 @@ Deno.serve(async (req) => {
             channelToSpeaker[ch] = `Speaker ${String.fromCharCode(65 + nextLetter)}`;
             nextLetter++;
           }
+          // Strip inline language tags in-place so downstream consumers
+          // (transcript text + identify-speakers metadata utterances) see clean text
+          const cleaned = stripInlineLanguageTags(u.text ?? "");
+          if (cleaned.stripped) inlineLanguageTagsStripped++;
+          u.text = cleaned.text;
         }
         transcriptText = mcUtterances
           .map((u) => `${formatTimestamp(u.start)} ${channelToSpeaker[String(u.channel)]}: ${u.text}`)
@@ -659,6 +665,11 @@ Deno.serve(async (req) => {
     } else {
       const rawDiarUtterances = (transcript.utterances as DiarUtterance[]) ?? [];
       if (rawDiarUtterances.length > 0) {
+        for (const u of rawDiarUtterances) {
+          const cleaned = stripInlineLanguageTags(u.text ?? "");
+          if (cleaned.stripped) inlineLanguageTagsStripped++;
+          u.text = cleaned.text;
+        }
         // Trust AssemblyAI's diarization output verbatim. The previous
         // mergeFalseSpeakerFlips heuristic was collapsing genuine speaker
         // turns in 2-person recordings (e.g. Fatebenefratelli) and is now
@@ -670,6 +681,15 @@ Deno.serve(async (req) => {
       } else {
         transcriptText = (transcript.text as string) ?? "";
       }
+    }
+
+    if (inlineLanguageTagsStripped > 0) {
+      console.log(JSON.stringify({
+        event: "inline_language_tags_stripped",
+        job_id,
+        utterances_modified: inlineLanguageTagsStripped,
+        route,
+      }));
     }
 
     const detectedLanguage = (transcript.language_code as string) ?? null;
