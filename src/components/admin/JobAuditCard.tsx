@@ -88,6 +88,9 @@ export default function JobAuditCard({ job }: { job: JobRow }) {
           />
         </div>
 
+        {/* Strategy & prompt audit */}
+        <StrategyPromptAudit cfg={cfg} />
+
         {/* Language audit */}
         <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
           <div className="flex items-center justify-between">
