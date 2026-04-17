@@ -34,12 +34,15 @@ export const DEFAULT_AUDIO_ENHANCE_OPTIONS: AudioEnhanceOptions = {
   normalise: true,
   normalise_mode: "rms",
   target_peak_dbfs: -1,
-  target_rms_dbfs: -1,
-  max_gain_db_mono: 20,
-  max_gain_db_stereo: 18,
+  target_rms_dbfs: 0,
+  max_gain_db_mono: 22,
+  max_gain_db_stereo: 20,
   noise_floor_dbfs: -50,
-  soft_clip_threshold: 0.8,
+  soft_clip_threshold: 0.78,
 };
+
+/** MP3 bitrate (kbps) used when re-encoding the enhanced audio. Above the 256 kbps minimum requested. */
+export const MP3_BITRATE_KBPS = 320;
 
 export interface AudioEnhanceMeasured {
   input_rms_dbfs: number;
