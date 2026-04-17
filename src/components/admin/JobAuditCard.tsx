@@ -208,6 +208,9 @@ function AudioEnhancementAudit({ cfg }: { cfg: Record<string, unknown> }) {
     const gainDb = measured && typeof measured.applied_gain_db === "number"
       ? (measured.applied_gain_db as number)
       : null;
+    const mode = measured && typeof measured.normalise_mode === "string"
+      ? String(measured.normalise_mode).toUpperCase()
+      : null;
 
     if (!eligible) {
       summary = `Not eligible — ${reason || "skipped by template"}`;
@@ -216,9 +219,9 @@ function AudioEnhancementAudit({ cfg }: { cfg: Record<string, unknown> }) {
       summary = `Eligible, not attempted — ${reason || "unknown"}`;
       tone = "skipped";
     } else if (applied) {
-      const gainStr = gainDb != null && Number.isFinite(gainDb)
-        ? ` (${gainDb >= 0 ? "+" : ""}${gainDb.toFixed(1)} dB)`
-        : "";
+      const gainStr = gainDb != null && Number.isFinite(gainDb) && gainDb > 0.05
+        ? ` (${gainDb >= 0 ? "+" : ""}${gainDb.toFixed(1)} dB${mode ? ` · ${mode}` : ""})`
+        : " (soft-clip safety only — no boost needed)";
       summary = `Eligible, attempted, applied${gainStr}`;
       tone = "ok";
     } else {
@@ -245,14 +248,42 @@ function AudioEnhancementAudit({ cfg }: { cfg: Record<string, unknown> }) {
       ? ((ae as Record<string, unknown>).measured as Record<string, unknown> | null)
       : null;
 
+  const softClipPct = measured && typeof measured.soft_clip_samples_pct === "number"
+    ? (measured.soft_clip_samples_pct as number)
+    : null;
+
   return (
     <div className={cn("rounded-lg border p-3 space-y-2", toneClasses[tone])}>
-      <h4 className="text-sm font-semibold">Audio enhancement</h4>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold">Audio enhancement</h4>
+        {softClipPct != null && Number.isFinite(softClipPct) && (
+          <SoftClipPill pct={softClipPct} />
+        )}
+      </div>
       <p className="text-xs text-muted-foreground">{summary}</p>
       {measured && typeof measured === "object" && (
         <MeasuredTable measured={measured} />
       )}
     </div>
+  );
+}
+
+function SoftClipPill({ pct }: { pct: number }) {
+  const tone = pct < 1
+    ? "border-primary/40 bg-primary/10 text-primary"
+    : pct < 10
+      ? "border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-400"
+      : "border-destructive/50 bg-destructive/15 text-destructive";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono tabular-nums",
+        tone,
+      )}
+      title="Percentage of samples touched by the soft-clip limiter"
+    >
+      soft-clip {pct.toFixed(2)}%
+    </span>
   );
 }
 
@@ -264,9 +295,11 @@ function formatDb(v: unknown): string {
 
 function MeasuredTable({ measured }: { measured: Record<string, unknown> }) {
   const rows: Array<{ label: string; key: string; hint?: string }> = [
-    { label: "Input RMS", key: "input_rms_dbfs", hint: "average loudness" },
-    { label: "Input peak", key: "input_peak_dbfs", hint: "loudest sample" },
+    { label: "Input RMS", key: "input_rms_dbfs", hint: "average loudness in" },
+    { label: "Input peak", key: "input_peak_dbfs", hint: "loudest sample in" },
     { label: "Applied gain", key: "applied_gain_db", hint: "boost added" },
+    { label: "Output RMS", key: "output_rms_dbfs", hint: "average loudness out (post-gain)" },
+    { label: "Output peak", key: "output_peak_dbfs", hint: "loudest sample out (post-clip)" },
   ];
   return (
     <div className="overflow-hidden rounded-md border bg-background/60">
