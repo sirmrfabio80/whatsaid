@@ -152,7 +152,8 @@ async function encodeMp3(buffer: AudioBuffer): Promise<Blob> {
   const tail = encoder.flush();
   if (tail.length > 0) chunks.push(tail);
 
-  return new Blob(chunks, { type: "audio/mpeg" });
+  // Cast to BlobPart[] — lamejs returns Uint8Array<ArrayBufferLike> which TS narrows oddly.
+  return new Blob(chunks as unknown as BlobPart[], { type: "audio/mpeg" });
 }
 
 /**
@@ -176,7 +177,7 @@ export async function enhanceAudioForTranscription(
   await tempCtx.close();
 
   const baseName = file.name.replace(/\.[^.]+$/, "");
-  const enhancedFileName = `${baseName}_normalised.wav`;
+  const enhancedFileName = `${baseName}_normalised.mp3`;
   const inputChannels: 1 | 2 = audioBuffer.numberOfChannels === 1 ? 1 : 2;
 
   // --- Measure input ---
@@ -189,9 +190,9 @@ export async function enhanceAudioForTranscription(
   // --- Noise gate ---
   if (inputRms < NOISE_FLOOR) {
     onProgress?.("encoding");
-    const wavBlob = encodeWav(audioBuffer);
+    const mp3Blob = await encodeMp3(audioBuffer);
     return {
-      file: new File([wavBlob], enhancedFileName, { type: "audio/wav" }),
+      file: new File([mp3Blob], enhancedFileName, { type: "audio/mpeg" }),
       metadata: {
         applied: false,
         reason: "noise_gated",
@@ -270,12 +271,12 @@ export async function enhanceAudioForTranscription(
   const outputPeakDbfs = linearToDbfs(outputPeak);
 
   onProgress?.("encoding");
-  const wavBlob = encodeWav(audioBuffer);
+  const mp3Blob = await encodeMp3(audioBuffer);
 
   const sampleModified = softClipped || normalisationApplied;
 
   return {
-    file: new File([wavBlob], enhancedFileName, { type: "audio/wav" }),
+    file: new File([mp3Blob], enhancedFileName, { type: "audio/mpeg" }),
     metadata: {
       applied: sampleModified,
       reason: sampleModified ? "applied" : "below_normalise_threshold",
