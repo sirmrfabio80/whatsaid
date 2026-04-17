@@ -80,6 +80,23 @@ export default function LogsTab() {
     load();
   }, [load]);
 
+  const filteredJobs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return data?.recent_jobs ?? [];
+    return (data?.recent_jobs ?? []).filter((j) => {
+      const haystack = [
+        j.file_name,
+        j.title ?? "",
+        j.user_id ?? "",
+        j.id,
+        j.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [data?.recent_jobs, search]);
+
   if (loading && !data) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
@@ -100,23 +117,6 @@ export default function LogsTab() {
   }
 
   const transcriptOutput = data.outputs.find((o) => o.output_type === "transcript");
-
-  const filteredJobs = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return data?.recent_jobs ?? [];
-    return (data?.recent_jobs ?? []).filter((j) => {
-      const haystack = [
-        j.file_name,
-        j.title ?? "",
-        j.user_id ?? "",
-        j.id,
-        j.status,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [data?.recent_jobs, search]);
 
   return (
     <div className="space-y-6">
