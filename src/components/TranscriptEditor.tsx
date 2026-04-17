@@ -887,6 +887,12 @@ export default function TranscriptEditor({
             // Read-only segment card
             const displayedText = applySpeakerNamesToText(seg.text, speakerNames);
 
+            const isSpeakerMatch = !!segSpeakerMatch[i];
+            const isActiveSpeakerMatch =
+              isSpeakerMatch &&
+              activeMatch?.type === "speaker" &&
+              activeMatch.segIndex === i;
+
             return (
               <div
                 key={seg.id}
@@ -905,6 +911,8 @@ export default function TranscriptEditor({
                   isDragOver ? " ring-2 ring-primary/50 border-primary/40" : ""
                 }${
                   isDropSuccess ? " ring-2 ring-green-500/40" : ""
+                }${
+                  isActiveSpeakerMatch ? " ring-2 ring-primary/60" : isSpeakerMatch ? " ring-1 ring-primary/30" : ""
                 }`}
                 style={{ '--seg-color': color ? (hasSuggestionHighlight ? color.border : color.border + (editing ? "80" : "60")) : 'transparent', borderLeftColor: 'var(--seg-color)' } as React.CSSProperties}
                 onDragOver={editing ? (e) => { e.preventDefault(); setDragOverIndex(i); } : undefined}
