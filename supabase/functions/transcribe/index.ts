@@ -14,6 +14,8 @@ const FALLBACK_MAX_POLLS = 120;
 
 interface ActiveTemplateConfig {
   base_url: string;
+  geo_routing_enabled: boolean;
+  us_base_url: string;
   speech_models: string[];
   temperature: number;
   speech_threshold: number;
@@ -32,6 +34,8 @@ interface ActiveTemplateConfig {
 
 const FALLBACK_CONFIG: ActiveTemplateConfig = {
   base_url: FALLBACK_BASE_URL,
+  geo_routing_enabled: false,
+  us_base_url: "https://api.assemblyai.com/v2",
   speech_models: ["universal-3-pro"],
   temperature: 0,
   speech_threshold: 0.05,
@@ -58,6 +62,36 @@ const FALLBACK_CONFIG: ActiveTemplateConfig = {
   poll_interval_ms: FALLBACK_POLL_INTERVAL_MS,
   max_polls: FALLBACK_MAX_POLLS,
 };
+
+/**
+ * Detect the requesting client's country from common edge/proxy headers.
+ * Returns an uppercase ISO-3166-1 alpha-2 code, or null if unknown.
+ */
+function detectCountry(req: Request): string | null {
+  const headers = req.headers;
+  const candidates = [
+    headers.get("cf-ipcountry"),
+    headers.get("x-vercel-ip-country"),
+    headers.get("x-country-code"),
+  ];
+  for (const c of candidates) {
+    const v = (c ?? "").trim().toUpperCase();
+    if (v && v !== "XX" && v !== "T1") return v;
+  }
+  return null;
+}
+
+/**
+ * Mirror of `resolveBaseUrl` in src/lib/transcribe-template.ts.
+ * Returns the AssemblyAI base URL to use for this request, given the
+ * template's geo-routing configuration and the detected country.
+ */
+function resolveBaseUrl(cfg: ActiveTemplateConfig, country: string | null): string {
+  if (cfg.geo_routing_enabled && country === "US") {
+    return cfg.us_base_url;
+  }
+  return cfg.base_url;
+}
 
 /**
  * Coerce raw JSON config from the active template row into a complete,
