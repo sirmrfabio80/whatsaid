@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
-import { enhanceAudioForTranscription } from "@/lib/audio-enhance";
+import { enhanceAudioForTranscription, type AudioEnhanceMetadata } from "@/lib/audio-enhance";
+import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard
