@@ -183,10 +183,58 @@ function AudioEnhancementAudit({ cfg }: { cfg: Record<string, unknown> }) {
     legacy: "border-amber-500/40 bg-amber-500/5",
   };
 
+  const measured =
+    ae && typeof ae === "object"
+      ? ((ae as Record<string, unknown>).measured as Record<string, unknown> | null)
+      : null;
+
   return (
-    <div className={cn("rounded-lg border p-3 space-y-1", toneClasses[tone])}>
+    <div className={cn("rounded-lg border p-3 space-y-2", toneClasses[tone])}>
       <h4 className="text-sm font-semibold">Audio enhancement</h4>
       <p className="text-xs text-muted-foreground">{summary}</p>
+      {measured && typeof measured === "object" && (
+        <MeasuredTable measured={measured} />
+      )}
+    </div>
+  );
+}
+
+function formatDb(v: unknown): string {
+  if (typeof v !== "number" || !Number.isFinite(v)) return "—";
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${v.toFixed(2)} dB`;
+}
+
+function MeasuredTable({ measured }: { measured: Record<string, unknown> }) {
+  const rows: Array<{ label: string; key: string; hint?: string }> = [
+    { label: "Input RMS", key: "input_rms_dbfs", hint: "average loudness" },
+    { label: "Input peak", key: "input_peak_dbfs", hint: "loudest sample" },
+    { label: "Applied gain", key: "applied_gain_db", hint: "boost added" },
+  ];
+  return (
+    <div className="overflow-hidden rounded-md border bg-background/60">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b bg-muted/40 text-muted-foreground">
+            <th className="text-left font-medium px-2.5 py-1.5">Metric</th>
+            <th className="text-right font-medium px-2.5 py-1.5">Value</th>
+            <th className="text-left font-medium px-2.5 py-1.5 hidden sm:table-cell">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.key} className="border-b last:border-0">
+              <td className="px-2.5 py-1.5">{r.label}</td>
+              <td className="px-2.5 py-1.5 text-right font-mono tabular-nums">
+                {formatDb(measured[r.key])}
+              </td>
+              <td className="px-2.5 py-1.5 text-muted-foreground hidden sm:table-cell">
+                {r.hint}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
