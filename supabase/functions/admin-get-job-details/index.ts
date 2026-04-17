@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     const { data: recentJobs, error: recentErr } = await adminClient
       .from("jobs")
       .select(
-        "id, file_name, title, status, created_at, language_selected, language_detected, duration_seconds",
+        "id, file_name, title, status, created_at, language_selected, language_detected, duration_seconds, user_id",
       )
       .order("created_at", { ascending: false })
       .limit(limit);

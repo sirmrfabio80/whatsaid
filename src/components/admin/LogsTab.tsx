@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { RefreshCw, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import JsonBlock from "./JsonBlock";
 import JobAuditCard from "./JobAuditCard";
@@ -25,6 +26,7 @@ interface RecentJob {
   language_selected: string | null;
   language_detected: string | null;
   duration_seconds: number | null;
+  user_id: string | null;
 }
 
 interface JobOutput {
@@ -53,6 +55,7 @@ export default function LogsTab() {
   const [data, setData] = useState<JobDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async (jobId?: string) => {
     setLoading(true);
@@ -76,6 +79,23 @@ export default function LogsTab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const filteredJobs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return data?.recent_jobs ?? [];
+    return (data?.recent_jobs ?? []).filter((j) => {
+      const haystack = [
+        j.file_name,
+        j.title ?? "",
+        j.user_id ?? "",
+        j.id,
+        j.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [data?.recent_jobs, search]);
 
   if (loading && !data) {
     return (
@@ -102,34 +122,67 @@ export default function LogsTab() {
     <div className="space-y-6">
       {/* Job picker */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
           <span className="text-sm text-muted-foreground shrink-0">Job:</span>
           <Select
             value={selectedJobId ?? undefined}
             onValueChange={(v) => load(v)}
           >
-            <SelectTrigger className="max-w-xl">
+            <SelectTrigger className="max-w-xl min-w-[16rem]">
               <SelectValue placeholder="Select a job" />
             </SelectTrigger>
             <SelectContent>
-              {data.recent_jobs.map((j) => (
-                <SelectItem key={j.id} value={j.id}>
-                  <span className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {new Date(j.created_at).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+              {filteredJobs.length === 0 ? (
+                <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                  No jobs match “{search}”
+                </div>
+              ) : (
+                filteredJobs.map((j) => (
+                  <SelectItem key={j.id} value={j.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {new Date(j.created_at).toLocaleString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">{j.status}</Badge>
+                      <span className="truncate">{j.title || j.file_name}</span>
                     </span>
-                    <Badge variant="outline" className="text-[10px]">{j.status}</Badge>
-                    <span className="truncate">{j.title || j.file_name}</span>
-                  </span>
-                </SelectItem>
-              ))}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
+
+          <div className="relative flex-1 min-w-[12rem] max-w-sm">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter by file, title, user id…"
+              className="h-9 pl-8 pr-8 text-sm"
+              aria-label="Filter jobs"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
+                aria-label="Clear filter"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {search && (
+            <span className="text-xs text-muted-foreground shrink-0">
+              {filteredJobs.length} / {data?.recent_jobs.length ?? 0}
+            </span>
+          )}
         </div>
         <Button
           variant="outline"
