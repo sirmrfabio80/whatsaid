@@ -406,6 +406,7 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
           disabled={disabled || d.audio_normalise.disabled}
           disabledReason={d.audio_normalise.reason}
         />
+        <GainPreview value={value} />
         <div className="grid sm:grid-cols-2 gap-4">
           <Field
             label="Normalisation mode"
@@ -677,6 +678,117 @@ function EffectiveBehaviourBlock({
         <span className="uppercase tracking-wide text-muted-foreground">Effective prompt behaviour: </span>
         <span>{effective}</span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Live preview of what the enhancer would do to a reference file
+ * (mono, RMS = -12 dBFS, peak = 0 dBFS — typical phone-call recording).
+ */
+function GainPreview({ value }: { value: TranscribeTemplateConfig }) {
+  const SAMPLE_RMS_DBFS = -12;
+  const SAMPLE_PEAK_DBFS = 0;
+  const dbToLin = (d: number) => Math.pow(10, d / 20);
+  const linToDb = (l: number) => (l <= 0 ? -Infinity : 20 * Math.log10(l));
+
+  const masterOff = !value.audio_enhancement_enabled;
+  const monoBlocked = !value.audio_enhancement_apply_to_mono;
+  const normaliseOff = !value.audio_normalise;
+
+  if (masterOff) {
+    return (
+      <PreviewBox>
+        <PreviewLine label="Reference file" value="mono · RMS −12 dBFS · peak 0 dBFS" />
+        <PreviewLine label="Result" value="Audio uploaded untouched (master switch OFF)." dim />
+      </PreviewBox>
+    );
+  }
+  if (monoBlocked) {
+    return (
+      <PreviewBox>
+        <PreviewLine label="Reference file" value="mono · RMS −12 dBFS · peak 0 dBFS" />
+        <PreviewLine label="Result" value="Skipped — Apply-to-mono is OFF for this reference." dim />
+      </PreviewBox>
+    );
+  }
+
+  const inputRms = dbToLin(SAMPLE_RMS_DBFS);
+  const inputPeak = dbToLin(SAMPLE_PEAK_DBFS);
+  const cap = dbToLin(value.audio_max_gain_db_mono);
+
+  let gain = 1;
+  if (!normaliseOff) {
+    if (value.audio_normalise_mode === "rms") {
+      gain = dbToLin(value.audio_target_rms_dbfs) / inputRms;
+    } else {
+      gain = dbToLin(value.audio_target_peak_dbfs) / inputPeak;
+    }
+    gain = Math.max(1, Math.min(gain, cap));
+  }
+  const gainDb = linToDb(gain);
+  const capped = !normaliseOff && gain >= cap - 1e-6 && gainDb > 0.05;
+
+  // Estimate output: assume crest factor preserved until soft-clip kicks in.
+  const rawOutPeak = inputPeak * gain;
+  const clipT = Math.max(0.5, Math.min(1.0, value.audio_soft_clip_threshold));
+  const outPeak = rawOutPeak > clipT
+    ? clipT * Math.tanh(rawOutPeak / clipT)
+    : rawOutPeak;
+  const outRms = inputRms * gain; // pre-clip estimate
+  const willClip = rawOutPeak > clipT;
+
+  return (
+    <PreviewBox>
+      <PreviewLine label="Reference file" value="mono · RMS −12 dBFS · peak 0 dBFS" />
+      <PreviewLine
+        label="Applied gain"
+        value={`${gainDb >= 0 ? "+" : ""}${gainDb.toFixed(1)} dB${capped ? " (capped)" : ""}${normaliseOff ? " — normalisation OFF" : ""}`}
+        accent={gainDb > 0.05}
+      />
+      <PreviewLine
+        label="Estimated output"
+        value={`RMS ${linToDb(outRms).toFixed(1)} dBFS · peak ${linToDb(outPeak).toFixed(1)} dBFS${willClip ? " · soft-clip engaged" : ""}`}
+        dim
+      />
+    </PreviewBox>
+  );
+}
+
+function PreviewBox({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+        Live preview
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PreviewLine({
+  label,
+  value,
+  dim,
+  accent,
+}: {
+  label: string;
+  value: string;
+  dim?: boolean;
+  accent?: boolean;
+}) {
+  return (
+    <div className="text-xs flex flex-wrap gap-x-2">
+      <span className="uppercase tracking-wide text-muted-foreground">{label}:</span>
+      <span
+        className={cn(
+          "font-mono tabular-nums",
+          dim && "text-muted-foreground",
+          accent && "text-primary font-semibold",
+        )}
+      >
+        {value}
+      </span>
     </div>
   );
 }

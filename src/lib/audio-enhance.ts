@@ -34,11 +34,11 @@ export const DEFAULT_AUDIO_ENHANCE_OPTIONS: AudioEnhanceOptions = {
   normalise: true,
   normalise_mode: "rms",
   target_peak_dbfs: -1,
-  target_rms_dbfs: -3,
-  max_gain_db_mono: 14,
-  max_gain_db_stereo: 12,
+  target_rms_dbfs: -1,
+  max_gain_db_mono: 20,
+  max_gain_db_stereo: 18,
   noise_floor_dbfs: -50,
-  soft_clip_threshold: 0.85,
+  soft_clip_threshold: 0.8,
 };
 
 export interface AudioEnhanceMeasured {
