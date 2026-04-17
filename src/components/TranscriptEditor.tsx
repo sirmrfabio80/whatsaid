@@ -200,26 +200,33 @@ export default function TranscriptEditor({
     setRejectedSuggestionIds(new Set());
   }, [suggestions]);
 
-  // Search index: per-segment match offsets + flat list of (segIndex, offset) for nav
-  const { perSegMatches, flatMatches } = useMemo(() => {
+  // Search index: per-segment text-match offsets + flat nav list (text matches + speaker matches)
+  const { perSegMatches, segSpeakerMatch, flatMatches } = useMemo(() => {
     const perSeg: Record<number, number[]> = {};
-    const flat: Array<{ segIndex: number; offset: number }> = [];
+    const speakerHit: Record<number, boolean> = {};
+    const flat: Array<{ segIndex: number; offset: number; type: "text" | "speaker" }> = [];
     const q = searchQuery.trim();
-    if (!q) return { perSegMatches: perSeg, flatMatches: flat };
+    if (!q) return { perSegMatches: perSeg, segSpeakerMatch: speakerHit, flatMatches: flat };
     const re = new RegExp(escapeRegExp(q), "gi");
+    const ql = q.toLowerCase();
     segments.forEach((seg, i) => {
+      const speakerDisplay = seg.speaker ? (speakerNames[seg.speaker] || seg.speaker) : "";
+      if (speakerDisplay && speakerDisplay.toLowerCase().includes(ql)) {
+        speakerHit[i] = true;
+        flat.push({ segIndex: i, offset: -1, type: "speaker" });
+      }
       const text = applySpeakerNamesToText(seg.text, speakerNames);
       const offsets: number[] = [];
       let m: RegExpExecArray | null;
       re.lastIndex = 0;
       while ((m = re.exec(text)) !== null) {
         offsets.push(m.index);
-        flat.push({ segIndex: i, offset: m.index });
+        flat.push({ segIndex: i, offset: m.index, type: "text" });
         if (m[0].length === 0) re.lastIndex++;
       }
       if (offsets.length) perSeg[i] = offsets;
     });
-    return { perSegMatches: perSeg, flatMatches: flat };
+    return { perSegMatches: perSeg, segSpeakerMatch: speakerHit, flatMatches: flat };
   }, [searchQuery, segments, speakerNames]);
 
   const totalMatches = flatMatches.length;
