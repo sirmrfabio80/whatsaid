@@ -611,7 +611,17 @@ function extractSelfIdentification(text: string): Candidate | null {
   m = t.match(/\bhier\s+spricht\s+([A-ZÀ-Ö]\S*)/);
   if (m) { const c = mk(m[1], t, "medium"); if (c) return c; }
 
-  // NO BROAD PATTERNS — removed entirely per plan
+  // ===== NAME-ONLY (rule B) — bare "sono X" / "I'm X" / "soy X"... case-insensitive, no punctuation gate =====
+  const nameOnly = extractNameOnlySelfId(t);
+  if (nameOnly) {
+    return { ...nameOnly, patternStrength: "name-only" };
+  }
+
+  // ===== ROLE-ONLY (rule C) — "sono un fisiatra", "sono il fisioterapista" =====
+  const roleOnly = extractRoleOnlySelfId(t);
+  if (roleOnly) {
+    return { ...roleOnly, patternStrength: "role-only" };
+  }
 
   return null;
 }
