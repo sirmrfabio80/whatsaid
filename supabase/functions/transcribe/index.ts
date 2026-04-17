@@ -254,8 +254,9 @@ async function submitAndPollTranscript(
   payload: Record<string, unknown>,
   jobId: string,
   cfg: ActiveTemplateConfig,
+  baseUrl: string,
 ): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
-  const submitRes = await fetch(`${cfg.base_url}/transcript`, {
+  const submitRes = await fetch(`${baseUrl}/transcript`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
