@@ -1,56 +1,52 @@
 
 
-## Plan: Per-user region routing for AssemblyAI
+## Plan: Surface `language_code` in transcribe logs
 
-### Goal
-Detect the user's country in the `transcribe` edge function and route US users to `api.assemblyai.com/v2`, everyone else to the EU endpoint. Admin can toggle this behavior on/off per template.
+### Diagnosis
+The language selection IS being sent to AssemblyAI correctly. I verified in the database that the most recent job (`2c8cd47f...`, file "Villa Ida — pre video chiamata.m4a") has:
+- `language_selected = "it"` (user picked Italian)
+- `transcription_config.language_code = "it"` (edge function set it on the payload)
+- `transcription_config.language_detection = false` (correctly skipped)
 
-### Technical design
+The edge function code at `supabase/functions/transcribe/index.ts:448-453` is correct:
+```
+if (job.language_selected && job.language_selected !== "auto") {
+  payload.language_code = job.language_selected;
+} else if (cfg.language_detection) {
+  payload.language_detection = true;
+  ...
+}
+```
 
-**1. Schema additions** (`src/lib/transcribe-template.ts`)
-- Add to `TranscribeTemplateConfig`:
-  - `geo_routing_enabled: boolean` — master toggle
-  - `us_base_url: string` — US endpoint, defaults to `https://api.assemblyai.com/v2`
-  - (existing `base_url` becomes the "default / non-US" URL — keep field name for backward compat, label it as "Default base URL (non-US)" in the UI)
-- Update `DEFAULT_TEMPLATE_CONFIG`, `parseTemplateConfig`, `configsEqual` accordingly.
+### Real bug: observability gap
+The `transcription_routing` and `transcription_completed` log lines do NOT include `language_code` at all. They only log `language_confidence_threshold`. So when reading edge function logs, it looks like no language was forced — which is what triggered this report.
 
-**2. Country detection in `transcribe` edge function**
-- Read country from request headers in this priority order:
-  1. `cf-ipcountry` (Cloudflare)
-  2. `x-vercel-ip-country`
-  3. `x-country-code` (generic)
-- If `geo_routing_enabled === true` AND country `=== "US"` → use `cfg.us_base_url`
-- Otherwise → use existing `cfg.base_url`
-- Log resolved country + chosen base URL for observability.
-- Fallback to `cfg.base_url` if no header present or geo-routing disabled.
+Recent log line confirms the gap:
+```
+{"event":"transcription_routing", ..., "language_confidence_threshold":null, ...}
+```
+No `language_code` key, no `language_detection` key.
 
-**3. Admin UI** (`src/components/admin/TemplateEditor.tsx`)
-- New "Region routing" section with:
-  - Toggle: "Enable geo-routing"
-  - Input: "Default base URL (non-US)" (renamed from current "Base URL")
-  - Input: "US base URL" (only enabled when geo-routing is on)
-- Hint text explains: when enabled, US-detected requests use the US URL; all others use the default.
+### Fix
+In `supabase/functions/transcribe/index.ts`:
 
-**4. Preview panel** (`src/lib/transcribe-template.ts` → `buildPreviewPayload` & `RequestPreviewPanel`)
-- Add `country?: string` to `PreviewSampleJob`
-- Compute resolved base URL in preview using same logic as edge function
-- Add country selector (Auto/US/EU) toggle to preview sample controls — surfaces which endpoint would actually be hit
-- Show resolved endpoint URL above the JSON payload (it's not in the body itself, but it's the most useful piece of info)
+1. **`transcription_routing` log** (~line 505) — add:
+   - `language_code: transcriptPayload.language_code ?? null`
+   - `language_detection: transcriptPayload.language_detection ?? false`
+   - `language_selected_by_user: job.language_selected ?? null` (so we see exactly what the user chose vs what was sent)
 
-**5. Database migration**
-- No schema change needed — `config` is `jsonb`. New fields are added via the application schema only.
-- Existing active template rows will fall back via `parseTemplateConfig` to defaults (`geo_routing_enabled: false`, `us_base_url: "https://api.assemblyai.com/v2"`), so behavior is unchanged until an admin opts in.
+2. **`transcription_completed` log** (~line 590) — add:
+   - `language_code_requested: transcriptPayload.language_code ?? null`
+   - `language_detection_requested: transcriptPayload.language_detection ?? false`
+   - Keep existing `language_detected` (what AssemblyAI returned)
 
-### Files to edit
-- `src/lib/transcribe-template.ts` — schema, defaults, parser, equality, preview helper
-- `src/components/admin/TemplateEditor.tsx` — new Region routing section
-- `src/components/admin/RequestPreviewPanel.tsx` — country toggle + resolved endpoint display
-- `supabase/functions/transcribe/index.ts` — country detection + base URL resolution + log line
+This makes it trivial to audit per-job whether the user's language override was honored.
+
+### File to edit
+- `supabase/functions/transcribe/index.ts` — extend two log lines
 
 ### Acceptance
-- Admin can toggle geo-routing on a template and set both URLs.
-- With geo-routing ON: US-headered request hits `api.assemblyai.com/v2`; others hit EU URL.
-- With geo-routing OFF: all requests hit `cfg.base_url` (current behavior).
-- Preview panel reflects which endpoint would be used for a chosen sample country.
-- Logs show `[transcribe] country=XX base_url=...` per job for auditability.
+- For a job where the user picks Italian, the `transcription_routing` log shows `"language_code":"it","language_detection":false,"language_selected_by_user":"it"`.
+- For a job where the user leaves Auto, it shows `"language_code":null,"language_detection":true,"language_selected_by_user":"auto"`.
+- No payload behavior changes — pure observability fix.
 
