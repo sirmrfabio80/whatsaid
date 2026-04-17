@@ -239,7 +239,13 @@ export default function TranscriptEditor({
   useEffect(() => {
     if (!activeMatch) return;
     const el = segmentRefs.current.get(activeMatch.segIndex);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!el) return;
+    // Manual scroll accounting for sticky navbar / tab header overlap.
+    // Estimate header offset; falls back to a sensible default.
+    const headerOffset = 140;
+    const rect = el.getBoundingClientRect();
+    const targetY = window.scrollY + rect.top - headerOffset;
+    window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
   }, [safeActiveMatch, activeMatch?.segIndex, activeMatch?.offset, activeMatch?.type]);
 
   const goPrevMatch = useCallback(() => {
