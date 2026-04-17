@@ -244,6 +244,7 @@ export default function TranscriptEditor({
     setActiveMatchIndex((i) => (i + 1) % totalMatches);
   }, [totalMatches]);
 
+  const contentSpeakers = getUniqueSpeakers(segments);
   const speakers = allSpeakersProp
     ? [...new Set([...contentSpeakers, ...allSpeakersProp])]
     : contentSpeakers;
