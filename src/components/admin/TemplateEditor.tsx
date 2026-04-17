@@ -189,6 +189,10 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
             disabled={disabled}
           />
         </div>
+        <EffectiveBehaviourBlock
+          strategy={value.default_strategy}
+          applyOnDiarization={value.apply_prompt_on_diarization}
+        />
         <Field label="Recovery prompt">
           <Textarea
             value={value.recovery_prompt}
@@ -391,6 +395,53 @@ function ToggleField({
         onCheckedChange={onChange}
         disabled={disabled}
       />
+    </div>
+  );
+}
+
+function EffectiveBehaviourBlock({
+  strategy,
+  applyOnDiarization,
+}: {
+  strategy: DefaultStrategy;
+  applyOnDiarization: boolean;
+}) {
+  const strategyLabel: Record<DefaultStrategy, string> = {
+    recovery: "Recovery",
+    review: "Review",
+    keyterms: "Keyterms",
+    none: "None",
+  };
+
+  let effective: React.ReactNode;
+  if (strategy === "recovery" || strategy === "review") {
+    effective = applyOnDiarization ? (
+      <>Prompt sent on <strong>multichannel</strong> and <strong>diarization (mono)</strong> jobs.</>
+    ) : (
+      <>
+        Prompt sent on <strong>multichannel</strong> jobs only.{" "}
+        <strong>Skipped on diarization (mono)</strong> by template policy — strategy
+        label is still recorded for audit.
+      </>
+    );
+  } else if (strategy === "keyterms") {
+    effective = (
+      <>No prose prompt sent. <code className="font-mono text-[11px]">keyterms_prompt</code> array attached on all routes.</>
+    );
+  } else {
+    effective = <>No prompt attached on any route.</>;
+  }
+
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
+      <div className="text-xs">
+        <span className="uppercase tracking-wide text-muted-foreground">Configured strategy: </span>
+        <span className="font-mono">{strategyLabel[strategy]}</span>
+      </div>
+      <div className="text-xs">
+        <span className="uppercase tracking-wide text-muted-foreground">Effective prompt behaviour: </span>
+        <span>{effective}</span>
+      </div>
     </div>
   );
 }
