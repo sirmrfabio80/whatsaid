@@ -292,13 +292,13 @@ function extractCompoundPatterns(t: string): Candidate | null {
     if (isValidName(namePart)) return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
   }
 
-  // Italian: "sono X la/il [role]" — name first, role after
-  m = t.match(/\bsono\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:il|la)\s+(\S+)/i);
+  // Italian: "sono X[,] [il/la/l'/un/una/lo/gli] [role]" — comma + article optional, case-insensitive
+  m = t.match(/\bsono\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]+)(?:\s*,)?\s*(?:il|la|l['\u2019]|un|una|lo|gli)?\s+([a-zà-öA-ZÀ-Ö]{4,})/i);
   if (m) {
     const namePart = cleanName(m[1]);
     const rolePart = cleanName(m[2]);
     if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
-      return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+      return { name: namePart, evidence: [t], role: rolePart.toLowerCase(), capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
     }
   }
 
