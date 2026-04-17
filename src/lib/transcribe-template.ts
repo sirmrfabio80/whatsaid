@@ -46,6 +46,26 @@ export interface TranscribeTemplateConfig {
   poll_interval_ms: number;
   /** Maximum polling attempts before timing out. */
   max_polls: number;
+
+  // ───────────────────────── Audio enhancement (browser-side) ─────────────────────────
+  /** Master switch for the client-side audio-enhancement pass (decode → soft-clip → optional normalise). */
+  audio_enhancement_enabled: boolean;
+  /** Apply to mono uploads. Off by default: client-side normalisation can collapse AAI's diarizer on quiet single-mic audio. */
+  audio_enhancement_apply_to_mono: boolean;
+  /** Apply to stereo uploads. */
+  audio_enhancement_apply_to_stereo: boolean;
+  /** Run the peak-normalisation stage. When false, only the soft-clip safety limiter runs. */
+  audio_normalise: boolean;
+  /** Target peak level in dBFS (e.g. -1 = 0.891 linear). */
+  audio_target_peak_dbfs: number;
+  /** Max gain (dB) applied during normalisation for mono uploads. */
+  audio_max_gain_db_mono: number;
+  /** Max gain (dB) applied during normalisation for stereo uploads. */
+  audio_max_gain_db_stereo: number;
+  /** Below this RMS (dBFS), the file is considered near-silent and the enhancer skips processing. */
+  audio_noise_floor_dbfs: number;
+  /** Soft-clip threshold (linear, 0.5–1.0) — samples above this are tanh-shaped. */
+  audio_soft_clip_threshold: number;
 }
 
 export const DEFAULT_TEMPLATE_CONFIG: TranscribeTemplateConfig = {
@@ -77,6 +97,16 @@ export const DEFAULT_TEMPLATE_CONFIG: TranscribeTemplateConfig = {
   apply_prompt_on_diarization: false,
   poll_interval_ms: 5000,
   max_polls: 120,
+
+  audio_enhancement_enabled: true,
+  audio_enhancement_apply_to_mono: false,
+  audio_enhancement_apply_to_stereo: true,
+  audio_normalise: true,
+  audio_target_peak_dbfs: -1,
+  audio_max_gain_db_mono: 18,
+  audio_max_gain_db_stereo: 12,
+  audio_noise_floor_dbfs: -50,
+  audio_soft_clip_threshold: 0.95,
 };
 
 /**
@@ -129,6 +159,16 @@ export function parseTemplateConfig(raw: unknown): TranscribeTemplateConfig {
     ),
     poll_interval_ms: asNum(r.poll_interval_ms, d.poll_interval_ms),
     max_polls: asNum(r.max_polls, d.max_polls),
+
+    audio_enhancement_enabled: asBool(r.audio_enhancement_enabled, d.audio_enhancement_enabled),
+    audio_enhancement_apply_to_mono: asBool(r.audio_enhancement_apply_to_mono, d.audio_enhancement_apply_to_mono),
+    audio_enhancement_apply_to_stereo: asBool(r.audio_enhancement_apply_to_stereo, d.audio_enhancement_apply_to_stereo),
+    audio_normalise: asBool(r.audio_normalise, d.audio_normalise),
+    audio_target_peak_dbfs: asNum(r.audio_target_peak_dbfs, d.audio_target_peak_dbfs),
+    audio_max_gain_db_mono: asNum(r.audio_max_gain_db_mono, d.audio_max_gain_db_mono),
+    audio_max_gain_db_stereo: asNum(r.audio_max_gain_db_stereo, d.audio_max_gain_db_stereo),
+    audio_noise_floor_dbfs: asNum(r.audio_noise_floor_dbfs, d.audio_noise_floor_dbfs),
+    audio_soft_clip_threshold: asNum(r.audio_soft_clip_threshold, d.audio_soft_clip_threshold),
   };
 }
 
@@ -254,6 +294,15 @@ export function configsEqual(
     a.disfluencies === b.disfluencies &&
     a.apply_prompt_on_diarization === b.apply_prompt_on_diarization &&
     a.poll_interval_ms === b.poll_interval_ms &&
-    a.max_polls === b.max_polls
+    a.max_polls === b.max_polls &&
+    a.audio_enhancement_enabled === b.audio_enhancement_enabled &&
+    a.audio_enhancement_apply_to_mono === b.audio_enhancement_apply_to_mono &&
+    a.audio_enhancement_apply_to_stereo === b.audio_enhancement_apply_to_stereo &&
+    a.audio_normalise === b.audio_normalise &&
+    a.audio_target_peak_dbfs === b.audio_target_peak_dbfs &&
+    a.audio_max_gain_db_mono === b.audio_max_gain_db_mono &&
+    a.audio_max_gain_db_stereo === b.audio_max_gain_db_stereo &&
+    a.audio_noise_floor_dbfs === b.audio_noise_floor_dbfs &&
+    a.audio_soft_clip_threshold === b.audio_soft_clip_threshold
   );
 }
