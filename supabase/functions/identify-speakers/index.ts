@@ -200,13 +200,41 @@ interface Identification {
 
 // ---- Helpers ----
 
+// Articles / fillers across supported languages — never a person name
+const ARTICLES = new Set([
+  // IT
+  "il", "lo", "la", "le", "gli", "un", "uno", "una", "in", "a", "l",
+  // EN
+  "the", "an", "a",
+  // ES
+  "el", "los", "las", "unos", "unas",
+  // FR
+  "les", "des", "du", "de", "le", "une",
+  // DE
+  "der", "die", "das", "ein", "eine",
+  // PT
+  "o", "os", "as", "um", "uma",
+  // NL
+  "een", "het",
+]);
+
+function isArticle(token: string): boolean {
+  return ARTICLES.has(token.toLowerCase());
+}
+
 function isValidName(token: string): boolean {
   if (token.length < 3) return false;
   if (STOPWORDS.has(token.toLowerCase())) return false;
   if (ROLE_WORDS.has(token.toLowerCase())) return false;
+  if (isArticle(token)) return false;
   if (/^\d+$/.test(token)) return false;
   if (matchesNonNamePattern(token)) return false;
   return true;
+}
+
+function capitalise(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
 function isCapitalised(token: string): boolean {
