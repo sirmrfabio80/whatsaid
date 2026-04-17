@@ -31,7 +31,9 @@ type DisabledMap = {
   apply_to_mono: DisabledInfo;
   apply_to_stereo: DisabledInfo;
   audio_normalise: DisabledInfo;
+  audio_normalise_mode: DisabledInfo;
   audio_target_peak_dbfs: DisabledInfo;
+  audio_target_rms_dbfs: DisabledInfo;
   audio_max_gain_db_mono: DisabledInfo;
   audio_max_gain_db_stereo: DisabledInfo;
   audio_noise_floor_dbfs: DisabledInfo;
@@ -109,6 +111,14 @@ function computeDisabled(value: TranscribeTemplateConfig): DisabledMap {
       disabled: masterOff,
       reason: masterOff ? MASTER_OFF_REASON : undefined,
     },
+    audio_normalise_mode: {
+      disabled: masterOff || normaliseOff,
+      reason: masterOff
+        ? MASTER_OFF_REASON
+        : normaliseOff
+          ? NORMALISE_OFF_REASON
+          : undefined,
+    },
     audio_target_peak_dbfs: {
       disabled: masterOff || normaliseOff,
       reason: masterOff
@@ -116,6 +126,16 @@ function computeDisabled(value: TranscribeTemplateConfig): DisabledMap {
         : normaliseOff
           ? NORMALISE_OFF_REASON
           : undefined,
+    },
+    audio_target_rms_dbfs: {
+      disabled: masterOff || normaliseOff || value.audio_normalise_mode !== "rms",
+      reason: masterOff
+        ? MASTER_OFF_REASON
+        : normaliseOff
+          ? NORMALISE_OFF_REASON
+          : value.audio_normalise_mode !== "rms"
+            ? "Active only when normalisation mode is RMS."
+            : undefined,
     },
     audio_max_gain_db_mono: {
       disabled: monoGainDisabled,
@@ -379,7 +399,7 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
           />
         </div>
         <ToggleField
-          label="Run normalisation (peak boost)"
+          label="Run normalisation (volume boost)"
           hint="When OFF, only the soft-clip safety limiter runs — no volume change."
           checked={value.audio_normalise}
           onChange={(v) => set("audio_normalise", v)}
@@ -388,8 +408,48 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
         />
         <div className="grid sm:grid-cols-2 gap-4">
           <Field
-            label="Target peak (dBFS)"
-            hint="Normalise pushes the loudest sample up to this level. -1 dBFS is a safe ceiling."
+            label="Normalisation mode"
+            hint="RMS lifts average loudness even when peaks already hit the ceiling (recommended for phone calls / hot recordings). Peak only lifts the loudest sample to the target."
+            isDisabled={d.audio_normalise_mode.disabled}
+            disabledReason={d.audio_normalise_mode.reason}
+          >
+            <Select
+              value={value.audio_normalise_mode}
+              onValueChange={(v) =>
+                set("audio_normalise_mode", v as "peak" | "rms")
+              }
+              disabled={disabled || d.audio_normalise_mode.disabled}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rms">RMS (loudness target)</SelectItem>
+                <SelectItem value="peak">Peak (loudest-sample target)</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field
+            label="Target RMS (dBFS)"
+            hint="Average loudness target in RMS mode. -3 dBFS is broadcast-loud; -14 dBFS is podcast-conservative. Soft-clip catches peaks pushed past the ceiling."
+            isDisabled={d.audio_target_rms_dbfs.disabled}
+            disabledReason={d.audio_target_rms_dbfs.reason}
+          >
+            <Input
+              type="number"
+              step="0.5"
+              value={value.audio_target_rms_dbfs}
+              onChange={onNumber("audio_target_rms_dbfs")}
+              disabled={disabled || d.audio_target_rms_dbfs.disabled}
+            />
+          </Field>
+          <Field
+            label="Target peak / soft-clip ceiling (dBFS)"
+            hint={
+              value.audio_normalise_mode === "rms"
+                ? "Soft-clip ceiling — peaks above this are tanh-limited. Used as the soft-clip reference in RMS mode."
+                : "Normalise pushes the loudest sample up to this level. -1 dBFS is a safe ceiling."
+            }
             isDisabled={d.audio_target_peak_dbfs.disabled}
             disabledReason={d.audio_target_peak_dbfs.reason}
           >
@@ -449,7 +509,7 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
           </Field>
           <Field
             label="Soft-clip threshold"
-            hint="Linear, 0.5–1.0. Samples above this are tanh-shaped to prevent harsh clipping."
+            hint="Linear, 0.5–1.0. Lower = more aggressive limiting. 0.85 pairs well with RMS mode."
             isDisabled={d.audio_soft_clip_threshold.disabled}
             disabledReason={d.audio_soft_clip_threshold.reason}
           >
