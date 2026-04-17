@@ -1,52 +1,72 @@
 
 
-## Plan: Surface `language_code` in transcribe logs
+## Plan: Add "Logs" tab in Admin to inspect last job
 
-### Diagnosis
-The language selection IS being sent to AssemblyAI correctly. I verified in the database that the most recent job (`2c8cd47f...`, file "Villa Ida — pre video chiamata.m4a") has:
-- `language_selected = "it"` (user picked Italian)
-- `transcription_config.language_code = "it"` (edge function set it on the payload)
-- `transcription_config.language_detection = false` (correctly skipped)
+### Goal
+Add a second tab in `/admin` next to "Transcribe settings" called **Logs** that shows the most recent job's full details — including the AssemblyAI request payload sent and the raw response received — formatted intelligently for a technical admin audit.
 
-The edge function code at `supabase/functions/transcribe/index.ts:448-453` is correct:
-```
-if (job.language_selected && job.language_selected !== "auto") {
-  payload.language_code = job.language_selected;
-} else if (cfg.language_detection) {
-  payload.language_detection = true;
-  ...
-}
-```
+### What gets shown (organized top-to-bottom)
 
-### Real bug: observability gap
-The `transcription_routing` and `transcription_completed` log lines do NOT include `language_code` at all. They only log `language_confidence_threshold`. So when reading edge function logs, it looks like no language was forced — which is what triggered this report.
+**1. Header strip** — quick-scan facts
+- Job title + file name, status badge, created_at (relative + absolute), duration, language detected vs selected, country (if logged), region/base URL used.
 
-Recent log line confirms the gap:
-```
-{"event":"transcription_routing", ..., "language_confidence_threshold":null, ...}
-```
-No `language_code` key, no `language_detection` key.
+**2. Routing & language audit** (the part that triggered recent debugging)
+- `language_selected` (user choice) → `language_code` requested → `language_detected` (AAI returned)
+- Visual flag if user-forced language ≠ detected language
+- Geo-routing: country header → resolved base URL
+- Strategy resolved (e.g. "recovery"), route (mono/multichannel), prompt applied yes/no
 
-### Fix
-In `supabase/functions/transcribe/index.ts`:
+**3. AssemblyAI request** — collapsible, syntax-highlighted JSON
+- Full `transcription_config` payload exactly as built by the edge function (already stored on `jobs.transcription_config`).
+- Copy-to-clipboard button.
 
-1. **`transcription_routing` log** (~line 505) — add:
-   - `language_code: transcriptPayload.language_code ?? null`
-   - `language_detection: transcriptPayload.language_detection ?? false`
-   - `language_selected_by_user: job.language_selected ?? null` (so we see exactly what the user chose vs what was sent)
+**4. AssemblyAI response** — collapsible, syntax-highlighted JSON
+- Raw response stored on `job_outputs.raw_response` for the transcript output.
+- Pretty-printed, copy button, optional "show only top-level keys" collapse for huge payloads.
 
-2. **`transcription_completed` log** (~line 590) — add:
-   - `language_code_requested: transcriptPayload.language_code ?? null`
-   - `language_detection_requested: transcriptPayload.language_detection ?? false`
-   - Keep existing `language_detected` (what AssemblyAI returned)
+**5. Post-processing outputs** — compact list
+- One row per `job_outputs` entry (transcript, summary, custom): output_type, language, char count, created_at. Click to expand `content` + `metadata`.
 
-This makes it trivial to audit per-job whether the user's language override was honored.
+**6. Recent edge function logs for this job** (bonus, very useful)
+- Pull last ~50 log lines from `function_edge_logs` filtered by job id (search the event_message). Show event name + timestamp + key fields. Lets you see `transcription_routing`, `transcription_completed`, `diarization_prompt_skipped` etc. inline.
 
-### File to edit
-- `supabase/functions/transcribe/index.ts` — extend two log lines
+**7. Job picker** (top right)
+- Defaults to "latest job (any user)". Dropdown of last 20 jobs by `created_at desc` so you can flip between recent ones without leaving the tab.
+
+### Data sources
+- `jobs` (latest by `created_at desc`) — admin-readable via service-role edge function (current RLS only allows owner select).
+- `job_outputs` (joined on `job_id`) — same.
+- `function_edge_logs` (analytics) — fetched via a small admin-only edge function.
+
+### Implementation
+
+**New edge function: `admin-get-job-details`**
+- Verifies caller has `admin` role (using `has_role`).
+- Inputs: optional `job_id`, optional `limit` for picker list.
+- Returns: `{ job, outputs[], recent_jobs[], edge_logs[] }`.
+- Uses service role to bypass RLS; admin check is enforced first.
+- Calls Supabase Analytics API for `function_edge_logs` filtered by job id substring across recent rows.
+
+**New components**
+- `src/pages/Admin.tsx` — add second `<TabsTrigger value="logs">Logs</TabsTrigger>` and matching `<TabsContent>`.
+- `src/components/admin/LogsTab.tsx` — top-level tab UI with picker + sections.
+- `src/components/admin/JobAuditCard.tsx` — header + routing/language audit panel.
+- `src/components/admin/JsonBlock.tsx` — small reusable collapsible JSON viewer with copy button (no new deps; use `<pre>` + `JSON.stringify(_, null, 2)` and a simple key-based collapse).
+- `src/components/admin/EdgeLogsList.tsx` — list of recent function logs for the job.
+
+**No DB schema changes.** No migrations. No new tables.
+
+### Files to add / edit
+- ADD `supabase/functions/admin-get-job-details/index.ts`
+- EDIT `src/pages/Admin.tsx` — register Logs tab
+- ADD `src/components/admin/LogsTab.tsx`
+- ADD `src/components/admin/JobAuditCard.tsx`
+- ADD `src/components/admin/JsonBlock.tsx`
+- ADD `src/components/admin/EdgeLogsList.tsx`
 
 ### Acceptance
-- For a job where the user picks Italian, the `transcription_routing` log shows `"language_code":"it","language_detection":false,"language_selected_by_user":"it"`.
-- For a job where the user leaves Auto, it shows `"language_code":null,"language_detection":true,"language_selected_by_user":"auto"`.
-- No payload behavior changes — pure observability fix.
+- Navigating to `/admin` shows two tabs: "Transcribe settings" and "Logs".
+- "Logs" loads the latest job by default, shows header facts, language/routing audit, full AAI request JSON, raw AAI response JSON, list of post-processing outputs, and the last edge logs for that job.
+- A picker lets me switch to any of the last 20 jobs.
+- Non-admins hitting the edge function get 403; the AdminGuard already prevents UI access.
 
