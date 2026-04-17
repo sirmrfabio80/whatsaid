@@ -34,12 +34,15 @@ export const DEFAULT_AUDIO_ENHANCE_OPTIONS: AudioEnhanceOptions = {
   normalise: true,
   normalise_mode: "rms",
   target_peak_dbfs: -1,
-  target_rms_dbfs: -1,
-  max_gain_db_mono: 20,
-  max_gain_db_stereo: 18,
+  target_rms_dbfs: 0,
+  max_gain_db_mono: 22,
+  max_gain_db_stereo: 20,
   noise_floor_dbfs: -50,
-  soft_clip_threshold: 0.8,
+  soft_clip_threshold: 0.78,
 };
+
+/** MP3 bitrate (kbps) used when re-encoding the enhanced audio. Above the 256 kbps minimum requested. */
+export const MP3_BITRATE_KBPS = 320;
 
 export interface AudioEnhanceMeasured {
   input_rms_dbfs: number;
@@ -106,53 +109,51 @@ function dbfsToLinear(dbfs: number): number {
   return Math.pow(10, dbfs / 20);
 }
 
-/** Encode an AudioBuffer to a WAV Blob (PCM 16-bit). */
-function encodeWav(buffer: AudioBuffer): Blob {
-  const numChannels = buffer.numberOfChannels;
+/** Convert a Float32 sample (-1..1) to Int16 PCM. */
+function floatToInt16(sample: number): number {
+  const s = Math.max(-1, Math.min(1, sample));
+  return s < 0 ? s * 0x8000 : s * 0x7fff;
+}
+
+/**
+ * Encode an AudioBuffer to an MP3 Blob using lamejs.
+ * Bitrate is fixed at MP3_BITRATE_KBPS (320 kbps) — well above the 256 kbps floor
+ * we want to keep, and effectively transparent for speech.
+ */
+async function encodeMp3(buffer: AudioBuffer): Promise<Blob> {
+  // Dynamic import keeps lamejs out of the initial bundle.
+  const lamejs = await import("@breezystack/lamejs");
+  const Mp3Encoder = lamejs.Mp3Encoder;
+
+  const numChannels = buffer.numberOfChannels === 1 ? 1 : 2;
   const sampleRate = buffer.sampleRate;
-  const format = 1; // PCM
-  const bitsPerSample = 16;
+  const encoder = new Mp3Encoder(numChannels, sampleRate, MP3_BITRATE_KBPS);
 
-  const length = buffer.length * numChannels;
-  const samples = new Int16Array(length);
+  const left = new Int16Array(buffer.length);
+  const right = numChannels === 2 ? new Int16Array(buffer.length) : null;
 
-  for (let ch = 0; ch < numChannels; ch++) {
-    const channelData = buffer.getChannelData(ch);
-    for (let i = 0; i < buffer.length; i++) {
-      const s = Math.max(-1, Math.min(1, channelData[i]));
-      samples[i * numChannels + ch] = s < 0 ? s * 0x8000 : s * 0x7fff;
-    }
+  const lCh = buffer.getChannelData(0);
+  const rCh = numChannels === 2 ? buffer.getChannelData(1) : null;
+  for (let i = 0; i < buffer.length; i++) {
+    left[i] = floatToInt16(lCh[i]);
+    if (right && rCh) right[i] = floatToInt16(rCh[i]);
   }
 
-  const dataSize = samples.length * (bitsPerSample / 8);
-  const headerSize = 44;
-  const arrayBuffer = new ArrayBuffer(headerSize + dataSize);
-  const view = new DataView(arrayBuffer);
+  const BLOCK = 1152; // MP3 frame size
+  const chunks: Uint8Array[] = [];
+  for (let i = 0; i < buffer.length; i += BLOCK) {
+    const lChunk = left.subarray(i, i + BLOCK);
+    const rChunk = right ? right.subarray(i, i + BLOCK) : null;
+    const mp3buf = rChunk
+      ? encoder.encodeBuffer(lChunk, rChunk)
+      : encoder.encodeBuffer(lChunk);
+    if (mp3buf.length > 0) chunks.push(mp3buf);
+  }
+  const tail = encoder.flush();
+  if (tail.length > 0) chunks.push(tail);
 
-  const writeString = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  };
-
-  writeString(0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, "WAVE");
-  writeString(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, format, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
-  view.setUint16(32, numChannels * (bitsPerSample / 8), true);
-  view.setUint16(34, bitsPerSample, true);
-  writeString(36, "data");
-  view.setUint32(40, dataSize, true);
-
-  const output = new Int16Array(arrayBuffer, headerSize);
-  output.set(samples);
-
-  return new Blob([arrayBuffer], { type: "audio/wav" });
+  // Cast to BlobPart[] — lamejs returns Uint8Array<ArrayBufferLike> which TS narrows oddly.
+  return new Blob(chunks as unknown as BlobPart[], { type: "audio/mpeg" });
 }
 
 /**
@@ -176,7 +177,7 @@ export async function enhanceAudioForTranscription(
   await tempCtx.close();
 
   const baseName = file.name.replace(/\.[^.]+$/, "");
-  const enhancedFileName = `${baseName}_normalised.wav`;
+  const enhancedFileName = `${baseName}_normalised.mp3`;
   const inputChannels: 1 | 2 = audioBuffer.numberOfChannels === 1 ? 1 : 2;
 
   // --- Measure input ---
@@ -189,9 +190,9 @@ export async function enhanceAudioForTranscription(
   // --- Noise gate ---
   if (inputRms < NOISE_FLOOR) {
     onProgress?.("encoding");
-    const wavBlob = encodeWav(audioBuffer);
+    const mp3Blob = await encodeMp3(audioBuffer);
     return {
-      file: new File([wavBlob], enhancedFileName, { type: "audio/wav" }),
+      file: new File([mp3Blob], enhancedFileName, { type: "audio/mpeg" }),
       metadata: {
         applied: false,
         reason: "noise_gated",
@@ -270,12 +271,12 @@ export async function enhanceAudioForTranscription(
   const outputPeakDbfs = linearToDbfs(outputPeak);
 
   onProgress?.("encoding");
-  const wavBlob = encodeWav(audioBuffer);
+  const mp3Blob = await encodeMp3(audioBuffer);
 
   const sampleModified = softClipped || normalisationApplied;
 
   return {
-    file: new File([wavBlob], enhancedFileName, { type: "audio/wav" }),
+    file: new File([mp3Blob], enhancedFileName, { type: "audio/mpeg" }),
     metadata: {
       applied: sampleModified,
       reason: sampleModified ? "applied" : "below_normalise_threshold",
