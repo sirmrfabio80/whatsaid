@@ -359,13 +359,13 @@ function extractCompoundPatterns(t: string): Candidate | null {
   m = t.match(/\bje\s+suis\s+(\S+)[,\s]+(?:le|la)\s+(.+)/i);
   if (m) { const c = mk(m[1], t, "compound", m[2]); if (c) return c; }
 
-  // French: "je suis X le/la [role]" — name first, role after
-  m = t.match(/\bje\s+suis\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:le|la)\s+(\S+)/i);
+  // French: "je suis X[,] [le/la/l'/un/une] [role]" — comma + article optional, case-insensitive
+  m = t.match(/\bje\s+suis\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]+)(?:\s*,)?\s*(?:le|la|l['\u2019]|un|une)?\s+([a-zà-öA-ZÀ-Ö]{4,})/i);
   if (m) {
     const namePart = cleanName(m[1]);
     const rolePart = cleanName(m[2]);
     if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
-      return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+      return { name: namePart, evidence: [t], role: rolePart.toLowerCase(), capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
     }
   }
 
