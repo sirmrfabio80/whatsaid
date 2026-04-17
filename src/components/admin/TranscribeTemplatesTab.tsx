@@ -149,10 +149,12 @@ export default function TranscribeTemplatesTab() {
   const handleUpdateCurrent = async () => {
     if (!selected || !draft) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("transcribe_settings_templates")
+    const { error } = await (supabase
+      .from("transcribe_settings_templates") as unknown as {
+        update: (v: Record<string, unknown>) => { eq: (c: string, v: string) => Promise<{ error: { message: string } | null }> };
+      })
       .update({
-        config: draft as unknown as Record<string, unknown>,
+        config: draft,
         updated_by: user?.id ?? null,
       })
       .eq("id", selected.id);
@@ -200,12 +202,14 @@ export default function TranscribeTemplatesTab() {
   const handleSaveAs = async () => {
     if (!draft || !newName.trim()) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("transcribe_settings_templates")
+    const { error } = await (supabase
+      .from("transcribe_settings_templates") as unknown as {
+        insert: (v: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      })
       .insert({
         name: newName.trim(),
         description: newDescription.trim() || null,
-        config: draft as unknown as Record<string, unknown>,
+        config: draft,
         is_active: false,
         created_by: user?.id ?? null,
         updated_by: user?.id ?? null,
@@ -224,12 +228,14 @@ export default function TranscribeTemplatesTab() {
     if (!selected) return;
     const copyName = `${selected.name} (copy)`;
     setSaving(true);
-    const { error } = await supabase
-      .from("transcribe_settings_templates")
+    const { error } = await (supabase
+      .from("transcribe_settings_templates") as unknown as {
+        insert: (v: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      })
       .insert({
         name: copyName,
         description: selected.description,
-        config: selected.config as unknown as Record<string, unknown>,
+        config: selected.config,
         is_active: false,
         created_by: user?.id ?? null,
         updated_by: user?.id ?? null,
