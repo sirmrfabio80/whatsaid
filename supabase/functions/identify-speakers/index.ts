@@ -168,7 +168,7 @@ interface TranscriptLine {
   text: string;
 }
 
-type PatternStrength = "compound" | "strong" | "medium";
+type PatternStrength = "compound" | "strong" | "medium" | "name-only" | "role-only";
 
 interface Candidate {
   name: string;
