@@ -601,3 +601,31 @@ export default function TranscribeTemplatesTab() {
     </div>
   );
 }
+
+function AudioEnhancementSummary({ cfg }: { cfg: TranscribeTemplateConfig }) {
+  let scope: string;
+  if (!cfg.audio_enhancement_enabled) {
+    scope = "disabled";
+  } else if (cfg.audio_enhancement_apply_to_mono && cfg.audio_enhancement_apply_to_stereo) {
+    scope = "enabled — mono + stereo";
+  } else if (cfg.audio_enhancement_apply_to_stereo) {
+    scope = "enabled — stereo only";
+  } else if (cfg.audio_enhancement_apply_to_mono) {
+    scope = "enabled — mono only";
+  } else {
+    scope = "enabled — no channel layouts selected";
+  }
+
+  const normalisePart = cfg.audio_enhancement_enabled
+    ? cfg.audio_normalise
+      ? `, normalise → ${cfg.audio_target_peak_dbfs} dBFS (max +${cfg.audio_max_gain_db_stereo}/${cfg.audio_max_gain_db_mono} dB stereo/mono)`
+      : ", normalisation off (soft-clip safety only)"
+    : "";
+
+  return (
+    <div className="mb-6 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">Audio enhancement:</span> {scope}
+      {normalisePart}.
+    </div>
+  );
+}
