@@ -690,7 +690,7 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const deleteRes = await fetch(`${cfg.base_url}/transcript/${transcriptId}`, {
+      const deleteRes = await fetch(`${resolvedBaseUrl}/transcript/${transcriptId}`, {
         method: "DELETE",
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });
