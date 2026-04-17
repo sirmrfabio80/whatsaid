@@ -596,6 +596,7 @@ export default function TranscriptEditor({
           <div className="relative flex items-center">
             <Search className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <Input
+              ref={searchInputRef}
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
