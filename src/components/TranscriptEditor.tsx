@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Check, X, AlertTriangle, MessageSquareWarning, Scissors, ArrowUpToLine, Plus, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Pencil, Check, X, AlertTriangle, MessageSquareWarning, Scissors, ArrowUpToLine, Plus, Trash2, Search, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -111,6 +112,46 @@ function generateSegId(): string {
   return `seg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Render text with highlighted matches; flags the active match with a stronger style. */
+function renderHighlighted(
+  text: string,
+  query: string,
+  segMatchOffsets: number[],
+  activeOffset: number | null,
+): React.ReactNode {
+  if (!query || segMatchOffsets.length === 0) return text;
+  const re = new RegExp(escapeRegExp(query), "gi");
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  let matchIdx = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > lastIdx) parts.push(text.slice(lastIdx, m.index));
+    const isActive = activeOffset !== null && segMatchOffsets[matchIdx] === activeOffset;
+    parts.push(
+      <mark
+        key={`hl-${m.index}`}
+        className={
+          isActive
+            ? "bg-primary text-primary-foreground rounded px-0.5"
+            : "bg-primary/20 text-foreground rounded px-0.5"
+        }
+      >
+        {m[0]}
+      </mark>,
+    );
+    lastIdx = m.index + m[0].length;
+    matchIdx++;
+    if (m[0].length === 0) re.lastIndex++; // safety
+  }
+  if (lastIdx < text.length) parts.push(text.slice(lastIdx));
+  return parts;
+}
+
 function usePointerFine() {
   const [fine, setFine] = useState(false);
   useEffect(() => {
@@ -142,6 +183,8 @@ export default function TranscriptEditor({
   const [deleteConfirmIndex, setDeleteConfirmIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dropSuccessIndex, setDropSuccessIndex] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const pendingFocusRef = useRef<{ index: number; cursorPos: number } | null>(null);
@@ -156,6 +199,50 @@ export default function TranscriptEditor({
   useEffect(() => {
     setRejectedSuggestionIds(new Set());
   }, [suggestions]);
+
+  // Search index: per-segment match offsets + flat list of (segIndex, offset) for nav
+  const { perSegMatches, flatMatches } = useMemo(() => {
+    const perSeg: Record<number, number[]> = {};
+    const flat: Array<{ segIndex: number; offset: number }> = [];
+    const q = searchQuery.trim();
+    if (!q) return { perSegMatches: perSeg, flatMatches: flat };
+    const re = new RegExp(escapeRegExp(q), "gi");
+    segments.forEach((seg, i) => {
+      const text = applySpeakerNamesToText(seg.text, speakerNames);
+      const offsets: number[] = [];
+      let m: RegExpExecArray | null;
+      re.lastIndex = 0;
+      while ((m = re.exec(text)) !== null) {
+        offsets.push(m.index);
+        flat.push({ segIndex: i, offset: m.index });
+        if (m[0].length === 0) re.lastIndex++;
+      }
+      if (offsets.length) perSeg[i] = offsets;
+    });
+    return { perSegMatches: perSeg, flatMatches: flat };
+  }, [searchQuery, segments, speakerNames]);
+
+  const totalMatches = flatMatches.length;
+  const safeActiveMatch = totalMatches === 0 ? 0 : Math.min(activeMatchIndex, totalMatches - 1);
+  const activeMatch = totalMatches > 0 ? flatMatches[safeActiveMatch] : null;
+
+  useEffect(() => { setActiveMatchIndex(0); }, [searchQuery]);
+
+  useEffect(() => {
+    if (!activeMatch) return;
+    const el = segmentRefs.current.get(activeMatch.segIndex);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeMatch?.segIndex, activeMatch?.offset]);
+
+  const goPrevMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setActiveMatchIndex((i) => (i - 1 + totalMatches) % totalMatches);
+  }, [totalMatches]);
+
+  const goNextMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setActiveMatchIndex((i) => (i + 1) % totalMatches);
+  }, [totalMatches]);
 
   const contentSpeakers = getUniqueSpeakers(segments);
   const speakers = allSpeakersProp
@@ -464,7 +551,7 @@ export default function TranscriptEditor({
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50">
+      <div className="flex items-center justify-between gap-2 p-3 border-b border-border/50 flex-wrap">
         <div className="flex items-center gap-2">
           {transcriptEdited && !editing && (
             <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
@@ -473,17 +560,78 @@ export default function TranscriptEditor({
             </span>
           )}
         </div>
-        {!readOnly && (
-          <Button
-            variant={editing ? "default" : "outline"}
-            size="sm"
-            className="rounded-full gap-1.5 text-xs h-8"
-            onClick={toggleEditing}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2 ml-auto">
+          {!readOnly && (
+            <Button
+              variant={editing ? "default" : "outline"}
+              size="sm"
+              className="rounded-full gap-1.5 text-xs h-8"
+              onClick={toggleEditing}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {editing ? t("jobResults.doneEditing") : t("jobResults.editTranscript")}
+            </Button>
+          )}
+          {/* Search */}
+          <div className="relative flex items-center">
+            <Search className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (e.shiftKey) goPrevMatch(); else goNextMatch();
+                } else if (e.key === "Escape") {
+                  setSearchQuery("");
+                }
+              }}
+              placeholder={t("jobResults.searchTranscriptPlaceholder")}
+              aria-label={t("jobResults.searchTranscriptPlaceholder")}
+              className="h-8 w-44 sm:w-52 pl-7 pr-7 text-xs rounded-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 inline-flex items-center justify-center w-5 h-5 rounded text-muted-foreground hover:text-foreground"
+                aria-label={t("jobResults.searchClear")}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          {searchQuery.trim() && (
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] tabular-nums text-muted-foreground min-w-[3.5rem] text-center">
+                {totalMatches > 0
+                  ? t("jobResults.searchMatchCount", { current: safeActiveMatch + 1, total: totalMatches })
+                  : t("jobResults.searchNoMatches")}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-full"
+                onClick={goPrevMatch}
+                disabled={totalMatches === 0}
+                aria-label={t("jobResults.searchPrev")}
+              >
+                <ChevronUp className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-full"
+                onClick={goNextMatch}
+                disabled={totalMatches === 0}
+                aria-label={t("jobResults.searchNext")}
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Suggestion bar */}
@@ -794,7 +942,14 @@ export default function TranscriptEditor({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[15px] leading-[1.7] flex-1">
-                      {displayedText}
+                      {searchQuery.trim()
+                        ? renderHighlighted(
+                            displayedText,
+                            searchQuery.trim(),
+                            perSegMatches[i] ?? [],
+                            activeMatch && activeMatch.segIndex === i ? activeMatch.offset : null,
+                          )
+                        : displayedText}
                     </p>
                     {hasSuggestionHighlight && (
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">

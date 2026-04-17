@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2, Timer, MapPin } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2, Timer, MapPin, Type } from "lucide-react";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatRecordedDate, formatRecordedTime, toLocalDate, replaceDate, replaceTime } from "@/lib/recorded-date";
 import { parseISO6709, formatCoordinates, mapsUrl, reverseGeocode } from "@/lib/location";
 import JobDetailTags from "@/components/JobDetailTags";
+import { parseSegments } from "@/components/TranscriptEditor";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +31,7 @@ export default function JobDetail() {
   /** The raw ISO string for the recording date — preserved with original offset */
   const [recordedIso, setRecordedIso] = useState<string | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  const [wordCount, setWordCount] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
@@ -55,6 +57,22 @@ export default function JobDetail() {
       }
     } else if (m.location_label) {
       setLocationLabel(m.location_label);
+    }
+
+    // Word count from transcript output (strip speaker labels & timestamps)
+    if (id) {
+      const { data: transcriptOutput } = await supabase
+        .from("job_outputs")
+        .select("content")
+        .eq("job_id", id)
+        .eq("output_type", "transcript")
+        .maybeSingle();
+      if (transcriptOutput?.content) {
+        const segs = parseSegments(transcriptOutput.content);
+        const allText = segs.map((s) => s.text).join(" ");
+        const words = allText.trim().split(/\s+/).filter(Boolean).length;
+        setWordCount(words);
+      }
     }
   };
 
@@ -197,6 +215,11 @@ export default function JobDetail() {
                 {meta.language_detected && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium">
                     <Globe className="w-3 h-3" />{getLanguageLabel(meta.language_detected)}
+                  </span>
+                )}
+                {wordCount != null && wordCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium">
+                    <Type className="w-3 h-3" />{t("jobDetail.wordsLabel", { count: wordCount })}
                   </span>
                 )}
                 {(() => {
