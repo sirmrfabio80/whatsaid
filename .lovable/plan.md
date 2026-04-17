@@ -1,49 +1,49 @@
 
 
-## Plan: Strategy clarity in Admin + Logs (revised)
+## Plan: Dependency-aware disabled states in Transcribe settings (confirmed)
 
-### Goal
-Make the gap between *configured strategy* and *effective prompt behaviour* explicit in both Admin and Logs. No payload behaviour changes.
+### Confirmation of dependency rule
+Verified in `src/lib/audio-enhance.ts`: `max_gain_db_mono` and `max_gain_db_stereo` are read **only inside the normalisation stage** (line 201, gated by `if (opts.normalise && ...)` on line 207). They have zero effect when `audio_normalise === false` — the soft-clip limiter does not use them. **Original rule stands: disable both gain caps when normalisation is OFF.**
 
-### 1) `TemplateEditor.tsx` — Admin settings clarity
-Under the **Default strategy** dropdown, render a two-line "Effective behaviour" block that updates live based on the current `apply_prompt_on_diarization` value and chosen strategy:
+### Approach
+Single helper `computeDisabled(value)` at the top of `TemplateEditor.tsx` returning a `DisabledMap` of `{ disabled, reason }` per dependent control. Threaded into existing `Field` / `ToggleField` / `Input` / `Textarea` / `Select` props. UI-only — never mutates stored values.
 
-- **Configured strategy:** `Recovery` (or Review / Keyterms / None)
-- **Effective prompt behaviour:**
-  - If strategy is `recovery` or `review`:
-    - toggle ON → "Prompt sent on **multichannel** and **diarization (mono)** jobs."
-    - toggle OFF → "Prompt sent on **multichannel** jobs only. **Skipped on diarization (mono)** by template policy — strategy label is still recorded for audit."
-  - If strategy is `keyterms` → "No prose prompt sent. `keyterms_prompt` array attached on all routes."
-  - If strategy is `none` → "No prompt attached on any route."
+### Dependency rules
 
-Styled as a muted info block (border + bg-muted/30), not an error. Always visible — not conditional — so the relationship is discoverable even when toggle is ON.
+**Region routing**
+- `us_base_url` — disabled when `geo_routing_enabled === false` → *"Geo-routing is OFF — all requests use the default base URL."*
 
-### 2) `JobAuditCard.tsx` — Logs clarity
-Add a new compact **"Strategy & prompt"** sub-block inside the existing routing/language audit area (above or beside the language pills). Two labelled lines:
+**Prompting**
+- `recovery_prompt` — disabled when `default_strategy !== "recovery"` → *"Active only when Default strategy is Recovery."*
+- `review_prompt` — disabled when `default_strategy !== "review"` → *"Active only when Default strategy is Review."*
+- `apply_prompt_on_diarization` — disabled when `default_strategy ∈ {"keyterms", "none"}` → *"No prose prompt configured — diarization-route policy has no effect."*
 
-- **Configured strategy:** value from `cfg.strategy` (e.g. `recovery`), rendered as a pill.
-- **Effective prompt behaviour on this job:** plain-English sentence derived from `cfg.strategy`, `cfg.route` (or `route_hint`), and `cfg.prompt`:
-  - `prompt` is non-null → "Prompt sent to AssemblyAI ({N} chars)."
-  - `prompt` is null AND strategy ∈ {recovery, review} AND route is diarization → **"Prompt skipped on diarization route by template policy."** (amber-toned border)
-  - `prompt` is null AND strategy = `keyterms` → "Prose prompt not used; keyterms array sent instead ({N} terms)." (neutral)
-  - `prompt` is null AND strategy = `none` → "No prompt configured." (neutral)
-  - `prompt` is null AND strategy ∈ {recovery, review} AND route = multichannel → "Prompt unexpectedly missing on multichannel route — investigate." (destructive)
-  - Legacy jobs missing `strategy` field → fall back to "Strategy not recorded for this job."
+**Audio enhancement** (master OFF disables all; reasons cascade most-specific-wins)
+- All sub-controls: master OFF → *"Audio enhancement is OFF — enable the master switch above to configure."*
+- `audio_target_peak_dbfs` — also disabled when `audio_normalise === false` → *"Active only when normalisation is ON."*
+- `audio_max_gain_db_mono` — disabled when `audio_normalise === false` → *"Active only when normalisation is ON."* OR when `apply_to_mono === false` → *"Apply-to-mono is OFF — this gain cap has no effect."* (mono-specific reason wins if both apply)
+- `audio_max_gain_db_stereo` — mirror of above for stereo.
+- `audio_normalise`, `audio_noise_floor_dbfs`, `audio_soft_clip_threshold`, `apply_to_mono`, `apply_to_stereo` — only depend on master.
 
-Tone classes follow the existing `AudioEnhancementAudit` pattern (ok / skipped / failed / legacy → border + bg colour).
+### UI changes
+1. Extend `Field` and `ToggleField` with optional `disabledReason?: string` rendered as a second muted hint line (italic, `text-xs text-muted-foreground/80`) when disabled.
+2. Add `bg-muted/20` background tint on disabled `ToggleField` rows; rely on shadcn `disabled:opacity-50` for inputs. Labels keep full opacity for readability.
+3. Stored values untouched — `computeDisabled` only flips the `disabled` prop. Re-enabling parent restores child immediately with previous value.
 
-### 3) Files to edit
-- `src/components/admin/TemplateEditor.tsx` — add live "Effective behaviour" block under Default strategy.
-- `src/components/admin/JobAuditCard.tsx` — add `StrategyPromptAudit` component, render it inside `CardContent` near the language audit block.
+### Files to edit
+- `src/components/admin/TemplateEditor.tsx` — add `computeDisabled` helper, extend `Field`/`ToggleField`, thread props through every dependent control.
 
 ### Out of scope
-- No changes to `supabase/functions/transcribe/index.ts` or any payload logic.
-- No new fields written to `transcription_config`.
+No changes to `transcribe-template.ts`, `audio-enhance.ts`, `Convert.tsx`, edge functions, payload, or job audit UI.
 
 ### Acceptance
-- Admin → Transcribe settings: Default strategy section always shows the configured strategy + a plain-English effective behaviour line that updates when the diarization toggle flips.
-- Admin → Logs: every job card shows a "Strategy & prompt" block with the configured strategy *and* a plain-English explanation of what actually happened on that job (not just `prompt: null`).
-- Current job (strategy=recovery, route=diarization, prompt=null) reads: *"Configured strategy: recovery. Effective prompt behaviour on this job: Prompt skipped on diarization route by template policy."*
-- Multichannel job with prompt sent reads: *"Prompt sent to AssemblyAI (842 chars)."*
-- Legacy jobs without `strategy` still render without errors.
+- Master audio enhancement OFF → all 8 sub-controls disabled with master-switch reason; values preserved.
+- `audio_normalise` OFF → target peak + both max-gain caps disabled with normalisation reason.
+- `apply_to_mono` OFF → mono max-gain cap shows mono-specific reason (overrides normalisation reason); stereo unaffected.
+- `apply_to_stereo` OFF → stereo max-gain cap shows stereo-specific reason; mono unaffected.
+- Default strategy = `none` or `keyterms` → both prompt textareas + diarization toggle disabled with appropriate reasons.
+- Default strategy = `recovery` → recovery textarea active; review textarea disabled with reason.
+- Geo-routing OFF → US base URL disabled with reason.
+- Re-enabling any parent restores child controls with stored values intact.
+- Disabled controls remain readable.
 
