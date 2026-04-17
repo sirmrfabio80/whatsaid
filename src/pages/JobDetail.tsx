@@ -222,6 +222,15 @@ export default function JobDetail() {
                     <Type className="w-3 h-3" />{t("jobDetail.wordsLabel", { count: wordCount })}
                   </span>
                 )}
+                {wordCount != null && wordCount > 0 && (() => {
+                  const minutes = Math.round(wordCount / 200);
+                  const label = minutes < 1 ? t("jobDetail.readingTimeSecLabel") : t("jobDetail.readingTimeMinLabel", { minutes });
+                  return (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium">
+                      <BookOpen className="w-3 h-3" />{label}
+                    </span>
+                  );
+                })()}
                 {(() => {
                   const loc = meta.metadata_location_iso6709 ? parseISO6709(meta.metadata_location_iso6709) : null;
                   if (!loc) return null;
