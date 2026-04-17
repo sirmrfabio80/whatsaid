@@ -58,6 +58,22 @@ export default function JobDetail() {
     } else if (m.location_label) {
       setLocationLabel(m.location_label);
     }
+
+    // Word count from transcript output (strip speaker labels & timestamps)
+    if (id) {
+      const { data: transcriptOutput } = await supabase
+        .from("job_outputs")
+        .select("content")
+        .eq("job_id", id)
+        .eq("output_type", "transcript")
+        .maybeSingle();
+      if (transcriptOutput?.content) {
+        const segs = parseSegments(transcriptOutput.content);
+        const allText = segs.map((s) => s.text).join(" ");
+        const words = allText.trim().split(/\s+/).filter(Boolean).length;
+        setWordCount(words);
+      }
+    }
   };
 
   const generateTitle = async () => {
