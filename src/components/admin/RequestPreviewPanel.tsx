@@ -82,7 +82,7 @@ export default function RequestPreviewPanel({ config }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        <pre className="text-xs bg-muted/40 border border-border rounded-md p-3 overflow-auto max-h-96 font-mono leading-relaxed">
+        <pre className="text-xs bg-muted/40 border border-border rounded-md p-3 overflow-auto max-h-96 font-mono leading-relaxed whitespace-pre-wrap break-words max-w-full">
           {json}
         </pre>
       </CardContent>
