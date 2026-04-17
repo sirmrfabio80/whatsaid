@@ -553,6 +553,7 @@ Deno.serve(async (req) => {
       transcriptPayload,
       job_id,
       cfg,
+      resolvedBaseUrl,
     );
 
     const utterances = (transcript.utterances as Array<Record<string, unknown>>) ?? [];
