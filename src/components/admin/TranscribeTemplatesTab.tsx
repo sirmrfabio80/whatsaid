@@ -385,7 +385,7 @@ export default function TranscribeTemplatesTab() {
                   </Badge>
                 )}
                 {dirty && (
-                  <Badge variant="outline" className="text-amber-600 border-amber-600/40">
+                  <Badge variant="outline" className="text-destructive border-destructive/40">
                     Unsaved changes
                   </Badge>
                 )}
