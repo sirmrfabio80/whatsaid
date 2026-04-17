@@ -217,8 +217,9 @@ async function submitAndPollTranscript(
   apiKey: string,
   payload: Record<string, unknown>,
   jobId: string,
+  cfg: ActiveTemplateConfig,
 ): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
-  const submitRes = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
+  const submitRes = await fetch(`${cfg.base_url}/transcript`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
@@ -241,12 +242,13 @@ async function submitAndPollTranscript(
 
   console.log(`[transcribe] AssemblyAI transcript ID: ${transcriptId}`);
 
-  const maxPolls = 120;
+  const maxPolls = cfg.max_polls;
+  const pollIntervalMs = cfg.poll_interval_ms;
 
   for (let i = 0; i < maxPolls; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
-    const pollRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
+    const pollRes = await fetch(`${cfg.base_url}/transcript/${transcriptId}`, {
       headers: { Authorization: apiKey },
     });
 
@@ -292,7 +294,7 @@ async function submitAndPollTranscript(
     console.log(`[transcribe] Polling... status: ${pollData.status} (attempt ${i + 1})`);
   }
 
-  throw new Error("Transcription timed out after 10 minutes");
+  throw new Error(`Transcription timed out after ${Math.round((maxPolls * pollIntervalMs) / 60000)} minutes`);
 }
 
 Deno.serve(async (req) => {
