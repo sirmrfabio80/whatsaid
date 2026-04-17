@@ -137,6 +137,60 @@ export default function JobAuditCard({ job }: { job: JobRow }) {
   );
 }
 
+function StrategyPromptAudit({ cfg }: { cfg: Record<string, unknown> }) {
+  const strategy = cfg.strategy as string | undefined;
+  const prompt = cfg.prompt as string | null | undefined;
+  const route = (cfg.route as string | undefined) ?? (cfg.route_hint as string | undefined);
+  const keyterms = cfg.keyterms_prompt as unknown[] | null | undefined;
+
+  let effective: React.ReactNode;
+  let tone: "ok" | "skipped" | "failed" | "legacy" = "ok";
+
+  if (!strategy) {
+    effective = "Strategy not recorded for this job.";
+    tone = "legacy";
+  } else if (prompt && typeof prompt === "string" && prompt.length > 0) {
+    effective = `Prompt sent to AssemblyAI (${prompt.length} chars).`;
+    tone = "ok";
+  } else if (strategy === "keyterms") {
+    const n = Array.isArray(keyterms) ? keyterms.length : 0;
+    effective = `Prose prompt not used; keyterms array sent instead (${n} terms).`;
+    tone = "ok";
+  } else if (strategy === "none") {
+    effective = "No prompt configured.";
+    tone = "skipped";
+  } else if ((strategy === "recovery" || strategy === "review") && route === "diarization") {
+    effective = "Prompt skipped on diarization route by template policy.";
+    tone = "legacy"; // amber
+  } else if ((strategy === "recovery" || strategy === "review") && route === "multichannel") {
+    effective = "Prompt unexpectedly missing on multichannel route — investigate.";
+    tone = "failed";
+  } else {
+    effective = "Prompt not sent.";
+    tone = "skipped";
+  }
+
+  const toneClasses: Record<typeof tone, string> = {
+    ok: "border-primary/40 bg-primary/5",
+    skipped: "border-border bg-muted/30",
+    failed: "border-destructive/50 bg-destructive/10",
+    legacy: "border-amber-500/40 bg-amber-500/5",
+  };
+
+  return (
+    <div className={cn("rounded-lg border p-3 space-y-2", toneClasses[tone])}>
+      <h4 className="text-sm font-semibold">Strategy &amp; prompt</h4>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <LangPill label="configured strategy" value={strategy ?? "—"} />
+      </div>
+      <div className="text-xs">
+        <span className="uppercase tracking-wide text-muted-foreground">Effective prompt behaviour on this job: </span>
+        <span>{effective}</span>
+      </div>
+    </div>
+  );
+}
+
 function AudioEnhancementAudit({ cfg }: { cfg: Record<string, unknown> }) {
   const ae = cfg.audio_enhancement;
   const legacyApplied = cfg.audio_enhanced;
