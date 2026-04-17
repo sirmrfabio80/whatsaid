@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { RefreshCw, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import JsonBlock from "./JsonBlock";
 import JobAuditCard from "./JobAuditCard";
@@ -25,6 +26,7 @@ interface RecentJob {
   language_selected: string | null;
   language_detected: string | null;
   duration_seconds: number | null;
+  user_id: string | null;
 }
 
 interface JobOutput {
