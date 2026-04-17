@@ -115,6 +115,8 @@ function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
   })();
   return {
     base_url: asString(r.base_url, f.base_url),
+    geo_routing_enabled: asBool(r.geo_routing_enabled, f.geo_routing_enabled),
+    us_base_url: asString(r.us_base_url, f.us_base_url),
     speech_models: speech_models.length > 0 ? speech_models : f.speech_models,
     temperature: asNum(r.temperature, f.temperature),
     speech_threshold: asNum(r.speech_threshold, f.speech_threshold),
