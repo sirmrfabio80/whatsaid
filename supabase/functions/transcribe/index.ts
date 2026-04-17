@@ -380,29 +380,26 @@ Deno.serve(async (req) => {
     };
 
     const buildTranscriptPayload = (): Record<string, unknown> => {
-      // Always pin to universal-3-pro. Empirically (Fatebenefratelli matrix)
-      // the universal-2 fallback collapses 2-person mono recordings into a
-      // single speaker, so we no longer declare it — even for the recovery
-      // strategy. The trade-off is that AssemblyAI rejects `disfluencies`
-      // on universal-3-pro alone, so we drop disfluencies below to keep
-      // diarization quality intact.
-      const speechModels = ["universal-3-pro"];
+      // Speech models come from the active template. We pin to universal-3-pro
+      // by default (Fatebenefratelli matrix: universal-2 collapses 2-person
+      // mono recordings into a single speaker) but admins can override.
+      const speechModels = cfg.speech_models;
 
       const payload: Record<string, unknown> = {
         audio_url: signedUrlData.signedUrl,
         speech_models: speechModels,
-        temperature: 0,
-        speech_threshold: 0.05,
+        temperature: cfg.temperature,
+        speech_threshold: cfg.speech_threshold,
         ...(route === "multichannel"
           ? { multichannel: true }
-          : { speaker_labels: true }),
+          : { speaker_labels: cfg.speaker_labels }),
       };
 
       if (job.language_selected && job.language_selected !== "auto") {
         payload.language_code = job.language_selected;
-      } else {
+      } else if (cfg.language_detection) {
         payload.language_detection = true;
-        payload.language_confidence_threshold = 0.4;
+        payload.language_confidence_threshold = cfg.language_confidence_threshold;
       }
 
       if (strategy === "keyterms") {
@@ -411,12 +408,10 @@ Deno.serve(async (req) => {
           payload.keyterms_prompt = keyterms;
         }
       } else if (strategy in STRATEGY_PROMPTS) {
-        // Skip the recovery/review prompt on the diarization path. The
-        // controlled A/B matrix (config C3) showed that adding any prompt to
-        // a mono diarization request collapses Speaker B back into Speaker A
-        // on universal-3-pro. Multichannel runs are unaffected by the prompt
-        // so we keep it there.
-        if (route === "multichannel") {
+        // On the diarization route, prompts can collapse Speaker B back into
+        // Speaker A on universal-3-pro (C3 matrix). Skip unless the active
+        // template explicitly opts in via apply_prompt_on_diarization.
+        if (route === "multichannel" || cfg.apply_prompt_on_diarization) {
           payload.prompt = STRATEGY_PROMPTS[strategy];
         } else {
           console.log(JSON.stringify({
@@ -427,9 +422,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Note: `disfluencies: true` is intentionally NOT set. It would force
-      // AssemblyAI to fall back to universal-2 (which loses Speaker B on
-      // mono recordings). Diarization quality > disfluency markers.
+      if (cfg.disfluencies) {
+        payload.disfluencies = true;
+      }
 
       if (!payload.prompt && !payload.keyterms_prompt) {
         if (tuningConfig.keyterms_prompt && typeof tuningConfig.keyterms_prompt === "string") {
