@@ -659,7 +659,11 @@ function runDeterministicExtraction(
 
   const results: Identification[] = [];
 
-  for (const [speaker, candidates] of speakerCandidates) {
+  for (const [speaker, allCandidates] of speakerCandidates) {
+    // Priority A>B>C: if any name candidate exists, drop role-only ones for this speaker
+    const nameCandidates = allCandidates.filter((c) => c.patternStrength !== "role-only");
+    const candidates = nameCandidates.length > 0 ? nameCandidates : allCandidates;
+
     const nameGroups = new Map<string, Candidate[]>();
     for (const c of candidates) {
       const key = c.name.toLowerCase();
@@ -673,45 +677,59 @@ function runDeterministicExtraction(
     const sorted = [...nameGroups.entries()].sort((a, b) => b[1].length - a[1].length);
     const [, topGroup] = sorted[0];
     const bestCandidate = topGroup.find((c) => c.capitalised) ?? topGroup[0];
-    const displayName = bestCandidate.name.charAt(0).toUpperCase() + bestCandidate.name.slice(1);
+    const isRoleOnly = bestCandidate.patternStrength === "role-only";
+    // Role-only candidates already carry a capitalised display name; for name candidates capitalise the first letter
+    const displayName = isRoleOnly
+      ? bestCandidate.name
+      : bestCandidate.name.charAt(0).toUpperCase() + bestCandidate.name.slice(1);
     const MAX_EVIDENCE_CHARS = 120;
     const allEvidence = [...new Set(
       (hasMultipleNames ? candidates : topGroup).flatMap((c) => c.evidence)
     )].slice(0, 3).map((e) => e.length > MAX_EVIDENCE_CHARS ? e.slice(0, MAX_EVIDENCE_CHARS) + "…" : e);
     const role = topGroup.find((c) => c.role)?.role ?? candidates.find((c) => c.role)?.role;
 
-    const validation = validateCandidate(bestCandidate);
+    // Role-only suggestions bypass the strict name validation (the "name" is the role itself)
+    const validation: ValidationResult = isRoleOnly
+      ? { status: "clean" }
+      : validateCandidate(bestCandidate);
     if (validation.status === "rejected") continue;
 
-    const conflictingSpeakers = nameToSpeakers.get(bestCandidate.name.toLowerCase()) ?? [];
+    // For role-only suggestions, multiple speakers can share the same role label — never treat as conflict
+    const conflictingSpeakers = isRoleOnly
+      ? []
+      : (nameToSpeakers.get(bestCandidate.name.toLowerCase()) ?? []);
     const hasCrossSpeakerConflict = conflictingSpeakers.length > 1;
 
     // Confidence based on pattern strength
     let confidence: number;
     const strength = bestCandidate.patternStrength;
     switch (strength) {
-      case "compound": confidence = 0.92; break;
-      case "strong": confidence = 0.90; break;
-      case "medium": confidence = 0.85; break;
+      case "compound":  confidence = 0.92; break;
+      case "strong":    confidence = 0.90; break;
+      case "name-only": confidence = 0.88; break;
+      case "medium":    confidence = 0.85; break;
+      case "role-only": confidence = 0.75; break;
     }
 
-    // Lowercase penalty
-    if (!bestCandidate.capitalised) {
+    // Lowercase penalty (skip for role-only — display name is synthetic)
+    if (!isRoleOnly && !bestCandidate.capitalised) {
       confidence = Math.max(confidence - 0.10, 0.70);
     }
 
     if (topGroup.length > 1) confidence = Math.min(confidence + 0.03, 0.95);
     if (hasCrossSpeakerConflict) confidence = Math.min(confidence, 0.50);
-    if (hasMultipleNames) confidence = Math.min(confidence, 0.50);
+    if (hasMultipleNames && !isRoleOnly) confidence = Math.min(confidence, 0.50);
     if (validation.status === "suspicious") confidence = Math.min(confidence, 0.60);
 
-    // Escalation flags
+    // Escalation flags — never escalate role-only (deterministic by definition)
     let needsAI = false;
-    if (validation.status === "suspicious") needsAI = true;
-    if (hasMultipleNames) needsAI = true;
-    if (hasCrossSpeakerConflict) needsAI = true;
-    if (confidence < 0.80) needsAI = true;
-    if (!bestCandidate.capitalised) needsAI = true;
+    if (!isRoleOnly) {
+      if (validation.status === "suspicious") needsAI = true;
+      if (hasMultipleNames) needsAI = true;
+      if (hasCrossSpeakerConflict) needsAI = true;
+      if (confidence < 0.80) needsAI = true;
+      if (!bestCandidate.capitalised) needsAI = true;
+    }
 
     // NEVER auto-apply — always suggest
     results.push({
