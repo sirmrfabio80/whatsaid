@@ -186,6 +186,7 @@ export default function TranscriptEditor({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const pendingFocusRef = useRef<{ index: number; cursorPos: number } | null>(null);
   const isPointerFine = usePointerFine();
