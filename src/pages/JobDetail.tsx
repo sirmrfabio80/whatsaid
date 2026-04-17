@@ -31,6 +31,7 @@ export default function JobDetail() {
   /** The raw ISO string for the recording date — preserved with original offset */
   const [recordedIso, setRecordedIso] = useState<string | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  const [wordCount, setWordCount] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
