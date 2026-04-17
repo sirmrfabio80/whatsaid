@@ -1,4 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+// ----------------------------------------------------------------------------
+// stripInlineLanguageTags: remove inline annotations like "(Italian)",
+// "[English]", "(in French)", "(en español)", "[Português]", etc. that some
+// AssemblyAI/STT outputs occasionally insert. Cover all UI-supported and
+// commonly detected languages plus their native names.
+// ----------------------------------------------------------------------------
+const LANGUAGE_TAG_RE = /\s*[\(\[](?:in\s+|en\s+|im\s+|na\s+|au\s+|on\s+)?(?:italian|italiano|english|inglese|french|français|francese|spanish|español|spagnolo|german|deutsch|tedesco|portuguese|português|portoghese|dutch|nederlands|olandese|polish|polski|polacco|romanian|română|rumeno|czech|čeština|ceco|russian|русский|russo|chinese|中文|cinese|japanese|日本語|giapponese|korean|한국어|coreano|arabic|العربية|arabo|turkish|türkçe|turco|hindi|हिन्दी|swedish|svenska|svedese|norwegian|norsk|norvegese|danish|dansk|danese|finnish|suomi|finlandese|greek|ελληνικά|greco|hebrew|עברית|ebraico|hungarian|magyar|ungherese|ukrainian|українська|ucraino|catalan|català|catalano|galician|galego|galiziano|indonesian|bahasa|indonesiano|malay|melayu|thai|ไทย|tailandese|vietnamese|tiếng\s+việt|vietnamita)[\)\]]\s*/giu;
+
+function stripInlineLanguageTags(text: string): { text: string; stripped: boolean } {
+  if (!text) return { text, stripped: false };
+  const cleaned = text.replace(LANGUAGE_TAG_RE, " ").replace(/\s{2,}/g, " ").trim();
+  return { text: cleaned, stripped: cleaned !== text };
+}
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 
 const corsHeaders = {
