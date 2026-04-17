@@ -377,16 +377,118 @@ function extractCompoundPatterns(t: string): Candidate | null {
     if (isValidName(namePart)) return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
   }
 
-  // Spanish: "soy X el/la [role]" — name first, role after
-  m = t.match(/\bsoy\s+([A-ZÀ-Ö][a-zà-ö]+)\s+(?:el|la)\s+(\S+)/i);
+  // Spanish: "soy X[,] [el/la/un/una] [role]" — comma + article optional, case-insensitive
+  m = t.match(/\bsoy\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]+)(?:\s*,)?\s*(?:el|la|un|una)?\s+([a-zà-öA-ZÀ-Ö]{4,})/i);
   if (m) {
     const namePart = cleanName(m[1]);
     const rolePart = cleanName(m[2]);
     if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
-      return { name: namePart, evidence: [t], role: rolePart, capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+      return { name: namePart, evidence: [t], role: rolePart.toLowerCase(), capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
     }
   }
 
+  // German: "ich bin X[,] [der/die/das/ein/eine] [role]"
+  m = t.match(/\bich\s+bin\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]+)(?:\s*,)?\s*(?:der|die|das|ein|eine)?\s+([a-zà-öA-ZÀ-Ö]{4,})/i);
+  if (m) {
+    const namePart = cleanName(m[1]);
+    const rolePart = cleanName(m[2]);
+    if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
+      return { name: namePart, evidence: [t], role: rolePart.toLowerCase(), capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+    }
+  }
+
+  // Portuguese: "(eu) sou X[,] [o/a/um/uma] [role]"
+  m = t.match(/\b(?:eu\s+)?sou\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]+)(?:\s*,)?\s*(?:o|a|um|uma)?\s+([a-zà-öA-ZÀ-Ö]{4,})/i);
+  if (m) {
+    const namePart = cleanName(m[1]);
+    const rolePart = cleanName(m[2]);
+    if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
+      return { name: namePart, evidence: [t], role: rolePart.toLowerCase(), capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+    }
+  }
+
+  // Dutch: "ik ben X[,] [de/het/een] [role]"
+  m = t.match(/\bik\s+ben\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]+)(?:\s*,)?\s*(?:de|het|een)?\s+([a-zà-öA-ZÀ-Ö]{4,})/i);
+  if (m) {
+    const namePart = cleanName(m[1]);
+    const rolePart = cleanName(m[2]);
+    if (isValidName(namePart) && ROLE_WORDS.has(rolePart.toLowerCase())) {
+      return { name: namePart, evidence: [t], role: rolePart.toLowerCase(), capitalised: isCapitalised(namePart), compound: true, patternStrength: "compound" };
+    }
+  }
+
+  return null;
+}
+
+// ---- Name-only self-id (rule B) — case-insensitive, no punctuation gate ----
+// Returns name candidate; rejects stopwords, articles, role words, morphological non-names.
+function extractNameOnlySelfId(t: string): Candidate | null {
+  const PATTERNS: RegExp[] = [
+    /\bsono\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]{1,})\b/i,                // IT
+    /\bI(?:['\u2019]m|\s+am)\s+([a-zA-Zà-öÀ-Ö][a-zA-Zà-öÀ-Ö]{1,})\b/i, // EN
+    /\bsoy\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]{1,})\b/i,                  // ES
+    /\bje\s+suis\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]{1,})\b/i,            // FR
+    /\bich\s+bin\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]{1,})\b/i,            // DE
+    /\b(?:eu\s+)?sou\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]{1,})\b/i,        // PT
+    /\bik\s+ben\s+([a-zà-öA-ZÀ-Ö][a-zà-öA-ZÀ-Ö]{1,})\b/i,             // NL
+  ];
+  for (const re of PATTERNS) {
+    const m = t.match(re);
+    if (!m) continue;
+    const raw = cleanName(m[1]);
+    const low = raw.toLowerCase();
+    // Reject articles, role words, stopwords, morphological non-names
+    if (isArticle(raw)) continue;
+    if (ROLE_WORDS.has(low)) continue; // → handled by rule C
+    if (STOPWORDS.has(low)) continue;
+    if (matchesNonNamePattern(raw)) continue;
+    if (raw.length < 3) continue;
+    return {
+      name: raw,
+      evidence: [t],
+      capitalised: isCapitalised(raw),
+      compound: false,
+      patternStrength: "strong", // 0.90 base; lowercase penalty applies if needed
+    };
+  }
+  return null;
+}
+
+// ---- Role-only self-id (rule C) — "sono un fisiatra", "sono il fisioterapista" ----
+// Suggests the role itself as the speaker label when no name is given.
+function extractRoleOnlySelfId(t: string): Candidate | null {
+  const PATTERNS: RegExp[] = [
+    // IT — "sono [il/la/l'/un/una/lo/gli/in/a]? [role]"
+    /\bsono\s+(?:il|la|l['\u2019]|un|una|lo|gli|in|a)?\s*([a-zà-öA-ZÀ-Ö]{4,})\b/i,
+    // EN — "I'm/I am [the/a/an]? [role]"
+    /\bI(?:['\u2019]m|\s+am)\s+(?:the|a|an)?\s*([a-zA-Z]{4,})\b/i,
+    // ES — "soy [el/la/un/una]? [role]"
+    /\bsoy\s+(?:el|la|un|una)?\s*([a-zà-öA-ZÀ-Ö]{4,})\b/i,
+    // FR — "je suis [le/la/l'/un/une]? [role]"
+    /\bje\s+suis\s+(?:le|la|l['\u2019]|un|une)?\s*([a-zà-öA-ZÀ-Ö]{4,})\b/i,
+    // DE — "ich bin [der/die/das/ein/eine]? [role]"
+    /\bich\s+bin\s+(?:der|die|das|ein|eine)?\s*([a-zà-öA-ZÀ-Ö]{4,})\b/i,
+    // PT — "(eu) sou [o/a/um/uma]? [role]"
+    /\b(?:eu\s+)?sou\s+(?:o|a|um|uma)?\s*([a-zà-öA-ZÀ-Ö]{4,})\b/i,
+    // NL — "ik ben [de/het/een]? [role]"
+    /\bik\s+ben\s+(?:de|het|een)?\s*([a-zà-öA-ZÀ-Ö]{4,})\b/i,
+  ];
+  for (const re of PATTERNS) {
+    const m = t.match(re);
+    if (!m) continue;
+    const raw = cleanName(m[1]);
+    const low = raw.toLowerCase();
+    if (!ROLE_WORDS.has(low)) continue;
+    const display = capitalise(low);
+    return {
+      name: display,
+      evidence: [t],
+      role: low,
+      capitalised: true, // synthetic display name is always capitalised
+      compound: false,
+      patternStrength: "medium", // 0.85 base; downshifted to 0.75 in scoring
+    };
+  }
   return null;
 }
 
