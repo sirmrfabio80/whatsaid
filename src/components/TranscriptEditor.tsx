@@ -200,7 +200,50 @@ export default function TranscriptEditor({
     setRejectedSuggestionIds(new Set());
   }, [suggestions]);
 
-  const contentSpeakers = getUniqueSpeakers(segments);
+  // Search index: per-segment match offsets + flat list of (segIndex, offset) for nav
+  const { perSegMatches, flatMatches } = useMemo(() => {
+    const perSeg: Record<number, number[]> = {};
+    const flat: Array<{ segIndex: number; offset: number }> = [];
+    const q = searchQuery.trim();
+    if (!q) return { perSegMatches: perSeg, flatMatches: flat };
+    const re = new RegExp(escapeRegExp(q), "gi");
+    segments.forEach((seg, i) => {
+      const text = applySpeakerNamesToText(seg.text, speakerNames);
+      const offsets: number[] = [];
+      let m: RegExpExecArray | null;
+      re.lastIndex = 0;
+      while ((m = re.exec(text)) !== null) {
+        offsets.push(m.index);
+        flat.push({ segIndex: i, offset: m.index });
+        if (m[0].length === 0) re.lastIndex++;
+      }
+      if (offsets.length) perSeg[i] = offsets;
+    });
+    return { perSegMatches: perSeg, flatMatches: flat };
+  }, [searchQuery, segments, speakerNames]);
+
+  const totalMatches = flatMatches.length;
+  const safeActiveMatch = totalMatches === 0 ? 0 : Math.min(activeMatchIndex, totalMatches - 1);
+  const activeMatch = totalMatches > 0 ? flatMatches[safeActiveMatch] : null;
+
+  useEffect(() => { setActiveMatchIndex(0); }, [searchQuery]);
+
+  useEffect(() => {
+    if (!activeMatch) return;
+    const el = segmentRefs.current.get(activeMatch.segIndex);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeMatch?.segIndex, activeMatch?.offset]);
+
+  const goPrevMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setActiveMatchIndex((i) => (i - 1 + totalMatches) % totalMatches);
+  }, [totalMatches]);
+
+  const goNextMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setActiveMatchIndex((i) => (i + 1) % totalMatches);
+  }, [totalMatches]);
+
   const speakers = allSpeakersProp
     ? [...new Set([...contentSpeakers, ...allSpeakersProp])]
     : contentSpeakers;
