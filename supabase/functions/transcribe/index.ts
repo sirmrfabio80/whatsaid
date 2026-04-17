@@ -312,6 +312,11 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Load active provider template (with safe fallback). Per-job tuning
+    // (job.transcription_config, job.language_selected, etc.) still wins
+    // over these admin defaults further down.
+    const cfg = await loadActiveConfig(supabase);
+
     const requestBody = await req.json().catch(() => ({}));
     const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
 
@@ -352,7 +357,7 @@ Deno.serve(async (req) => {
     // Permanent default: "recovery" strategy is always on unless an explicit
     // alternative strategy is provided in transcription_config. This injects
     // the recovery prompt and enables `disfluencies: true` for every job.
-    const strategy = (tuningConfig.strategy as string) ?? "recovery";
+    const strategy = (tuningConfig.strategy as string) ?? cfg.default_strategy;
     const requestedAudioChannels = typeof job.audio_channels === "number" && job.audio_channels > 1
       ? job.audio_channels
       : null;
@@ -363,26 +368,15 @@ Deno.serve(async (req) => {
 
     // Only use multichannel when we have positive evidence that speakers are
     // actually isolated on separate channels. Channel count alone is not enough.
-    const route: "multichannel" | "diarization" = requestedAudioChannels && channelRouteHint === "multichannel"
+    // Also requires the active template to permit each route.
+    const wantMultichannel = !!(requestedAudioChannels && channelRouteHint === "multichannel");
+    const route: "multichannel" | "diarization" = wantMultichannel && cfg.multichannel
       ? "multichannel"
       : "diarization";
 
-    const CODE_SWITCH_INSTRUCTION = "Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.";
-
     const STRATEGY_PROMPTS: Record<string, string> = {
-      recovery: [
-        `Required: ${CODE_SWITCH_INSTRUCTION}`,
-        "",
-        "Always: Transcribe speech with your best guess based on context in all possible scenarios where speech is present in the audio.",
-      ].join("\n"),
-      review: [
-        CODE_SWITCH_INSTRUCTION,
-        "",
-        "Always: Transcribe speech exactly as heard. If uncertain or audio is unclear, mark as [unclear].",
-        "After the first output, review the transcript again.",
-        "Pay close attention to hallucinations, misspellings, or errors, and revise them like a computer performing spell and grammar checks.",
-        "Ensure words and phrases make grammatical sense in sentences.",
-      ].join("\n"),
+      recovery: cfg.recovery_prompt,
+      review: cfg.review_prompt,
     };
 
     const buildTranscriptPayload = (): Record<string, unknown> => {
