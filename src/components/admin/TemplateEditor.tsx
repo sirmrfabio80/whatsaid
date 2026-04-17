@@ -189,6 +189,10 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
             disabled={disabled}
           />
         </div>
+        <EffectiveBehaviourBlock
+          strategy={value.default_strategy}
+          applyOnDiarization={value.apply_prompt_on_diarization}
+        />
         <Field label="Recovery prompt">
           <Textarea
             value={value.recovery_prompt}
