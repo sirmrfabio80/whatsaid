@@ -54,10 +54,14 @@ export interface TranscribeTemplateConfig {
   audio_enhancement_apply_to_mono: boolean;
   /** Apply to stereo uploads. */
   audio_enhancement_apply_to_stereo: boolean;
-  /** Run the peak-normalisation stage. When false, only the soft-clip safety limiter runs. */
+  /** Run the normalisation stage. When false, only the soft-clip safety limiter runs. */
   audio_normalise: boolean;
-  /** Target peak level in dBFS (e.g. -1 = 0.891 linear). */
+  /** "peak" = lift loudest sample to target_peak_dbfs. "rms" = lift average loudness to target_rms_dbfs (recommended — works even when peaks are already at the ceiling). */
+  audio_normalise_mode: "peak" | "rms";
+  /** Target peak level in dBFS (used in peak mode; also the soft-clip ceiling reference). */
   audio_target_peak_dbfs: number;
+  /** Target RMS level in dBFS (used in rms mode). e.g. -3 for very loud broadcast-style speech. */
+  audio_target_rms_dbfs: number;
   /** Max gain (dB) applied during normalisation for mono uploads. */
   audio_max_gain_db_mono: number;
   /** Max gain (dB) applied during normalisation for stereo uploads. */
@@ -102,11 +106,13 @@ export const DEFAULT_TEMPLATE_CONFIG: TranscribeTemplateConfig = {
   audio_enhancement_apply_to_mono: false,
   audio_enhancement_apply_to_stereo: true,
   audio_normalise: true,
+  audio_normalise_mode: "rms",
   audio_target_peak_dbfs: -1,
-  audio_max_gain_db_mono: 18,
+  audio_target_rms_dbfs: -3,
+  audio_max_gain_db_mono: 14,
   audio_max_gain_db_stereo: 12,
   audio_noise_floor_dbfs: -50,
-  audio_soft_clip_threshold: 0.95,
+  audio_soft_clip_threshold: 0.85,
 };
 
 /**
@@ -164,7 +170,11 @@ export function parseTemplateConfig(raw: unknown): TranscribeTemplateConfig {
     audio_enhancement_apply_to_mono: asBool(r.audio_enhancement_apply_to_mono, d.audio_enhancement_apply_to_mono),
     audio_enhancement_apply_to_stereo: asBool(r.audio_enhancement_apply_to_stereo, d.audio_enhancement_apply_to_stereo),
     audio_normalise: asBool(r.audio_normalise, d.audio_normalise),
+    audio_normalise_mode: r.audio_normalise_mode === "peak" || r.audio_normalise_mode === "rms"
+      ? r.audio_normalise_mode
+      : d.audio_normalise_mode,
     audio_target_peak_dbfs: asNum(r.audio_target_peak_dbfs, d.audio_target_peak_dbfs),
+    audio_target_rms_dbfs: asNum(r.audio_target_rms_dbfs, d.audio_target_rms_dbfs),
     audio_max_gain_db_mono: asNum(r.audio_max_gain_db_mono, d.audio_max_gain_db_mono),
     audio_max_gain_db_stereo: asNum(r.audio_max_gain_db_stereo, d.audio_max_gain_db_stereo),
     audio_noise_floor_dbfs: asNum(r.audio_noise_floor_dbfs, d.audio_noise_floor_dbfs),
@@ -299,7 +309,9 @@ export function configsEqual(
     a.audio_enhancement_apply_to_mono === b.audio_enhancement_apply_to_mono &&
     a.audio_enhancement_apply_to_stereo === b.audio_enhancement_apply_to_stereo &&
     a.audio_normalise === b.audio_normalise &&
+    a.audio_normalise_mode === b.audio_normalise_mode &&
     a.audio_target_peak_dbfs === b.audio_target_peak_dbfs &&
+    a.audio_target_rms_dbfs === b.audio_target_rms_dbfs &&
     a.audio_max_gain_db_mono === b.audio_max_gain_db_mono &&
     a.audio_max_gain_db_stereo === b.audio_max_gain_db_stereo &&
     a.audio_noise_floor_dbfs === b.audio_noise_floor_dbfs &&

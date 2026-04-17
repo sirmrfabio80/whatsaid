@@ -1,42 +1,58 @@
 /**
  * Client-side audio preprocessing using Web Audio API.
  *
- * Normalise-only chain (NO dynamic range compression):
+ * Two-stage chain:
  *   1. Noise gate — skip near-silent recordings
- *   2. Soft-clip limiter (tanh at ±threshold) — safety only
- *   3. Capped peak normalisation (configurable target + max gain)
- *
- * Speech dynamics are fully preserved.
+ *   2. Normalisation (peak OR rms target) with capped gain
+ *   3. Soft-clip limiter (tanh at ±threshold) — runs AFTER gain so it
+ *      actually catches boosted peaks. This is the safety net that lets
+ *      RMS-mode push files past the digital ceiling without harsh clipping.
  */
 
+export type NormaliseMode = "peak" | "rms";
+
 export interface AudioEnhanceOptions {
-  /** Run the peak-normalisation stage. When false, only the soft-clip safety limiter runs. */
+  /** Run the normalisation stage. When false, only the soft-clip safety limiter runs. */
   normalise: boolean;
-  /** Target peak level in dBFS (e.g. -1). */
+  /** "peak" = lift loudest sample to target_peak_dbfs (legacy). "rms" = lift average loudness to target_rms_dbfs (recommended for already-hot files). */
+  normalise_mode: NormaliseMode;
+  /** Target peak level in dBFS (used when normalise_mode = "peak"; also the soft-clip ceiling reference). */
   target_peak_dbfs: number;
+  /** Target RMS level in dBFS (used when normalise_mode = "rms"). e.g. -3 for very loud broadcast-style speech. */
+  target_rms_dbfs: number;
   /** Max gain (dB) for mono uploads. */
   max_gain_db_mono: number;
   /** Max gain (dB) for stereo uploads. */
   max_gain_db_stereo: number;
   /** Below this RMS (dBFS), the enhancer skips (noise gate). */
   noise_floor_dbfs: number;
-  /** Soft-clip threshold (linear, 0.5–1.0). */
+  /** Soft-clip threshold (linear, 0.5–1.0). Lower = more aggressive limiting. */
   soft_clip_threshold: number;
 }
 
 export const DEFAULT_AUDIO_ENHANCE_OPTIONS: AudioEnhanceOptions = {
   normalise: true,
+  normalise_mode: "rms",
   target_peak_dbfs: -1,
-  max_gain_db_mono: 18,
+  target_rms_dbfs: -3,
+  max_gain_db_mono: 14,
   max_gain_db_stereo: 12,
   noise_floor_dbfs: -50,
-  soft_clip_threshold: 0.95,
+  soft_clip_threshold: 0.85,
 };
 
 export interface AudioEnhanceMeasured {
   input_rms_dbfs: number;
   input_peak_dbfs: number;
   applied_gain_db: number;
+  /** Post-gain, pre-clip RMS. */
+  output_rms_dbfs: number;
+  /** Post-clip peak. */
+  output_peak_dbfs: number;
+  /** % of samples touched by the soft-clip limiter (0–100). */
+  soft_clip_samples_pct: number;
+  /** Which normalisation mode was used. */
+  normalise_mode: NormaliseMode;
 }
 
 export interface AudioEnhanceMetadata {
@@ -66,6 +82,19 @@ function computeRMS(buffer: AudioBuffer): number {
     }
   }
   return Math.sqrt(sumSq / count);
+}
+
+/** Compute peak (max abs sample) across all channels. */
+function computePeak(buffer: AudioBuffer): number {
+  let maxSample = 0;
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      const abs = Math.abs(data[i]);
+      if (abs > maxSample) maxSample = abs;
+    }
+  }
+  return maxSample;
 }
 
 function linearToDbfs(linear: number): number {
@@ -127,7 +156,7 @@ function encodeWav(buffer: AudioBuffer): Blob {
 }
 
 /**
- * Normalise + boost an audio file for transcription. NO compression.
+ * Normalise + soft-clip an audio file for transcription.
  * Returns a new WAV File and structured metadata.
  */
 export async function enhanceAudioForTranscription(
@@ -150,12 +179,15 @@ export async function enhanceAudioForTranscription(
   const enhancedFileName = `${baseName}_normalised.wav`;
   const inputChannels: 1 | 2 = audioBuffer.numberOfChannels === 1 ? 1 : 2;
 
-  // --- Noise gate ---
+  // --- Measure input ---
   const NOISE_FLOOR = dbfsToLinear(opts.noise_floor_dbfs);
-  const rms = computeRMS(audioBuffer);
-  const inputRmsDbfs = linearToDbfs(rms);
+  const inputRms = computeRMS(audioBuffer);
+  const inputPeak = computePeak(audioBuffer);
+  const inputRmsDbfs = linearToDbfs(inputRms);
+  const inputPeakDbfs = linearToDbfs(inputPeak);
 
-  if (rms < NOISE_FLOOR) {
+  // --- Noise gate ---
+  if (inputRms < NOISE_FLOOR) {
     onProgress?.("encoding");
     const wavBlob = encodeWav(audioBuffer);
     return {
@@ -165,49 +197,40 @@ export async function enhanceAudioForTranscription(
         reason: "noise_gated",
         input_channels: inputChannels,
         duration_ms: Math.round(performance.now() - t0),
-        measured: { input_rms_dbfs: inputRmsDbfs, input_peak_dbfs: -Infinity, applied_gain_db: 0 },
+        measured: {
+          input_rms_dbfs: inputRmsDbfs,
+          input_peak_dbfs: inputPeakDbfs,
+          applied_gain_db: 0,
+          output_rms_dbfs: inputRmsDbfs,
+          output_peak_dbfs: inputPeakDbfs,
+          soft_clip_samples_pct: 0,
+          normalise_mode: opts.normalise_mode,
+        },
       },
     };
   }
 
   onProgress?.("processing");
 
-  // --- Stage 1: Soft-clip limiter (safety) ---
-  const CLIP_THRESHOLD = Math.max(0.5, Math.min(1.0, opts.soft_clip_threshold));
-  let softClipped = false;
-  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-    const data = audioBuffer.getChannelData(ch);
-    for (let i = 0; i < data.length; i++) {
-      if (Math.abs(data[i]) > CLIP_THRESHOLD) {
-        data[i] = CLIP_THRESHOLD * Math.tanh(data[i] / CLIP_THRESHOLD);
-        softClipped = true;
-      }
-    }
-  }
-
-  // --- Measure input peak (after soft-clip — represents clipped ceiling) ---
-  let maxSample = 0;
-  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-    const data = audioBuffer.getChannelData(ch);
-    for (let i = 0; i < data.length; i++) {
-      const abs = Math.abs(data[i]);
-      if (abs > maxSample) maxSample = abs;
-    }
-  }
-  const inputPeakDbfs = linearToDbfs(maxSample);
-
-  // --- Stage 2: Capped peak normalisation ---
-  const TARGET_PEAK = dbfsToLinear(opts.target_peak_dbfs);
+  // --- Stage 1: Normalisation gain (peak OR rms target) ---
   const maxGainDb = inputChannels === 1 ? opts.max_gain_db_mono : opts.max_gain_db_stereo;
   const MAX_NORM_GAIN = dbfsToLinear(maxGainDb);
 
-  let appliedGainDb = 0;
+  let gain = 1.0;
   let normalisationApplied = false;
 
-  if (opts.normalise && maxSample > 0 && maxSample < TARGET_PEAK) {
-    const gain = Math.min(TARGET_PEAK / maxSample, MAX_NORM_GAIN);
-    appliedGainDb = linearToDbfs(gain);
+  if (opts.normalise) {
+    let desiredGain = 1.0;
+    if (opts.normalise_mode === "rms" && inputRms > 0) {
+      const targetRmsLinear = dbfsToLinear(opts.target_rms_dbfs);
+      desiredGain = targetRmsLinear / inputRms;
+    } else if (opts.normalise_mode === "peak" && inputPeak > 0) {
+      const targetPeakLinear = dbfsToLinear(opts.target_peak_dbfs);
+      desiredGain = targetPeakLinear / inputPeak;
+    }
+    gain = Math.max(1.0, Math.min(desiredGain, MAX_NORM_GAIN));
     normalisationApplied = gain > 1.0;
+
     if (normalisationApplied) {
       for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
         const data = audioBuffer.getChannelData(ch);
@@ -217,6 +240,34 @@ export async function enhanceAudioForTranscription(
       }
     }
   }
+  const appliedGainDb = linearToDbfs(gain);
+
+  // Measure RMS after gain (pre-clip).
+  const postGainRms = computeRMS(audioBuffer);
+  const outputRmsDbfs = linearToDbfs(postGainRms);
+
+  // --- Stage 2: Soft-clip limiter (safety, runs AFTER gain) ---
+  const CLIP_THRESHOLD = Math.max(0.5, Math.min(1.0, opts.soft_clip_threshold));
+  let softClipSampleCount = 0;
+  let totalSampleCount = 0;
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const data = audioBuffer.getChannelData(ch);
+    totalSampleCount += data.length;
+    for (let i = 0; i < data.length; i++) {
+      if (Math.abs(data[i]) > CLIP_THRESHOLD) {
+        data[i] = CLIP_THRESHOLD * Math.tanh(data[i] / CLIP_THRESHOLD);
+        softClipSampleCount++;
+      }
+    }
+  }
+  const softClipSamplesPct = totalSampleCount > 0
+    ? (softClipSampleCount / totalSampleCount) * 100
+    : 0;
+  const softClipped = softClipSampleCount > 0;
+
+  // Final peak after clipping.
+  const outputPeak = computePeak(audioBuffer);
+  const outputPeakDbfs = linearToDbfs(outputPeak);
 
   onProgress?.("encoding");
   const wavBlob = encodeWav(audioBuffer);
@@ -234,6 +285,10 @@ export async function enhanceAudioForTranscription(
         input_rms_dbfs: inputRmsDbfs,
         input_peak_dbfs: inputPeakDbfs,
         applied_gain_db: appliedGainDb,
+        output_rms_dbfs: outputRmsDbfs,
+        output_peak_dbfs: outputPeakDbfs,
+        soft_clip_samples_pct: softClipSamplesPct,
+        normalise_mode: opts.normalise_mode,
       },
     },
   };
