@@ -183,6 +183,8 @@ export default function TranscriptEditor({
   const [deleteConfirmIndex, setDeleteConfirmIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dropSuccessIndex, setDropSuccessIndex] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const pendingFocusRef = useRef<{ index: number; cursorPos: number } | null>(null);
