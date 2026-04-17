@@ -112,6 +112,46 @@ function generateSegId(): string {
   return `seg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Render text with highlighted matches; flags the active match with a stronger style. */
+function renderHighlighted(
+  text: string,
+  query: string,
+  segMatchOffsets: number[],
+  activeOffset: number | null,
+): React.ReactNode {
+  if (!query || segMatchOffsets.length === 0) return text;
+  const re = new RegExp(escapeRegExp(query), "gi");
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  let matchIdx = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > lastIdx) parts.push(text.slice(lastIdx, m.index));
+    const isActive = activeOffset !== null && segMatchOffsets[matchIdx] === activeOffset;
+    parts.push(
+      <mark
+        key={`hl-${m.index}`}
+        className={
+          isActive
+            ? "bg-primary text-primary-foreground rounded px-0.5"
+            : "bg-primary/20 text-foreground rounded px-0.5"
+        }
+      >
+        {m[0]}
+      </mark>,
+    );
+    lastIdx = m.index + m[0].length;
+    matchIdx++;
+    if (m[0].length === 0) re.lastIndex++; // safety
+  }
+  if (lastIdx < text.length) parts.push(text.slice(lastIdx));
+  return parts;
+}
+
 function usePointerFine() {
   const [fine, setFine] = useState(false);
   useEffect(() => {
