@@ -55,6 +55,7 @@ export default function LogsTab() {
   const [data, setData] = useState<JobDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async (jobId?: string) => {
     setLoading(true);
