@@ -6,7 +6,117 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ASSEMBLYAI_BASE = "https://api.eu.assemblyai.com/v2";
+// Hardcoded fallbacks if no active template row exists. These mirror the
+// "Default" template seeded in the database.
+const FALLBACK_BASE_URL = "https://api.eu.assemblyai.com/v2";
+const FALLBACK_POLL_INTERVAL_MS = 5000;
+const FALLBACK_MAX_POLLS = 120;
+
+interface ActiveTemplateConfig {
+  base_url: string;
+  speech_models: string[];
+  temperature: number;
+  speech_threshold: number;
+  speaker_labels: boolean;
+  multichannel: boolean;
+  language_detection: boolean;
+  language_confidence_threshold: number;
+  default_strategy: string;
+  recovery_prompt: string;
+  review_prompt: string;
+  disfluencies: boolean;
+  apply_prompt_on_diarization: boolean;
+  poll_interval_ms: number;
+  max_polls: number;
+}
+
+const FALLBACK_CONFIG: ActiveTemplateConfig = {
+  base_url: FALLBACK_BASE_URL,
+  speech_models: ["universal-3-pro"],
+  temperature: 0,
+  speech_threshold: 0.05,
+  speaker_labels: true,
+  multichannel: true,
+  language_detection: true,
+  language_confidence_threshold: 0.4,
+  default_strategy: "recovery",
+  recovery_prompt: [
+    "Required: Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.",
+    "",
+    "Always: Transcribe speech with your best guess based on context in all possible scenarios where speech is present in the audio.",
+  ].join("\n"),
+  review_prompt: [
+    "Preserve the original language(s) and script as spoken, including code-switching and mixed-language phrases.",
+    "",
+    "Always: Transcribe speech exactly as heard. If uncertain or audio is unclear, mark as [unclear].",
+    "After the first output, review the transcript again.",
+    "Pay close attention to hallucinations, misspellings, or errors, and revise them like a computer performing spell and grammar checks.",
+    "Ensure words and phrases make grammatical sense in sentences.",
+  ].join("\n"),
+  disfluencies: false,
+  apply_prompt_on_diarization: false,
+  poll_interval_ms: FALLBACK_POLL_INTERVAL_MS,
+  max_polls: FALLBACK_MAX_POLLS,
+};
+
+/**
+ * Coerce raw JSON config from the active template row into a complete,
+ * typed ActiveTemplateConfig. Missing/invalid fields fall back to the
+ * hardcoded defaults. Never throws.
+ */
+function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const f = FALLBACK_CONFIG;
+  const asString = (v: unknown, fb: string): string => typeof v === "string" ? v : fb;
+  const asBool = (v: unknown, fb: boolean): boolean => typeof v === "boolean" ? v : fb;
+  const asNum = (v: unknown, fb: number): number => typeof v === "number" && Number.isFinite(v) ? v : fb;
+  const speech_models = Array.isArray(r.speech_models)
+    ? (r.speech_models.filter((x) => typeof x === "string") as string[])
+    : f.speech_models;
+  const default_strategy = (() => {
+    const s = r.default_strategy;
+    return s === "recovery" || s === "review" || s === "keyterms" || s === "none"
+      ? (s as string)
+      : f.default_strategy;
+  })();
+  return {
+    base_url: asString(r.base_url, f.base_url),
+    speech_models: speech_models.length > 0 ? speech_models : f.speech_models,
+    temperature: asNum(r.temperature, f.temperature),
+    speech_threshold: asNum(r.speech_threshold, f.speech_threshold),
+    speaker_labels: asBool(r.speaker_labels, f.speaker_labels),
+    multichannel: asBool(r.multichannel, f.multichannel),
+    language_detection: asBool(r.language_detection, f.language_detection),
+    language_confidence_threshold: asNum(r.language_confidence_threshold, f.language_confidence_threshold),
+    default_strategy,
+    recovery_prompt: asString(r.recovery_prompt, f.recovery_prompt),
+    review_prompt: asString(r.review_prompt, f.review_prompt),
+    disfluencies: asBool(r.disfluencies, f.disfluencies),
+    apply_prompt_on_diarization: asBool(r.apply_prompt_on_diarization, f.apply_prompt_on_diarization),
+    poll_interval_ms: asNum(r.poll_interval_ms, f.poll_interval_ms),
+    max_polls: asNum(r.max_polls, f.max_polls),
+  };
+}
+
+async function loadActiveConfig(supabase: ReturnType<typeof createClient>): Promise<ActiveTemplateConfig> {
+  try {
+    const { data, error } = await supabase
+      .from("transcribe_settings_templates")
+      .select("config, name")
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error || !data) {
+      console.log(JSON.stringify({ event: "active_template_missing", error: error?.message ?? null }));
+      return FALLBACK_CONFIG;
+    }
+    const cfg = parseActiveConfig((data as { config: unknown }).config);
+    console.log(JSON.stringify({ event: "active_template_loaded", name: (data as { name: string }).name }));
+    return cfg;
+  } catch (e) {
+    console.log(JSON.stringify({ event: "active_template_load_error", error: String(e) }));
+    return FALLBACK_CONFIG;
+  }
+}
 
 /** Format milliseconds as [HH:MM:SS] */
 function formatTimestamp(ms: number): string {
