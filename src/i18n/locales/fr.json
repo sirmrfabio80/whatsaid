@@ -262,6 +262,8 @@
     "durationLabel": "Durée : {{duration}}",
     "recordingTime": "Heure d'enregistrement",
     "wordsLabel": "{{count}} mots",
+    "readingTimeMinLabel": "{{minutes}} min de lecture",
+    "readingTimeSecLabel": "<1 min de lecture",
     "tags": {
       "addPlaceholder": "Ajouter un tag…",
       "addLabel": "Ajouter un tag",
