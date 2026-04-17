@@ -137,7 +137,9 @@ export default function SpeakerIdentificationBanner({
               ) : (
                 <>
                   <span className="font-medium text-foreground">
-                    {s.inferred_name}
+                    {s.role && s.inferred_name.toLowerCase() !== s.role.toLowerCase()
+                      ? `${s.inferred_name} (${s.role})`
+                      : s.inferred_name}
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -191,7 +193,9 @@ export default function SpeakerIdentificationBanner({
               <span className="text-muted-foreground">{s.speaker_label}</span>
               <span className="text-muted-foreground">→</span>
               <span className="font-medium text-foreground/80">
-                {s.inferred_name}
+                {s.role && s.inferred_name.toLowerCase() !== s.role.toLowerCase()
+                  ? `${s.inferred_name} (${s.role})`
+                  : s.inferred_name}
               </span>
               
               <span className="text-[10px] text-muted-foreground/50 px-1.5 py-0.5 rounded-full bg-muted/50">
