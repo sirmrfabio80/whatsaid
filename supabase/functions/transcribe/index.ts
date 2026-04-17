@@ -285,7 +285,7 @@ async function submitAndPollTranscript(
   for (let i = 0; i < maxPolls; i++) {
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
-    const pollRes = await fetch(`${cfg.base_url}/transcript/${transcriptId}`, {
+    const pollRes = await fetch(`${baseUrl}/transcript/${transcriptId}`, {
       headers: { Authorization: apiKey },
     });
 
