@@ -124,6 +124,84 @@ export function parseTemplateConfig(raw: unknown): TranscribeTemplateConfig {
   };
 }
 
+/**
+ * Build the AssemblyAI request payload that the transcribe edge function
+ * would send right now for a given draft config and sample job context.
+ *
+ * This is a pure mirror of `buildTranscriptPayload` in
+ * `supabase/functions/transcribe/index.ts` — keep them in lockstep.
+ *
+ * The `audio_url` is intentionally a placeholder; the real edge function
+ * generates a signed URL from Supabase Storage at request time.
+ */
+export interface PreviewSampleJob {
+  /** "diarization" = mono single-channel mix; "multichannel" = isolated per-channel speakers. */
+  route: "diarization" | "multichannel";
+  /** "auto" triggers language_detection; otherwise sent as language_code. */
+  language: "auto" | string;
+  /** Optional: pin a specific speaker count on the diarization route. */
+  speakers_expected?: number;
+  /** Optional: which prompting strategy to apply (defaults to template's default_strategy). */
+  strategy?: DefaultStrategy;
+}
+
+export const DEFAULT_PREVIEW_SAMPLE: PreviewSampleJob = {
+  route: "diarization",
+  language: "auto",
+};
+
+const PREVIEW_AUDIO_URL_PLACEHOLDER =
+  "https://<supabase-storage>/temp-audio/<signed-url-generated-at-runtime>";
+
+export function buildPreviewPayload(
+  cfg: TranscribeTemplateConfig,
+  sample: PreviewSampleJob = DEFAULT_PREVIEW_SAMPLE,
+): Record<string, unknown> {
+  const route = sample.route;
+  const strategy: DefaultStrategy = sample.strategy ?? cfg.default_strategy;
+
+  const STRATEGY_PROMPTS: Record<string, string> = {
+    recovery: cfg.recovery_prompt,
+    review: cfg.review_prompt,
+  };
+
+  const payload: Record<string, unknown> = {
+    audio_url: PREVIEW_AUDIO_URL_PLACEHOLDER,
+    speech_models: cfg.speech_models,
+    temperature: cfg.temperature,
+    speech_threshold: cfg.speech_threshold,
+    ...(route === "multichannel"
+      ? { multichannel: true }
+      : { speaker_labels: cfg.speaker_labels }),
+  };
+
+  if (sample.language && sample.language !== "auto") {
+    payload.language_code = sample.language;
+  } else if (cfg.language_detection) {
+    payload.language_detection = true;
+    payload.language_confidence_threshold = cfg.language_confidence_threshold;
+  }
+
+  if (strategy === "recovery" || strategy === "review") {
+    if (route === "multichannel" || cfg.apply_prompt_on_diarization) {
+      payload.prompt = STRATEGY_PROMPTS[strategy];
+    }
+  }
+
+  if (cfg.disfluencies) {
+    payload.disfluencies = true;
+  }
+
+  if (route === "diarization" && typeof sample.speakers_expected === "number" && sample.speakers_expected > 0) {
+    payload.speaker_options = {
+      min_speakers_expected: sample.speakers_expected,
+      max_speakers_expected: sample.speakers_expected,
+    };
+  }
+
+  return payload;
+}
+
 /** Stable shallow equality for TranscribeTemplateConfig (used for unsaved-changes detection). */
 export function configsEqual(
   a: TranscribeTemplateConfig,

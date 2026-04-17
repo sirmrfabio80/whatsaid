@@ -48,6 +48,7 @@ import {
   TranscribeTemplateConfig,
 } from "@/lib/transcribe-template";
 import TemplateEditor from "./TemplateEditor";
+import RequestPreviewPanel from "./RequestPreviewPanel";
 
 interface TemplateRow {
   id: string;
@@ -464,11 +465,14 @@ export default function TranscribeTemplatesTab() {
         </CardHeader>
         <CardContent>
           {draft ? (
-            <TemplateEditor
-              value={draft}
-              onChange={setDraft}
-              disabled={saving}
-            />
+            <>
+              <TemplateEditor
+                value={draft}
+                onChange={setDraft}
+                disabled={saving}
+              />
+              <RequestPreviewPanel config={draft} />
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">
               Select a template on the left or create a new one.
