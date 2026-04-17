@@ -252,6 +252,18 @@ export default function TranscriptEditor({
     setActiveMatchIndex((i) => (i + 1) % totalMatches);
   }, [totalMatches]);
 
+  // Cmd/Ctrl+F focuses the search input (only while this editor is mounted, i.e. Transcript tab)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
   const contentSpeakers = getUniqueSpeakers(segments);
   const speakers = allSpeakersProp
     ? [...new Set([...contentSpeakers, ...allSpeakersProp])]
