@@ -552,6 +552,7 @@ Deno.serve(async (req) => {
           profile: tuningConfig.profile ?? null,
           channel_analysis: channelAnalysis,
           route,
+          audio_enhancement: audioEnhancement,
         },
       })
       .eq("id", job_id);
@@ -618,6 +619,7 @@ Deno.serve(async (req) => {
       disfluencies: transcriptPayload.disfluencies ?? false,
       has_keyterms: !!transcriptPayload.keyterms_prompt,
       profile: tuningConfig.profile ?? null,
+      audio_enhancement: audioEnhancement,
     }));
 
     let transcriptText: string;
