@@ -108,11 +108,11 @@ export const DEFAULT_TEMPLATE_CONFIG: TranscribeTemplateConfig = {
   audio_normalise: true,
   audio_normalise_mode: "rms",
   audio_target_peak_dbfs: -1,
-  audio_target_rms_dbfs: -3,
-  audio_max_gain_db_mono: 14,
-  audio_max_gain_db_stereo: 12,
+  audio_target_rms_dbfs: -1,
+  audio_max_gain_db_mono: 20,
+  audio_max_gain_db_stereo: 18,
   audio_noise_floor_dbfs: -50,
-  audio_soft_clip_threshold: 0.85,
+  audio_soft_clip_threshold: 0.8,
 };
 
 /**

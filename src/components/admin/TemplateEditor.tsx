@@ -406,6 +406,7 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
           disabled={disabled || d.audio_normalise.disabled}
           disabledReason={d.audio_normalise.reason}
         />
+        <GainPreview value={value} />
         <div className="grid sm:grid-cols-2 gap-4">
           <Field
             label="Normalisation mode"
