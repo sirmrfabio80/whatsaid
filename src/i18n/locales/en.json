@@ -261,6 +261,7 @@
     "clickToRename": "Click to rename",
     "durationLabel": "Duration: {{duration}}",
     "recordingTime": "Recording time",
+    "wordsLabel": "{{count}} words",
     "tags": {
       "addPlaceholder": "Add tag…",
       "addLabel": "Add a tag",
