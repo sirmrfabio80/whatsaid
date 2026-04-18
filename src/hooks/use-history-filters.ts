@@ -107,17 +107,30 @@ export function useHistoryFilters(userId: string | undefined, jobIds: string[] =
     [jobTagMappings, userTags]
   );
 
-  // Autocomplete suggestions (exclude already selected)
+  // Set of tag IDs assigned to at least one loaded job (usage-aware filter source)
+  const usedTagIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of jobTagMappings) set.add(m.tag_id);
+    return set;
+  }, [jobTagMappings]);
+
+  // Tags that are actually used by at least one record — drives the filter UI
+  const usedUserTags = useMemo(
+    () => userTags.filter((t) => usedTagIds.has(t.id)),
+    [userTags, usedTagIds]
+  );
+
+  // Autocomplete suggestions (only used tags, exclude already selected)
   const tagSuggestions = useMemo(() => {
-    return userTags.filter((t) => !selectedTagIds.includes(t.id));
-  }, [userTags, selectedTagIds]);
+    return usedUserTags.filter((t) => !selectedTagIds.includes(t.id));
+  }, [usedUserTags, selectedTagIds]);
 
   const selectedTags = useMemo(() => {
     return userTags.filter((t) => selectedTagIds.includes(t.id));
   }, [userTags, selectedTagIds]);
 
   return {
-    userTags,
+    userTags: usedUserTags,
     tagsLoading,
     selectedTagIds,
     selectedTags,
