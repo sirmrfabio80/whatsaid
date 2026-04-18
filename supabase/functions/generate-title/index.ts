@@ -40,32 +40,15 @@ Deno.serve(async (req) => {
     // Use first ~2000 chars for title generation
     const excerpt = txRow.content.slice(0, 2000);
 
-    const res = await fetch(AI_GATEWAY, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Generate a short, descriptive title (max 6 words) for this audio recording based on its transcript. The title should be in the same language as the transcript. Return ONLY the title text, nothing else. No quotes, no explanation.",
-          },
-          { role: "user", content: excerpt },
-        ],
-      }),
+    const rawTitle = await callAiGateway({
+      apiKey: LOVABLE_API_KEY,
+      model: MODEL,
+      system:
+        "Generate a short, descriptive title (max 6 words) for this audio recording based on its transcript. The title should be in the same language as the transcript. Return ONLY the title text, nothing else. No quotes, no explanation.",
+      user: excerpt,
     });
 
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error(`AI gateway error [${res.status}]: ${t}`);
-    }
-
-    const data = await res.json();
-    const title = (data.choices?.[0]?.message?.content ?? "").trim().replace(/^["']|["']$/g, "");
+    const title = rawTitle.trim().replace(/^["']|["']$/g, "");
 
     // Save title
     await supabase.from("jobs").update({ title }).eq("id", job_id);
