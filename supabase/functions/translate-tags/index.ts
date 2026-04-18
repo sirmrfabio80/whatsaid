@@ -40,7 +40,7 @@ serve(async (req) => {
 
     const userPrompt = `Translate these English tags to ${target_lang}:\n${JSON.stringify(batch)}`;
 
-    const res = await fetch(AI_GATEWAY, {
+    const res = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
