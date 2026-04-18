@@ -252,7 +252,9 @@
     "removeTag": "Remove tag",
     "clearAll": "Clear all",
     "noResults": "No matching transcriptions",
-    "noResultsDesc": "Try adjusting your search or removing some filters."
+    "noResultsDesc": "Try adjusting your search or removing some filters.",
+    "loadError": "Could not load your transcriptions",
+    "loadErrorDesc": "Something went wrong while fetching your history. Please try again."
   },
   "jobDetail": {
     "backToHistory": "Back to history",

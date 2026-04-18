@@ -16,6 +16,9 @@ import { useNavigate } from "react-router-dom";
 import { useHistoryFilters } from "@/hooks/use-history-filters";
 import { useTranslatedTags } from "@/hooks/use-translated-tags";
 import HistoryFilters from "@/components/HistoryFilters";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 interface Job {
   id: string;
@@ -37,6 +40,7 @@ export default function History() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Job | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -56,17 +60,27 @@ export default function History() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { navigate("/login"); return; }
+    let cancelled = false;
     const fetchJobs = async () => {
-      const { data } = await supabase
+      setLoading(true);
+      setLoadError(false);
+      const { data, error } = await supabase
         .from("jobs")
         .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      setJobs((data as Job[]) ?? []);
+      if (cancelled) return;
+      if (error) {
+        setLoadError(true);
+        setJobs([]);
+      } else {
+        setJobs((data as Job[]) ?? []);
+      }
       setLoading(false);
     };
     fetchJobs();
-  }, [user, navigate]);
+    return () => { cancelled = true; };
+  }, [user, authLoading, navigate]);
 
   // Apply combined filters
   const filteredJobs = useMemo(() => {
@@ -113,10 +127,9 @@ export default function History() {
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
-         <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
-          <div className="max-w-3xl mx-auto space-y-3">
-            <div className="h-8 w-64 bg-muted rounded-lg animate-pulse mb-8" />
-            {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}
+        <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
+          <div className="max-w-3xl mx-auto">
+            <LoadingState rows={3} titleWidth="w-64" rowHeight="h-20" />
           </div>
         </div>
       </div>
@@ -143,28 +156,38 @@ export default function History() {
             />
           )}
 
-          {jobs.length === 0 ? (
-            <Card className="border-dashed rounded-xl shadow-sm">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <Inbox className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                <p className="font-medium text-lg mb-1">{t("history.empty")}</p>
-                <p className="text-muted-foreground text-sm mb-6">{t("history.emptyDesc")}</p>
+          {loadError ? (
+            <ErrorState
+              title={t("history.loadError")}
+              description={t("history.loadErrorDesc")}
+              action={
+                <Button variant="outline" className="rounded-xl" onClick={() => window.location.reload()}>
+                  {t("common.tryAgain")}
+                </Button>
+              }
+            />
+          ) : jobs.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title={t("history.empty")}
+              description={t("history.emptyDesc")}
+              action={
                 <Button className="rounded-xl" onClick={() => navigate("/convert")}>
                   <FileAudio className="w-4 h-4 mr-2" />{t("history.startTranscribing")}
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : filteredJobs.length === 0 ? (
-            <Card className="border-dashed rounded-xl shadow-sm">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <SearchX className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                <p className="font-medium text-lg mb-1">{t("history.noResults")}</p>
-                <p className="text-muted-foreground text-sm mb-6">{t("history.noResultsDesc")}</p>
+            <EmptyState
+              icon={SearchX}
+              title={t("history.noResults")}
+              description={t("history.noResultsDesc")}
+              action={
                 <Button variant="outline" className="rounded-xl" onClick={filters.clearAll}>
                   {t("history.clearAll")}
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : (
             <div className="space-y-3">
               {filteredJobs.map((job) => {

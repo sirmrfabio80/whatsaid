@@ -252,7 +252,9 @@
     "removeTag": "Rimuovi tag",
     "clearAll": "Cancella tutto",
     "noResults": "Nessuna trascrizione corrispondente",
-    "noResultsDesc": "Prova a modificare la ricerca o a rimuovere alcuni filtri."
+    "noResultsDesc": "Prova a modificare la ricerca o a rimuovere alcuni filtri.",
+    "loadError": "Impossibile caricare le trascrizioni",
+    "loadErrorDesc": "Si è verificato un errore durante il caricamento dello storico. Riprova."
   },
   "jobDetail": {
     "backToHistory": "Torna alla cronologia",
