@@ -801,12 +801,22 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                             </div>
                             <div>
                               {isEditing ? (
-                                <div className="flex items-start gap-2 mb-2">
-                                  <span className="text-xs font-semibold text-primary/70 mt-2.5 shrink-0">Q</span>
-                                  <div className="flex-1 flex items-center gap-1.5">
-                                    <Textarea value={editingQAText} onChange={(e) => setEditingQAText(e.target.value)} className="rounded-lg text-sm min-h-[40px] resize-none flex-1" autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditQA(entry); } }} />
-                                    <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => handleEditQA(entry)} disabled={!editingQAText.trim()}><Check className="w-3.5 h-3.5" /></Button>
-                                    <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => { setEditingQAId(null); setEditingQAText(""); }}><X className="w-3.5 h-3.5" /></Button>
+                                <div className="space-y-2 mb-2">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs font-semibold text-primary/70 mt-2.5 shrink-0">Q</span>
+                                    <div className="flex-1 flex items-center gap-1.5">
+                                      <Textarea value={editingQAText} onChange={(e) => setEditingQAText(e.target.value)} className="rounded-lg text-sm min-h-[40px] resize-none flex-1" autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditQA(entry); } }} />
+                                      <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => handleEditQA(entry)} disabled={!editingQAText.trim()}><Check className="w-3.5 h-3.5" /></Button>
+                                      <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => { setEditingQAId(null); setEditingQAText(""); setEditingExtraSources([]); }}><X className="w-3.5 h-3.5" /></Button>
+                                    </div>
+                                  </div>
+                                  <div className="pl-5">
+                                    <QuestionExtraSourcesPicker
+                                      currentJobId={jobId}
+                                      value={editingExtraSources}
+                                      onChange={setEditingExtraSources}
+                                      max={5}
+                                    />
                                   </div>
                                 </div>
                               ) : (
