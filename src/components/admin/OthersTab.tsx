@@ -161,7 +161,20 @@ export default function OthersTab() {
           <CardTitle>{t("admin.others.title")}</CardTitle>
           <CardDescription>{t("admin.others.desc")}</CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={scanNow}
+            disabled={loading || scanning || bulkBusy}
+          >
+            {scanning ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
+            <span className="ml-1">{scanning ? t("admin.others.scanning") : t("admin.others.scanNow")}</span>
+          </Button>
           <Button
             variant="default"
             size="sm"
