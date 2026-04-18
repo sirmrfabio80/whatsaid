@@ -27,7 +27,7 @@ async function computeSourceHash(content: string): Promise<string> {
 }
 
 async function handleTranslateAll(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   apiKey: string,
   jobId: string,
   targetLang: string,
@@ -124,7 +124,7 @@ async function handleTranslateAll(
 // ─── summary_from_edit handler ───────────────────────────────────────────────
 
 async function handleSummaryFromEdit(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   apiKey: string,
   jobId: string,
 ) {
@@ -204,7 +204,7 @@ Rules:
 // ─── summary / custom handlers (original logic) ─────────────────────────────
 
 async function handleSummaryOrCustom(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   apiKey: string,
   jobId: string,
   outputType: "summary" | "custom",
