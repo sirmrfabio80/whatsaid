@@ -822,7 +822,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                               ) : (
                                 entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>
                               )}
-                              {entry.metadata?.extra_sources && entry.metadata.extra_sources.length > 0 && (
+                              {!isEditing && entry.metadata?.extra_sources && entry.metadata.extra_sources.length > 0 && (
                                 <div className="pl-5 mb-2 flex flex-wrap items-center gap-1.5">
                                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
                                     {t("jobResults.extraSources.usedLabel")}
