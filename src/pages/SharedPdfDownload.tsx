@@ -3,8 +3,9 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, FileText, Loader2, CheckCircle2 } from "lucide-react";
+import { Download, FileText, CheckCircle2 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
+import { InlineSpinner } from "@/components/ui/inline-spinner";
 
 type DownloadStatus = "loading" | "needsAuth" | "ready" | "downloading" | "done" | "error";
 
@@ -103,7 +104,7 @@ export default function SharedPdfDownload() {
         <CardContent className="pt-8 pb-8 px-6 text-center space-y-6">
           {status === "loading" && (
             <>
-              <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
+              <InlineSpinner size="lg" tone="primary" className="mx-auto" />
               <p className="text-sm text-muted-foreground">Checking secure download access…</p>
             </>
           )}
@@ -132,7 +133,7 @@ export default function SharedPdfDownload() {
 
           {status === "downloading" && (
             <>
-              <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
+              <InlineSpinner size="lg" tone="primary" className="mx-auto" />
               <p className="text-sm text-muted-foreground">Preparing your PDF…</p>
             </>
           )}
