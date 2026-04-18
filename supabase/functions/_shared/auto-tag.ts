@@ -1,4 +1,4 @@
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import type { SupabaseClient } from "./supabase.ts";
 import { AI_GATEWAY_URL } from "./ai-gateway.ts";
 import { TAGS_SYSTEM_PROMPT, buildTagsUserPrompt } from "./prompts.ts";
 
