@@ -131,3 +131,63 @@ export async function requireAdmin(
 
   return { ok: true, userId, adminClient };
 }
+
+/**
+ * Result of a `requireAuth` check.
+ *
+ * - `ok: true` — the caller is authenticated. Includes the resolved `userId`,
+ *   `email` (may be null for some auth providers), and the JWT-bound
+ *   `userClient` so subsequent queries run under the caller's RLS.
+ * - `ok: false` — auth failed. Includes a fully-formed 401 `Response`.
+ *
+ * Note: this helper does NOT return a service-role client. Callers that need
+ * to bypass RLS (e.g. service-managed tables) should call `createServiceClient()`
+ * separately — keeping the privilege escalation explicit at the call site.
+ */
+export type RequireAuthResult =
+  | { ok: true; userId: string; email: string | null; userClient: SupabaseClient }
+  | { ok: false; response: Response };
+
+/**
+ * Verify that the request carries a valid user JWT.
+ *
+ * Performs:
+ *   1. `Authorization: Bearer <jwt>` presence check
+ *   2. `userClient.auth.getUser()` to resolve and validate the caller
+ *
+ * Returns a discriminated union so callers can early-return the prepared
+ * 401 response without re-implementing CORS or status handling:
+ *
+ * ```ts
+ * const auth = await requireAuth(req.headers.get("Authorization"));
+ * if (!auth.ok) return auth.response;
+ * const { userId, email, userClient } = auth;
+ * ```
+ *
+ * Use this for any non-admin endpoint that needs to know who the caller is.
+ * For admin-gated endpoints, use `requireAdmin` instead.
+ */
+export async function requireAuth(
+  authHeader: string | null,
+): Promise<RequireAuthResult> {
+  // Lazy import to avoid a circular dep if cors.ts ever imports from here.
+  const { corsHeaders } = await import("./cors.ts");
+  const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
+  const unauthorized = (): RequireAuthResult => ({
+    ok: false,
+    response: new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: jsonHeaders,
+    }),
+  });
+
+  if (!authHeader) return unauthorized();
+
+  const userClient = createUserClient(authHeader);
+  const { data: { user }, error } = await userClient.auth.getUser();
+  if (error || !user) return unauthorized();
+
+  return { ok: true, userId: user.id, email: user.email ?? null, userClient };
+}
+
