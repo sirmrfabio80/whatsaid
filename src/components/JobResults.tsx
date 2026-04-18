@@ -21,6 +21,8 @@ import ParticipantsPanel from "@/components/ParticipantsPanel";
 import { toast } from "sonner";
 import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/speaker-identification";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
+import { LoadingState } from "@/components/ui/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
