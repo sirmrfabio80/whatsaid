@@ -9,14 +9,14 @@ import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Timer, MapPin, Type, BookOpen } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import JobResults from "@/components/JobResults";
-import type { JobMeta } from "@/components/JobResults";
+import type { JobMeta } from "@/types/job";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRecordedDate, formatRecordedTime, toLocalDate, replaceDate, replaceTime } from "@/lib/recorded-date";
 import { parseISO6709, formatCoordinates, mapsUrl, reverseGeocode } from "@/lib/location";
 import JobDetailTags from "@/components/JobDetailTags";
-import { parseSegments } from "@/components/TranscriptEditor";
+import { parseSegments } from "@/lib/transcript";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
