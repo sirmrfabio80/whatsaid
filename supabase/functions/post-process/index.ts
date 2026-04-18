@@ -3,6 +3,7 @@ import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { markJobFailed } from "../_shared/job-failure.ts";
 
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
@@ -182,36 +183,8 @@ Rules:
 
     // Try to mark job as failed and insert failure notification
     try {
-      const supabase = createServiceClient();
       const body = await req.clone().json().catch(() => ({}));
-      if (body.job_id) {
-        await supabase
-          .from("jobs")
-           .update({
-            status: "failed",
-            error_message: sanitizeErrorForClient(error),
-          })
-          .eq("id", body.job_id);
-
-        // Insert failure notification
-        const { data: failedJob } = await supabase
-          .from("jobs")
-          .select("user_id, title, file_name")
-          .eq("id", body.job_id)
-          .single();
-
-        if (failedJob?.user_id) {
-          await supabase.from("notifications").insert({
-            user_id: failedJob.user_id,
-            type: "job_failed",
-            title: failedJob.title || failedJob.file_name || "Transcription",
-            description: sanitizeErrorForClient(error),
-            status: "error",
-            resource_type: "job",
-            resource_id: body.job_id,
-          });
-        }
-      }
+      await markJobFailed(createServiceClient(), body.job_id, error, { notify: true });
     } catch {
       // ignore cleanup errors
     }

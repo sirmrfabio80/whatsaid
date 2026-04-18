@@ -1,6 +1,7 @@
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { markJobFailed } from "../_shared/job-failure.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -140,17 +141,8 @@ Deno.serve(async (req) => {
 
     // Mark job as failed
     try {
-      const supabase = createServiceClient();
       const body = await req.clone().json().catch(() => ({}));
-      if (body.job_id) {
-        await supabase
-          .from("jobs")
-           .update({
-            status: "failed",
-            error_message: sanitizeErrorForClient(error),
-          })
-          .eq("id", body.job_id);
-      }
+      await markJobFailed(createServiceClient(), body.job_id, error);
     } catch {
       // ignore
     }
