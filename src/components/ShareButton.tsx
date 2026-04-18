@@ -18,6 +18,7 @@ interface ShareButtonProps {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ACCEPT_HINT_STORAGE_KEY = "share-email-autocomplete-hint-dismissed";
 
 async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Promise<string | null> {
   try {
@@ -39,12 +40,13 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
 
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
-  handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
+  handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients, showAcceptHint, onAcceptSuggestion,
 }: {
   email: string; setEmail: (v: string) => void; isValid: boolean;
   sending: boolean; sent: boolean; sendingRecord: boolean; sentRecord: boolean;
   handleSendEmail: () => void; handleShareRecord: () => void;
   t: (k: string) => string; autoFocusInput?: boolean; recentRecipients: string[];
+  showAcceptHint: boolean; onAcceptSuggestion: () => void;
 }) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +77,7 @@ function ShareContent({
     if (el && el.selectionStart !== cur.length) return false;
     const full = cur + sug;
     setEmail(full);
+    onAcceptSuggestion();
     requestAnimationFrame(() => {
       const node = inputRef.current;
       if (node) {
@@ -93,10 +96,12 @@ function ShareContent({
     if (!el) return;
     const onBeforeInput = (ev: Event) => {
       const e = ev as InputEvent;
-      const data = e.data;
+      const data = typeof e.data === "string" ? e.data.replace(/\u00a0/g, " ") : e.data;
       const isSpaceInsert =
         (e.inputType === "insertText" || e.inputType === "insertCompositionText") &&
-        data === " ";
+        typeof data === "string" &&
+        data.length > 0 &&
+        data.trim() === "";
       if (isSpaceInsert && suggestionRef.current) {
         if (acceptIfPossible()) {
           e.preventDefault();
@@ -125,7 +130,8 @@ function ShareContent({
           <Input
             id="share-email"
             ref={inputRef}
-            type="email"
+            type="text"
+            inputMode="email"
             placeholder={t("share.emailPlaceholder")}
             value={email}
             onChange={(e) => {
@@ -163,8 +169,11 @@ function ShareContent({
             disabled={sending || sent || sendingRecord || sentRecord}
             autoFocus={autoFocusInput}
             autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
             spellCheck={false}
             aria-autocomplete="inline"
+            enterKeyHint="send"
           />
           {showGhost && (
             <div
@@ -176,6 +185,11 @@ function ShareContent({
             </div>
           )}
         </div>
+        {showAcceptHint && (
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            {t("share.spaceToAcceptHint")}
+          </p>
+        )}
       </div>
 
       {/* Action: Send by email */}
@@ -223,6 +237,10 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const [sendingRecord, setSendingRecord] = useState(false);
   const [sentRecord, setSentRecord] = useState(false);
   const [recentRecipients, setRecentRecipients] = useState<string[]>([]);
+  const [hasDismissedAcceptHint, setHasDismissedAcceptHint] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(ACCEPT_HINT_STORAGE_KEY) === "1";
+  });
 
   const isValid = EMAIL_RE.test(email.trim());
 
@@ -299,6 +317,16 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     }
   };
 
+  const handleAcceptSuggestion = () => {
+    if (hasDismissedAcceptHint) return;
+    setHasDismissedAcceptHint(true);
+    try {
+      window.localStorage.setItem(ACCEPT_HINT_STORAGE_KEY, "1");
+    } catch {
+      // silent
+    }
+  };
+
   const trigger = (
     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" disabled={disabled}>
       <Share2 className="w-3.5 h-3.5" />
@@ -309,6 +337,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const contentProps = {
     email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
     handleSendEmail, handleShareRecord, t, autoFocusInput: !isMobile, recentRecipients,
+    showAcceptHint: !hasDismissedAcceptHint && open && email.length > 0,
+    onAcceptSuggestion: handleAcceptSuggestion,
   };
 
   if (isMobile) {
