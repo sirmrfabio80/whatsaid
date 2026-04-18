@@ -110,7 +110,12 @@ Rules:
 
       const customUserPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
 
-      const customContent = await callAI(LOVABLE_API_KEY, MODEL_CUSTOM, customSystemPrompt, customUserPrompt);
+      const customContent = await callAiGateway({
+        apiKey: LOVABLE_API_KEY,
+        model: MODEL_CUSTOM,
+        system: customSystemPrompt,
+        user: customUserPrompt,
+      });
       console.log(`[post-process] Custom output generated for job ${job_id}`);
 
       await supabase.from("job_outputs").insert({
