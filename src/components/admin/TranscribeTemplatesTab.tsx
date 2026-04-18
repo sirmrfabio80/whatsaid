@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { LoadingState } from "@/components/ui/loading-state";
 import {
   Card,
   CardContent,
@@ -302,12 +303,7 @@ export default function TranscribeTemplatesTab() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-2">
-        <div className="h-6 w-48 bg-muted/60 rounded animate-pulse" />
-        <div className="h-32 w-full bg-muted/40 rounded animate-pulse" />
-      </div>
-    );
+    return <LoadingState rows={1} titleWidth="w-48" rowHeight="h-32" />;
   }
 
   return (
