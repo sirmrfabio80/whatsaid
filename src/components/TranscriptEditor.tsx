@@ -17,7 +17,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { parseSegments, type Segment, type SpeakerSuggestion } from "@/lib/transcript";
+import {
+  parseSegments,
+  reconstructContent,
+  getUniqueSpeakers,
+  formatSegmentTimestamp,
+  type Segment,
+  type SpeakerSuggestion,
+} from "@/lib/transcript";
+import { escapeRegExp } from "@/lib/string-utils";
 
 interface TranscriptEditorProps {
   content: string;
@@ -32,25 +40,6 @@ interface TranscriptEditorProps {
   onEditedIdsChange?: (ids: Set<string>) => void;
   onCreateSpeaker?: () => string | null;
   readOnly?: boolean;
-}
-
-function formatTimestamp(ts: string): string {
-  const clean = ts.replace(/[\[\]]/g, "");
-  return clean.startsWith("00:") ? clean.slice(3) : clean;
-}
-
-function reconstructContent(segments: Segment[]): string {
-  return segments.map((s) => {
-    const prefix = s.timestamp ? `${s.timestamp} ` : "";
-    if (s.speaker) return `${prefix}${s.speaker}: ${s.text}`;
-    return s.text || s.raw;
-  }).join("\n");
-}
-
-function getUniqueSpeakers(segments: Segment[]): string[] {
-  const speakers = new Set<string>();
-  segments.forEach((s) => { if (s.speaker) speakers.add(s.speaker); });
-  return [...speakers];
 }
 
 function applySpeakerNamesToText(text: string, speakerNames: Record<string, string>): string {
