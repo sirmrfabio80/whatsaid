@@ -686,7 +686,14 @@
       "dismiss": "Dismiss",
       "renamed": "Tag renamed",
       "deleted": "Tag deleted",
-      "dismissed": "Flag dismissed"
+      "dismissed": "Flag dismissed",
+      "fix": "Fix",
+      "fixAll": "Fix all",
+      "fixing": "Fixing…",
+      "fixedCount": "Fixed {{count}} tag(s)",
+      "fixSomeErrors": "Fixed {{fixed}}, {{errors}} error(s)",
+      "fixConfirmTitle": "Fix all flagged tags?",
+      "fixConfirmDesc": "This will translate {{count}} tag(s) to English and seed the original text as a translation in the detected source language."
     }
   }
 }
