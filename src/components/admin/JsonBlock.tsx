@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, ChevronDown, ChevronRight } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 
 interface JsonBlockProps {
   data: unknown;

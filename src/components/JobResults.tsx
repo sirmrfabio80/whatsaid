@@ -44,7 +44,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
   const [meta, setMeta] = useState<JobMeta | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { copiedId, copyWithId } = useCopyToClipboard();
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [outputLang, setOutputLang] = useState<string>("");
   const [regeneratingLang, setRegeneratingLang] = useState(false);
@@ -335,7 +335,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     }
   };
 
-  const handleCopy = async (content: string, id: string) => { await navigator.clipboard.writeText(content); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
+  const handleCopy = (content: string, id: string) => copyWithId(content, id);
 
   const handleTranscriptSave = async (newContent: string) => {
     if (!transcript) return;
