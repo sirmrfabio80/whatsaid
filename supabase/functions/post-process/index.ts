@@ -3,6 +3,12 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 import { markJobFailed } from "../_shared/job-failure.ts";
+import {
+  buildSummarySystemPrompt,
+  buildSummaryUserPrompt,
+  buildCustomUserPrompt,
+  CUSTOM_OUTPUT_SYSTEM_PROMPT,
+} from "../_shared/prompts.ts";
 
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
@@ -61,37 +67,13 @@ Deno.serve(async (req) => {
 
     // Build language instruction — ALWAYS specify output language
     const langLabel = detectedLang || "en";
-    const languageInstruction = `\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST write the ENTIRE output in ${langLabel}. Every heading, every bullet point, every sentence must be in ${langLabel}. Do NOT use English unless ${langLabel} IS English. This is mandatory and non-negotiable.`;
 
     // 2. Generate summary with structured sections
-    const summarySystemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries designed to be easy to scan and share.
-
-Your output MUST use the following markdown structure with exactly these section headings (translate the heading names into the output language):
-
-## Overview
-A concise 2-3 paragraph summary of what was discussed and the overall outcome.
-
-## Key Points
-A bullet list of the most important facts or information shared. Keep each point to 1-2 sentences.
-
-## Decisions & Next Steps
-A bullet list of decisions made, action items, follow-ups, or next steps. Include who is responsible and any dates mentioned.
-
-## Terms to Know
-A bullet list of specialised or technical terms with brief plain-language explanations. Only include this section if there are terms a non-specialist would find unclear. Omit entirely if not needed.
-
-Rules:
-- Use markdown: ## for headings, - for bullets, **bold** for emphasis.
-- Be factual and precise. Do not invent information.
-- Keep bullet points concise and scannable.${languageInstruction}`;
-
-    const summaryPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
-
     const summaryContent = await callAiGateway({
       apiKey: LOVABLE_API_KEY,
       model: MODEL_SUMMARY,
-      system: summarySystemPrompt,
-      user: summaryPrompt,
+      system: buildSummarySystemPrompt(langLabel),
+      user: buildSummaryUserPrompt(transcript),
     });
     console.log(`[post-process] Summary generated for job ${job_id}`);
 
@@ -104,15 +86,11 @@ Rules:
 
     // 4. Generate custom prompt output (if provided)
     if (custom_prompt && custom_prompt.trim()) {
-      const customSystemPrompt = `You are a professional analysis assistant. The user has provided a transcript and a custom instruction. Apply the instruction to the transcript and produce a clear, well-structured response. Be factual and precise. Do not invent information not present in the transcript.`;
-
-      const customUserPrompt = `Instruction: ${custom_prompt}\n\nTranscript:\n${transcript}`;
-
       const customContent = await callAiGateway({
         apiKey: LOVABLE_API_KEY,
         model: MODEL_CUSTOM,
-        system: customSystemPrompt,
-        user: customUserPrompt,
+        system: CUSTOM_OUTPUT_SYSTEM_PROMPT,
+        user: buildCustomUserPrompt(custom_prompt, transcript),
       });
       console.log(`[post-process] Custom output generated for job ${job_id}`);
 
