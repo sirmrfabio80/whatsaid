@@ -41,3 +41,43 @@ export function parseSegments(content: string): Segment[] {
     return { id, index, speaker: null, text: afterTs, raw: line, timestamp };
   });
 }
+
+/**
+ * Inverse of `parseSegments` — serializes a list of segments back to the
+ * canonical transcript text format.
+ */
+export function reconstructContent(segments: Segment[]): string {
+  return segments
+    .map((s) => {
+      const prefix = s.timestamp ? `${s.timestamp} ` : "";
+      if (s.speaker) return `${prefix}${s.speaker}: ${s.text}`;
+      return s.text || s.raw;
+    })
+    .join("\n");
+}
+
+/**
+ * Returns the de-duplicated list of speaker labels present in a list of
+ * segments, preserving first-seen order.
+ */
+export function getUniqueSpeakers(segments: Segment[]): string[] {
+  const speakers = new Set<string>();
+  segments.forEach((s) => {
+    if (s.speaker) speakers.add(s.speaker);
+  });
+  return [...speakers];
+}
+
+/** Convenience: parse a raw transcript string and return its unique speaker labels. */
+export function getUniqueSpeakersFromContent(content: string): string[] {
+  return getUniqueSpeakers(parseSegments(content));
+}
+
+/**
+ * Format a `[HH:MM:SS]` segment timestamp for display: strips brackets and
+ * drops a leading `00:` hours component when present (e.g. `[00:01:23]` → `01:23`).
+ */
+export function formatSegmentTimestamp(ts: string): string {
+  const clean = ts.replace(/[\[\]]/g, "");
+  return clean.startsWith("00:") ? clean.slice(3) : clean;
+}
