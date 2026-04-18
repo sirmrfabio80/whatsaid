@@ -10,16 +10,11 @@ import { buildTxt } from "@/lib/export-txt";
 import { buildJson } from "@/lib/export-json";
 import { exportDocx } from "@/lib/export";
 import { useNotifications } from "@/contexts/NotificationsContext";
+import { downloadString } from "@/lib/download";
 
 type ExportFormat = "txt" | "json" | "doc" | "pdf";
 
 interface ExportButtonProps { data: CanonicalExportData | null; disabled?: boolean; sourceJobId?: string; }
-
-function downloadString(content: string, filename: string, mime: string) {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
-}
 
 export default function ExportButton({ data, disabled, sourceJobId }: ExportButtonProps) {
   const { t } = useTranslation();

@@ -17,7 +17,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { parseSegments, type Segment, type SpeakerSuggestion } from "@/lib/transcript";
+import {
+  parseSegments,
+  reconstructContent,
+  getUniqueSpeakers,
+  formatSegmentTimestamp,
+  type Segment,
+  type SpeakerSuggestion,
+} from "@/lib/transcript";
+import { escapeRegExp } from "@/lib/string-utils";
 
 interface TranscriptEditorProps {
   content: string;
@@ -32,25 +40,6 @@ interface TranscriptEditorProps {
   onEditedIdsChange?: (ids: Set<string>) => void;
   onCreateSpeaker?: () => string | null;
   readOnly?: boolean;
-}
-
-function formatTimestamp(ts: string): string {
-  const clean = ts.replace(/[\[\]]/g, "");
-  return clean.startsWith("00:") ? clean.slice(3) : clean;
-}
-
-function reconstructContent(segments: Segment[]): string {
-  return segments.map((s) => {
-    const prefix = s.timestamp ? `${s.timestamp} ` : "";
-    if (s.speaker) return `${prefix}${s.speaker}: ${s.text}`;
-    return s.text || s.raw;
-  }).join("\n");
-}
-
-function getUniqueSpeakers(segments: Segment[]): string[] {
-  const speakers = new Set<string>();
-  segments.forEach((s) => { if (s.speaker) speakers.add(s.speaker); });
-  return [...speakers];
 }
 
 function applySpeakerNamesToText(text: string, speakerNames: Record<string, string>): string {
@@ -82,9 +71,6 @@ function generateSegId(): string {
   return `seg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 /** Render text with highlighted matches; flags the active match with a stronger style. */
 function renderHighlighted(
@@ -711,7 +697,7 @@ export default function TranscriptEditor({
                     )}
                     {seg.timestamp && (
                       <span className="text-[11px] text-muted-foreground/60 font-mono tabular-nums whitespace-nowrap select-none">
-                        {formatTimestamp(seg.timestamp)}
+                        {formatSegmentTimestamp(seg.timestamp)}
                       </span>
                     )}
                   </div>
@@ -923,7 +909,7 @@ export default function TranscriptEditor({
                   ) : null}
                   {seg.timestamp && (
                     <span className="text-[11px] text-muted-foreground/60 font-mono tabular-nums whitespace-nowrap select-none">
-                      {formatTimestamp(seg.timestamp)}
+                      {formatSegmentTimestamp(seg.timestamp)}
                     </span>
                   )}
                 </div>

@@ -4,17 +4,7 @@ import { CheckCircle2, XCircle, Info, FileText, Loader2, X, RotateCw } from "luc
 import { useNotifications, type AppNotification } from "@/contexts/NotificationsContext";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
+import { timeAgo } from "@/lib/time-format";
 
 const statusIcons: Record<string, React.ReactNode> = {
   success: <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" />,

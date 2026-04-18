@@ -18,7 +18,7 @@ import SpeakerChips from "@/components/SpeakerChips";
 import SpeakerIdentificationBanner from "@/components/SpeakerIdentificationBanner";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import TranscriptEditor from "@/components/TranscriptEditor";
-import { parseSegments, type SpeakerSuggestion } from "@/lib/transcript";
+import { parseSegments, getUniqueSpeakersFromContent, type SpeakerSuggestion } from "@/lib/transcript";
 import type { JobMeta } from "@/types/job";
 import ParticipantsPanel from "@/components/ParticipantsPanel";
 import { toast } from "sonner";
@@ -30,11 +30,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
-
-function parseSpeakers(text: string): string[] {
-  const segments = parseSegments(text);
-  return [...new Set(segments.map((segment) => segment.speaker).filter((speaker): speaker is string => Boolean(speaker)))];
-}
 
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
   const { t } = useTranslation();
@@ -175,7 +170,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const handleResetSpeakerNames = async () => { setSpeakerNames({}); await supabase.from("jobs").update({ speaker_names: {} }).eq("id", jobId); };
 
   const handleAddSpeaker = () => {
-    const allExisting = [...(transcript ? parseSpeakers(transcript.content) : []), ...extraSpeakers];
+    const allExisting = [...(transcript ? getUniqueSpeakersFromContent(transcript.content) : []), ...extraSpeakers];
     const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
     let next = "A";
     for (let i = 0; i < 26; i++) {
@@ -422,13 +417,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   const transcript = outputs.find((o) => o.output_type === "transcript");
   const summary = outputs.find((o) => o.output_type === "summary");
-  const speakers = transcript ? parseSpeakers(transcript.content) : [];
+  const speakers = transcript ? getUniqueSpeakersFromContent(transcript.content) : [];
   const allSpeakers = [...new Set([...speakers, ...extraSpeakers])];
 
   // Wire up createAndAssign now that transcript is available
   createSpeakerRef.current = () => {
     if (!transcript) return null;
-    const allExisting = [...parseSpeakers(transcript.content), ...extraSpeakers];
+    const allExisting = [...getUniqueSpeakersFromContent(transcript.content), ...extraSpeakers];
     const usedLetters = new Set(allExisting.map((s) => { const m = s.match(/^Speaker ([A-Z])$/); return m ? m[1] : null; }).filter(Boolean));
     let next = "A";
     for (let i = 0; i < 26; i++) {
