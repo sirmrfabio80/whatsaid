@@ -1,8 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
-import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
+import { AiGatewayError, callAiGateway } from "../_shared/ai-gateway.ts";
 
-const AI_GATEWAY = AI_GATEWAY_URL;
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
 const MODEL_TRANSLATE = "google/gemini-2.5-flash";
@@ -14,19 +13,8 @@ function extractShortSummary(summaryContent: string): string {
   return plain.slice(0, 200);
 }
 
-async function callAI(apiKey: string, model: string, system: string, user: string): Promise<string> {
-  const res = await fetch(AI_GATEWAY, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
-  });
-
-  if (res.status === 429) throw Object.assign(new Error("Rate limit exceeded. Please try again later."), { statusCode: 429 });
-  if (res.status === 402) throw Object.assign(new Error("AI credits exhausted. Please add funds."), { statusCode: 402 });
-  if (!res.ok) { const t = await res.text(); throw new Error(`AI gateway error [${res.status}]: ${t}`); }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+function callAI(apiKey: string, model: string, system: string, user: string): Promise<string> {
+  return callAiGateway({ apiKey, model, system, user });
 }
 
 // ─── translate_all handler ───────────────────────────────────────────────────
@@ -408,7 +396,8 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    const statusCode = (error as { statusCode?: number }).statusCode;
+    const aiStatus = error instanceof AiGatewayError ? error.status : undefined;
+    const statusCode = aiStatus ?? (error as { statusCode?: number }).statusCode;
     const status = statusCode && statusCode >= 400 && statusCode < 600 ? statusCode : 500;
     console.error(`[regenerate] Error:`, error);
     return new Response(
