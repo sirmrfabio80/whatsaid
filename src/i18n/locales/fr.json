@@ -252,7 +252,9 @@
     "removeTag": "Supprimer le tag",
     "clearAll": "Tout effacer",
     "noResults": "Aucune transcription correspondante",
-    "noResultsDesc": "Essayez d'ajuster votre recherche ou de supprimer certains filtres."
+    "noResultsDesc": "Essayez d'ajuster votre recherche ou de supprimer certains filtres.",
+    "loadError": "Impossible de charger vos transcriptions",
+    "loadErrorDesc": "Une erreur s'est produite lors du chargement de votre historique. Veuillez réessayer."
   },
   "jobDetail": {
     "backToHistory": "Retour à l'historique",
