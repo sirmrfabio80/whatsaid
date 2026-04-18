@@ -1,5 +1,5 @@
 import { withExtraAllowedHeaders } from '../_shared/cors.ts'
-import { createServiceClient } from '../_shared/supabase.ts'
+import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
 
 // `x-share-token` is the share-link token passed for unauthenticated lookups.
 const corsHeaders = withExtraAllowedHeaders('x-share-token')
