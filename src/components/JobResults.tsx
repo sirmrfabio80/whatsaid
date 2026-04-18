@@ -66,6 +66,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [questionGenCount, setQuestionGenCount] = useState(0);
   const [editingQAId, setEditingQAId] = useState<string | null>(null);
   const [editingQAText, setEditingQAText] = useState("");
+  const [editingExtraSources, setEditingExtraSources] = useState<ExtraSource[]>([]);
   const [regeneratingQAId, setRegeneratingQAId] = useState<string | null>(null);
   const [useExtraSources, setUseExtraSources] = useState(false);
   const [extraSources, setExtraSources] = useState<ExtraSource[]>([]);
