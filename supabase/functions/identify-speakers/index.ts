@@ -7,7 +7,6 @@ import {
   buildSpeakerVerifierUserPrompt,
 } from "../_shared/prompts.ts";
 
-const AI_GATEWAY = AI_GATEWAY_URL;
 const AI_MODEL = "google/gemini-2.5-flash";
 
 // ---- Expanded stopwords: common words that are never person names ----
