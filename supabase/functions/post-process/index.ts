@@ -89,7 +89,12 @@ Rules:
 
     const summaryPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
 
-    const summaryContent = await callAI(LOVABLE_API_KEY, MODEL_SUMMARY, summarySystemPrompt, summaryPrompt);
+    const summaryContent = await callAiGateway({
+      apiKey: LOVABLE_API_KEY,
+      model: MODEL_SUMMARY,
+      system: summarySystemPrompt,
+      user: summaryPrompt,
+    });
     console.log(`[post-process] Summary generated for job ${job_id}`);
 
     // 3. Insert summary output
