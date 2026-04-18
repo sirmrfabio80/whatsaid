@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Share2, Mail, Link2, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,43 +35,6 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
     console.error("PDF generation failed:", err);
     return null;
   }
-}
-
-/**
- * Tracks the iOS/Android virtual keyboard via window.visualViewport and
- * exposes its height as the CSS variable `--keyboard-inset` on <html>.
- * The bottom sheet uses this to lift itself above the keyboard.
- *
- * Best-practice notes:
- * - layout viewport doesn't shrink on iOS Safari → must use visualViewport
- * - listen for resize + scroll (iOS fires scroll when keyboard animates)
- * - clean up on unmount and reset the variable to 0
- */
-function KeyboardInsetTracker() {
-  useEffect(() => {
-    const vv = typeof window !== "undefined" ? window.visualViewport : null;
-    if (!vv) return;
-
-    const root = document.documentElement;
-    const update = () => {
-      // Distance between visual viewport bottom and layout viewport bottom.
-      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      root.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
-    };
-
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    window.addEventListener("orientationchange", update);
-
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-      window.removeEventListener("orientationchange", update);
-      root.style.setProperty("--keyboard-inset", "0px");
-    };
-  }, []);
-  return null;
 }
 
 function ShareContent({
@@ -314,10 +277,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         <SheetTrigger asChild>{trigger}</SheetTrigger>
         <SheetContent
           side="bottom"
-          className="p-0 rounded-t-xl max-h-[90dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-          style={{ bottom: `var(--keyboard-inset, 0px)` }}
+          className="p-0 rounded-t-xl max-h-[90dvh] overflow-y-auto"
         >
-          <KeyboardInsetTracker />
           <ShareContent {...contentProps} />
         </SheetContent>
       </Sheet>
