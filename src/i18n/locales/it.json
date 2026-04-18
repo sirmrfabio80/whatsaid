@@ -642,5 +642,19 @@
     "spoken": "Parlato",
     "share": "Quota",
     "noData": "Nessun dato di partecipazione disponibile"
+  },
+  "admin": {
+    "others": {
+      "title": "Revisione tag",
+      "desc": "Tag generati dall'IA che potrebbero non essere in inglese. Rinomina, elimina o ignora.",
+      "empty": "Niente da rivedere",
+      "emptyDesc": "Tutti i tag IA recenti sembrano corretti.",
+      "rename": "Rinomina",
+      "save": "Salva",
+      "dismiss": "Ignora",
+      "renamed": "Tag rinominato",
+      "deleted": "Tag eliminato",
+      "dismissed": "Segnalazione ignorata"
+    }
   }
 }

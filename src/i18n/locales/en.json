@@ -674,5 +674,19 @@
     "spoken": "Spoken",
     "share": "Share",
     "noData": "No participation data available"
+  },
+  "admin": {
+    "others": {
+      "title": "Tag review",
+      "desc": "AI-generated tags that may not be in English. Rename, delete, or dismiss.",
+      "empty": "Nothing to review",
+      "emptyDesc": "All recent AI tags look clean.",
+      "rename": "Rename",
+      "save": "Save",
+      "dismiss": "Dismiss",
+      "renamed": "Tag renamed",
+      "deleted": "Tag deleted",
+      "dismissed": "Flag dismissed"
+    }
   }
 }

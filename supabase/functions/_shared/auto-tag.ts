@@ -182,9 +182,84 @@ export async function autoTag(
     if (!error) assigned++;
   }
 
+  // 10. Inline non-English detection — flag suspect AI tags for admin review
+  try {
+    const suspects = candidates.filter((c) => !looksEnglish(c.display));
+    if (suspects.length > 0) {
+      // Resolve tag IDs for the suspects
+      const suspectNorms = suspects.map((s) => s.normalized);
+      const { data: suspectRows } = await supabase
+        .from("tags")
+        .select("id, name, normalized_name")
+        .eq("user_id", userId)
+        .in("normalized_name", suspectNorms);
+
+      for (const row of suspectRows ?? []) {
+        const detected = guessLang(row.name);
+        // Use upsert keyed on tag_id where status='open' (partial unique index handles dedupe)
+        const { error: flagErr } = await supabase
+          .from("tag_quality_flags")
+          .insert({
+            tag_id: row.id,
+            tag_name: row.name,
+            detected_lang: detected,
+            status: "open",
+          });
+        if (flagErr && !flagErr.message?.includes("duplicate")) {
+          console.warn(`[auto-tag] flag insert failed for tag ${row.id}:`, flagErr.message);
+        }
+      }
+      if ((suspectRows ?? []).length > 0) {
+        console.log(`[auto-tag] flagged ${suspectRows!.length} non-English AI tag(s) for job=${jobId}`);
+      }
+    }
+  } catch (e) {
+    console.warn("[auto-tag] quality-flag pass failed:", e);
+  }
+
   console.log(
     `[auto-tag] job=${jobId} user=${userId} generated=${generated} reused=${reused} created=${created} assigned=${assigned}`
   );
 
   return { success: true, skipped: false, generated, reused, created, assigned };
+}
+
+/**
+ * Heuristic: does this tag look like English?
+ * - Only ASCII letters/spaces/hyphens/digits → almost certainly English (or untranslatable acronym)
+ * - Contains diacritics (à, é, ñ, ü, ç…) → likely non-English
+ * - Contains common non-English function words → non-English
+ */
+function looksEnglish(tag: string): boolean {
+  const t = tag.trim().toLowerCase();
+  if (!t) return true;
+
+  // Diacritics → non-English
+  if (/[àáâãäåèéêëìíîïòóôõöùúûüñçßœæ]/i.test(t)) return false;
+
+  // Common Italian / French / Spanish / German function words or fragments
+  const nonEnglishMarkers = [
+    /\b(di|del|della|degli|delle|al|alla|dei|sul|sulla|nel|nella|con|per|dal|dalla)\b/, // it
+    /\b(le|la|les|du|des|aux?|avec|pour|dans|chez|sur)\b/, // fr (some overlap with en handled below)
+    /\b(el|los|las|una?|con|por|para|del?)\b/, // es
+    /\b(der|die|das|den|dem|und|mit|für|nicht|aber)\b/, // de
+  ];
+  for (const re of nonEnglishMarkers) {
+    if (re.test(t)) return false;
+  }
+
+  // Pure ASCII letters / digits / space / hyphen → assume English
+  if (/^[a-z0-9 \-/&.]+$/i.test(t)) return true;
+
+  // Anything else → suspect
+  return false;
+}
+
+function guessLang(tag: string): string {
+  const t = tag.toLowerCase();
+  if (/[àèéìòóù]/.test(t) || /\b(di|del|della|degli|delle|alla|sulla)\b/.test(t)) return "it";
+  if (/[âêëïôœç]/.test(t) || /\b(le|les|du|des|avec|pour|chez)\b/.test(t)) return "fr";
+  if (/[ñ]/.test(t) || /\b(el|los|las|una|por|para)\b/.test(t)) return "es";
+  if (/[äöüß]/.test(t) || /\b(der|die|das|und|mit|für)\b/.test(t)) return "de";
+  return "unknown";
 }
