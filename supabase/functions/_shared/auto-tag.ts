@@ -182,35 +182,48 @@ export async function autoTag(
     if (!error) assigned++;
   }
 
-  // 10. Inline non-English detection — flag suspect AI tags for admin review
+  // 10. Non-English detection — LLM-classify ambiguous tags and flag non-English ones
   try {
-    const suspects = candidates.filter((c) => !looksEnglish(c.display));
-    if (suspects.length > 0) {
-      // Resolve tag IDs for the suspects
-      const suspectNorms = suspects.map((s) => s.normalized);
-      const { data: suspectRows } = await supabase
-        .from("tags")
-        .select("id, name, normalized_name")
-        .eq("user_id", userId)
-        .in("normalized_name", suspectNorms);
+    // Skip tags that are obviously English (pure ASCII without non-English markers AND no content
+    // signal needing a check). To avoid false negatives like "assistenza domiciliare" (pure ASCII,
+    // no function words but Italian content words), we now LLM-classify EVERY AI tag in one batch.
+    const toCheck = candidates;
+    if (toCheck.length > 0) {
+      const langMap = await classifyTagLanguages(
+        toCheck.map((c) => c.display),
+        apiKey,
+      );
 
-      for (const row of suspectRows ?? []) {
-        const detected = guessLang(row.name);
-        // Use upsert keyed on tag_id where status='open' (partial unique index handles dedupe)
-        const { error: flagErr } = await supabase
-          .from("tag_quality_flags")
-          .insert({
-            tag_id: row.id,
-            tag_name: row.name,
-            detected_lang: detected,
-            status: "open",
-          });
-        if (flagErr && !flagErr.message?.includes("duplicate")) {
-          console.warn(`[auto-tag] flag insert failed for tag ${row.id}:`, flagErr.message);
+      const nonEnglish = toCheck.filter((c) => {
+        const lang = langMap.get(c.display);
+        return lang && lang !== "en" && lang !== "unknown";
+      });
+
+      if (nonEnglish.length > 0) {
+        const suspectNorms = nonEnglish.map((s) => s.normalized);
+        const { data: suspectRows } = await supabase
+          .from("tags")
+          .select("id, name, normalized_name")
+          .eq("user_id", userId)
+          .in("normalized_name", suspectNorms);
+
+        for (const row of suspectRows ?? []) {
+          const detected = langMap.get(row.name) ?? guessLang(row.name);
+          const { error: flagErr } = await supabase
+            .from("tag_quality_flags")
+            .insert({
+              tag_id: row.id,
+              tag_name: row.name,
+              detected_lang: detected,
+              status: "open",
+            });
+          if (flagErr && !flagErr.message?.includes("duplicate")) {
+            console.warn(`[auto-tag] flag insert failed for tag ${row.id}:`, flagErr.message);
+          }
         }
-      }
-      if ((suspectRows ?? []).length > 0) {
-        console.log(`[auto-tag] flagged ${suspectRows!.length} non-English AI tag(s) for job=${jobId}`);
+        if ((suspectRows ?? []).length > 0) {
+          console.log(`[auto-tag] flagged ${suspectRows!.length} non-English AI tag(s) for job=${jobId}`);
+        }
       }
     }
   } catch (e) {
@@ -262,4 +275,85 @@ function guessLang(tag: string): string {
   if (/[ñ]/.test(t) || /\b(el|los|las|una|por|para)\b/.test(t)) return "es";
   if (/[äöüß]/.test(t) || /\b(der|die|das|und|mit|für)\b/.test(t)) return "de";
   return "unknown";
+}
+
+/**
+ * LLM-classify a batch of tags. Returns a Map<displayName, ISO 639-1 code>.
+ * Catches non-English tags whose words don't trip the regex heuristic
+ * (e.g. "assistenza domiciliare" — pure ASCII, no function words).
+ * Cheap: one batched call using gemini-2.5-flash-lite.
+ */
+export async function classifyTagLanguages(
+  tags: string[],
+  apiKey: string,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (tags.length === 0) return result;
+
+  try {
+    const res = await fetch(AI_GATEWAY_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You detect the language of short tags/labels. For each input tag return its ISO 639-1 lowercase code (e.g. 'en', 'it', 'fr', 'es', 'de'). For proper nouns, brand names, or untranslatable acronyms that exist in English, return 'en'. Use 'unknown' only when truly ambiguous.",
+          },
+          { role: "user", content: `Classify these tags:\n${JSON.stringify(tags)}` },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "return_languages",
+              description: "Return language codes per tag.",
+              parameters: {
+                type: "object",
+                properties: {
+                  results: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        tag: { type: "string" },
+                        lang: { type: "string" },
+                      },
+                      required: ["tag", "lang"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["results"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "return_languages" } },
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn("[classifyTagLanguages] AI error:", res.status);
+      return result;
+    }
+
+    const data = await res.json();
+    const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) return result;
+    const parsed = JSON.parse(args);
+    const items = Array.isArray(parsed.results) ? parsed.results : [];
+    for (const item of items) {
+      if (typeof item?.tag === "string" && typeof item?.lang === "string") {
+        result.set(item.tag, item.lang.trim().toLowerCase());
+      }
+    }
+  } catch (e) {
+    console.warn("[classifyTagLanguages] error:", e);
+  }
+
+  return result;
 }
