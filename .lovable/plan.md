@@ -1,55 +1,57 @@
 
 ## Goal
-Tags (AI-generated and manually created) must always display in the user's UI language (`profiles.ui_language`), in every place they appear — including the History page Tags filter.
-
-## Root cause
-The frontend pipeline (`useTranslatedTags` → `translate-tags` edge function) already exists and is wired into both `History.tsx` and `JobDetailTags.tsx`. It works correctly **as long as the stored tag name is English**, because `translate-tags` is hardcoded to assume English source. Two leaks break this:
-
-1. **AI-generated tags occasionally stored in non-English** — DB shows 4 Italian AI tags (e.g. "mobilità e automomia", "flessibilità oraria") slipped through despite the English-only system prompt. When the UI is in English, these stay Italian; when the UI is in Italian, the translator is asked to translate Italian-as-if-English → Italian and produces nonsense or no-op.
-2. **Manual tags stored in whatever language the user typed** — if an Italian user types "Riunione", an English user later sees "Riunione".
+Implement non-English AI tag detection + persistent tag translation cache, with the admin review surface labeled **"Others"** (instead of "Tag Quality").
 
 ## Plan
 
-### 1. Make the tag-translation edge function language-agnostic
-Rewrite the `translate-tags` system prompt so the model:
-- Auto-detects each tag's source language.
-- Translates into the requested `target_lang`.
-- Returns the tag unchanged if it's a proper noun, brand, acronym, or already in the target language.
+### 1. Database (migration)
+Create two new tables:
 
-This single change makes both AI and manual tags display correctly regardless of the language they were stored in.
+- **`tag_translations`** — global cache, keyed by `(normalized_name, target_lang)`
+  - `id uuid pk`, `normalized_name text`, `target_lang text`, `translated_name text`, `created_at timestamptz`
+  - Unique index on `(normalized_name, target_lang)`
+  - RLS: read for `authenticated`, write only for service role (edge functions)
 
-### 2. Tighten AI tag generation to enforce English canonical form
-Update `TAGS_SYSTEM_PROMPT` in `_shared/prompts.ts` to add an explicit, unambiguous instruction:
-> "Tags MUST be in English, even if the transcript is in another language. Translate concepts to English. Never output non-English words."
+- **`tag_quality_flags`** — log of AI tags that fail the English-only check
+  - `id uuid pk`, `tag_id uuid fk tags(id) on delete cascade`, `tag_name text`, `detected_lang text`, `status text default 'open'` (`open` | `resolved` | `dismissed`), `created_at timestamptz`, `resolved_at timestamptz`
+  - Unique index on `tag_id` (one open flag per tag)
+  - RLS: only admins (`has_role(auth.uid(), 'admin')`) can select/update
 
-Redeploy `post-process` (which calls `auto-tag`).
+- **Trigger on `tags`**: when `normalized_name` changes, delete matching rows in `tag_translations` to invalidate cache.
 
-### 3. Fix the cache key + lookup in `useTranslatedTags`
-Currently `displayMap.get(tag.name)` returns the translation keyed by the *original stored* name. That stays correct after change #1, but to be safer against duplicates and identity, key the cache by `${lang}:${name}` consistently (already done in `tag-translation.ts`). No frontend code change needed beyond verifying behavior.
+### 2. `translate-tags` edge function
+- Before calling AI gateway, look up each `(normalized_name, target_lang)` in `tag_translations`.
+- Only send the cache-miss subset to the AI.
+- Insert returned translations into `tag_translations` (upsert on conflict do nothing).
+- Same response shape — no frontend change needed.
 
-### 4. Backfill the 4 stray Italian AI tags
-One-off data fix: rewrite the 4 known Italian AI tags to their English canonical form so they merge cleanly with existing English tags (avoids duplicates like "informazioni mediche" vs "medical information"):
+### 3. `auto-tag.ts` (inline detection)
+- After AI returns tags, run a lightweight English-only classifier (regex/charset heuristic + fallback to a tiny AI gateway call only if ambiguous) on each tag.
+- For any tag classified as non-English, insert a row into `tag_quality_flags` (status `open`).
+- Tags still get stored normally — flagging is non-blocking.
 
-```
-mobilità e automomia       → mobility and autonomy
-flessibilità oraria        → schedule flexibility
-richiesta disponibilità    → availability request
-disponibilità posto        → spot availability
-informazioni mediche       → medical information
-```
+### 4. Admin UI — new "Others" tab
+- **`src/components/admin/OthersTab.tsx`** (new): lists open `tag_quality_flags` joined with `tags`, with actions:
+  - **Rename** (inline input → updates `tags.name` + `normalized_name`, resolves flag)
+  - **Delete** (removes tag + cascades flag)
+  - **Dismiss** (sets flag `status = 'dismissed'`)
+- **`src/pages/Admin.tsx`**: add third tab `<TabsTrigger value="others">Others</TabsTrigger>` with `<OthersTab />`.
 
-(Done as an `INSERT`-tool data update; if any English equivalent already exists for a user, re-point that user's `job_tags` to the existing tag and delete the Italian duplicate.)
+### 5. i18n
+Add minimal strings under `admin.others.*` in `en.json`, `fr.json`, `it.json` (tab label, column headers, action buttons, empty state).
 
-### 5. Verify History filter coverage
-`HistoryFilters.tsx` already renders `tag.displayName ?? tag.name` in dropdown, suggestions, and selected chips — so once #1 + #2 land, the filter will show translated names automatically. No component change needed.
+### 6. Deploy
+Redeploy `translate-tags`, `post-process` (which calls `auto-tag`).
 
 ## Files touched
-- `supabase/functions/translate-tags/index.ts` — language-agnostic prompt
-- `supabase/functions/_shared/prompts.ts` — stricter "English only" rule for AI tags
-- Data migration via insert tool — backfill 5 Italian tag rows
-- Redeploy: `translate-tags`, `post-process`
+- Migration: `tag_translations`, `tag_quality_flags`, invalidation trigger, RLS policies
+- `supabase/functions/translate-tags/index.ts` — cache read/write
+- `supabase/functions/_shared/auto-tag.ts` — inline detection + flag insert
+- `src/components/admin/OthersTab.tsx` — new
+- `src/pages/Admin.tsx` — add "Others" tab
+- `src/i18n/locales/{en,fr,it}.json` — admin.others.* strings
 
-## Out of scope (per guardrails)
-- No changes to tag CRUD UX, tag colors, tag source field.
-- No schema change (no new "canonical_name" column) — keeping the change minimal and low-risk.
-- No changes to record data or unrelated filters.
+## Out of scope
+- Per-user cache (using global)
+- TTL expiration (manual purge only via tag rename trigger)
+- Bulk re-translation jobs
