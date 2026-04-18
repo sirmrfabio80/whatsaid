@@ -396,7 +396,8 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    const statusCode = (error as { statusCode?: number }).statusCode;
+    const aiStatus = error instanceof AiGatewayError ? error.status : undefined;
+    const statusCode = aiStatus ?? (error as { statusCode?: number }).statusCode;
     const status = statusCode && statusCode >= 400 && statusCode < 600 ? statusCode : 500;
     console.error(`[regenerate] Error:`, error);
     return new Response(
