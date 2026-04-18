@@ -1,6 +1,12 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { AiGatewayError, callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient, type SupabaseClient } from "../_shared/supabase.ts";
+import {
+  buildSummarySystemPrompt,
+  buildSummaryUserPrompt,
+  buildCustomUserPrompt,
+  CUSTOM_OUTPUT_SYSTEM_PROMPT,
+} from "../_shared/prompts.ts";
 
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
