@@ -1,5 +1,5 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders as baseCorsHeaders } from '../_shared/cors.ts'
+import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
 
 // Augment shared CORS with Content-Disposition exposure so the browser can
 // read the suggested filename when streaming the PDF back to the client.
@@ -23,13 +23,8 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization') ?? ''
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
+    const userClient = createUserClient(authHeader)
 
     const {
       data: { user },
@@ -54,7 +49,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+    const serviceClient = createServiceClient()
 
     const { data: share } = await serviceClient
       .from('transcript_shares')

@@ -1,6 +1,6 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AiGatewayError, callAiGateway } from "../_shared/ai-gateway.ts";
+import { createServiceClient, type SupabaseClient } from "../_shared/supabase.ts";
 
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
@@ -27,7 +27,7 @@ async function computeSourceHash(content: string): Promise<string> {
 }
 
 async function handleTranslateAll(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   apiKey: string,
   jobId: string,
   targetLang: string,
@@ -124,7 +124,7 @@ async function handleTranslateAll(
 // ─── summary_from_edit handler ───────────────────────────────────────────────
 
 async function handleSummaryFromEdit(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   apiKey: string,
   jobId: string,
 ) {
@@ -204,7 +204,7 @@ Rules:
 // ─── summary / custom handlers (original logic) ─────────────────────────────
 
 async function handleSummaryOrCustom(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   apiKey: string,
   jobId: string,
   outputType: "summary" | "custom",
@@ -339,9 +339,7 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceClient();
 
     const body = await req.json();
     const { job_id, custom_prompt, output_type, target_language } = body;

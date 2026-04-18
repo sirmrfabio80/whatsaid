@@ -1,6 +1,6 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
 import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/constants.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
 
 function escapeHtml(str: string): string {
   return str
@@ -170,13 +170,8 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization') ?? ''
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
+    const userClient = createUserClient(authHeader)
     const { data: { user }, error: authError } = await userClient.auth.getUser()
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -203,7 +198,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+    const serviceClient = createServiceClient()
 
     const { data: senderProfile } = await serviceClient
       .from('profiles')

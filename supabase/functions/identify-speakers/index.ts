@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
+import { createServiceClient } from "../_shared/supabase.ts";
 
 const AI_GATEWAY = AI_GATEWAY_URL;
 const AI_MODEL = "google/gemini-2.5-flash";
@@ -875,9 +875,7 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createServiceClient();
 
     // Execution guard
     if (!force) {

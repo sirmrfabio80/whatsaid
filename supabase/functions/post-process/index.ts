@@ -1,8 +1,8 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAiGateway } from "../_shared/ai-gateway.ts";
+import { createServiceClient } from "../_shared/supabase.ts";
 
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
@@ -25,9 +25,7 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceClient();
 
     const { job_id, custom_prompt } = await req.json();
     if (!job_id) {
@@ -184,10 +182,7 @@ Rules:
 
     // Try to mark job as failed and insert failure notification
     try {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+      const supabase = createServiceClient();
       const body = await req.clone().json().catch(() => ({}));
       if (body.job_id) {
         await supabase

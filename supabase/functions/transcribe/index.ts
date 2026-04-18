@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createServiceClient, type SupabaseClient } from "../_shared/supabase.ts";
 
 // ----------------------------------------------------------------------------
 // stripInlineLanguageTags: remove inline annotations like "(Italian)",
@@ -355,9 +355,7 @@ Deno.serve(async (req) => {
       throw new Error("ASSEMBLYAI_API_KEY is not configured");
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceClient();
 
     // Load active provider template (with safe fallback). Per-job tuning
     // (job.transcription_config, job.language_selected, etc.) still wins
@@ -794,10 +792,7 @@ Deno.serve(async (req) => {
     console.error(`[transcribe] Error:`, error);
 
     try {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+      const supabase = createServiceClient();
       const { job_id } = await req.clone().json().catch(() => ({ job_id: null }));
       if (job_id) {
         await supabase

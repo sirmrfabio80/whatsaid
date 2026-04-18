@@ -1,5 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, createUserClient } from "../_shared/supabase.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,14 +15,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
     // Verify caller identity
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const userClient = createUserClient(authHeader);
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
@@ -34,7 +28,7 @@ Deno.serve(async (req) => {
     const callerId = claimsData.claims.sub as string;
 
     // Check admin role server-side
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const adminClient = createServiceClient();
     const { data: isAdmin } = await adminClient.rpc("has_role", {
       _user_id: callerId,
       _role: "admin",

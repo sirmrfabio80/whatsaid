@@ -1,5 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, createUserClient } from "../_shared/supabase.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -16,12 +16,7 @@ Deno.serve(async (req) => {
     }
 
     // Verify the user from JWT
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const userClient = createUserClient(authHeader);
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -31,7 +26,7 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
-    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const admin = createServiceClient();
 
     // 1. Get all job IDs for this user
     const { data: jobs } = await admin.from("jobs").select("id").eq("user_id", userId);

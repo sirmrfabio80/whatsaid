@@ -1,5 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient } from "../_shared/supabase.ts";
 
 // ---------------------------------------------------------------------------
 // Paddle signature verification (Paddle Billing / v2 webhooks)
@@ -102,8 +102,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  // (env vars are read inside createServiceClient() when needed)
 
   const rawBody = await req.text();
 
@@ -155,7 +154,7 @@ Deno.serve(async (req) => {
     }
 
     // Add credits atomically
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createServiceClient();
     const { data: newBalance, error } = await supabase.rpc("add_credits", {
       p_user_id: userId,
       p_amount: credits,
