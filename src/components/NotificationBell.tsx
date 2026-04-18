@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NotificationItem from "@/components/NotificationItem";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function NotificationBell() {
   const { t } = useTranslation();
@@ -83,10 +84,12 @@ export default function NotificationBell() {
 
           {/* List */}
           {notifications.length === 0 ? (
-            <div className="px-4 py-8 text-center">
-              <Bell className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">{t("notifications.empty")}</p>
-            </div>
+            <EmptyState
+              icon={Bell}
+              title={t("notifications.empty")}
+              variant="plain"
+              className="py-8"
+            />
           ) : (
             <ScrollArea className="max-h-80">
               <div className="p-1 space-y-0.5">

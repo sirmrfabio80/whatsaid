@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState } from "@/components/ui/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Card,
   CardContent,
@@ -36,6 +37,7 @@ import {
 import {
   CheckCircle2,
   Copy,
+  FileText,
   Pencil,
   Plus,
   Save,
@@ -332,7 +334,12 @@ export default function TranscribeTemplatesTab() {
         </CardHeader>
         <CardContent className="space-y-1">
           {templates.length === 0 && (
-            <p className="text-sm text-muted-foreground">No templates yet.</p>
+            <EmptyState
+              icon={FileText}
+              title="No templates yet"
+              variant="plain"
+              className="py-6"
+            />
           )}
           {templates.map((t) => {
             const isSelected = t.id === selectedId;
