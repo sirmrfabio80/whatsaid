@@ -1,5 +1,5 @@
 import { corsHeaders as baseCorsHeaders } from '../_shared/cors.ts'
-import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
+import { createServiceClient, requireAuth } from '../_shared/supabase.ts'
 
 // Augment shared CORS with Content-Disposition exposure so the browser can
 // read the suggested filename when streaming the PDF back to the client.

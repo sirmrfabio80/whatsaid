@@ -1,6 +1,6 @@
 import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/constants.ts'
 import { corsHeaders } from '../_shared/cors.ts'
-import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
+import { createServiceClient, requireAuth } from '../_shared/supabase.ts'
 
 function escapeHtml(str: string): string {
   return str
