@@ -1,6 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
-import { requireEnv } from "../_shared/env.ts";
 
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
 
@@ -14,7 +13,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const ASSEMBLYAI_API_KEY = requireEnv("ASSEMBLYAI_API_KEY");
+    const ASSEMBLYAI_API_KEY = Deno.env.get("ASSEMBLYAI_API_KEY");
+    if (!ASSEMBLYAI_API_KEY) {
+      throw new Error("ASSEMBLYAI_API_KEY is not configured");
+    }
 
     const supabase = createServiceClient();
 

@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
-import { requireEnv } from "../_shared/env.ts";
 
 const MODEL = "google/gemini-2.5-flash-lite";
 
@@ -73,7 +72,10 @@ serve(async (req) => {
     let aiTranslations: Record<string, string> = {};
 
     if (missingOriginals.length > 0) {
-      const LOVABLE_API_KEY = requireEnv("LOVABLE_API_KEY");
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) {
+        throw new Error("LOVABLE_API_KEY is not configured");
+      }
 
       const systemPrompt = `You are a multilingual tag translator.
 

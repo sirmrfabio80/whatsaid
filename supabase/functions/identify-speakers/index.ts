@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
-import { requireEnv } from "../_shared/env.ts";
 import {
   buildSpeakerVerifierSystemPrompt,
   buildSpeakerVerifierUserPrompt,
@@ -860,7 +859,7 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = requireEnv("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const supabase = createServiceClient();
 
     // Execution guard

@@ -3,7 +3,12 @@
  *
  * Finds transcription jobs that have been stuck in `processing` for more
  * than STALE_MINUTES with no `updated_at` activity, marks them `failed`,
- * refunds their credits, and emits a `job_failed` notification.
+ * refunds their credits, deletes any orphaned temp-audio file, and emits a
+ * `job_failed` notification.
+ *
+ * Also performs a secondary sweep over already-failed jobs whose temp-audio
+ * file was never cleaned up (audio_deleted_at IS NULL) to garbage-collect
+ * orphan storage objects from earlier crashes.
  *
  * Designed to be invoked on a schedule (e.g. pg_cron every 5 minutes).
  */
@@ -11,7 +16,26 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 
 const STALE_MINUTES = 20;
-const TIMEOUT_MESSAGE = "Job timed out — marked failed by watchdog";
+const ORPHAN_LOOKBACK_HOURS = 24;
+export const TIMEOUT_MESSAGE = "Job timed out — marked failed by watchdog";
+
+async function deleteTempAudio(
+  supabase: ReturnType<typeof createServiceClient>,
+  jobId: string,
+  tempFilePath: string | null,
+): Promise<boolean> {
+  if (!tempFilePath) return false;
+  const { error } = await supabase.storage.from("temp-audio").remove([tempFilePath]);
+  if (error) {
+    console.error(`[watchdog-stale-jobs] Storage delete failed for ${jobId}:`, error.message);
+    return false;
+  }
+  await supabase
+    .from("jobs")
+    .update({ audio_deleted_at: new Date().toISOString() })
+    .eq("id", jobId);
+  return true;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,7 +48,7 @@ Deno.serve(async (req) => {
 
     const { data: staleJobs, error: fetchErr } = await supabase
       .from("jobs")
-      .select("id, user_id, title, file_name, credits_charged")
+      .select("id, user_id, title, file_name, credits_charged, temp_file_path, audio_deleted_at")
       .eq("status", "processing")
       .lt("updated_at", cutoff);
 
@@ -36,19 +60,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!staleJobs || staleJobs.length === 0) {
-      return new Response(JSON.stringify({ cleaned: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log(`[watchdog-stale-jobs] Found ${staleJobs.length} stale job(s)`);
-
     let cleaned = 0;
     let refunded = 0;
+    let audioDeleted = 0;
 
-    for (const job of staleJobs) {
+    for (const job of staleJobs ?? []) {
       // 1. Mark job as failed (guard against races: only update if still processing).
       const { data: updated, error: updateErr } = await supabase
         .from("jobs")
@@ -58,10 +74,7 @@ Deno.serve(async (req) => {
         .select("id")
         .maybeSingle();
 
-      if (updateErr || !updated) {
-        // Either failed to update or job already moved out of processing.
-        continue;
-      }
+      if (updateErr || !updated) continue;
       cleaned++;
 
       // 2. Refund credits if the user was charged and is not an admin.
@@ -90,7 +103,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 3. Notify the user (skip duplicate failure notifications for this job).
+      // 3. Clean up orphaned temp-audio file (privacy: must not retain).
+      if (!job.audio_deleted_at && job.temp_file_path) {
+        if (await deleteTempAudio(supabase, job.id, job.temp_file_path)) {
+          audioDeleted++;
+        }
+      }
+
+      // 4. Notify the user (skip duplicate failure notifications for this job).
       if (job.user_id) {
         const { data: existingNotif } = await supabase
           .from("notifications")
@@ -115,12 +135,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[watchdog-stale-jobs] Cleaned ${cleaned}, refunded ${refunded}`);
+    // ---- Secondary sweep: orphan temp-audio files for already-failed jobs ----
+    const orphanCutoff = new Date(
+      Date.now() - ORPHAN_LOOKBACK_HOURS * 60 * 60 * 1000,
+    ).toISOString();
 
-    return new Response(JSON.stringify({ cleaned, refunded }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const { data: orphanJobs } = await supabase
+      .from("jobs")
+      .select("id, temp_file_path")
+      .eq("status", "failed")
+      .is("audio_deleted_at", null)
+      .not("temp_file_path", "is", null)
+      .gt("updated_at", orphanCutoff)
+      .limit(100);
+
+    let orphansDeleted = 0;
+    for (const job of orphanJobs ?? []) {
+      if (await deleteTempAudio(supabase, job.id, job.temp_file_path)) {
+        orphansDeleted++;
+      }
+    }
+
+    console.log(
+      `[watchdog-stale-jobs] cleaned=${cleaned} refunded=${refunded} audio=${audioDeleted} orphans=${orphansDeleted}`,
+    );
+
+    return new Response(
+      JSON.stringify({ cleaned, refunded, audio_deleted: audioDeleted, orphans_deleted: orphansDeleted }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error) {
     console.error("[watchdog-stale-jobs] Error:", error);
     return new Response(

@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { requireEnv } from "../_shared/env.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 import {
   buildSpeakerSuggestSystemPrompt,
@@ -129,7 +128,13 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = requireEnv("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "AI gateway not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const excludedSet = new Set<string>(excluded_ids ?? []);
     const validIds = new Set<string>(
