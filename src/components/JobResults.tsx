@@ -18,7 +18,7 @@ import SpeakerChips from "@/components/SpeakerChips";
 import SpeakerIdentificationBanner from "@/components/SpeakerIdentificationBanner";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
 import TranscriptEditor from "@/components/TranscriptEditor";
-import { parseSegments, type SpeakerSuggestion } from "@/lib/transcript";
+import { parseSegments, getUniqueSpeakersFromContent, type SpeakerSuggestion } from "@/lib/transcript";
 import type { JobMeta } from "@/types/job";
 import ParticipantsPanel from "@/components/ParticipantsPanel";
 import { toast } from "sonner";
