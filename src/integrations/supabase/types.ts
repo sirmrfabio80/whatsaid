@@ -573,6 +573,68 @@ export type Database = {
         }
         Relationships: []
       }
+      tag_quality_flags: {
+        Row: {
+          created_at: string
+          detected_lang: string | null
+          id: string
+          resolved_at: string | null
+          status: string
+          tag_id: string
+          tag_name: string
+        }
+        Insert: {
+          created_at?: string
+          detected_lang?: string | null
+          id?: string
+          resolved_at?: string | null
+          status?: string
+          tag_id: string
+          tag_name: string
+        }
+        Update: {
+          created_at?: string
+          detected_lang?: string | null
+          id?: string
+          resolved_at?: string | null
+          status?: string
+          tag_id?: string
+          tag_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tag_quality_flags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tag_translations: {
+        Row: {
+          created_at: string
+          id: string
+          normalized_name: string
+          target_lang: string
+          translated_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          normalized_name: string
+          target_lang: string
+          translated_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          normalized_name?: string
+          target_lang?: string
+          translated_name?: string
+        }
+        Relationships: []
+      }
       tags: {
         Row: {
           color: string | null
