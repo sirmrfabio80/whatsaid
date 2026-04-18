@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Loader2, Globe, RefreshCw, Pencil, Trash2, X } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X } from "lucide-react";
+import { InlineSpinner } from "@/components/ui/inline-spinner";
 import ShareButton from "@/components/ShareButton";
 import { LANGUAGES } from "@/lib/languages";
 import { applySpeakerNames } from "@/lib/speaker-names";
@@ -564,7 +565,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       <SelectTrigger id="output-lang" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.outputLanguage")}><SelectValue /></SelectTrigger>
                       <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
                     </Select>
-                    {regeneratingLang && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+                    {regeneratingLang && <InlineSpinner size="xs" tone="primary" />}
                   </div>
                 </div>
               )}
@@ -576,7 +577,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     <SelectTrigger id="output-lang-mobile" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.outputLanguage")}><SelectValue /></SelectTrigger>
                     <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  {regeneratingLang && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+                  {regeneratingLang && <InlineSpinner size="xs" tone="primary" />}
                 </div>
               </div>
               {/* AI Speaker Identification Banner */}
@@ -616,7 +617,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               {regeneratingLang ? (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.translatingTranscript")}</div>
+                <InlineSpinner layout="block" label={t("jobResults.translatingTranscript")} />
               ) : transcript ? (
                 <TranscriptEditor
                   content={activeTranscriptContent}
@@ -679,7 +680,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                             }
                           }}
                         >
-                          {regeneratingSummary ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {regeneratingSummary ? <InlineSpinner size="xs" /> : <RefreshCw className="w-3.5 h-3.5" />}
                           {regeneratingSummary ? t("jobResults.regeneratingSummary") : t("jobResults.regenerateSummary")}
                         </Button>
                         <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
@@ -703,7 +704,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               <div className="p-5 sm:p-6">
-                {regeneratingLang ? <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />{t("jobResults.translatingContent")}</div>
+                {regeneratingLang ? <InlineSpinner layout="block" label={t("jobResults.translatingContent")} />
                   : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
                   : <p className="text-sm text-muted-foreground">{t("jobResults.noSummary")}</p>}
               </div>
@@ -720,7 +721,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 <div className="relative">
                   <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-base md:text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
                   <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
-                    {askingQuestion ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
+                    {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground text-right mt-1.5">
@@ -783,7 +784,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                                 <SectionBody body={applySpeakerNames(getContent(entry), speakerNames)} />
                                 {isRegenerating && (
                                   <div className="absolute inset-0 flex items-center justify-center">
-                                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                    <InlineSpinner size="md" tone="primary" />
                                   </div>
                                 )}
                               </div>
