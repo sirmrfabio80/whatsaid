@@ -41,8 +41,7 @@ Deno.serve(async (req) => {
     const rawTitle = await callAiGateway({
       apiKey: LOVABLE_API_KEY,
       model: MODEL,
-      system:
-        "Generate a short, descriptive title (max 6 words) for this audio recording based on its transcript. The title should be in the same language as the transcript. Return ONLY the title text, nothing else. No quotes, no explanation.",
+      system: TITLE_SYSTEM_PROMPT,
       user: excerpt,
     });
 

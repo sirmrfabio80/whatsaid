@@ -78,19 +78,8 @@ export async function autoTag(
   }
 
   // 3. Call AI for tag suggestions
-  const systemPrompt = `You are a tagging assistant. Given a transcript, return a JSON array of 3 to 6 short, reusable tags that capture the main topics, meeting type, or domain discussed.
-
-Rules:
-- Return ONLY a JSON array of strings, e.g. ["tag1","tag2","tag3"]
-- Each tag must be 1–4 words, lowercase
-- Tags must ALWAYS be in English, regardless of the transcript language
-- Tags should be high-signal: topic, domain, or meeting type
-- Do NOT include generic filler like "discussion", "meeting", "conversation", "audio"
-- Do NOT invent names, companies, or entities not clearly stated in the transcript
-- Do NOT include dates, timestamps, or speaker names as tags
-- Minimum 3 tags, maximum 6 tags`;
-
-  const userPrompt = `Generate tags for this transcript:\n\n${transcript.slice(0, 12000)}`;
+  const systemPrompt = TAGS_SYSTEM_PROMPT;
+  const userPrompt = buildTagsUserPrompt(transcript.slice(0, 12000));
 
   const res = await fetch(AI_GATEWAY, {
     method: "POST",

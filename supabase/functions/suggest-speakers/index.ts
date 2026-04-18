@@ -145,24 +145,12 @@ serve(async (req) => {
       excludedSet
     );
 
-    const systemPrompt = `You are a transcript speaker-attribution assistant.
-
-You are given a transcript with speaker labels and segment IDs. A new speaker "${target_speaker}" has been added but has no segments assigned yet.
-
-Your task: identify which existing segments most likely belong to "${target_speaker}" based on conversational patterns, turn-taking, topic continuity, and context.
-
-Existing speakers: ${existing_speakers.join(", ")}
-
-Rules:
-- Return ONLY a JSON array of objects with "id" (segment ID) and "confidence" (0.0 to 1.0)
-- Only include segments you are reasonably confident belong to "${target_speaker}" (confidence >= 0.5)
-- Do NOT modify any text — only suggest ownership changes
-- Do NOT assign segments that clearly belong to their current speaker
-- Look for patterns: if the transcript has Speaker A only but clearly contains two distinct voices/perspectives, suggest which segments belong to the new speaker
-- If you cannot identify any segments for the new speaker, return an empty array []
-${truncated ? "\n- Note: The middle section shows only previews. Use the full start/end context and speaker patterns to make inferences." : ""}`;
-
-    const userPrompt = `Analyze this transcript and suggest which segments belong to "${target_speaker}":\n\n${formatted}`;
+    const systemPrompt = buildSpeakerSuggestSystemPrompt({
+      targetSpeaker: target_speaker,
+      existingSpeakers: existing_speakers,
+      truncated,
+    });
+    const userPrompt = buildSpeakerSuggestUserPrompt(target_speaker, formatted);
 
     const res = await fetch(AI_GATEWAY, {
       method: "POST",
