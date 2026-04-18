@@ -19,6 +19,7 @@ interface ShareButtonProps {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ACCEPT_HINT_STORAGE_KEY = "share-email-autocomplete-hint-dismissed";
+const ARROW_HINT_STORAGE_KEY = "share-email-autocomplete-arrow-hint-dismissed";
 
 async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Promise<string | null> {
   try {
@@ -40,13 +41,15 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
 
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
-  handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients, showAcceptHint, onAcceptSuggestion,
+  handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
+  showAcceptHint, onAcceptSuggestion, showArrowHint, onAcceptArrowSuggestion, isMobile,
 }: {
   email: string; setEmail: (v: string) => void; isValid: boolean;
   sending: boolean; sent: boolean; sendingRecord: boolean; sentRecord: boolean;
   handleSendEmail: () => void; handleShareRecord: () => void;
   t: (k: string) => string; autoFocusInput?: boolean; recentRecipients: string[];
   showAcceptHint: boolean; onAcceptSuggestion: () => void;
+  showArrowHint: boolean; onAcceptArrowSuggestion: () => void; isMobile: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,7 +165,7 @@ function ShareContent({
                 if (acceptIfPossible()) e.preventDefault();
               }
               if (e.key === "ArrowRight" && suggestion) {
-                if (acceptIfPossible()) e.preventDefault();
+                if (acceptIfPossible()) { e.preventDefault(); onAcceptArrowSuggestion(); }
               }
             }}
             onFocus={() => setFocused(true)}
@@ -186,9 +189,14 @@ function ShareContent({
             </div>
           )}
         </div>
-        {showAcceptHint && (
+        {isMobile && showAcceptHint && (
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
             {t("share.spaceToAcceptHint")}
+          </p>
+        )}
+        {!isMobile && showArrowHint && suggestion.length > 0 && (
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            {t("share.arrowRightToAcceptHint")}
           </p>
         )}
       </div>
@@ -241,6 +249,10 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const [hasDismissedAcceptHint, setHasDismissedAcceptHint] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(ACCEPT_HINT_STORAGE_KEY) === "1";
+  });
+  const [hasDismissedArrowHint, setHasDismissedArrowHint] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(ARROW_HINT_STORAGE_KEY) === "1";
   });
 
   const isValid = EMAIL_RE.test(email.trim());
@@ -328,6 +340,16 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     }
   };
 
+  const handleAcceptArrowSuggestion = () => {
+    if (hasDismissedArrowHint) return;
+    setHasDismissedArrowHint(true);
+    try {
+      window.localStorage.setItem(ARROW_HINT_STORAGE_KEY, "1");
+    } catch {
+      // silent
+    }
+  };
+
   const trigger = (
     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" disabled={disabled}>
       <Share2 className="w-3.5 h-3.5" />
@@ -340,6 +362,9 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     handleSendEmail, handleShareRecord, t, autoFocusInput: !isMobile, recentRecipients,
     showAcceptHint: !hasDismissedAcceptHint && open,
     onAcceptSuggestion: handleAcceptSuggestion,
+    showArrowHint: !hasDismissedArrowHint && open,
+    onAcceptArrowSuggestion: handleAcceptArrowSuggestion,
+    isMobile,
   };
 
   if (isMobile) {

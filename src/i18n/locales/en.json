@@ -348,6 +348,7 @@
     "emailLabel": "Recipient email",
     "emailPlaceholder": "colleague@company.com",
     "spaceToAcceptHint": "Press space to accept",
+    "arrowRightToAcceptHint": "Press → to accept",
     "sendEmailLabel": "Send transcript by email",
     "sendEmailDesc": "Sends a readable email with the title, summary, questions and answers, and full transcript.",
     "shareRecordLabel": "Share as transcript record",
