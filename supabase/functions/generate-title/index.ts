@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 import { TITLE_SYSTEM_PROMPT } from "../_shared/prompts.ts";
 
 const MODEL = "google/gemini-2.5-flash-lite";

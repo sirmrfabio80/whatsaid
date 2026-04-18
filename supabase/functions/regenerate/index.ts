@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { AiGatewayError, callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient, requireAuth, type SupabaseClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 import {
   buildSummarySystemPrompt,
   buildSummaryUserPrompt,

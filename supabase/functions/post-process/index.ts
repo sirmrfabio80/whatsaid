@@ -2,6 +2,7 @@ import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 import { markJobFailed } from "../_shared/job-failure.ts";
 import {
   buildSummarySystemPrompt,

@@ -1,6 +1,7 @@
 import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

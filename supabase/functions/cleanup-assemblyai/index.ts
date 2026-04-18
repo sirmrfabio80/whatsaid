@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
 

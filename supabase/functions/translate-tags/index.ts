@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 
 const MODEL = "google/gemini-2.5-flash-lite";
 

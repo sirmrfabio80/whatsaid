@@ -1,4 +1,5 @@
 import { createServiceClient, type SupabaseClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 import { markJobFailed } from "../_shared/job-failure.ts";
 
 // ----------------------------------------------------------------------------
