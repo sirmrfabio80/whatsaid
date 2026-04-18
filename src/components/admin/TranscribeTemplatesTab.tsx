@@ -334,7 +334,12 @@ export default function TranscribeTemplatesTab() {
         </CardHeader>
         <CardContent className="space-y-1">
           {templates.length === 0 && (
-            <p className="text-sm text-muted-foreground">No templates yet.</p>
+            <EmptyState
+              icon={FileText}
+              title="No templates yet"
+              variant="plain"
+              className="py-6"
+            />
           )}
           {templates.map((t) => {
             const isSelected = t.id === selectedId;
