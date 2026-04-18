@@ -66,6 +66,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [questionGenCount, setQuestionGenCount] = useState(0);
   const [editingQAId, setEditingQAId] = useState<string | null>(null);
   const [editingQAText, setEditingQAText] = useState("");
+  const [editingExtraSources, setEditingExtraSources] = useState<ExtraSource[]>([]);
   const [regeneratingQAId, setRegeneratingQAId] = useState<string | null>(null);
   const [useExtraSources, setUseExtraSources] = useState(false);
   const [extraSources, setExtraSources] = useState<ExtraSource[]>([]);
@@ -383,11 +384,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   };
 
   const handleDeleteQA = async (id: string) => {
-    if (editingQAId === id) { setEditingQAId(null); setEditingQAText(""); }
+    if (editingQAId === id) { setEditingQAId(null); setEditingQAText(""); setEditingExtraSources([]); }
     const prev = outputs;
     setOutputs((o) => o.filter((x) => x.id !== id));
     const { error } = await supabase.from("job_outputs").delete().eq("id", id);
-    if (error) { setOutputs(prev); toast.error(t("jobResults.saveFailed")); }
+    if (error) { setOutputs(prev); toast.error(t("jobResults.summaryRegenFailed")); }
   };
 
   const handleEditQA = async (entry: JobOutput) => {
@@ -395,6 +396,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (!newPrompt || isQuestionLimitReached) return;
     const originalPrompt = entry.custom_prompt;
     const originalContent = entry.content;
+    const originalMetadata = entry.metadata ?? null;
+    const extrasToSend = editingExtraSources.slice(0, 5);
     setRegeneratingQAId(entry.id);
     setEditingQAId(null);
     // Optimistically show new question text
@@ -402,14 +405,19 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     try {
       // Delete old output
       await supabase.from("job_outputs").delete().eq("id", entry.id);
-      const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: newPrompt } });
+      const body: { job_id: string; custom_prompt: string; extra_job_ids?: string[] } = {
+        job_id: jobId,
+        custom_prompt: newPrompt,
+      };
+      if (extrasToSend.length > 0) body.extra_job_ids = extrasToSend.map((s) => s.id);
+      const { data, error } = await supabase.functions.invoke("regenerate", { body });
       if (error || data?.error) {
         // Revert
-        setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent } : o));
+        setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent, metadata: originalMetadata } : o));
         if (data?.error === "question_limit_reached") toast.error(t("jobResults.noQuestionsLeft"));
         else toast.error(t("jobResults.summaryRegenFailed"));
         // Re-insert old output (best effort)
-        await supabase.from("job_outputs").insert({ id: entry.id, job_id: jobId, output_type: "custom", content: originalContent, custom_prompt: originalPrompt });
+        await supabase.from("job_outputs").insert({ id: entry.id, job_id: jobId, output_type: "custom", content: originalContent, custom_prompt: originalPrompt, metadata: originalMetadata as never });
         return;
       }
       if (data?.output) {
@@ -419,11 +427,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       }
       setQuestionGenCount((c) => c + 1);
     } catch {
-      setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent } : o));
+      setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent, metadata: originalMetadata } : o));
       toast.error(t("jobResults.summaryRegenFailed"));
     } finally {
       setRegeneratingQAId(null);
       setEditingQAText("");
+      setEditingExtraSources([]);
     }
   };
 
@@ -778,7 +787,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                               </div>
                               <div className="flex items-center gap-0.5">
                                 {!isQuestionLimitReached && !isEditing && (
-                                  <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" disabled={isAnyGenerating} onClick={() => { setEditingQAId(entry.id); setEditingQAText(entry.custom_prompt ?? ""); }} aria-label={t("jobResults.editQuestion")}>
+                                  <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" disabled={isAnyGenerating} onClick={() => { setEditingQAId(entry.id); setEditingQAText(entry.custom_prompt ?? ""); setEditingExtraSources((entry.metadata?.extra_sources ?? []).slice(0, 5).map((s) => ({ id: s.id, title: s.title }))); }} aria-label={t("jobResults.editQuestion")}>
                                     <Pencil className="w-3 h-3" />
                                   </Button>
                                 )}
@@ -792,18 +801,28 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                             </div>
                             <div>
                               {isEditing ? (
-                                <div className="flex items-start gap-2 mb-2">
-                                  <span className="text-xs font-semibold text-primary/70 mt-2.5 shrink-0">Q</span>
-                                  <div className="flex-1 flex items-center gap-1.5">
-                                    <Textarea value={editingQAText} onChange={(e) => setEditingQAText(e.target.value)} className="rounded-lg text-sm min-h-[40px] resize-none flex-1" autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditQA(entry); } }} />
-                                    <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => handleEditQA(entry)} disabled={!editingQAText.trim()}><Check className="w-3.5 h-3.5" /></Button>
-                                    <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => { setEditingQAId(null); setEditingQAText(""); }}><X className="w-3.5 h-3.5" /></Button>
+                                <div className="space-y-2 mb-2">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs font-semibold text-primary/70 mt-2.5 shrink-0">Q</span>
+                                    <div className="flex-1 flex items-center gap-1.5">
+                                      <Textarea value={editingQAText} onChange={(e) => setEditingQAText(e.target.value)} className="rounded-lg text-sm min-h-[40px] resize-none flex-1" autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditQA(entry); } }} />
+                                      <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => handleEditQA(entry)} disabled={!editingQAText.trim()}><Check className="w-3.5 h-3.5" /></Button>
+                                      <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => { setEditingQAId(null); setEditingQAText(""); setEditingExtraSources([]); }}><X className="w-3.5 h-3.5" /></Button>
+                                    </div>
+                                  </div>
+                                  <div className="pl-5">
+                                    <QuestionExtraSourcesPicker
+                                      currentJobId={jobId}
+                                      value={editingExtraSources}
+                                      onChange={setEditingExtraSources}
+                                      max={5}
+                                    />
                                   </div>
                                 </div>
                               ) : (
                                 entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>
                               )}
-                              {entry.metadata?.extra_sources && entry.metadata.extra_sources.length > 0 && (
+                              {!isEditing && entry.metadata?.extra_sources && entry.metadata.extra_sources.length > 0 && (
                                 <div className="pl-5 mb-2 flex flex-wrap items-center gap-1.5">
                                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
                                     {t("jobResults.extraSources.usedLabel")}
