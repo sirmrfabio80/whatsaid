@@ -341,7 +341,14 @@
     "noQuestionsLeft": "Nessuna domanda rimanente",
     "editQuestion": "Modifica domanda",
     "deleteQuestion": "Elimina domanda",
-    "regeneratingAnswer": "Rigenerazione risposta…"
+    "regeneratingAnswer": "Rigenerazione risposta…",
+    "extraSources": {
+      "toggleLabel": "Includi altre trascrizioni come contesto",
+      "searchPlaceholder": "Cerca tra le tue trascrizioni…",
+      "noResults": "Nessuna trascrizione corrispondente",
+      "removeAriaLabel": "Rimuovi {{title}}",
+      "limitReached": "Massimo {{max}} trascrizioni"
+    }
   },
   "share": {
     "share": "Condividi",
