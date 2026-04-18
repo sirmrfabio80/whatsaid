@@ -56,14 +56,10 @@ Deno.serve(async (req) => {
     }
 
     // POST = claim the share
-    const authHeader = req.headers.get('Authorization') ?? ''
-    const userClient = createUserClient(authHeader)
-    const { data: { user }, error: authError } = await userClient.auth.getUser()
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const auth = await requireAuth(req.headers.get('Authorization'))
+    if (!auth.ok) return auth.response
+    const { userId, email } = auth
+    const user = { id: userId, email }
 
     const { token } = await req.json()
     if (!token) {
