@@ -250,6 +250,10 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(ACCEPT_HINT_STORAGE_KEY) === "1";
   });
+  const [hasDismissedArrowHint, setHasDismissedArrowHint] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(ARROW_HINT_STORAGE_KEY) === "1";
+  });
 
   const isValid = EMAIL_RE.test(email.trim());
 
@@ -336,6 +340,16 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     }
   };
 
+  const handleAcceptArrowSuggestion = () => {
+    if (hasDismissedArrowHint) return;
+    setHasDismissedArrowHint(true);
+    try {
+      window.localStorage.setItem(ARROW_HINT_STORAGE_KEY, "1");
+    } catch {
+      // silent
+    }
+  };
+
   const trigger = (
     <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 text-xs h-8" disabled={disabled}>
       <Share2 className="w-3.5 h-3.5" />
@@ -348,6 +362,9 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     handleSendEmail, handleShareRecord, t, autoFocusInput: !isMobile, recentRecipients,
     showAcceptHint: !hasDismissedAcceptHint && open,
     onAcceptSuggestion: handleAcceptSuggestion,
+    showArrowHint: !hasDismissedArrowHint && open,
+    onAcceptArrowSuggestion: handleAcceptArrowSuggestion,
+    isMobile,
   };
 
   if (isMobile) {
