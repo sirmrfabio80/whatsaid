@@ -276,3 +276,84 @@ function guessLang(tag: string): string {
   if (/[äöüß]/.test(t) || /\b(der|die|das|und|mit|für)\b/.test(t)) return "de";
   return "unknown";
 }
+
+/**
+ * LLM-classify a batch of tags. Returns a Map<displayName, ISO 639-1 code>.
+ * Catches non-English tags whose words don't trip the regex heuristic
+ * (e.g. "assistenza domiciliare" — pure ASCII, no function words).
+ * Cheap: one batched call using gemini-2.5-flash-lite.
+ */
+export async function classifyTagLanguages(
+  tags: string[],
+  apiKey: string,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (tags.length === 0) return result;
+
+  try {
+    const res = await fetch(AI_GATEWAY_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You detect the language of short tags/labels. For each input tag return its ISO 639-1 lowercase code (e.g. 'en', 'it', 'fr', 'es', 'de'). For proper nouns, brand names, or untranslatable acronyms that exist in English, return 'en'. Use 'unknown' only when truly ambiguous.",
+          },
+          { role: "user", content: `Classify these tags:\n${JSON.stringify(tags)}` },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "return_languages",
+              description: "Return language codes per tag.",
+              parameters: {
+                type: "object",
+                properties: {
+                  results: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        tag: { type: "string" },
+                        lang: { type: "string" },
+                      },
+                      required: ["tag", "lang"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["results"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "return_languages" } },
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn("[classifyTagLanguages] AI error:", res.status);
+      return result;
+    }
+
+    const data = await res.json();
+    const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) return result;
+    const parsed = JSON.parse(args);
+    const items = Array.isArray(parsed.results) ? parsed.results : [];
+    for (const item of items) {
+      if (typeof item?.tag === "string" && typeof item?.lang === "string") {
+        result.set(item.tag, item.lang.trim().toLowerCase());
+      }
+    }
+  } catch (e) {
+    console.warn("[classifyTagLanguages] error:", e);
+  }
+
+  return result;
+}
