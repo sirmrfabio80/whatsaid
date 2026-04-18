@@ -65,6 +65,14 @@ function ShareContent({
     const el = inputRef.current;
     if (el && el.selectionStart !== email.length) return false;
     setEmail(email + suggestion);
+    // Move caret to end after React updates
+    requestAnimationFrame(() => {
+      const node = inputRef.current;
+      if (node) {
+        const len = node.value.length;
+        try { node.setSelectionRange(len, len); } catch { /* noop */ }
+      }
+    });
     return true;
   };
 
