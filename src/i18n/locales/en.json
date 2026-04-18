@@ -347,6 +347,7 @@
     "shareDesc": "Send the full transcript and summary to someone by email.",
     "emailLabel": "Recipient email",
     "emailPlaceholder": "colleague@company.com",
+    "spaceToAcceptHint": "Press space to accept",
     "sendEmailLabel": "Send transcript by email",
     "sendEmailDesc": "Sends a readable email with the title, summary, questions and answers, and full transcript.",
     "shareRecordLabel": "Share as transcript record",

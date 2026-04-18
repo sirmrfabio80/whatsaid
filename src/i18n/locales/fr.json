@@ -347,6 +347,7 @@
     "shareDesc": "Envoyez la transcription complète et le résumé par email.",
     "emailLabel": "Email du destinataire",
     "emailPlaceholder": "collegue@entreprise.com",
+    "spaceToAcceptHint": "Appuyez sur espace pour accepter",
     "sendEmailLabel": "Envoyer par email",
     "sendEmailDesc": "Envoie un email lisible avec le titre, le résumé, les questions-réponses et la transcription complète.",
     "shareRecordLabel": "Partager comme enregistrement",
