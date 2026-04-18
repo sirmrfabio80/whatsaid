@@ -1,4 +1,5 @@
 import { createServiceClient, type SupabaseClient } from "../_shared/supabase.ts";
+import { markJobFailed } from "../_shared/job-failure.ts";
 
 // ----------------------------------------------------------------------------
 // stripInlineLanguageTags: remove inline annotations like "(Italian)",
@@ -792,17 +793,8 @@ Deno.serve(async (req) => {
     console.error(`[transcribe] Error:`, error);
 
     try {
-      const supabase = createServiceClient();
       const { job_id } = await req.clone().json().catch(() => ({ job_id: null }));
-      if (job_id) {
-        await supabase
-          .from("jobs")
-           .update({
-            status: "failed",
-            error_message: sanitizeErrorForClient(error),
-          })
-          .eq("id", job_id);
-      }
+      await markJobFailed(createServiceClient(), job_id, error);
     } catch {
       // ignore cleanup errors
     }
