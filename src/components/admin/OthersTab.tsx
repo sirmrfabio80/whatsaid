@@ -248,6 +248,23 @@ export default function OthersTab() {
           </ul>
         )}
       </CardContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("admin.others.fixConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("admin.others.fixConfirmDesc", { count: flags.length })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => fixFlags()}>
+              {t("admin.others.fixAll")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
