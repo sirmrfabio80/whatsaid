@@ -60,12 +60,21 @@ function ShareContent({
     return match.slice(q.length);
   }, [email, recentRecipients]);
 
+  // Use refs so the native beforeinput listener (registered once) always sees
+  // the latest values without re-binding listeners on every keystroke.
+  const emailRef = useRef(email);
+  const suggestionRef = useRef(suggestion);
+  useEffect(() => { emailRef.current = email; }, [email]);
+  useEffect(() => { suggestionRef.current = suggestion; }, [suggestion]);
+
   const acceptIfPossible = () => {
-    if (!suggestion) return false;
+    const sug = suggestionRef.current;
+    const cur = emailRef.current;
+    if (!sug) return false;
     const el = inputRef.current;
-    if (el && el.selectionStart !== email.length) return false;
-    setEmail(email + suggestion);
-    // Move caret to end after React updates
+    if (el && el.selectionStart !== cur.length) return false;
+    const full = cur + sug;
+    setEmail(full);
     requestAnimationFrame(() => {
       const node = inputRef.current;
       if (node) {
@@ -75,6 +84,29 @@ function ShareContent({
     });
     return true;
   };
+
+  // Native beforeinput listener — required for reliable Space detection on
+  // iOS Safari and Android Chrome, where React's synthetic onBeforeInput is
+  // polyfilled inconsistently and InputEvent fields are often missing.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const onBeforeInput = (ev: Event) => {
+      const e = ev as InputEvent;
+      const data = e.data;
+      const isSpaceInsert =
+        (e.inputType === "insertText" || e.inputType === "insertCompositionText") &&
+        data === " ";
+      if (isSpaceInsert && suggestionRef.current) {
+        if (acceptIfPossible()) {
+          e.preventDefault();
+        }
+      }
+    };
+    el.addEventListener("beforeinput", onBeforeInput);
+    return () => el.removeEventListener("beforeinput", onBeforeInput);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showGhost = focused && suggestion.length > 0;
 
