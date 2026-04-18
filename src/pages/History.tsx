@@ -16,6 +16,9 @@ import { useNavigate } from "react-router-dom";
 import { useHistoryFilters } from "@/hooks/use-history-filters";
 import { useTranslatedTags } from "@/hooks/use-translated-tags";
 import HistoryFilters from "@/components/HistoryFilters";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 interface Job {
   id: string;
@@ -37,6 +40,7 @@ export default function History() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Job | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -56,17 +60,27 @@ export default function History() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { navigate("/login"); return; }
+    let cancelled = false;
     const fetchJobs = async () => {
-      const { data } = await supabase
+      setLoading(true);
+      setLoadError(false);
+      const { data, error } = await supabase
         .from("jobs")
         .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      setJobs((data as Job[]) ?? []);
+      if (cancelled) return;
+      if (error) {
+        setLoadError(true);
+        setJobs([]);
+      } else {
+        setJobs((data as Job[]) ?? []);
+      }
       setLoading(false);
     };
     fetchJobs();
-  }, [user, navigate]);
+    return () => { cancelled = true; };
+  }, [user, authLoading, navigate]);
 
   // Apply combined filters
   const filteredJobs = useMemo(() => {
