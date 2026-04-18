@@ -722,6 +722,29 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                     {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
                   </Button>
                 </div>
+                <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <Switch
+                      checked={useExtraSources}
+                      onCheckedChange={(checked) => {
+                        setUseExtraSources(checked);
+                        if (!checked) setExtraSources([]);
+                      }}
+                      aria-label={t("jobResults.extraSources.toggleLabel")}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {t("jobResults.extraSources.toggleLabel")}
+                    </span>
+                  </label>
+                  {useExtraSources && (
+                    <QuestionExtraSourcesPicker
+                      currentJobId={jobId}
+                      value={extraSources}
+                      onChange={setExtraSources}
+                      max={5}
+                    />
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground text-right mt-1.5">
                   {isQuestionLimitReached
                     ? t("jobResults.noQuestionsLeft")
