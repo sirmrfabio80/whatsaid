@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { CanonicalExportData } from "@/lib/export-types";
 import { sanitizeFileBaseName } from "@/lib/export-filename";
+import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 
 export interface AppNotification {
   id: string;
@@ -307,8 +308,9 @@ border:3px solid #334155;border-top-color:#818cf8;border-radius:50%;margin:0 aut
           const { generatePdfBlob } = await import("@/lib/export-pdf");
           const blob = await generatePdfBlob(data);
 
-          // 3. Upload to exports bucket
-          const pdfFileName = `${sanitizeFileBaseName(data.title)}.pdf`;
+          // 3. Upload to exports bucket — sanitize for Supabase Storage key constraints
+          // (sanitizeFileBaseName preserves the human title for UI; storage needs ASCII-safe)
+          const pdfFileName = sanitizeStorageFilename(`${sanitizeFileBaseName(data.title)}.pdf`);
           const storagePath = `${user.id}/${asyncJobId}/${pdfFileName}`;
           const { error: uploadErr } = await supabase.storage
             .from("exports")
