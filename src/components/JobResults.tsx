@@ -26,6 +26,8 @@ import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/spe
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Switch } from "@/components/ui/switch";
+import QuestionExtraSourcesPicker, { type ExtraSource } from "@/components/QuestionExtraSourcesPicker";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
@@ -63,6 +65,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [editingQAId, setEditingQAId] = useState<string | null>(null);
   const [editingQAText, setEditingQAText] = useState("");
   const [regeneratingQAId, setRegeneratingQAId] = useState<string | null>(null);
+  const [useExtraSources, setUseExtraSources] = useState(false);
+  const [extraSources, setExtraSources] = useState<ExtraSource[]>([]);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -358,7 +362,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     const prompt = questionPrompt.trim(); if (!prompt || isQuestionLimitReached) return;
     setAskingQuestion(true);
     try {
-      const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: prompt } });
+      const includeExtras = useExtraSources && extraSources.length > 0;
+      const body: { job_id: string; custom_prompt: string; extra_job_ids?: string[] } = {
+        job_id: jobId,
+        custom_prompt: prompt,
+      };
+      if (includeExtras) body.extra_job_ids = extraSources.map((s) => s.id);
+      const { data, error } = await supabase.functions.invoke("regenerate", { body });
       if (error || data?.error) {
         if (data?.error === "question_limit_reached") toast.error(t("jobResults.noQuestionsLeft"));
         return;
