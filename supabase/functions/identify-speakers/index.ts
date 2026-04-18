@@ -7,7 +7,6 @@ import {
   buildSpeakerVerifierUserPrompt,
 } from "../_shared/prompts.ts";
 
-const AI_GATEWAY = AI_GATEWAY_URL;
 const AI_MODEL = "google/gemini-2.5-flash";
 
 // ---- Expanded stopwords: common words that are never person names ----
@@ -773,7 +772,7 @@ async function runAIReview(
   const userPrompt = buildSpeakerVerifierUserPrompt(candidateDescription, relevantLines);
 
   try {
-    const res = await fetch(AI_GATEWAY, {
+    const res = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

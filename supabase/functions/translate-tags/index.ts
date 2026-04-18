@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 
-const AI_GATEWAY = AI_GATEWAY_URL;
 const MODEL = "google/gemini-2.5-flash-lite";
 
 serve(async (req) => {
@@ -41,7 +40,7 @@ serve(async (req) => {
 
     const userPrompt = `Translate these English tags to ${target_lang}:\n${JSON.stringify(batch)}`;
 
-    const res = await fetch(AI_GATEWAY, {
+    const res = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

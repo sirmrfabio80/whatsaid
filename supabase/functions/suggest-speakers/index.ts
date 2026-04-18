@@ -6,7 +6,6 @@ import {
   buildSpeakerSuggestUserPrompt,
 } from "../_shared/prompts.ts";
 
-const AI_GATEWAY = AI_GATEWAY_URL;
 const MODEL = "google/gemini-2.5-flash-lite";
 const MAX_FULL_CHARS = 15_000;
 const ANCHOR_CHARS = 2_000;
@@ -156,7 +155,7 @@ serve(async (req) => {
     });
     const userPrompt = buildSpeakerSuggestUserPrompt(target_speaker, formatted);
 
-    const res = await fetch(AI_GATEWAY, {
+    const res = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
