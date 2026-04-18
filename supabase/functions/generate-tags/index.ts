@@ -1,6 +1,6 @@
 import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { createServiceClient, createUserClient } from "../_shared/supabase.ts";
+import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,22 +14,10 @@ Deno.serve(async (req) => {
     const supabase = createServiceClient();
 
     // Authenticate caller
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: { user }, error: authErr } = await createUserClient(authHeader).auth.getUser();
-
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const auth = await requireAuth(req.headers.get("Authorization"));
+    if (!auth.ok) return auth.response;
+    const { userId } = auth;
+    const user = { id: userId };
 
     const { job_id } = await req.json();
     if (!job_id) {

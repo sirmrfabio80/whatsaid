@@ -1,5 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
-import { createServiceClient, createUserClient } from "../_shared/supabase.ts";
+import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -7,30 +7,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify caller using getUser (reliable, standard method)
-    const userClient = createUserClient(authHeader);
-    const {
-      data: { user },
-      error: userError,
-    } = await userClient.auth.getUser();
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const userId = user.id;
-    const userEmail = user.email;
+    const auth = await requireAuth(req.headers.get("Authorization"));
+    if (!auth.ok) return auth.response;
+    const { userId, email: userEmail } = auth;
 
     if (!userEmail) {
       return new Response(JSON.stringify({ error: "No email in token" }), {
