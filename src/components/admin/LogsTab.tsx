@@ -11,11 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Loader2, Search, X } from "lucide-react";
+import { RefreshCw, Loader2, Search, X, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import JsonBlock from "./JsonBlock";
 import JobAuditCard from "./JobAuditCard";
 import EdgeLogsList from "./EdgeLogsList";
+import { LoadingState } from "@/components/ui/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface RecentJob {
   id: string;
@@ -98,22 +100,11 @@ export default function LogsTab() {
   }, [data?.recent_jobs, search]);
 
   if (loading && !data) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Loading latest job…
-      </div>
-    );
+    return <LoadingState rows={2} titleWidth="w-48" rowHeight="h-32" className="py-6" />;
   }
 
   if (!data?.job) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          No jobs found.
-        </CardContent>
-      </Card>
-    );
+    return <EmptyState icon={Inbox} title="No jobs found" description="There are no jobs in the system yet." />;
   }
 
   const transcriptOutput = data.outputs.find((o) => o.output_type === "transcript");
