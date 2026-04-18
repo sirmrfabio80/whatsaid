@@ -250,8 +250,10 @@ async function handleSummaryOrCustom(
   } else {
     if (!customPrompt?.trim()) throw Object.assign(new Error("custom_prompt is required"), { statusCode: 400 });
     systemPrompt = CUSTOM_OUTPUT_SYSTEM_PROMPT;
-    userPrompt = buildCustomUserPrompt(customPrompt, transcript);
-    console.log(`[regenerate] Processing job ${jobId}, prompt: "${customPrompt.slice(0, 80)}..."`);
+    userPrompt = extraSources.length > 0
+      ? buildCustomUserPromptMulti(customPrompt, transcript, extraSources)
+      : buildCustomUserPrompt(customPrompt, transcript);
+    console.log(`[regenerate] Processing job ${jobId}, prompt: "${customPrompt.slice(0, 80)}...", extras=${extraSources.length}`);
   }
 
   const model = outputType === "summary" ? MODEL_SUMMARY : MODEL_CUSTOM;
@@ -352,8 +354,74 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Optional: extra transcript sources for the Questions/custom path ──
+    // Validated under the caller's identity so we never reveal another user's
+    // transcripts even though we use a service-role client for everything else.
+    let extraSources: Array<{ title: string; content: string }> = [];
+    const rawExtras = (body as { extra_job_ids?: unknown }).extra_job_ids;
+    if (regenerateType === "custom" && Array.isArray(rawExtras) && rawExtras.length > 0) {
+      const requested = rawExtras
+        .filter((v): v is string => typeof v === "string" && UUID_RE.test(v) && v !== job_id)
+        .slice(0, MAX_EXTRA_SOURCES);
+
+      if (requested.length > 0) {
+        const auth = await requireAuth(req.headers.get("Authorization"));
+        if (!auth.ok) return auth.response;
+        const callerId = auth.userId;
+
+        // Verify the caller owns the primary job (defense in depth — service role bypasses RLS).
+        const { data: primaryOwner } = await supabase
+          .from("jobs")
+          .select("user_id")
+          .eq("id", job_id)
+          .maybeSingle();
+        if (!primaryOwner || primaryOwner.user_id !== callerId) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Validate ownership + completion for each extra. Drop unauthorized/invalid silently.
+        const { data: ownedRows } = await supabase
+          .from("jobs")
+          .select("id, title, file_name")
+          .in("id", requested)
+          .eq("user_id", callerId)
+          .eq("status", "completed");
+
+        const owned = (ownedRows ?? []) as Array<{ id: string; title: string | null; file_name: string }>;
+        if (owned.length > 0) {
+          const { data: txRows } = await supabase
+            .from("job_outputs")
+            .select("job_id, content")
+            .in("job_id", owned.map((o) => o.id))
+            .eq("output_type", "transcript");
+
+          const txMap = new Map<string, string>();
+          for (const r of (txRows ?? []) as Array<{ job_id: string; content: string }>) {
+            txMap.set(r.job_id, r.content);
+          }
+
+          // Preserve caller-specified ordering.
+          const ownedById = new Map(owned.map((o) => [o.id, o]));
+          let totalChars = 0;
+          for (const id of requested) {
+            const meta = ownedById.get(id);
+            const content = txMap.get(id);
+            if (!meta || !content) continue;
+            if (totalChars + content.length > MAX_COMBINED_EXTRA_CHARS) {
+              console.warn(`[regenerate] extra-sources char cap reached; dropping remaining ${requested.length - extraSources.length}`);
+              break;
+            }
+            extraSources.push({ title: meta.title?.trim() || meta.file_name, content });
+            totalChars += content.length;
+          }
+        }
+      }
+    }
+
     const insertedOutput = await handleSummaryOrCustom(
-      supabase, LOVABLE_API_KEY, job_id, regenerateType, custom_prompt ?? null, target_language ?? null
+      supabase, LOVABLE_API_KEY, job_id, regenerateType, custom_prompt ?? null, target_language ?? null, extraSources,
     );
 
     console.log(`[regenerate] ${regenerateType} output regenerated for job ${job_id}`);
