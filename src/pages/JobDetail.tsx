@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Loader2, Timer, MapPin, Type, BookOpen } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Calendar, Plus, Pencil, Check, Timer, MapPin, Type, BookOpen } from "lucide-react";
+import { InlineSpinner } from "@/components/ui/inline-spinner";
 import JobResults from "@/components/JobResults";
 import type { JobMeta } from "@/components/JobResults";
 import { formatDuration } from "@/lib/pricing";
@@ -166,10 +167,12 @@ export default function JobDetail() {
                       onKeyDown={(e) => { if (e.key === "Enter") startEditing(); }}
                     >
                       {generatingTitle ? (
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-lg">{t("jobDetail.generatingTitle")}</span>
-                        </span>
+                        <InlineSpinner
+                          size="sm"
+                          tone="muted"
+                          label={t("jobDetail.generatingTitle")}
+                          className="text-lg"
+                        />
                       ) : (
                         title || meta.file_name
                       )}
