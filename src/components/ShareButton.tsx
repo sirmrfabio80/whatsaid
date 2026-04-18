@@ -37,6 +37,43 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
   }
 }
 
+/**
+ * Tracks the iOS/Android virtual keyboard via window.visualViewport and
+ * exposes its height as the CSS variable `--keyboard-inset` on <html>.
+ * The bottom sheet uses this to lift itself above the keyboard.
+ *
+ * Best-practice notes:
+ * - layout viewport doesn't shrink on iOS Safari → must use visualViewport
+ * - listen for resize + scroll (iOS fires scroll when keyboard animates)
+ * - clean up on unmount and reset the variable to 0
+ */
+function KeyboardInsetTracker() {
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+
+    const root = document.documentElement;
+    const update = () => {
+      // Distance between visual viewport bottom and layout viewport bottom.
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+    };
+
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    window.addEventListener("orientationchange", update);
+
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      window.removeEventListener("orientationchange", update);
+      root.style.setProperty("--keyboard-inset", "0px");
+    };
+  }, []);
+  return null;
+}
+
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
   handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
