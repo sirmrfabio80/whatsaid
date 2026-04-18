@@ -155,7 +155,7 @@ serve(async (req) => {
     });
     const userPrompt = buildSpeakerSuggestUserPrompt(target_speaker, formatted);
 
-    const res = await fetch(AI_GATEWAY, {
+    const res = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
