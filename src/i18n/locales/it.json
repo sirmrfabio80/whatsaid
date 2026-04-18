@@ -347,7 +347,8 @@
       "searchPlaceholder": "Cerca tra le tue trascrizioni…",
       "noResults": "Nessuna trascrizione corrispondente",
       "removeAriaLabel": "Rimuovi {{title}}",
-      "limitReached": "Massimo {{max}} trascrizioni"
+      "limitReached": "Massimo {{max}} trascrizioni",
+      "usedLabel": "Fonti usate:"
     }
   },
   "share": {
