@@ -19,9 +19,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator";
 import { parseSegments, type Segment, type SpeakerSuggestion } from "@/lib/transcript";
 
-export { parseSegments };
-export type { Segment, SpeakerSuggestion };
-
 interface TranscriptEditorProps {
   content: string;
   speakerNames: Record<string, string>;

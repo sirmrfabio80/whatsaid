@@ -31,8 +31,6 @@ export type { JobMeta };
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
-interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
-
 function parseSpeakers(text: string): string[] {
   const segments = parseSegments(text);
   return [...new Set(segments.map((segment) => segment.speaker).filter((speaker): speaker is string => Boolean(speaker)))];
