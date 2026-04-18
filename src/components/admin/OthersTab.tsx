@@ -106,6 +106,34 @@ export default function OthersTab() {
     load();
   }
 
+  async function fixFlags(flagIds?: string[]) {
+    if (flagIds?.length === 1) setBusyId(flagIds[0]);
+    else setBulkBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fix-flagged-tags", {
+        body: flagIds && flagIds.length > 0 ? { flag_ids: flagIds } : {},
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      const fixed = data?.fixed ?? 0;
+      const errs = Array.isArray(data?.errors) ? data.errors.length : 0;
+      if (errs > 0) {
+        toast.warning(t("admin.others.fixSomeErrors", { fixed, errors: errs }));
+        console.warn("fix-flagged-tags errors:", data.errors);
+      } else {
+        toast.success(t("admin.others.fixedCount", { count: fixed }));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setBusyId(null);
+      setBulkBusy(false);
+      load();
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
