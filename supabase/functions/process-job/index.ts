@@ -9,6 +9,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createServiceClient();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const { job_id, custom_prompt, keyterms_prompt } = await req.json();
     if (!job_id) {
