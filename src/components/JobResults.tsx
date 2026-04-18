@@ -29,7 +29,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Switch } from "@/components/ui/switch";
 import QuestionExtraSourcesPicker, { type ExtraSource } from "@/components/QuestionExtraSourcesPicker";
 
-interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
+interface ExtraSourceMeta { id: string; title: string; }
+interface JobOutputMetadata { extra_sources?: ExtraSourceMeta[]; [key: string]: unknown; }
+interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; metadata?: JobOutputMetadata | null; }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
 
@@ -70,7 +72,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
-      supabase.from("job_outputs").select("id, output_type, content, custom_prompt").eq("job_id", jobId).order("created_at", { ascending: true }),
+      supabase.from("job_outputs").select("id, output_type, content, custom_prompt, metadata").eq("job_id", jobId).order("created_at", { ascending: true }),
       supabase.from("jobs").select("language_detected, summary_language, duration_seconds, file_name, created_at, recorded_at, recorded_at_source, speech_model, speaker_names, title, metadata_location_iso6709, location_label, output_language, summary_needs_regen, summary_regen_count, question_generation_count").eq("id", jobId).maybeSingle(),
     ]);
     setOutputs((outputsData as JobOutput[]) ?? []);
