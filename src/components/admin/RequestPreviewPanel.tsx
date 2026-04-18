@@ -42,8 +42,12 @@ type SampleCountry = "auto" | "US" | "EU";
  * because the real signed URL is created at request time.
  */
 export default function RequestPreviewPanel({ config }: Props) {
-  const [copied, setCopied] = useState(false);
   const [sampleCountry, setSampleCountry] = useState<SampleCountry>("auto");
+  const { copied, copy } = useCopyToClipboard({
+    successMessage: "Payload copied",
+    errorMessage: "Copy failed",
+    resetMs: 1500,
+  });
 
   const payload = useMemo(
     () =>
@@ -66,16 +70,7 @@ export default function RequestPreviewPanel({ config }: Props) {
 
   const json = useMemo(() => JSON.stringify(payload, null, 2), [payload]);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(json);
-      setCopied(true);
-      toast.success("Payload copied");
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error("Copy failed");
-    }
-  };
+  const handleCopy = () => copy(json);
 
   return (
     <Card className="mt-6">

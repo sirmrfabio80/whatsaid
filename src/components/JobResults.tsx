@@ -20,6 +20,7 @@ import TranscriptEditor, { parseSegments, type SpeakerSuggestion } from "@/compo
 import ParticipantsPanel from "@/components/ParticipantsPanel";
 import { toast } from "sonner";
 import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/speaker-identification";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
