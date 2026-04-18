@@ -1,5 +1,6 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
 import { createClient, type SupabaseClient } from '../_shared/supabase.ts'
+import { requireEnvs } from '../_shared/env.ts'
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -79,12 +80,20 @@ async function moveToDlq(
 }
 
 Deno.serve(async (req) => {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY')
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-  if (!apiKey || !supabaseUrl || !supabaseServiceKey) {
-    console.error('Missing required environment variables')
+  let apiKey: string
+  let supabaseUrl: string
+  let supabaseServiceKey: string
+  try {
+    const env = requireEnvs([
+      'LOVABLE_API_KEY',
+      'SUPABASE_URL',
+      'SUPABASE_SERVICE_ROLE_KEY',
+    ] as const)
+    apiKey = env.LOVABLE_API_KEY
+    supabaseUrl = env.SUPABASE_URL
+    supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY
+  } catch (err) {
+    console.error('[process-email-queue]', (err as Error).message)
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
