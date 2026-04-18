@@ -16,14 +16,7 @@
  */
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
-function requireEnv(name: string): string {
-  const value = Deno.env.get(name);
-  if (!value) {
-    throw new Error(`${name} is not configured`);
-  }
-  return value;
-}
+import { requireEnv } from "./env.ts";
 
 /**
  * Service-role client. Bypasses RLS — use only for trusted server logic.
