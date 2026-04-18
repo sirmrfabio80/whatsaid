@@ -199,7 +199,7 @@ async function handleSummaryOrCustom(
   outputType: "summary" | "custom",
   customPrompt: string | null,
   targetLang: string | null,
-  extraSources: Array<{ title: string; content: string }> = [],
+  extraSources: Array<{ id: string; title: string; content: string }> = [],
 ) {
   const { data: job, error: jobError } = await supabase
     .from("jobs")
@@ -272,6 +272,12 @@ async function handleSummaryOrCustom(
     throw aiError;
   }
 
+  // Persist which extra transcripts were used to ground this answer (custom path only).
+  // Stored under metadata so the UI can render a chip row on saved Q&A entries.
+  const insertMetadata = outputType === "custom" && extraSources.length > 0
+    ? { extra_sources: extraSources.map((s) => ({ id: s.id, title: s.title })) }
+    : null;
+
   const { data: insertedOutput, error: insertError } = await supabase
     .from("job_outputs")
     .insert({
@@ -279,8 +285,9 @@ async function handleSummaryOrCustom(
       output_type: outputType === "summary" ? "summary" : "custom",
       content,
       custom_prompt: outputType === "custom" ? customPrompt : null,
+      metadata: insertMetadata,
     })
-    .select("id, output_type, content, custom_prompt")
+    .select("id, output_type, content, custom_prompt, metadata")
     .single();
 
   if (insertError || !insertedOutput) throw new Error(insertError?.message || "Failed to save regenerated output");
@@ -413,7 +420,7 @@ Deno.serve(async (req) => {
               console.warn(`[regenerate] extra-sources char cap reached; dropping remaining ${requested.length - extraSources.length}`);
               break;
             }
-            extraSources.push({ title: meta.title?.trim() || meta.file_name, content });
+            extraSources.push({ id, title: meta.title?.trim() || meta.file_name, content });
             totalChars += content.length;
           }
         }

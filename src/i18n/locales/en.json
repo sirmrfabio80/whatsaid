@@ -347,7 +347,8 @@
       "searchPlaceholder": "Search your transcripts…",
       "noResults": "No matching transcripts",
       "removeAriaLabel": "Remove {{title}}",
-      "limitReached": "Up to {{max}} transcripts"
+      "limitReached": "Up to {{max}} transcripts",
+      "usedLabel": "Sources used:"
     }
   },
   "share": {
