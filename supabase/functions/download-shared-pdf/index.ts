@@ -1,8 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { corsHeaders as baseCorsHeaders } from '../_shared/cors.ts'
 
+// Augment shared CORS with Content-Disposition exposure so the browser can
+// read the suggested filename when streaming the PDF back to the client.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  ...baseCorsHeaders,
   'Access-Control-Expose-Headers': 'Content-Disposition, Content-Type',
 }
 

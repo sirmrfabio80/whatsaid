@@ -1,11 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { corsHeaders } from "../_shared/cors.ts";
+import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_GATEWAY = AI_GATEWAY_URL;
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
 const MODEL_TRANSLATE = "google/gemini-2.5-flash";
