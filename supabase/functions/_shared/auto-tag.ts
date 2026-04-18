@@ -2,7 +2,6 @@ import type { SupabaseClient } from "./supabase.ts";
 import { AI_GATEWAY_URL } from "./ai-gateway.ts";
 import { TAGS_SYSTEM_PROMPT, buildTagsUserPrompt } from "./prompts.ts";
 
-const AI_GATEWAY = AI_GATEWAY_URL;
 const MODEL = "google/gemini-2.5-flash-lite";
 const MIN_TRANSCRIPT_LENGTH = 100;
 const MAX_TAGS = 6;
