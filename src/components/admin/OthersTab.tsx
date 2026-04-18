@@ -107,7 +107,7 @@ export default function OthersTab() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <LoadingState message={t("admin.others.loading")} />
+          <LoadingState rows={3} titleWidth="" />
         ) : flags.length === 0 ? (
           <EmptyState title={t("admin.others.empty")} description={t("admin.others.emptyDesc")} />
         ) : (
