@@ -19,6 +19,7 @@ interface ShareButtonProps {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ACCEPT_HINT_STORAGE_KEY = "share-email-autocomplete-hint-dismissed";
+const ARROW_HINT_STORAGE_KEY = "share-email-autocomplete-arrow-hint-dismissed";
 
 async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Promise<string | null> {
   try {
@@ -40,13 +41,15 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
 
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
-  handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients, showAcceptHint, onAcceptSuggestion,
+  handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
+  showAcceptHint, onAcceptSuggestion, showArrowHint, onAcceptArrowSuggestion, isMobile,
 }: {
   email: string; setEmail: (v: string) => void; isValid: boolean;
   sending: boolean; sent: boolean; sendingRecord: boolean; sentRecord: boolean;
   handleSendEmail: () => void; handleShareRecord: () => void;
   t: (k: string) => string; autoFocusInput?: boolean; recentRecipients: string[];
   showAcceptHint: boolean; onAcceptSuggestion: () => void;
+  showArrowHint: boolean; onAcceptArrowSuggestion: () => void; isMobile: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
