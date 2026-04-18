@@ -313,7 +313,11 @@ export default function Convert() {
 
       setStep("uploading");
       const newJobId = crypto.randomUUID();
-      const filePath = `${user.id}/${newJobId}/${uploadFile.name}`;
+      // Defensive sanitization: covers branches that bypass enhancement (e.g. .wav)
+      // and any future code path producing an upload file. Supabase Storage rejects
+      // keys with non-ASCII chars (curly quotes, accents, emoji, etc.).
+      const safeUploadName = sanitizeStorageFilename(uploadFile.name);
+      const filePath = `${user.id}/${newJobId}/${safeUploadName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("temp-audio")

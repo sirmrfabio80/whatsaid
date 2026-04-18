@@ -9,6 +9,8 @@
  *      RMS-mode push files past the digital ceiling without harsh clipping.
  */
 
+import { sanitizeStorageFilename } from "./sanitize-filename";
+
 export type NormaliseMode = "peak" | "rms";
 
 export interface AudioEnhanceOptions {
@@ -176,8 +178,10 @@ export async function enhanceAudioForTranscription(
   const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
   await tempCtx.close();
 
-  const baseName = file.name.replace(/\.[^.]+$/, "");
-  const enhancedFileName = `${baseName}_normalised.mp3`;
+  // Sanitize so the produced File's name is always safe for Supabase Storage keys
+  // (curly quotes, accents, emoji, etc. otherwise trigger "Invalid key" errors).
+  const safeBase = sanitizeStorageFilename(file.name.replace(/\.[^.]+$/, "")).replace(/\.mp3$/i, "");
+  const enhancedFileName = `${safeBase}_normalised.mp3`;
   const inputChannels: 1 | 2 = audioBuffer.numberOfChannels === 1 ? 1 : 2;
 
   // --- Measure input ---
