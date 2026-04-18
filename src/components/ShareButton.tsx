@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Share2, Mail, Link2, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,13 +39,37 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
 
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
-  handleSendEmail, handleShareRecord, t, autoFocusInput = true,
+  handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
 }: {
   email: string; setEmail: (v: string) => void; isValid: boolean;
   sending: boolean; sent: boolean; sendingRecord: boolean; sentRecord: boolean;
   handleSendEmail: () => void; handleShareRecord: () => void;
-  t: (k: string) => string; autoFocusInput?: boolean;
+  t: (k: string) => string; autoFocusInput?: boolean; recentRecipients: string[];
 }) {
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const suggestion = useMemo(() => {
+    const q = email;
+    if (!q) return "";
+    const qLower = q.toLowerCase();
+    const match = recentRecipients.find(
+      (r) => r.toLowerCase().startsWith(qLower) && r.toLowerCase() !== qLower,
+    );
+    if (!match) return "";
+    return match.slice(q.length);
+  }, [email, recentRecipients]);
+
+  const acceptIfPossible = () => {
+    if (!suggestion) return false;
+    const el = inputRef.current;
+    if (el && el.selectionStart !== email.length) return false;
+    setEmail(email + suggestion);
+    return true;
+  };
+
+  const showGhost = focused && suggestion.length > 0;
+
   return (
     <>
       {/* Header */}
@@ -57,17 +81,42 @@ function ShareContent({
       {/* Email input */}
       <div className="px-4 py-3 border-b border-border/40">
         <label htmlFor="share-email" className="sr-only">{t("share.emailLabel")}</label>
-        <Input
-          id="share-email"
-          type="email"
-          placeholder={t("share.emailPlaceholder")}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="h-10 rounded-lg text-base md:text-sm"
-          onKeyDown={(e) => { if (e.key === "Enter") handleSendEmail(); }}
-          disabled={sending || sent || sendingRecord || sentRecord}
-          autoFocus={autoFocusInput}
-        />
+        <div className="relative">
+          <Input
+            id="share-email"
+            ref={inputRef}
+            type="email"
+            placeholder={t("share.emailPlaceholder")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-10 rounded-lg text-base md:text-sm bg-transparent relative z-10"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { handleSendEmail(); return; }
+              if (e.key === " " && suggestion) {
+                if (acceptIfPossible()) e.preventDefault();
+              }
+              if (e.key === "Tab" && suggestion && !e.shiftKey) {
+                if (acceptIfPossible()) e.preventDefault();
+              }
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            disabled={sending || sent || sendingRecord || sentRecord}
+            autoFocus={autoFocusInput}
+            autoComplete="off"
+            spellCheck={false}
+            aria-autocomplete="inline"
+          />
+          {showGhost && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 flex items-center px-3 pointer-events-none text-base md:text-sm rounded-lg overflow-hidden"
+            >
+              <span className="invisible whitespace-pre">{email}</span>
+              <span className="text-muted-foreground/60 whitespace-pre">{suggestion}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Action: Send by email */}
@@ -114,8 +163,38 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const [sent, setSent] = useState(false);
   const [sendingRecord, setSendingRecord] = useState(false);
   const [sentRecord, setSentRecord] = useState(false);
+  const [recentRecipients, setRecentRecipients] = useState<string[]>([]);
 
   const isValid = EMAIL_RE.test(email.trim());
+
+  const fetchRecentRecipients = async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("transcript_shares")
+        .select("recipient_email, created_at")
+        .eq("shared_by", user.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error || !data) return;
+      const seen = new Set<string>();
+      const unique: string[] = [];
+      for (const row of data) {
+        const raw = (row.recipient_email ?? "").trim();
+        if (!raw) continue;
+        const key = raw.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        unique.push(raw);
+        if (unique.length >= 50) break;
+      }
+      setRecentRecipients(unique);
+    } catch {
+      // silent
+    }
+  };
 
   const handleSendEmail = async () => {
     if (!isValid || sending) return;
@@ -154,8 +233,10 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const handleOpenChange = (next: boolean) => {
     if (!next && document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setOpen(next);
-    if (!next) {
-      setTimeout(() => { setEmail(""); setSent(false); setSentRecord(false); }, 200);
+    if (next) {
+      void fetchRecentRecipients();
+    } else {
+      setTimeout(() => { setEmail(""); setSent(false); setSentRecord(false); setRecentRecipients([]); }, 200);
     }
   };
 
@@ -168,7 +249,7 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
 
   const contentProps = {
     email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
-    handleSendEmail, handleShareRecord, t, autoFocusInput: !isMobile,
+    handleSendEmail, handleShareRecord, t, autoFocusInput: !isMobile, recentRecipients,
   };
 
   if (isMobile) {
