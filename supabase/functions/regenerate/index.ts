@@ -199,7 +199,7 @@ async function handleSummaryOrCustom(
   outputType: "summary" | "custom",
   customPrompt: string | null,
   targetLang: string | null,
-  extraSources: Array<{ title: string; content: string }> = [],
+  extraSources: Array<{ id: string; title: string; content: string }> = [],
 ) {
   const { data: job, error: jobError } = await supabase
     .from("jobs")
@@ -420,7 +420,7 @@ Deno.serve(async (req) => {
               console.warn(`[regenerate] extra-sources char cap reached; dropping remaining ${requested.length - extraSources.length}`);
               break;
             }
-            extraSources.push({ title: meta.title?.trim() || meta.file_name, content });
+            extraSources.push({ id, title: meta.title?.trim() || meta.file_name, content });
             totalChars += content.length;
           }
         }
