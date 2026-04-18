@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Share2, Mail, Link2, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,43 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
   }
 }
 
+/**
+ * Tracks the iOS/Android virtual keyboard via window.visualViewport and
+ * exposes its height as the CSS variable `--keyboard-inset` on <html>.
+ * The bottom sheet uses this to lift itself above the keyboard.
+ *
+ * Best-practice notes:
+ * - layout viewport doesn't shrink on iOS Safari → must use visualViewport
+ * - listen for resize + scroll (iOS fires scroll when keyboard animates)
+ * - clean up on unmount and reset the variable to 0
+ */
+function KeyboardInsetTracker() {
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+
+    const root = document.documentElement;
+    const update = () => {
+      // Distance between visual viewport bottom and layout viewport bottom.
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+    };
+
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    window.addEventListener("orientationchange", update);
+
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      window.removeEventListener("orientationchange", update);
+      root.style.setProperty("--keyboard-inset", "0px");
+    };
+  }, []);
+  return null;
+}
+
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
   handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
@@ -65,6 +102,14 @@ function ShareContent({
     const el = inputRef.current;
     if (el && el.selectionStart !== email.length) return false;
     setEmail(email + suggestion);
+    // Move caret to end after React updates
+    requestAnimationFrame(() => {
+      const node = inputRef.current;
+      if (node) {
+        const len = node.value.length;
+        try { node.setSelectionRange(len, len); } catch { /* noop */ }
+      }
+    });
     return true;
   };
 
@@ -92,10 +137,21 @@ function ShareContent({
             className="h-10 rounded-lg text-base md:text-sm bg-transparent relative z-10"
             onKeyDown={(e) => {
               if (e.key === "Enter") { handleSendEmail(); return; }
-              if (e.key === " " && suggestion) {
+              if ((e.key === " " || e.key === "Spacebar") && suggestion) {
                 if (acceptIfPossible()) e.preventDefault();
               }
               if (e.key === "Tab" && suggestion && !e.shiftKey) {
+                if (acceptIfPossible()) e.preventDefault();
+              }
+              if (e.key === "ArrowRight" && suggestion) {
+                if (acceptIfPossible()) e.preventDefault();
+              }
+            }}
+            onBeforeInput={(e) => {
+              // Mobile keyboards (iOS) often don't fire reliable keydown for space.
+              // Catch space insertions here as a fallback.
+              const ne = e.nativeEvent as InputEvent;
+              if (ne.inputType === "insertText" && ne.data === " " && suggestion) {
                 if (acceptIfPossible()) e.preventDefault();
               }
             }}
@@ -256,7 +312,12 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>
-        <SheetContent side="bottom" className="p-0 rounded-t-xl">
+        <SheetContent
+          side="bottom"
+          className="p-0 rounded-t-xl max-h-[90dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+          style={{ bottom: `var(--keyboard-inset, 0px)` }}
+        >
+          <KeyboardInsetTracker />
           <ShareContent {...contentProps} />
         </SheetContent>
       </Sheet>
