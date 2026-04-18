@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
-import { callAiGateway, AiGatewayError } from "../_shared/ai-gateway.ts";
+import { callAiGateway } from "../_shared/ai-gateway.ts";
 
 const MODEL = "google/gemini-2.5-flash-lite";
 
