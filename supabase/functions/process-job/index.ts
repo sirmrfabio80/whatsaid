@@ -85,63 +85,85 @@ Deno.serve(async (req) => {
 
     console.log(`[process-job] Starting pipeline for job ${job_id}`);
 
-    // 2. Call transcribe
-    console.log(`[process-job] Step 1: Transcribing...`);
-    const transcribeRes = await fetch(`${supabaseUrl}/functions/v1/transcribe`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${supabaseServiceKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ job_id }),
-    });
+    // Run the long-running pipeline (transcribe + post-process) in the
+    // background so we don't hit the 150s edge function idle timeout for
+    // longer audio. The client polls the job row for status updates.
+    const runPipeline = async () => {
+      try {
+        console.log(`[process-job] Step 1: Transcribing...`);
+        const transcribeRes = await fetch(`${supabaseUrl}/functions/v1/transcribe`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${supabaseServiceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ job_id }),
+        });
 
-    if (!transcribeRes.ok) {
-      const errBody = await transcribeRes.text();
-      throw new Error(`Transcription failed: ${errBody}`);
+        if (!transcribeRes.ok) {
+          const errBody = await transcribeRes.text();
+          throw new Error(`Transcription failed: ${errBody}`);
+        }
+
+        const transcribeResult = await transcribeRes.json();
+        if (!transcribeResult.success) {
+          throw new Error(`Transcription failed: ${transcribeResult.error || "Unknown error"}`);
+        }
+
+        console.log(`[process-job] Transcription complete. Language: ${transcribeResult.language_detected}`);
+
+        console.log(`[process-job] Step 2: Post-processing...`);
+        const postProcessRes = await fetch(`${supabaseUrl}/functions/v1/post-process`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${supabaseServiceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ job_id, custom_prompt: custom_prompt || null }),
+        });
+
+        if (!postProcessRes.ok) {
+          const errBody = await postProcessRes.text();
+          throw new Error(`Post-processing failed: ${errBody}`);
+        }
+
+        const postProcessResult = await postProcessRes.json();
+        if (!postProcessResult.success) {
+          throw new Error(`Post-processing failed: ${postProcessResult.error || "Unknown error"}`);
+        }
+
+        console.log(`[process-job] Pipeline complete for job ${job_id}`);
+      } catch (pipelineError) {
+        console.error(`[process-job] Pipeline error for job ${job_id}:`, pipelineError);
+        try {
+          await markJobFailed(createServiceClient(), job_id, pipelineError);
+        } catch (markErr) {
+          console.error(`[process-job] Failed to mark job as failed:`, markErr);
+        }
+      }
+    };
+
+    // @ts-ignore — EdgeRuntime is provided by the Supabase edge runtime
+    if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(runPipeline());
+    } else {
+      // Fallback: fire-and-forget (e.g. in local Deno tests).
+      runPipeline();
     }
 
-    const transcribeResult = await transcribeRes.json();
-    if (!transcribeResult.success) {
-      throw new Error(`Transcription failed: ${transcribeResult.error || "Unknown error"}`);
-    }
-
-    console.log(`[process-job] Transcription complete. Language: ${transcribeResult.language_detected}`);
-
-    // 3. Call post-process
-    console.log(`[process-job] Step 2: Post-processing...`);
-    const postProcessRes = await fetch(`${supabaseUrl}/functions/v1/post-process`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${supabaseServiceKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ job_id, custom_prompt: custom_prompt || null }),
-    });
-
-    if (!postProcessRes.ok) {
-      const errBody = await postProcessRes.text();
-      throw new Error(`Post-processing failed: ${errBody}`);
-    }
-
-    const postProcessResult = await postProcessRes.json();
-    if (!postProcessResult.success) {
-      throw new Error(`Post-processing failed: ${postProcessResult.error || "Unknown error"}`);
-    }
-
-    console.log(`[process-job] Pipeline complete for job ${job_id}`);
-
+    // Return immediately — client polls the job row for progress.
     return new Response(
-      JSON.stringify({ success: true, job_id }),
+      JSON.stringify({ success: true, job_id, status: "processing" }),
       {
-        status: 200,
+        status: 202,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
     console.error(`[process-job] Error:`, error);
 
-    // Mark job as failed
+    // Mark job as failed (only synchronous setup errors reach here).
     try {
       const body = await req.clone().json().catch(() => ({}));
       await markJobFailed(createServiceClient(), body.job_id, error);
@@ -158,3 +180,4 @@ Deno.serve(async (req) => {
     );
   }
 });
+
