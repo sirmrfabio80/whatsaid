@@ -61,6 +61,8 @@ Deno.serve(async (req) => {
       event_message: string;
     }> = [];
     try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
       if (projectRef) {
         const sql = `
