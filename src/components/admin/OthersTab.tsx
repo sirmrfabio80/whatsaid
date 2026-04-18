@@ -141,9 +141,24 @@ export default function OthersTab() {
           <CardTitle>{t("admin.others.title")}</CardTitle>
           <CardDescription>{t("admin.others.desc")}</CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setConfirmOpen(true)}
+            disabled={loading || bulkBusy || flags.length === 0}
+          >
+            {bulkBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="h-4 w-4" />
+            )}
+            <span className="ml-1">{bulkBusy ? t("admin.others.fixing") : t("admin.others.fixAll")}</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
