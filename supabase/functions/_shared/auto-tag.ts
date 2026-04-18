@@ -81,7 +81,7 @@ export async function autoTag(
   const systemPrompt = TAGS_SYSTEM_PROMPT;
   const userPrompt = buildTagsUserPrompt(transcript.slice(0, 12000));
 
-  const res = await fetch(AI_GATEWAY, {
+  const res = await fetch(AI_GATEWAY_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
