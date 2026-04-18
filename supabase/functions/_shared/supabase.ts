@@ -52,3 +52,82 @@ export function createUserClient(authHeader: string): SupabaseClient {
 // supabase-js version without adding a second import URL.
 export { createClient };
 export type { SupabaseClient };
+
+/**
+ * Result of a `requireAdmin` check.
+ *
+ * - `ok: true` — the caller is authenticated AND has the 'admin' role.
+ *   Includes the resolved `userId` and a ready-to-use service-role
+ *   `adminClient` (callers almost always need one immediately after).
+ * - `ok: false` — auth or role check failed. Includes a fully-formed
+ *   `Response` (with CORS headers) the caller can return as-is.
+ */
+export type RequireAdminResult =
+  | { ok: true; userId: string; adminClient: SupabaseClient }
+  | { ok: false; response: Response };
+
+/**
+ * Verify that the request is from an authenticated admin user.
+ *
+ * Performs:
+ *   1. `Authorization: Bearer <jwt>` presence check
+ *   2. `getClaims(token)` to resolve the calling user
+ *   3. `has_role(_user_id, 'admin')` RPC to confirm role membership
+ *
+ * Returns a discriminated union so callers can early-return the prepared
+ * 401/403 response without re-implementing CORS or status handling:
+ *
+ * ```ts
+ * const auth = await requireAdmin(req.headers.get("Authorization"));
+ * if (!auth.ok) return auth.response;
+ * const { userId, adminClient } = auth;
+ * ```
+ */
+export async function requireAdmin(
+  authHeader: string | null,
+): Promise<RequireAdminResult> {
+  // Lazy import to avoid a circular dep if cors.ts ever imports from here.
+  const { corsHeaders } = await import("./cors.ts");
+  const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: jsonHeaders,
+      }),
+    };
+  }
+
+  const userClient = createUserClient(authHeader);
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: jsonHeaders,
+      }),
+    };
+  }
+  const userId = claimsData.claims.sub as string;
+
+  const adminClient = createServiceClient();
+  const { data: isAdmin } = await adminClient.rpc("has_role", {
+    _user_id: userId,
+    _role: "admin",
+  });
+  if (!isAdmin) {
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: jsonHeaders,
+      }),
+    };
+  }
+
+  return { ok: true, userId, adminClient };
+}
