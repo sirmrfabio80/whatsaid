@@ -654,7 +654,14 @@
       "dismiss": "Ignorer",
       "renamed": "Tag renommé",
       "deleted": "Tag supprimé",
-      "dismissed": "Signalement ignoré"
+      "dismissed": "Signalement ignoré",
+      "fix": "Corriger",
+      "fixAll": "Tout corriger",
+      "fixing": "Correction…",
+      "fixedCount": "{{count}} tag(s) corrigé(s)",
+      "fixSomeErrors": "{{fixed}} corrigé(s), {{errors}} erreur(s)",
+      "fixConfirmTitle": "Corriger tous les tags signalés ?",
+      "fixConfirmDesc": "Cela traduira {{count}} tag(s) en anglais et enregistrera le texte original comme traduction dans la langue source détectée."
     }
   }
 }

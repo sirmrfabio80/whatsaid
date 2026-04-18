@@ -5,10 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, Trash2, Check, X, Pencil } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Check, X, Pencil, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface FlagRow {
   id: string;
@@ -26,6 +36,8 @@ export default function OthersTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,6 +106,34 @@ export default function OthersTab() {
     load();
   }
 
+  async function fixFlags(flagIds?: string[]) {
+    if (flagIds?.length === 1) setBusyId(flagIds[0]);
+    else setBulkBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fix-flagged-tags", {
+        body: flagIds && flagIds.length > 0 ? { flag_ids: flagIds } : {},
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      const fixed = data?.fixed ?? 0;
+      const errs = Array.isArray(data?.errors) ? data.errors.length : 0;
+      if (errs > 0) {
+        toast.warning(t("admin.others.fixSomeErrors", { fixed, errors: errs }));
+        console.warn("fix-flagged-tags errors:", data.errors);
+      } else {
+        toast.success(t("admin.others.fixedCount", { count: fixed }));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setBusyId(null);
+      setBulkBusy(false);
+      load();
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -101,9 +141,24 @@ export default function OthersTab() {
           <CardTitle>{t("admin.others.title")}</CardTitle>
           <CardDescription>{t("admin.others.desc")}</CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setConfirmOpen(true)}
+            disabled={loading || bulkBusy || flags.length === 0}
+          >
+            {bulkBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="h-4 w-4" />
+            )}
+            <span className="ml-1">{bulkBusy ? t("admin.others.fixing") : t("admin.others.fixAll")}</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -152,21 +207,34 @@ export default function OthersTab() {
                       <>
                         <Button
                           size="sm"
+                          variant="default"
+                          onClick={() => fixFlags([flag.id])}
+                          disabled={busy || bulkBusy}
+                        >
+                          {busy ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <Wand2 className="h-4 w-4 mr-1" />
+                          )}
+                          {t("admin.others.fix")}
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => { setEditingId(flag.id); setEditValue(flag.tag_name); }}
-                          disabled={busy}
+                          disabled={busy || bulkBusy}
                         >
                           <Pencil className="h-4 w-4 mr-1" />
                           {t("admin.others.rename")}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => dismiss(flag)} disabled={busy}>
+                        <Button size="sm" variant="ghost" onClick={() => dismiss(flag)} disabled={busy || bulkBusy}>
                           {t("admin.others.dismiss")}
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => deleteTag(flag)}
-                          disabled={busy}
+                          disabled={busy || bulkBusy}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -180,6 +248,23 @@ export default function OthersTab() {
           </ul>
         )}
       </CardContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("admin.others.fixConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("admin.others.fixConfirmDesc", { count: flags.length })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => fixFlags()}>
+              {t("admin.others.fixAll")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
