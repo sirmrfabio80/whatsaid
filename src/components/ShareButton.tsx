@@ -100,10 +100,21 @@ function ShareContent({
             className="h-10 rounded-lg text-base md:text-sm bg-transparent relative z-10"
             onKeyDown={(e) => {
               if (e.key === "Enter") { handleSendEmail(); return; }
-              if (e.key === " " && suggestion) {
+              if ((e.key === " " || e.key === "Spacebar") && suggestion) {
                 if (acceptIfPossible()) e.preventDefault();
               }
               if (e.key === "Tab" && suggestion && !e.shiftKey) {
+                if (acceptIfPossible()) e.preventDefault();
+              }
+              if (e.key === "ArrowRight" && suggestion) {
+                if (acceptIfPossible()) e.preventDefault();
+              }
+            }}
+            onBeforeInput={(e) => {
+              // Mobile keyboards (iOS) often don't fire reliable keydown for space.
+              // Catch space insertions here as a fallback.
+              const ne = e.nativeEvent as InputEvent;
+              if (ne.inputType === "insertText" && ne.data === " " && suggestion) {
                 if (acceptIfPossible()) e.preventDefault();
               }
             }}
