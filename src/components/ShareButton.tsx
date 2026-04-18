@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Share2, Mail, Link2, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,12 +60,21 @@ function ShareContent({
     return match.slice(q.length);
   }, [email, recentRecipients]);
 
+  // Use refs so the native beforeinput listener (registered once) always sees
+  // the latest values without re-binding listeners on every keystroke.
+  const emailRef = useRef(email);
+  const suggestionRef = useRef(suggestion);
+  useEffect(() => { emailRef.current = email; }, [email]);
+  useEffect(() => { suggestionRef.current = suggestion; }, [suggestion]);
+
   const acceptIfPossible = () => {
-    if (!suggestion) return false;
+    const sug = suggestionRef.current;
+    const cur = emailRef.current;
+    if (!sug) return false;
     const el = inputRef.current;
-    if (el && el.selectionStart !== email.length) return false;
-    setEmail(email + suggestion);
-    // Move caret to end after React updates
+    if (el && el.selectionStart !== cur.length) return false;
+    const full = cur + sug;
+    setEmail(full);
     requestAnimationFrame(() => {
       const node = inputRef.current;
       if (node) {
@@ -75,6 +84,29 @@ function ShareContent({
     });
     return true;
   };
+
+  // Native beforeinput listener — required for reliable Space detection on
+  // iOS Safari and Android Chrome, where React's synthetic onBeforeInput is
+  // polyfilled inconsistently and InputEvent fields are often missing.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const onBeforeInput = (ev: Event) => {
+      const e = ev as InputEvent;
+      const data = e.data;
+      const isSpaceInsert =
+        (e.inputType === "insertText" || e.inputType === "insertCompositionText") &&
+        data === " ";
+      if (isSpaceInsert && suggestionRef.current) {
+        if (acceptIfPossible()) {
+          e.preventDefault();
+        }
+      }
+    };
+    el.addEventListener("beforeinput", onBeforeInput);
+    return () => el.removeEventListener("beforeinput", onBeforeInput);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showGhost = focused && suggestion.length > 0;
 
@@ -96,7 +128,23 @@ function ShareContent({
             type="email"
             placeholder={t("share.emailPlaceholder")}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              // Final fallback: if a space was just appended at the end and we
+              // have a live suggestion, accept the suggestion and drop the
+              // space. This catches iOS autocorrect / IME paths where the
+              // beforeinput event doesn't fire or its data is empty.
+              if (
+                suggestionRef.current &&
+                next.length === emailRef.current.length + 1 &&
+                next.endsWith(" ") &&
+                next.slice(0, -1) === emailRef.current
+              ) {
+                acceptIfPossible();
+                return;
+              }
+              setEmail(next);
+            }}
             className="h-10 rounded-lg text-base md:text-sm bg-transparent relative z-10"
             onKeyDown={(e) => {
               if (e.key === "Enter") { handleSendEmail(); return; }
@@ -107,14 +155,6 @@ function ShareContent({
                 if (acceptIfPossible()) e.preventDefault();
               }
               if (e.key === "ArrowRight" && suggestion) {
-                if (acceptIfPossible()) e.preventDefault();
-              }
-            }}
-            onBeforeInput={(e) => {
-              // Mobile keyboards (iOS) often don't fire reliable keydown for space.
-              // Catch space insertions here as a fallback.
-              const ne = e.nativeEvent as InputEvent;
-              if (ne.inputType === "insertText" && ne.data === " " && suggestion) {
                 if (acceptIfPossible()) e.preventDefault();
               }
             }}
