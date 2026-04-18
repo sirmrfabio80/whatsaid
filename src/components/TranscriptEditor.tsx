@@ -71,9 +71,6 @@ function generateSegId(): string {
   return `seg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 /** Render text with highlighted matches; flags the active match with a stronger style. */
 function renderHighlighted(
@@ -700,7 +697,7 @@ export default function TranscriptEditor({
                     )}
                     {seg.timestamp && (
                       <span className="text-[11px] text-muted-foreground/60 font-mono tabular-nums whitespace-nowrap select-none">
-                        {formatTimestamp(seg.timestamp)}
+                        {formatSegmentTimestamp(seg.timestamp)}
                       </span>
                     )}
                   </div>
@@ -912,7 +909,7 @@ export default function TranscriptEditor({
                   ) : null}
                   {seg.timestamp && (
                     <span className="text-[11px] text-muted-foreground/60 font-mono tabular-nums whitespace-nowrap select-none">
-                      {formatTimestamp(seg.timestamp)}
+                      {formatSegmentTimestamp(seg.timestamp)}
                     </span>
                   )}
                 </div>
