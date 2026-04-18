@@ -128,7 +128,23 @@ function ShareContent({
             type="email"
             placeholder={t("share.emailPlaceholder")}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              // Final fallback: if a space was just appended at the end and we
+              // have a live suggestion, accept the suggestion and drop the
+              // space. This catches iOS autocorrect / IME paths where the
+              // beforeinput event doesn't fire or its data is empty.
+              if (
+                suggestionRef.current &&
+                next.length === emailRef.current.length + 1 &&
+                next.endsWith(" ") &&
+                next.slice(0, -1) === emailRef.current
+              ) {
+                acceptIfPossible();
+                return;
+              }
+              setEmail(next);
+            }}
             className="h-10 rounded-lg text-base md:text-sm bg-transparent relative z-10"
             onKeyDown={(e) => {
               if (e.key === "Enter") { handleSendEmail(); return; }
@@ -139,14 +155,6 @@ function ShareContent({
                 if (acceptIfPossible()) e.preventDefault();
               }
               if (e.key === "ArrowRight" && suggestion) {
-                if (acceptIfPossible()) e.preventDefault();
-              }
-            }}
-            onBeforeInput={(e) => {
-              // Mobile keyboards (iOS) often don't fire reliable keydown for space.
-              // Catch space insertions here as a fallback.
-              const ne = e.nativeEvent as InputEvent;
-              if (ne.inputType === "insertText" && ne.data === " " && suggestion) {
                 if (acceptIfPossible()) e.preventDefault();
               }
             }}
