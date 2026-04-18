@@ -132,6 +132,7 @@ export default function OthersTab() {
       setBusyId(null);
       setBulkBusy(false);
       load();
+    }
   }
 
   async function scanNow() {
@@ -151,7 +152,6 @@ export default function OthersTab() {
       setScanning(false);
       load();
     }
-  }
   }
 
   return (
