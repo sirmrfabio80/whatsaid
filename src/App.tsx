@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { KeyboardInsetTracker } from "@/hooks/use-keyboard-inset";
 
 // Eagerly load the landing page for fast FCP/LCP
 import Index from "./pages/Index";
@@ -37,6 +38,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <KeyboardInsetTracker />
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
