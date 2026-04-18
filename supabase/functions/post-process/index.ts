@@ -2,9 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
+import { callAiGateway } from "../_shared/ai-gateway.ts";
 
-const AI_GATEWAY = AI_GATEWAY_URL;
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
 
@@ -15,37 +14,6 @@ function extractShortSummary(summaryContent: string): string {
   // Strip markdown formatting
   const plain = text.replace(/[*#_`>\-]/g, "").replace(/\s+/g, " ").trim();
   return plain.slice(0, 200);
-}
-
-async function callAI(apiKey: string, model: string, systemPrompt: string, userPrompt: string): Promise<string> {
-  const res = await fetch(AI_GATEWAY, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    }),
-  });
-
-  if (res.status === 429) {
-    throw new Error("AI rate limit exceeded. Please try again later.");
-  }
-  if (res.status === 402) {
-    throw new Error("AI credits exhausted. Please add funds.");
-  }
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`AI gateway error [${res.status}]: ${t}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
 }
 
 Deno.serve(async (req) => {
