@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { requireEnvs } from "../_shared/env.ts";
 import { markJobFailed } from "../_shared/job-failure.ts";
 
 Deno.serve(async (req) => {
@@ -8,9 +9,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { SUPABASE_URL: supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey } =
+      requireEnvs(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] as const);
     const supabase = createServiceClient();
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const { job_id, custom_prompt, keyterms_prompt } = await req.json();
     if (!job_id) {
