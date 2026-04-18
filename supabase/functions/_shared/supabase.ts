@@ -86,45 +86,24 @@ export type RequireAdminResult =
 export async function requireAdmin(
   authHeader: string | null,
 ): Promise<RequireAdminResult> {
-  // Lazy import to avoid a circular dep if cors.ts ever imports from here.
-  const { corsHeaders } = await import("./cors.ts");
-  const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+  // Reuse requireAuth for the bearer + token validation. It returns a
+  // ready-to-send 401 response we can forward unchanged.
+  const auth = await requireAuth(authHeader);
+  if (!auth.ok) return auth;
 
-  if (!authHeader?.startsWith("Bearer ")) {
-    return {
-      ok: false,
-      response: new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: jsonHeaders,
-      }),
-    };
-  }
-
-  const userClient = createUserClient(authHeader);
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
-    return {
-      ok: false,
-      response: new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: jsonHeaders,
-      }),
-    };
-  }
-  const userId = claimsData.claims.sub as string;
-
+  const { userId } = auth;
   const adminClient = createServiceClient();
   const { data: isAdmin } = await adminClient.rpc("has_role", {
     _user_id: userId,
     _role: "admin",
   });
   if (!isAdmin) {
+    const { corsHeaders } = await import("./cors.ts");
     return {
       ok: false,
       response: new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
-        headers: jsonHeaders,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }),
     };
   }
