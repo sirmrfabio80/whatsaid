@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export interface TagOption {
   id: string;
@@ -19,7 +20,7 @@ export function useHistoryFilters(userId: string | undefined, jobIds: string[] =
   const [jobTagMappings, setJobTagMappings] = useState<JobTagMapping[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
   const [tagsLoading, setTagsLoading] = useState(false);
 
   // Fetch user tags
@@ -60,11 +61,7 @@ export function useHistoryFilters(userId: string | undefined, jobIds: string[] =
     fetchMappings();
   }, [userId, jobIds.join(",")]);
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // Search debouncing handled via useDebouncedValue above.
 
   const toggleTag = useCallback((tagId: string) => {
     setSelectedTagIds((prev) =>
