@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
 import { enhanceAudioForTranscription, type AudioEnhanceMetadata } from "@/lib/audio-enhance";
+import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -313,7 +314,11 @@ export default function Convert() {
 
       setStep("uploading");
       const newJobId = crypto.randomUUID();
-      const filePath = `${user.id}/${newJobId}/${uploadFile.name}`;
+      // Defensive sanitization: covers branches that bypass enhancement (e.g. .wav)
+      // and any future code path producing an upload file. Supabase Storage rejects
+      // keys with non-ASCII chars (curly quotes, accents, emoji, etc.).
+      const safeUploadName = sanitizeStorageFilename(uploadFile.name);
+      const filePath = `${user.id}/${newJobId}/${safeUploadName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("temp-audio")
