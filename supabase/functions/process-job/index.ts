@@ -1,6 +1,6 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient } from "../_shared/supabase.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -8,9 +8,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceClient();
 
     const { job_id, custom_prompt, keyterms_prompt } = await req.json();
     if (!job_id) {
@@ -142,10 +140,7 @@ Deno.serve(async (req) => {
 
     // Mark job as failed
     try {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+      const supabase = createServiceClient();
       const body = await req.clone().json().catch(() => ({}));
       if (body.job_id) {
         await supabase

@@ -1,5 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient } from "../_shared/supabase.ts";
 
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
 
@@ -18,10 +18,7 @@ Deno.serve(async (req) => {
       throw new Error("ASSEMBLYAI_API_KEY is not configured");
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createServiceClient();
 
     // Fetch jobs with failed AssemblyAI deletion (limit batch)
     const { data: failedJobs, error: fetchErr } = await supabase
