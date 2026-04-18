@@ -341,7 +341,14 @@
     "noQuestionsLeft": "No questions left",
     "editQuestion": "Edit question",
     "deleteQuestion": "Delete question",
-    "regeneratingAnswer": "Regenerating answer…"
+    "regeneratingAnswer": "Regenerating answer…",
+    "extraSources": {
+      "toggleLabel": "Include additional transcripts as context",
+      "searchPlaceholder": "Search your transcripts…",
+      "noResults": "No matching transcripts",
+      "removeAriaLabel": "Remove {{title}}",
+      "limitReached": "Up to {{max}} transcripts"
+    }
   },
   "share": {
     "share": "Share",

@@ -69,13 +69,43 @@ export function buildSummaryUserPrompt(transcript: string): string {
  * directive; this prompt only constrains tone and prevents hallucination.
  */
 export const CUSTOM_OUTPUT_SYSTEM_PROMPT =
-  `You are a professional analysis assistant. The user has provided a transcript and a custom instruction. Apply the instruction to the transcript and produce a clear, well-structured response. Be factual and precise. Do not invent information not present in the transcript.`;
+  `You are a professional analysis assistant. The user has provided one or more transcripts and a custom instruction. Apply the instruction and produce a clear, well-structured response. When multiple transcripts are provided, treat the PRIMARY transcript as the main source of truth and use ADDITIONAL transcripts only as supporting context — defer to the PRIMARY on conflicts unless the instruction explicitly asks you to compare. Be factual and precise. Do not invent information not present in the transcripts.`;
 
 /**
  * User prompt that pairs the custom instruction with the transcript.
  */
 export function buildCustomUserPrompt(instruction: string, transcript: string): string {
   return `Instruction: ${instruction}\n\nTranscript:\n${transcript}`;
+}
+
+/**
+ * Multi-transcript variant of `buildCustomUserPrompt`. Used by the Questions
+ * flow when the user opts to include additional transcripts as context.
+ *
+ * The current job's transcript is PRIMARY; extras are framed as supporting
+ * context. The system prompt instructs the model to defer to PRIMARY on
+ * conflicts. If `extras` is empty, callers should use `buildCustomUserPrompt`
+ * to keep the no-extras path byte-identical to the original.
+ */
+export function buildCustomUserPromptMulti(
+  instruction: string,
+  primary: string,
+  extras: Array<{ title: string; content: string }>,
+): string {
+  const parts: string[] = [
+    `Instruction: ${instruction}`,
+    "",
+    "PRIMARY TRANSCRIPT (use as the main source of truth):",
+    primary,
+  ];
+  for (const e of extras) {
+    parts.push(
+      "",
+      `ADDITIONAL TRANSCRIPT — "${e.title}" (supporting context only; defer to PRIMARY on conflicts unless the instruction asks to compare):`,
+      e.content,
+    );
+  }
+  return parts.join("\n");
 }
 
 // ─── title generation (generate-title) ───────────────────────────────────────

@@ -26,6 +26,8 @@ import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/spe
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Switch } from "@/components/ui/switch";
+import QuestionExtraSourcesPicker, { type ExtraSource } from "@/components/QuestionExtraSourcesPicker";
 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
@@ -63,6 +65,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [editingQAId, setEditingQAId] = useState<string | null>(null);
   const [editingQAText, setEditingQAText] = useState("");
   const [regeneratingQAId, setRegeneratingQAId] = useState<string | null>(null);
+  const [useExtraSources, setUseExtraSources] = useState(false);
+  const [extraSources, setExtraSources] = useState<ExtraSource[]>([]);
 
   const fetchData = useCallback(async () => {
     const [{ data: outputsData }, { data: jobData }] = await Promise.all([
@@ -358,7 +362,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     const prompt = questionPrompt.trim(); if (!prompt || isQuestionLimitReached) return;
     setAskingQuestion(true);
     try {
-      const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: prompt } });
+      const includeExtras = useExtraSources && extraSources.length > 0;
+      const body: { job_id: string; custom_prompt: string; extra_job_ids?: string[] } = {
+        job_id: jobId,
+        custom_prompt: prompt,
+      };
+      if (includeExtras) body.extra_job_ids = extraSources.map((s) => s.id);
+      const { data, error } = await supabase.functions.invoke("regenerate", { body });
       if (error || data?.error) {
         if (data?.error === "question_limit_reached") toast.error(t("jobResults.noQuestionsLeft"));
         return;
@@ -711,6 +721,29 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
                     {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
                   </Button>
+                </div>
+                <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <Switch
+                      checked={useExtraSources}
+                      onCheckedChange={(checked) => {
+                        setUseExtraSources(checked);
+                        if (!checked) setExtraSources([]);
+                      }}
+                      aria-label={t("jobResults.extraSources.toggleLabel")}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {t("jobResults.extraSources.toggleLabel")}
+                    </span>
+                  </label>
+                  {useExtraSources && (
+                    <QuestionExtraSourcesPicker
+                      currentJobId={jobId}
+                      value={extraSources}
+                      onChange={setExtraSources}
+                      max={5}
+                    />
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground text-right mt-1.5">
                   {isQuestionLimitReached
