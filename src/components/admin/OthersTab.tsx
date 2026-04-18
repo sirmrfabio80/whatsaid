@@ -207,21 +207,34 @@ export default function OthersTab() {
                       <>
                         <Button
                           size="sm"
+                          variant="default"
+                          onClick={() => fixFlags([flag.id])}
+                          disabled={busy || bulkBusy}
+                        >
+                          {busy ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <Wand2 className="h-4 w-4 mr-1" />
+                          )}
+                          {t("admin.others.fix")}
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => { setEditingId(flag.id); setEditValue(flag.tag_name); }}
-                          disabled={busy}
+                          disabled={busy || bulkBusy}
                         >
                           <Pencil className="h-4 w-4 mr-1" />
                           {t("admin.others.rename")}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => dismiss(flag)} disabled={busy}>
+                        <Button size="sm" variant="ghost" onClick={() => dismiss(flag)} disabled={busy || bulkBusy}>
                           {t("admin.others.dismiss")}
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => deleteTag(flag)}
-                          disabled={busy}
+                          disabled={busy || bulkBusy}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
