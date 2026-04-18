@@ -17,21 +17,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { parseSegments, type Segment, type SpeakerSuggestion } from "@/lib/transcript";
 
-export interface Segment {
-  id: string;
-  index: number;
-  speaker: string | null;
-  text: string;
-  raw: string;
-  timestamp: string | null;
-}
-
-export interface SpeakerSuggestion {
-  id: string;
-  confidence: number;
-  speaker: string;
-}
+export { parseSegments };
+export type { Segment, SpeakerSuggestion };
 
 interface TranscriptEditorProps {
   content: string;
@@ -46,22 +35,6 @@ interface TranscriptEditorProps {
   onEditedIdsChange?: (ids: Set<string>) => void;
   onCreateSpeaker?: () => string | null;
   readOnly?: boolean;
-}
-
-export function parseSegments(content: string): Segment[] {
-  return content.split("\n").map((line, index) => {
-    const snippet = line.slice(0, 40).replace(/[^a-zA-Z0-9]/g, "");
-    const id = `seg-${index}-${line.length}-${snippet}`;
-    // Handle optional [HH:MM:SS] timestamp prefix before speaker label
-    const tsMatch = line.match(/^(\[\d{2}:\d{2}:\d{2}\])\s/);
-    const timestamp = tsMatch ? tsMatch[1] : null;
-    const afterTs = timestamp ? line.slice(timestamp.length + 1) : line;
-    const match = afterTs.match(/^(.+?):\s(.*)/);
-    if (match) {
-      return { id, index, speaker: match[1], text: match[2], raw: line, timestamp };
-    }
-    return { id, index, speaker: null, text: afterTs, raw: line, timestamp };
-  });
 }
 
 function formatTimestamp(ts: string): string {
