@@ -642,5 +642,19 @@
     "spoken": "Temps de parole",
     "share": "Part",
     "noData": "Aucune donnée de participation disponible"
+  },
+  "admin": {
+    "others": {
+      "title": "Revue des tags",
+      "desc": "Tags générés par l'IA qui pourraient ne pas être en anglais. Renommer, supprimer ou ignorer.",
+      "empty": "Rien à vérifier",
+      "emptyDesc": "Tous les tags IA récents semblent corrects.",
+      "rename": "Renommer",
+      "save": "Enregistrer",
+      "dismiss": "Ignorer",
+      "renamed": "Tag renommé",
+      "deleted": "Tag supprimé",
+      "dismissed": "Signalement ignoré"
+    }
   }
 }
