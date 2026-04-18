@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import NotificationItem from "@/components/NotificationItem";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function Notifications() {
   const { t } = useTranslation();
@@ -63,10 +64,7 @@ export default function Notifications() {
 
       {/* Content */}
       {notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-4 py-20">
-          <Bell className="w-12 h-12 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">{t("notifications.empty")}</p>
-        </div>
+        <EmptyState icon={Bell} title={t("notifications.empty")} variant="plain" className="py-20" />
       ) : (
         <div className="p-2 space-y-1">
           {notifications.map((n) => (

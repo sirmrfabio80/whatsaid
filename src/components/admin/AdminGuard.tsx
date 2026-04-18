@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { LoadingState } from "@/components/ui/loading-state";
 
 /**
  * Gates admin-only routes. Non-admins are redirected to the homepage.
@@ -12,7 +13,7 @@ export default function AdminGuard({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <div className="h-6 w-40 bg-muted/60 rounded animate-pulse" />
+        <LoadingState rows={0} titleWidth="w-40" />
       </div>
     );
   }
