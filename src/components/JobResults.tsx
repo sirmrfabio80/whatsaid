@@ -787,7 +787,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                               </div>
                               <div className="flex items-center gap-0.5">
                                 {!isQuestionLimitReached && !isEditing && (
-                                  <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" disabled={isAnyGenerating} onClick={() => { setEditingQAId(entry.id); setEditingQAText(entry.custom_prompt ?? ""); }} aria-label={t("jobResults.editQuestion")}>
+                                  <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" disabled={isAnyGenerating} onClick={() => { setEditingQAId(entry.id); setEditingQAText(entry.custom_prompt ?? ""); setEditingExtraSources((entry.metadata?.extra_sources ?? []).slice(0, 5).map((s) => ({ id: s.id, title: s.title }))); }} aria-label={t("jobResults.editQuestion")}>
                                     <Pencil className="w-3 h-3" />
                                   </Button>
                                 )}
