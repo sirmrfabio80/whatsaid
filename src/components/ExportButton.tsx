@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileDown, Download, Loader2 } from "lucide-react";
+import { FileDown, Download } from "lucide-react";
+import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -57,7 +58,7 @@ export default function ExportButton({ data, disabled, sourceJobId }: ExportButt
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="rounded-lg gap-1.5 text-xs h-8" disabled={isDisabled}>
-          {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+          {exporting ? <InlineSpinner size="xs" /> : <FileDown className="w-3.5 h-3.5" />}
           {t("exportBtn.export")}
         </Button>
       </DropdownMenuTrigger>
