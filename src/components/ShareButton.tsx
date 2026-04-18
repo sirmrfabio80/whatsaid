@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDelayedCallback } from "@/hooks/use-delayed-callback";
 import type { CanonicalExportData } from "@/lib/export-types";
 import { generatePdfBlob } from "@/lib/export-pdf";
 
@@ -255,6 +256,9 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     return window.localStorage.getItem(ARROW_HINT_STORAGE_KEY) === "1";
   });
 
+  const { schedule: scheduleAutoClose } = useDelayedCallback();
+  const { schedule: scheduleResetOnClose } = useDelayedCallback();
+
   const isValid = EMAIL_RE.test(email.trim());
 
   const fetchRecentRecipients = async () => {
@@ -302,7 +306,12 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSent(true);
       toast.success(t("share.sentSuccess"));
-      setTimeout(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setOpen(false); setSent(false); setEmail(""); }, 1500);
+      scheduleAutoClose(() => {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        setOpen(false);
+        setSent(false);
+        setEmail("");
+      }, 1500);
     } catch { toast.error(t("share.sendFailed")); } finally { setSending(false); }
   };
 
@@ -316,7 +325,12 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSentRecord(true);
       toast.success(t("share.recordSentSuccess"));
-      setTimeout(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setOpen(false); setSentRecord(false); setEmail(""); }, 1500);
+      scheduleAutoClose(() => {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        setOpen(false);
+        setSentRecord(false);
+        setEmail("");
+      }, 1500);
     } catch { toast.error(t("share.sendFailed")); } finally { setSendingRecord(false); }
   };
 
@@ -326,7 +340,12 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     if (next) {
       void fetchRecentRecipients();
     } else {
-      setTimeout(() => { setEmail(""); setSent(false); setSentRecord(false); setRecentRecipients([]); }, 200);
+      scheduleResetOnClose(() => {
+        setEmail("");
+        setSent(false);
+        setSentRecord(false);
+        setRecentRecipients([]);
+      }, 200);
     }
   };
 
