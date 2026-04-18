@@ -157,30 +157,8 @@ async function handleSummaryFromEdit(
   const transcript = txRow.content;
 
   const lang = job.language_detected || "en";
-  const langInstruction = `\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST write the ENTIRE output in ${lang}. Every heading, every bullet point, every sentence must be in ${lang}. Do NOT use English unless ${lang} IS English. This is mandatory and non-negotiable.`;
-
-  const systemPrompt = `You are a professional meeting and audio analysis assistant. You produce clear, well-structured summaries designed to be easy to scan and share.
-
-Your output MUST use the following markdown structure with exactly these section headings (translate the heading names into the output language):
-
-## Overview
-A concise 2-3 paragraph summary of what was discussed and the overall outcome.
-
-## Key Points
-A bullet list of the most important facts or information shared. Keep each point to 1-2 sentences.
-
-## Decisions & Next Steps
-A bullet list of decisions made, action items, follow-ups, or next steps. Include who is responsible and any dates mentioned.
-
-## Terms to Know
-A bullet list of specialised or technical terms with brief plain-language explanations. Only include this section if there are terms a non-specialist would find unclear. Omit entirely if not needed.
-
-Rules:
-- Use markdown: ## for headings, - for bullets, **bold** for emphasis.
-- Be factual and precise. Do not invent information.
-- Keep bullet points concise and scannable.${langInstruction}`;
-
-  const userPrompt = `Analyse the following transcript and produce a structured summary:\n\n${transcript}`;
+  const systemPrompt = buildSummarySystemPrompt(lang);
+  const userPrompt = buildSummaryUserPrompt(transcript);
 
   // Delete old summary
   await supabase.from("job_outputs").delete().eq("job_id", jobId).eq("output_type", "summary");
