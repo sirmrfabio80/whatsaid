@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDelayedCallback } from "@/hooks/use-delayed-callback";
 import type { CanonicalExportData } from "@/lib/export-types";
 import { generatePdfBlob } from "@/lib/export-pdf";
 
@@ -302,7 +303,12 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSent(true);
       toast.success(t("share.sentSuccess"));
-      setTimeout(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setOpen(false); setSent(false); setEmail(""); }, 1500);
+      scheduleAutoClose(() => {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        setOpen(false);
+        setSent(false);
+        setEmail("");
+      }, 1500);
     } catch { toast.error(t("share.sendFailed")); } finally { setSending(false); }
   };
 
