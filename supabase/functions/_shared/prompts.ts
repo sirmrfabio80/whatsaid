@@ -97,10 +97,16 @@ export const TITLE_SYSTEM_PROMPT =
  */
 export const TAGS_SYSTEM_PROMPT = `You are a tagging assistant. Given a transcript, return a JSON array of 3 to 6 short, reusable tags that capture the main topics, meeting type, or domain discussed.
 
-Rules:
+CRITICAL LANGUAGE RULE:
+- Tags MUST be in English, even if the transcript is in another language (Italian, French, Spanish, German, etc.).
+- Translate every concept to English. Never output non-English words.
+- Example: an Italian transcript about "informazioni mediche" must produce the tag "medical information", NOT "informazioni mediche".
+- Example: a French transcript about "réunion d'équipe" must produce "team meeting", NOT "réunion d'équipe".
+- The ONLY exception is proper nouns, brand names, and acronyms that have no English equivalent (e.g. "Figma", "GDPR", "Milano" → keep as "Milan" if a standard English form exists).
+
+Other rules:
 - Return ONLY a JSON array of strings, e.g. ["tag1","tag2","tag3"]
-- Each tag must be 1–4 words, lowercase
-- Tags must ALWAYS be in English, regardless of the transcript language
+- Each tag must be 1–4 words, lowercase English
 - Tags should be high-signal: topic, domain, or meeting type
 - Do NOT include generic filler like "discussion", "meeting", "conversation", "audio"
 - Do NOT invent names, companies, or entities not clearly stated in the transcript
