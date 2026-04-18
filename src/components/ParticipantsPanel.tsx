@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Users } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { Segment } from "@/components/TranscriptEditor";
+import type { Segment } from "@/lib/transcript";
 
 interface ParticipantsPanelProps {
   segments: Segment[];

@@ -17,7 +17,9 @@ import ExportButton from "@/components/ExportButton";
 import SpeakerChips from "@/components/SpeakerChips";
 import SpeakerIdentificationBanner from "@/components/SpeakerIdentificationBanner";
 import StructuredSummary, { SectionBody } from "@/components/StructuredSummary";
-import TranscriptEditor, { parseSegments, type SpeakerSuggestion } from "@/components/TranscriptEditor";
+import TranscriptEditor from "@/components/TranscriptEditor";
+import { parseSegments, type SpeakerSuggestion } from "@/lib/transcript";
+import type { JobMeta } from "@/types/job";
 import ParticipantsPanel from "@/components/ParticipantsPanel";
 import { toast } from "sonner";
 import type { SpeakerIdentification, SpeakerIdentificationData } from "@/lib/speaker-identification";
@@ -25,16 +27,9 @@ import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 
-interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
+export type { JobMeta };
 
-export interface JobMeta {
-  language_detected: string | null; summary_language: string | null; duration_seconds: number | null;
-  file_name: string; created_at: string; recorded_at: string | null; recorded_at_source: string | null;
-  speech_model: string | null; speaker_names: Record<string, string>; title: string | null;
-  metadata_location_iso6709: string | null;
-  location_label: string | null;
-  output_language: string | null;
-}
+interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
 
