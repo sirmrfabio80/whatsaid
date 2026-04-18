@@ -277,10 +277,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         <SheetTrigger asChild>{trigger}</SheetTrigger>
         <SheetContent
           side="bottom"
-          className="p-0 rounded-t-xl max-h-[90dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-          style={{ bottom: `var(--keyboard-inset, 0px)` }}
+          className="p-0 rounded-t-xl max-h-[90dvh] overflow-y-auto"
         >
-          <KeyboardInsetTracker />
           <ShareContent {...contentProps} />
         </SheetContent>
       </Sheet>
