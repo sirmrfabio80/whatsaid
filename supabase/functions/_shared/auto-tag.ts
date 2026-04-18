@@ -1,5 +1,6 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { AI_GATEWAY_URL } from "./ai-gateway.ts";
+import { TAGS_SYSTEM_PROMPT, buildTagsUserPrompt } from "./prompts.ts";
 
 const AI_GATEWAY = AI_GATEWAY_URL;
 const MODEL = "google/gemini-2.5-flash-lite";

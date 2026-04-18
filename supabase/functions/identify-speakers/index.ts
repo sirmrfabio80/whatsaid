@@ -2,6 +2,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import {
+  buildSpeakerVerifierSystemPrompt,
+  buildSpeakerVerifierUserPrompt,
+} from "../_shared/prompts.ts";
 
 const AI_GATEWAY = AI_GATEWAY_URL;
 const AI_MODEL = "google/gemini-2.5-flash";
