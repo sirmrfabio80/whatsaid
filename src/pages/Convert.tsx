@@ -196,7 +196,11 @@ export default function Convert() {
     if (!file || !user) return;
 
     setProcessing(true);
-    setStep("uploading");
+    // Start at "enhancing" — the first real stage. We'll switch to "uploading"
+    // later if the file is ineligible for enhancement, so the visible step
+    // order always flows top-down (enhancing → uploading → …) instead of
+    // briefly showing "uploading" before jumping back up to "enhancing".
+    setStep("enhancing");
     setErrorMessage(null);
 
     // Scroll to top of page with smooth animation
