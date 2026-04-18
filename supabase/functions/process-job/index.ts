@@ -1,4 +1,3 @@
-import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 import { markJobFailed } from "../_shared/job-failure.ts";
