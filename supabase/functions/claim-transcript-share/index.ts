@@ -1,5 +1,5 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
 import { withExtraAllowedHeaders } from '../_shared/cors.ts'
+import { createServiceClient } from '../_shared/supabase.ts'
 
 // `x-share-token` is the share-link token passed for unauthenticated lookups.
 const corsHeaders = withExtraAllowedHeaders('x-share-token')
@@ -9,9 +9,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+  const serviceClient = createServiceClient()
 
   try {
     // GET = validate token, POST = claim

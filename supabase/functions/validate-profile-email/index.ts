@@ -1,5 +1,5 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -7,14 +7,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-
     const authHeader = req.headers.get('Authorization') ?? ''
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
+    const userClient = createUserClient(authHeader)
 
     const { data: { user }, error: authError } = await userClient.auth.getUser()
     if (authError || !user) {
