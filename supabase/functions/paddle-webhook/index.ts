@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 
 // ---------------------------------------------------------------------------
 // Paddle signature verification (Paddle Billing / v2 webhooks)
@@ -93,9 +94,11 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const WEBHOOK_SECRET = Deno.env.get("PADDLE_WEBHOOK_SECRET");
-  if (!WEBHOOK_SECRET) {
-    console.error("[paddle-webhook] PADDLE_WEBHOOK_SECRET not configured");
+  let WEBHOOK_SECRET: string;
+  try {
+    WEBHOOK_SECRET = requireEnv("PADDLE_WEBHOOK_SECRET");
+  } catch (err) {
+    console.error("[paddle-webhook]", (err as Error).message);
     return new Response(JSON.stringify({ error: "Server misconfigured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
