@@ -27,8 +27,6 @@ import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 
-export type { JobMeta };
-
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
