@@ -1,4 +1,5 @@
 import { createServiceClient, type SupabaseClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 import { markJobFailed } from "../_shared/job-failure.ts";
 
 // ----------------------------------------------------------------------------
@@ -351,10 +352,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const ASSEMBLYAI_API_KEY = Deno.env.get("ASSEMBLYAI_API_KEY");
-    if (!ASSEMBLYAI_API_KEY) {
-      throw new Error("ASSEMBLYAI_API_KEY is not configured");
-    }
+    const ASSEMBLYAI_API_KEY = requireEnv("ASSEMBLYAI_API_KEY");
 
     const supabase = createServiceClient();
 

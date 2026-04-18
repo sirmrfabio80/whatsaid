@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleCorsPreflight, jsonResponse } from "../_shared/cors.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 import { classifyTagLanguages } from "../_shared/auto-tag.ts";
 
 /**
@@ -17,9 +18,7 @@ serve(async (req) => {
     if (!auth.ok) return auth.response;
     const { adminClient } = auth;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return jsonResponse({ error: "LOVABLE_API_KEY missing" }, 500);
-
+    const LOVABLE_API_KEY = requireEnv("LOVABLE_API_KEY");
     // Fetch all AI tags
     const { data: tags, error: tagsErr } = await adminClient
       .from("tags")

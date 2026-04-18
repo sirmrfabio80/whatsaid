@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { AiGatewayError, callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient, requireAuth, type SupabaseClient } from "../_shared/supabase.ts";
+import { requireEnv } from "../_shared/env.ts";
 import {
   buildSummarySystemPrompt,
   buildSummaryUserPrompt,
@@ -313,8 +314,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const LOVABLE_API_KEY = requireEnv("LOVABLE_API_KEY");
 
     const supabase = createServiceClient();
 
