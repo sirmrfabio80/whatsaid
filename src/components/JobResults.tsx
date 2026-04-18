@@ -31,11 +31,6 @@ interface JobOutput { id: string; output_type: string; content: string; custom_p
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
 
-function getUniqueSpeakersFromContent(text: string): string[] {
-  const segments = parseSegments(text);
-  return [...new Set(segments.map((segment) => segment.speaker).filter((speaker): speaker is string => Boolean(speaker)))];
-}
-
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
   const { t } = useTranslation();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
