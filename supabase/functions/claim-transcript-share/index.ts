@@ -1,10 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { withExtraAllowedHeaders } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-share-token',
-}
+// `x-share-token` is the share-link token passed for unauthenticated lookups.
+const corsHeaders = withExtraAllowedHeaders('x-share-token')
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

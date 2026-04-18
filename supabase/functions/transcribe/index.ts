@@ -14,11 +14,7 @@ function stripInlineLanguageTags(text: string): { text: string; stripped: boolea
   return { text: cleaned, stripped: cleaned !== text };
 }
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Hardcoded fallbacks if no active template row exists. These mirror the
 // "Default" template seeded in the database.
