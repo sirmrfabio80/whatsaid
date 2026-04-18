@@ -31,6 +31,7 @@ export default function AdminInviteCard() {
   const [inviteLanguage, setInviteLanguage] = useState<string>("en");
   const [loading, setLoading] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
+  const { copy } = useCopyToClipboard({ successMessage: t("common.copied") });
 
   const { data: invites, refetch: refetchInvites } = useQuery({
     queryKey: ["admin-invites"],
@@ -76,10 +77,7 @@ export default function AdminInviteCard() {
   };
 
   const copyLink = () => {
-    if (magicLink) {
-      navigator.clipboard.writeText(magicLink);
-      toast.success(t("common.copied"));
-    }
+    if (magicLink) copy(magicLink);
   };
 
   return (
