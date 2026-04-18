@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+    const serviceClient = createServiceClient()
 
     const { data: share } = await serviceClient
       .from('transcript_shares')

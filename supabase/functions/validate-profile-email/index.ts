@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+    const serviceClient = createServiceClient()
 
     // 1. Check if another user's profile already uses this email
     const { data: profileMatch } = await serviceClient

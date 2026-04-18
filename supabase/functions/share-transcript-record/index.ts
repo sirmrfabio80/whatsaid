@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+    const serviceClient = createServiceClient()
 
     const { data: senderProfile } = await serviceClient
       .from('profiles')

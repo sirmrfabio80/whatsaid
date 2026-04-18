@@ -57,10 +57,7 @@ Deno.serve(async (req) => {
 
     // POST = claim the share
     const authHeader = req.headers.get('Authorization') ?? ''
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
+    const userClient = createUserClient(authHeader)
     const { data: { user }, error: authError } = await userClient.auth.getUser()
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
