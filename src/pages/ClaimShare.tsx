@@ -5,7 +5,8 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, XCircle, FileText, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, FileText, AlertTriangle } from "lucide-react";
+import { InlineSpinner } from "@/components/ui/inline-spinner";
 
 type ClaimStatus = "loading" | "ready" | "claiming" | "claimed" | "error" | "needsAuth";
 
@@ -137,7 +138,7 @@ export default function ClaimShare() {
         <CardContent className="pt-8 pb-8 px-6 text-center space-y-6">
           {status === "loading" && (
             <>
-              <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
+              <InlineSpinner size="lg" tone="primary" className="mx-auto" />
               <p className="text-sm text-muted-foreground">{t("claim.validating")}</p>
             </>
           )}
@@ -172,7 +173,7 @@ export default function ClaimShare() {
 
           {status === "claiming" && (
             <>
-              <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
+              <InlineSpinner size="lg" tone="primary" className="mx-auto" />
               <p className="text-sm text-muted-foreground">{t("claim.claiming")}</p>
             </>
           )}

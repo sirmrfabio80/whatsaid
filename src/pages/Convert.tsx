@@ -18,8 +18,9 @@ import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, Loader2, CheckCircle2, AlertCircle, FileText, Info, CreditCard
+  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard
 } from "lucide-react";
+import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
@@ -477,7 +478,7 @@ export default function Convert() {
                           }`}
                         >
                           {isCurrent && step !== "failed" ? (
-                            <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+                            <InlineSpinner size="md" tone="primary" />
                           ) : isPast ? (
                             <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
                           ) : step === "failed" && isCurrent ? (
