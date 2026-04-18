@@ -199,6 +199,7 @@ async function handleSummaryOrCustom(
   outputType: "summary" | "custom",
   customPrompt: string | null,
   targetLang: string | null,
+  extraSources: Array<{ title: string; content: string }> = [],
 ) {
   const { data: job, error: jobError } = await supabase
     .from("jobs")
