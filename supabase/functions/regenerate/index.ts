@@ -1,12 +1,17 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { AiGatewayError, callAiGateway } from "../_shared/ai-gateway.ts";
-import { createServiceClient, type SupabaseClient } from "../_shared/supabase.ts";
+import { createServiceClient, createUserClient, type SupabaseClient } from "../_shared/supabase.ts";
 import {
   buildSummarySystemPrompt,
   buildSummaryUserPrompt,
   buildCustomUserPrompt,
+  buildCustomUserPromptMulti,
   CUSTOM_OUTPUT_SYSTEM_PROMPT,
 } from "../_shared/prompts.ts";
+
+const MAX_EXTRA_SOURCES = 5;
+const MAX_COMBINED_EXTRA_CHARS = 200_000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MODEL_SUMMARY = "google/gemini-2.5-flash";
 const MODEL_CUSTOM = "google/gemini-3-flash-preview";
