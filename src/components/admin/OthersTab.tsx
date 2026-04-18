@@ -37,6 +37,7 @@ export default function OthersTab() {
   const [editValue, setEditValue] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const load = useCallback(async () => {
