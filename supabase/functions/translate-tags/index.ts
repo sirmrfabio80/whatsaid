@@ -36,9 +36,20 @@ serve(async (req) => {
     // Limit batch size
     const batch = tags.slice(0, 50);
 
-    const systemPrompt = `You are a translator. Translate the given English tags/labels into ${target_lang}. Return ONLY a JSON object mapping each English tag to its translation. Keep translations short (1-4 words). If a tag is a proper noun or technical term that doesn't translate, keep it as-is.`;
+    const systemPrompt = `You are a multilingual tag translator.
 
-    const userPrompt = `Translate these English tags to ${target_lang}:\n${JSON.stringify(batch)}`;
+You will receive a JSON array of short tags/labels. Each tag may be in ANY language (English, Italian, French, Spanish, German, etc.). Your job is to translate every tag into ${target_lang}.
+
+Rules:
+- Auto-detect the source language of each tag independently.
+- Translate the meaning into ${target_lang}, keeping it short (1-4 words) and lowercase when the source is lowercase.
+- If a tag is already in ${target_lang}, return it unchanged.
+- If a tag is a proper noun, brand name, acronym, or technical term with no natural translation, return it unchanged.
+- Preserve the original tag string EXACTLY as the JSON key. Only the value changes.
+
+Return ONLY a JSON object mapping each original tag (exact string) to its ${target_lang} translation. No commentary, no code fences.`;
+
+    const userPrompt = `Translate these tags to ${target_lang}:\n${JSON.stringify(batch)}`;
 
     const res = await fetch(AI_GATEWAY_URL, {
       method: "POST",
