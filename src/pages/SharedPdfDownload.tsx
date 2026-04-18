@@ -3,7 +3,8 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, FileText, Loader2, XCircle, CheckCircle2 } from "lucide-react";
+import { Download, FileText, Loader2, CheckCircle2 } from "lucide-react";
+import { ErrorState } from "@/components/ui/error-state";
 
 type DownloadStatus = "loading" | "needsAuth" | "ready" | "downloading" | "done" | "error";
 
@@ -151,24 +152,22 @@ export default function SharedPdfDownload() {
           )}
 
           {status === "error" && (
-            <>
-              <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
-                <XCircle className="w-7 h-7 text-destructive" />
-              </div>
-              <div>
-                <h1 className="font-heading text-xl font-bold">Something went wrong</h1>
-                <p className="text-sm text-muted-foreground mt-1">{errorMsg}</p>
-              </div>
-              <div className="space-y-3">
-                <Button onClick={() => void handleDownload()} className="w-full rounded-xl gap-2" disabled={!token || !pdfPath || !session}>
-                  <Download className="w-4 h-4" />
-                  Try again
-                </Button>
-                <Button onClick={() => navigate("/")} variant="outline" className="w-full rounded-xl">
-                  Back to home
-                </Button>
-              </div>
-            </>
+            <ErrorState
+              variant="plain"
+              title="Something went wrong"
+              description={errorMsg}
+              action={
+                <div className="space-y-3 w-full">
+                  <Button onClick={() => void handleDownload()} className="w-full rounded-xl gap-2" disabled={!token || !pdfPath || !session}>
+                    <Download className="w-4 h-4" />
+                    Try again
+                  </Button>
+                  <Button onClick={() => navigate("/")} variant="outline" className="w-full rounded-xl">
+                    Back to home
+                  </Button>
+                </div>
+              }
+            />
           )}
         </CardContent>
       </Card>
