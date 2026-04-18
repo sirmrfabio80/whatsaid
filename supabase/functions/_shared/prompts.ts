@@ -77,3 +77,125 @@ export const CUSTOM_OUTPUT_SYSTEM_PROMPT =
 export function buildCustomUserPrompt(instruction: string, transcript: string): string {
   return `Instruction: ${instruction}\n\nTranscript:\n${transcript}`;
 }
+
+// ─── title generation (generate-title) ───────────────────────────────────────
+
+/**
+ * Single-shot system prompt for generating a short title from a transcript
+ * excerpt. The model is asked to mirror the transcript's language so titles
+ * stay native — do NOT pass a language hint here.
+ */
+export const TITLE_SYSTEM_PROMPT =
+  "Generate a short, descriptive title (max 6 words) for this audio recording based on its transcript. The title should be in the same language as the transcript. Return ONLY the title text, nothing else. No quotes, no explanation.";
+
+// ─── auto-tagging (generate-tags / auto-tag) ─────────────────────────────────
+
+/**
+ * System prompt for the auto-tagging pass. Tags are intentionally pinned to
+ * English so the user-facing tag taxonomy stays consistent across jobs of
+ * different transcript languages.
+ */
+export const TAGS_SYSTEM_PROMPT = `You are a tagging assistant. Given a transcript, return a JSON array of 3 to 6 short, reusable tags that capture the main topics, meeting type, or domain discussed.
+
+Rules:
+- Return ONLY a JSON array of strings, e.g. ["tag1","tag2","tag3"]
+- Each tag must be 1–4 words, lowercase
+- Tags must ALWAYS be in English, regardless of the transcript language
+- Tags should be high-signal: topic, domain, or meeting type
+- Do NOT include generic filler like "discussion", "meeting", "conversation", "audio"
+- Do NOT invent names, companies, or entities not clearly stated in the transcript
+- Do NOT include dates, timestamps, or speaker names as tags
+- Minimum 3 tags, maximum 6 tags`;
+
+/**
+ * User prompt that ships the (truncated) transcript to the tagger.
+ * Caller is responsible for slicing — `auto-tag.ts` caps at 12k chars.
+ */
+export function buildTagsUserPrompt(transcript: string): string {
+  return `Generate tags for this transcript:\n\n${transcript}`;
+}
+
+// ─── speaker name verification (identify-speakers) ───────────────────────────
+
+/**
+ * Sceptical verifier prompt: takes already-extracted candidate names and
+ * either confirms each as a real person name or rejects it. Tuned for high
+ * precision — false positives (wrong-name suggestions) are far worse than
+ * false negatives, so the prompt biases toward "confidence: 0.0 when unsure".
+ *
+ * `language` is an optional ISO/native label included as a parsing hint;
+ * pass `null` to omit.
+ */
+export function buildSpeakerVerifierSystemPrompt(language: string | null): string {
+  const langHint = language ? `\nTranscript language: ${language}` : "";
+  return `You are a SCEPTICAL speaker name verifier for transcripts.
+
+Given transcript segments and candidate name extractions, verify whether each candidate is a real person name.
+${langHint}
+
+CRITICAL RULES:
+- You must REJECT any candidate that is NOT clearly a person's proper name
+- Common words, adjectives, verbs, past participles, articles, pronouns, role titles, and profession words are NEVER valid names
+- If no clear person name is identifiable from the evidence, set confidence to 0.0
+- Do NOT infer, guess, or fabricate names — only confirm names with explicit evidence
+- A person name must appear as a self-introduction (e.g. "mi chiamo Marco", "my name is Sarah")
+- "sono strutturati", "sono che", "I am happy" do NOT contain person names
+- Put roles/titles in the "role" field (e.g. "terapista occupazionale"), never in "inferred_name"
+- Capitalise proper names correctly
+- Return a JSON array: [{"speaker_label": "...", "inferred_name": "...", "confidence": 0.0-1.0, "role": "..."}]
+- When in doubt, return confidence 0.0 — it is better to miss a name than to suggest a wrong one`;
+}
+
+/**
+ * User prompt that ships the candidate list + relevant transcript context
+ * to the verifier. The two strings are pre-formatted by the caller.
+ */
+export function buildSpeakerVerifierUserPrompt(
+  candidateDescription: string,
+  relevantLines: string,
+): string {
+  return `Verify these candidate extractions (reject any that are not real person names):\n${candidateDescription}\n\nRelevant transcript segments:\n${relevantLines}`;
+}
+
+// ─── speaker attribution suggestions (suggest-speakers) ──────────────────────
+
+/**
+ * System prompt for re-attributing existing transcript segments to a newly
+ * added speaker. The model only suggests ownership changes — it never
+ * rewrites text. `truncated` toggles an extra hint when the middle of the
+ * transcript was elided to fit the context window.
+ */
+export function buildSpeakerSuggestSystemPrompt(args: {
+  targetSpeaker: string;
+  existingSpeakers: string[];
+  truncated: boolean;
+}): string {
+  const { targetSpeaker, existingSpeakers, truncated } = args;
+  return `You are a transcript speaker-attribution assistant.
+
+You are given a transcript with speaker labels and segment IDs. A new speaker "${targetSpeaker}" has been added but has no segments assigned yet.
+
+Your task: identify which existing segments most likely belong to "${targetSpeaker}" based on conversational patterns, turn-taking, topic continuity, and context.
+
+Existing speakers: ${existingSpeakers.join(", ")}
+
+Rules:
+- Return ONLY a JSON array of objects with "id" (segment ID) and "confidence" (0.0 to 1.0)
+- Only include segments you are reasonably confident belong to "${targetSpeaker}" (confidence >= 0.5)
+- Do NOT modify any text — only suggest ownership changes
+- Do NOT assign segments that clearly belong to their current speaker
+- Look for patterns: if the transcript has Speaker A only but clearly contains two distinct voices/perspectives, suggest which segments belong to the new speaker
+- If you cannot identify any segments for the new speaker, return an empty array []
+${truncated ? "\n- Note: The middle section shows only previews. Use the full start/end context and speaker patterns to make inferences." : ""}`;
+}
+
+/**
+ * User prompt that pairs the formatted transcript with the target-speaker
+ * directive.
+ */
+export function buildSpeakerSuggestUserPrompt(
+  targetSpeaker: string,
+  formattedTranscript: string,
+): string {
+  return `Analyze this transcript and suggest which segments belong to "${targetSpeaker}":\n\n${formattedTranscript}`;
+}

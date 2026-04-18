@@ -2,6 +2,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import {
+  buildSpeakerVerifierSystemPrompt,
+  buildSpeakerVerifierUserPrompt,
+} from "../_shared/prompts.ts";
 
 const AI_GATEWAY = AI_GATEWAY_URL;
 const AI_MODEL = "google/gemini-2.5-flash";
@@ -765,26 +769,8 @@ async function runAIReview(
     .map((r) => `${r.speaker_label} → candidate: "${r.inferred_name}" (confidence: ${r.confidence}, role: "${r.role ?? "unknown"}", evidence: ${r.evidence.join(" | ")})`)
     .join("\n");
 
-  const langHint = language ? `\nTranscript language: ${language}` : "";
-
-  const systemPrompt = `You are a SCEPTICAL speaker name verifier for transcripts.
-
-Given transcript segments and candidate name extractions, verify whether each candidate is a real person name.
-${langHint}
-
-CRITICAL RULES:
-- You must REJECT any candidate that is NOT clearly a person's proper name
-- Common words, adjectives, verbs, past participles, articles, pronouns, role titles, and profession words are NEVER valid names
-- If no clear person name is identifiable from the evidence, set confidence to 0.0
-- Do NOT infer, guess, or fabricate names — only confirm names with explicit evidence
-- A person name must appear as a self-introduction (e.g. "mi chiamo Marco", "my name is Sarah")
-- "sono strutturati", "sono che", "I am happy" do NOT contain person names
-- Put roles/titles in the "role" field (e.g. "terapista occupazionale"), never in "inferred_name"
-- Capitalise proper names correctly
-- Return a JSON array: [{"speaker_label": "...", "inferred_name": "...", "confidence": 0.0-1.0, "role": "..."}]
-- When in doubt, return confidence 0.0 — it is better to miss a name than to suggest a wrong one`;
-
-  const userPrompt = `Verify these candidate extractions (reject any that are not real person names):\n${candidateDescription}\n\nRelevant transcript segments:\n${relevantLines}`;
+  const systemPrompt = buildSpeakerVerifierSystemPrompt(language ?? null);
+  const userPrompt = buildSpeakerVerifierUserPrompt(candidateDescription, relevantLines);
 
   try {
     const res = await fetch(AI_GATEWAY, {
