@@ -335,7 +335,7 @@ export default function Settings() {
                         navigate("/");
                       }}
                     >
-                      {deleting ? <InlineSpinner size="sm" label={t("settings.deletingAccount")} className="mr-0" /> : t("settings.deleteMyAccount")}
+                      {deleting ? <InlineSpinner size="sm" label={t("settings.deletingAccount")} /> : t("settings.deleteMyAccount")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
