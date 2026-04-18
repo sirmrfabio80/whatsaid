@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, ChevronDown, ChevronRight } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 
 interface JsonBlockProps {
   data: unknown;
@@ -18,7 +18,11 @@ export default function JsonBlock({
   maxHeight = "32rem",
 }: JsonBlockProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard({
+    successMessage: "Copied to clipboard",
+    errorMessage: "Could not copy",
+    resetMs: 1500,
+  });
 
   const pretty = useMemo(() => {
     try {
@@ -30,16 +34,7 @@ export default function JsonBlock({
 
   const isEmpty = data === null || data === undefined;
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(pretty);
-      setCopied(true);
-      toast.success("Copied to clipboard");
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error("Could not copy");
-    }
-  };
+  const handleCopy = () => copy(pretty);
 
   return (
     <div className="rounded-lg border bg-muted/30">
@@ -63,7 +58,7 @@ export default function JsonBlock({
           <Button
             variant="ghost"
             size="sm"
-            onClick={copy}
+            onClick={handleCopy}
             className="h-7 gap-1.5 text-xs"
           >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

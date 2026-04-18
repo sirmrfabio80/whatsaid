@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, Send, Link2, Check, AlertCircle, Copy, Gift, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 
 const PACKAGES = [
   { id: "one-time", credits: 1 },
@@ -30,6 +31,7 @@ export default function AdminInviteCard() {
   const [inviteLanguage, setInviteLanguage] = useState<string>("en");
   const [loading, setLoading] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
+  const { copy } = useCopyToClipboard({ successMessage: t("common.copied") });
 
   const { data: invites, refetch: refetchInvites } = useQuery({
     queryKey: ["admin-invites"],
@@ -75,10 +77,7 @@ export default function AdminInviteCard() {
   };
 
   const copyLink = () => {
-    if (magicLink) {
-      navigator.clipboard.writeText(magicLink);
-      toast.success(t("common.copied"));
-    }
+    if (magicLink) copy(magicLink);
   };
 
   return (
