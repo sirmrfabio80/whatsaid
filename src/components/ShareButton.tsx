@@ -136,15 +136,16 @@ function ShareContent({
             value={email}
             onChange={(e) => {
               const next = e.target.value;
+              const normalizedNext = next.replace(/\u00a0/g, " ");
               // Final fallback: if a space was just appended at the end and we
               // have a live suggestion, accept the suggestion and drop the
               // space. This catches iOS autocorrect / IME paths where the
               // beforeinput event doesn't fire or its data is empty.
               if (
                 suggestionRef.current &&
-                next.length === emailRef.current.length + 1 &&
-                next.endsWith(" ") &&
-                next.slice(0, -1) === emailRef.current
+                normalizedNext.length > emailRef.current.length &&
+                normalizedNext.startsWith(emailRef.current) &&
+                normalizedNext.slice(emailRef.current.length).trim() === ""
               ) {
                 acceptIfPossible();
                 return;
@@ -337,7 +338,7 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const contentProps = {
     email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
     handleSendEmail, handleShareRecord, t, autoFocusInput: !isMobile, recentRecipients,
-    showAcceptHint: !hasDismissedAcceptHint && open && email.length > 0,
+    showAcceptHint: !hasDismissedAcceptHint && open,
     onAcceptSuggestion: handleAcceptSuggestion,
   };
 

@@ -347,6 +347,7 @@
     "shareDesc": "Invia la trascrizione completa e il riepilogo via email.",
     "emailLabel": "Email del destinatario",
     "emailPlaceholder": "collega@azienda.com",
+    "spaceToAcceptHint": "Premi spazio per accettare",
     "sendEmailLabel": "Invia trascrizione via email",
     "sendEmailDesc": "Invia un'email leggibile con titolo, riepilogo, domande e risposte, e trascrizione completa.",
     "shareRecordLabel": "Condividi come record",
