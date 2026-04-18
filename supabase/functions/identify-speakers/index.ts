@@ -772,7 +772,7 @@ async function runAIReview(
   const userPrompt = buildSpeakerVerifierUserPrompt(candidateDescription, relevantLines);
 
   try {
-    const res = await fetch(AI_GATEWAY, {
+    const res = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
