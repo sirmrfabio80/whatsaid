@@ -182,35 +182,48 @@ export async function autoTag(
     if (!error) assigned++;
   }
 
-  // 10. Inline non-English detection — flag suspect AI tags for admin review
+  // 10. Non-English detection — LLM-classify ambiguous tags and flag non-English ones
   try {
-    const suspects = candidates.filter((c) => !looksEnglish(c.display));
-    if (suspects.length > 0) {
-      // Resolve tag IDs for the suspects
-      const suspectNorms = suspects.map((s) => s.normalized);
-      const { data: suspectRows } = await supabase
-        .from("tags")
-        .select("id, name, normalized_name")
-        .eq("user_id", userId)
-        .in("normalized_name", suspectNorms);
+    // Skip tags that are obviously English (pure ASCII without non-English markers AND no content
+    // signal needing a check). To avoid false negatives like "assistenza domiciliare" (pure ASCII,
+    // no function words but Italian content words), we now LLM-classify EVERY AI tag in one batch.
+    const toCheck = candidates;
+    if (toCheck.length > 0) {
+      const langMap = await classifyTagLanguages(
+        toCheck.map((c) => c.display),
+        apiKey,
+      );
 
-      for (const row of suspectRows ?? []) {
-        const detected = guessLang(row.name);
-        // Use upsert keyed on tag_id where status='open' (partial unique index handles dedupe)
-        const { error: flagErr } = await supabase
-          .from("tag_quality_flags")
-          .insert({
-            tag_id: row.id,
-            tag_name: row.name,
-            detected_lang: detected,
-            status: "open",
-          });
-        if (flagErr && !flagErr.message?.includes("duplicate")) {
-          console.warn(`[auto-tag] flag insert failed for tag ${row.id}:`, flagErr.message);
+      const nonEnglish = toCheck.filter((c) => {
+        const lang = langMap.get(c.display);
+        return lang && lang !== "en" && lang !== "unknown";
+      });
+
+      if (nonEnglish.length > 0) {
+        const suspectNorms = nonEnglish.map((s) => s.normalized);
+        const { data: suspectRows } = await supabase
+          .from("tags")
+          .select("id, name, normalized_name")
+          .eq("user_id", userId)
+          .in("normalized_name", suspectNorms);
+
+        for (const row of suspectRows ?? []) {
+          const detected = langMap.get(row.name) ?? guessLang(row.name);
+          const { error: flagErr } = await supabase
+            .from("tag_quality_flags")
+            .insert({
+              tag_id: row.id,
+              tag_name: row.name,
+              detected_lang: detected,
+              status: "open",
+            });
+          if (flagErr && !flagErr.message?.includes("duplicate")) {
+            console.warn(`[auto-tag] flag insert failed for tag ${row.id}:`, flagErr.message);
+          }
         }
-      }
-      if ((suspectRows ?? []).length > 0) {
-        console.log(`[auto-tag] flagged ${suspectRows!.length} non-English AI tag(s) for job=${jobId}`);
+        if ((suspectRows ?? []).length > 0) {
+          console.log(`[auto-tag] flagged ${suspectRows!.length} non-English AI tag(s) for job=${jobId}`);
+        }
       }
     }
   } catch (e) {
