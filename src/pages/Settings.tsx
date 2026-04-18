@@ -16,7 +16,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, AlertCircle, Globe, Loader2 } from "lucide-react";
+import { Save, Lock, Trash2, AlertCircle, Globe } from "lucide-react";
+import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
 
@@ -210,7 +211,7 @@ export default function Settings() {
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <Button className="rounded-lg" size="sm" onClick={saveChanges} disabled={saving}>
-                  {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
+                  {saving ? <InlineSpinner size="sm" className="mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
                   {t("settings.saveChanges")}
                 </Button>
               </div>
@@ -334,7 +335,7 @@ export default function Settings() {
                         navigate("/");
                       }}
                     >
-                      {deleting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{t("settings.deletingAccount")}</> : t("settings.deleteMyAccount")}
+                      {deleting ? <InlineSpinner size="sm" label={t("settings.deletingAccount")} className="mr-0" /> : t("settings.deleteMyAccount")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
