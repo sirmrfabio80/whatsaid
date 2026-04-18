@@ -803,6 +803,26 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                               ) : (
                                 entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>
                               )}
+                              {entry.metadata?.extra_sources && entry.metadata.extra_sources.length > 0 && (
+                                <div className="pl-5 mb-2 flex flex-wrap items-center gap-1.5">
+                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+                                    {t("jobResults.extraSources.usedLabel")}
+                                  </span>
+                                  {entry.metadata.extra_sources.map((src) => (
+                                    <a
+                                      key={src.id}
+                                      href={`/job/${src.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 rounded-full bg-secondary/70 hover:bg-secondary px-2 py-0.5 text-[11px] text-secondary-foreground transition-colors max-w-[200px]"
+                                      title={src.title}
+                                    >
+                                      <FileText className="w-2.5 h-2.5 shrink-0 text-muted-foreground" />
+                                      <span className="truncate">{src.title}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                               <div className={`pl-5 relative ${isRegenerating ? "opacity-40" : ""}`}>
                                 <SectionBody body={applySpeakerNames(getContent(entry), speakerNames)} />
                                 {isRegenerating && (
