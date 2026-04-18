@@ -1,96 +1,121 @@
 
-## Goal
-Add an optional "Additional transcripts" knowledge source to the Questions tab on `/job/:id`. When enabled, the user picks other transcripts they own (Tags-style chip+search input) and the AI answer is grounded in **current transcript (PRIMARY) + selected transcripts (SUPPORTING)**. When the toggle is off or no extras are picked, behavior is **byte-identical** to today.
+## Plan: implement `docs/product/capabilities.md`
 
-## Verified facts (from code read)
-- Questions UI lives in `src/components/JobResults.tsx` `<TabsContent value="questions">`. Submit handler `handleAskQuestion` calls `supabase.functions.invoke("regenerate", { body: { job_id, custom_prompt } })`.
-- `supabase/functions/regenerate/index.ts` → `handleSummaryOrCustom` reads only the current job's transcript and builds the prompt via `buildCustomUserPrompt(custom_prompt, transcript)` from `_shared/prompts.ts`.
-- `jobs` RLS: `SELECT WHERE auth.uid() = user_id`. Edge function uses service role → must re-validate ownership server-side.
-- Tags interaction style is in `src/components/JobDetailTags.tsx` (chip + Input + suggestion dropdown, X-button removal).
+Single-pass write of the documentation file based on the verified codebase audit. No code changes elsewhere.
 
-## Plan
+### File location
+`docs/product/capabilities.md` (new file, new `docs/` tree).
 
-### 1. New isolated picker component
-**File**: `src/components/QuestionExtraSourcesPicker.tsx` (new)
-- Props: `{ currentJobId, value: Array<{id,title}>, onChange, max?: number }`.
-- Internal state: search query (debounced 300ms), search results, dropdown open.
-- Visual pattern mirrors `JobDetailTags.tsx`: `Badge` chips with `X` removal button; `Input` with floating result list.
-- Search query against `jobs` (RLS scopes to caller):
-  ```ts
-  supabase.from("jobs")
-    .select("id, title, file_name")
-    .eq("status", "completed")
-    .neq("id", currentJobId)
-    .or(`title.ilike.%${q}%,file_name.ilike.%${q}%`)
-    .order("created_at", { ascending: false })
-    .limit(8)
-  ```
-- Filters out already-selected IDs client-side.
-- Display: `title || file_name` fallback (matches existing convention).
-- Hard cap: max 5.
-- All i18n strings via `useTranslation`.
+### Frontmatter (exactly as requested)
+```yaml
+---
+title: WhatSaid — Product Capabilities
+purpose: Single source of truth for documentation, FAQ, help content, and marketing copy extraction.
+audience: internal (product, support, marketing, AI assistants)
+last_reviewed: 2026-04-18
+review_notes: First pass after Q&A extra-sources feature shipped. Verify items in "Needs review" before public extraction.
+---
+```
 
-### 2. JobResults.tsx — minimal additions
-- Add local state: `useExtraSources: boolean`, `extraSources: Array<{id,title}>`.
-- Above the existing question composer in the Questions tab, render:
-  - A `Switch` + label `t("jobResults.extraSources.toggleLabel")`.
-  - When ON, render `<QuestionExtraSourcesPicker currentJobId={jobId} value={extraSources} onChange={setExtraSources} max={5} />`.
-- Modify `handleAskQuestion` to pass `extra_job_ids` only when toggle is ON **and** `extraSources.length > 0`. Otherwise omit the field entirely (preserves byte-identical request body).
-- No other changes in this file.
+### Per-capability block (exact requested fields)
+Status · Confidence · Needs review · Public copy eligible · Audience · Where it appears · What it does · How it works (optional, ≤1 sentence, support-facing) · Dependencies / preconditions · Limits / constraints · Homepage seed · Pricing seed · FAQ seeds · Help topic · Source files
 
-### 3. Edge function — additive, custom-path only
-**File**: `supabase/functions/regenerate/index.ts`
-- Extend body schema with optional `extra_job_ids?: string[]` (Zod `.array(z.string().uuid()).max(5).optional()`).
-- In `handleSummaryOrCustom`, only when `outputType === "custom"` AND `extra_job_ids?.length > 0`:
-  1. Resolve caller's `user_id` via `auth.getUser` using the request's Authorization JWT (anon client).
-  2. Re-validate primary `job_id` ownership: `SELECT user_id FROM jobs WHERE id = :job_id`. Must equal caller.
-  3. Validate extras: `SELECT id FROM jobs WHERE id = ANY(extra_job_ids) AND user_id = caller AND status = 'completed'`. Drop unauthorized/invalid IDs silently.
-  4. Fetch transcripts for surviving IDs from `job_outputs WHERE output_type='transcript'`.
-  5. Cap at total ~200k combined chars; drop extras from the end if exceeded (log warn).
-  6. Call new `buildCustomUserPromptMulti(custom_prompt, primaryTranscript, extras)`.
-- If extras list ends up empty after validation/caps, fall through to the **exact existing** `buildCustomUserPrompt` path (no behavior change).
-- Summary path and translation path: untouched.
+### Document outline
+1. How to use this document (legend, status/confidence/review semantics)
+2. Product summary (1 factual paragraph)
+3. Glossary (job, output, credit, transcript, summary, Q&A, share, claim, tag, variant)
+4. Capability index (table: ID · category · name · status · audience · public-eligible)
+5. Capabilities by category (blocks below)
+6. Cross-cutting properties (formats, languages, exports, currencies, retention, accessibility)
+7. Out of scope (only safe, clearly-not-supported items)
+8. Reuse extraction guide (grep recipes; exclusion rules)
+9. Needs review list
+10. Partial capabilities list
+11. Inferred capabilities list
+12. Public-copy-excluded but user-facing list
+13. Change log
 
-### 4. Prompt helper — additive
-**File**: `supabase/functions/_shared/prompts.ts`
-- Add `buildCustomUserPromptMulti(instruction, primary, extras: Array<{title, content}>)`:
-  ```
-  Instruction: <instruction>
+### Capabilities to document (verified against code)
 
-  PRIMARY TRANSCRIPT (use as the main source of truth):
-  <primary>
+**User-facing (status: live unless noted)**
+- CAP-001 Audio upload (.m4a/.mp3/.wav, ≤100 MB, ≤60 min) — `src/lib/pricing.ts`, `AudioUploader`
+- CAP-002 Auto language detection + manual override — `LanguageSelector`, `transcribe`
+- CAP-003 Full transcription with timestamps — `transcribe`, `TranscriptEditor`
+- CAP-004 Speaker diarization & speaker labels — `SpeakerChips`, `ParticipantsPanel`
+- CAP-005 Speaker rename + AI-suggested speaker identification — `identify-speakers`, `suggest-speakers`, `SpeakerIdentificationBanner`
+- CAP-006 Structured summary (key points / actions) — `StructuredSummary`, `post-process`
+- CAP-007 Summary regeneration after transcript edits (cap 3) — verified counter `summary_regen_count` in JobResults
+- CAP-008 Custom Q&A on transcript — `JobResults` Questions tab, `regenerate`
+- CAP-009 Multi-transcript Q&A grounding (extra sources, max 5) — `QuestionExtraSourcesPicker`, persisted metadata
+- CAP-010 Edit / re-ask / delete saved Q&A — verified in JobResults
+- CAP-011 Transcript inline editing — `TranscriptEditor`
+- CAP-012 AI-generated tags + manual tags — `JobDetailTags`, `generate-tags`
+- CAP-013 Tag translation cache (multilingual rendering) — `translate-tags`, `use-translated-tags`
+- CAP-014 Output/summary language switch (translation variants) — `job_output_variants`
+- CAP-015 Title autogeneration + manual rename — `generate-title`
+- CAP-016 Recording date + location metadata extraction — `audio-creation-date`, `location.ts`
+- CAP-017 Word count + reading time — verified in JobDetail
+- CAP-018 Exports: TXT, JSON, DOC (synchronous) — `ExportButton`, `export-txt/json/docx`
+- CAP-019 PDF export (async via notifications) — `startPdfExport`, NotificationsContext
+- CAP-020 Share via email link (2-day expiry) — `share-transcript`, `claim-transcript-share`, `ClaimShare`
+- CAP-021 Share PDF download link — `share-transcript-record`, `download-shared-pdf`, `SharedPdfDownload`
+- CAP-022 In-app notifications (async export readiness) — `NotificationsContext`, `Notifications.tsx` *(scope: confirmed for PDF exports; other event types — needs review)*
+- CAP-023 History list with filters & search — `History`, `HistoryFilters`
+- CAP-024 Email/password + Google OAuth signup & login — `Login`, `Signup`, `lovable.auth.signInWithOAuth`
+- CAP-025 Password setup for OAuth-first users — `needsPasswordSetup` flow
+- CAP-026 Password reset — `ResetPassword`, `SetPassword`
+- CAP-027 Profile (avatar, display name, stats) — `Profile`, `AvatarUpload`
+- CAP-028 Settings (display name, contact email, UI language) — `Settings`
+- CAP-029 UI in EN / IT / FR — `i18n/locales`
+- CAP-030 Account deletion — `delete-account`
+- CAP-031 Credit packs (1 / 5 / 20) via Paddle in GBP/USD/EUR — `Pricing`, `paddle-checkout`, `paddle-pricing`
+- CAP-032 Credit-based transcription (1/2/3/4 credits per 15-min bracket) — `creditsForDuration`
+- CAP-033 Audio deletion after processing (privacy) — `cleanup-assemblyai`, Privacy page
 
-  ADDITIONAL TRANSCRIPT — "<title>" (supporting context only; defer to PRIMARY on conflicts unless the instruction asks to compare):
-  <content>
-  ...
-  ```
-- Append a one-line note to `CUSTOM_OUTPUT_SYSTEM_PROMPT` clarifying multi-transcript handling. Keep `buildCustomUserPrompt` exported and unchanged for the no-extras fallback.
+**Partial / conditional**
+- CAP-P-001 Audio enhancement (template-gated) — eligible flag from admin template; user has no toggle → status: partial, public-copy: no
+- CAP-P-002 Speech model selection — admin template-controlled, no user UI → partial / admin-only
+- CAP-P-003 Notifications for non-export events — only PDF export confirmed in code → partial, needs review
 
-### 5. i18n
-Add `jobResults.extraSources.*` to en/fr/it: `toggleLabel`, `searchPlaceholder`, `noResults`, `removeAriaLabel`, `limitReached` (`{{max}}`).
+**Admin-only (status: admin-only, public-copy: no)**
+- CAP-A-001 Admin dashboard (`/admin`) with `AdminGuard`
+- CAP-A-002 Transcribe templates (`TranscribeTemplatesTab`, `TemplateEditor`)
+- CAP-A-003 Edge logs viewer (`EdgeLogsList`, `LogsTab`)
+- CAP-A-004 Job audit (`JobAuditCard`, `admin-get-job-details`)
+- CAP-A-005 Tag quality flags (scan/fix non-English) (`OthersTab`, `scan-non-english-tags`, `fix-flagged-tags`)
+- CAP-A-006 Invite system (`AdminInviteCard`, `invite-user`, `redeem-invite`)
+- CAP-A-007 Admin unlimited credits
 
-## Files touched
-- `src/components/QuestionExtraSourcesPicker.tsx` (new, isolated)
-- `src/components/JobResults.tsx` (minimal: toggle, state, picker mount, payload field)
-- `supabase/functions/regenerate/index.ts` (custom path only)
-- `supabase/functions/_shared/prompts.ts` (additive helper + small system-prompt note)
-- `src/i18n/locales/{en,fr,it}.json`
+**Internal (status: internal, public-copy: no)**
+- CAP-I-001 Async job system (`async_jobs`)
+- CAP-I-002 Email pipeline (`process-email-queue`, `auth-email-hook`, `email_send_log`, `suppressed_emails`)
+- CAP-I-003 Stale-job cleanup (`cleanup-stale-jobs`)
+- CAP-I-004 AssemblyAI cleanup (`cleanup-assemblyai`)
+- CAP-I-005 AI gateway abstraction (`_shared/ai-gateway.ts`)
+- CAP-I-006 Paddle webhook (`paddle-webhook`)
+- CAP-I-007 Profile email validation (`validate-profile-email`)
 
-## Risks & edge cases
-| Risk | Mitigation |
-|---|---|
-| Service role bypasses RLS | Re-validate primary + every extra against caller JWT before reading transcripts. |
-| Context-window blow-up | Hard cap 5 extras + ~200k combined chars; drop from end if exceeded. |
-| Picking an unfinished transcript | `status='completed'` filter on both client query and server validation. |
-| Backward compatibility | `extra_job_ids` optional; absent → identical existing path. |
-| Saved Q&A rendering / edit-reask | Untouched — extras are not persisted, only used for that single call. |
-| Translation cache (`job_output_variants`) | Unchanged — extras only feed the prompt; no variants written. |
-| Question counter | Unchanged — same `question_generation_count` semantics. |
-| Title fallback when missing | Display `title || file_name` (matches existing UI convention). |
-| Duplicate chips | Enforced via `Set<id>` on add and result-list filter. |
+### Out of scope (conservative — only items users likely assume)
+- No guest / pay-per-conversion flow today (account required)
+- No live / real-time transcription
+- No team / shared workspaces
+- No public API
+- No native mobile app
+- No subscription plans (one-time credit purchases only)
 
-## Out of scope
-- Persisting selected extras alongside saved Q&A.
-- Shared/other-user transcripts.
-- Searching transcript content (only title + file_name).
-- Any changes to summary, translation, exports, edit/re-ask flows, or Tags component.
+(I will NOT speculate beyond these.)
+
+### Inclusion rules I will follow
+- Verified-in-code claims only; otherwise mark `confidence: inferred` + `Needs review: yes`.
+- No marketing prose in seed fields — short factual hints or `n/a`.
+- Vendor names (AssemblyAI, Paddle, Lovable AI) only in `Source files` and Privacy/legal context, never in homepage/pricing seeds.
+- "99 languages" treated as `inferred` (UI claim, not enumerated in code).
+- Audio enhancement and speech model selection marked `partial` + `Public copy eligible: no` since they're admin-template-controlled.
+
+### After writing, summary I will return
+- Total capabilities documented (count)
+- Counts by status: live / partial / admin-only / internal
+- Top items most needing manual review (with reason)
+
+### Files touched
+- `docs/product/capabilities.md` (new) — only this file.
