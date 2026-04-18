@@ -384,11 +384,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   };
 
   const handleDeleteQA = async (id: string) => {
-    if (editingQAId === id) { setEditingQAId(null); setEditingQAText(""); }
+    if (editingQAId === id) { setEditingQAId(null); setEditingQAText(""); setEditingExtraSources([]); }
     const prev = outputs;
     setOutputs((o) => o.filter((x) => x.id !== id));
     const { error } = await supabase.from("job_outputs").delete().eq("id", id);
-    if (error) { setOutputs(prev); toast.error(t("jobResults.saveFailed")); }
+    if (error) { setOutputs(prev); toast.error(t("jobResults.summaryRegenFailed")); }
   };
 
   const handleEditQA = async (entry: JobOutput) => {
@@ -396,6 +396,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     if (!newPrompt || isQuestionLimitReached) return;
     const originalPrompt = entry.custom_prompt;
     const originalContent = entry.content;
+    const originalMetadata = entry.metadata ?? null;
+    const extrasToSend = editingExtraSources.slice(0, 5);
     setRegeneratingQAId(entry.id);
     setEditingQAId(null);
     // Optimistically show new question text
@@ -403,14 +405,19 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
     try {
       // Delete old output
       await supabase.from("job_outputs").delete().eq("id", entry.id);
-      const { data, error } = await supabase.functions.invoke("regenerate", { body: { job_id: jobId, custom_prompt: newPrompt } });
+      const body: { job_id: string; custom_prompt: string; extra_job_ids?: string[] } = {
+        job_id: jobId,
+        custom_prompt: newPrompt,
+      };
+      if (extrasToSend.length > 0) body.extra_job_ids = extrasToSend.map((s) => s.id);
+      const { data, error } = await supabase.functions.invoke("regenerate", { body });
       if (error || data?.error) {
         // Revert
-        setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent } : o));
+        setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent, metadata: originalMetadata } : o));
         if (data?.error === "question_limit_reached") toast.error(t("jobResults.noQuestionsLeft"));
         else toast.error(t("jobResults.summaryRegenFailed"));
         // Re-insert old output (best effort)
-        await supabase.from("job_outputs").insert({ id: entry.id, job_id: jobId, output_type: "custom", content: originalContent, custom_prompt: originalPrompt });
+        await supabase.from("job_outputs").insert({ id: entry.id, job_id: jobId, output_type: "custom", content: originalContent, custom_prompt: originalPrompt, metadata: originalMetadata as never });
         return;
       }
       if (data?.output) {
@@ -420,11 +427,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       }
       setQuestionGenCount((c) => c + 1);
     } catch {
-      setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent } : o));
+      setOutputs((prev) => prev.map((o) => o.id === entry.id ? { ...o, custom_prompt: originalPrompt, content: originalContent, metadata: originalMetadata } : o));
       toast.error(t("jobResults.summaryRegenFailed"));
     } finally {
       setRegeneratingQAId(null);
       setEditingQAText("");
+      setEditingExtraSources([]);
     }
   };
 
