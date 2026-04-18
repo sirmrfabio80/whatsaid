@@ -132,7 +132,26 @@ export default function OthersTab() {
       setBusyId(null);
       setBulkBusy(false);
       load();
+  }
+
+  async function scanNow() {
+    setScanning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("scan-non-english-tags", { body: {} });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      const flagged = data?.flagged ?? 0;
+      const scanned = data?.scanned ?? 0;
+      toast.success(t("admin.others.scanResult", { flagged, scanned }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setScanning(false);
+      load();
     }
+  }
   }
 
   return (
