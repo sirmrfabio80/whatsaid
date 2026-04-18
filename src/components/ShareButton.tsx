@@ -165,7 +165,7 @@ function ShareContent({
                 if (acceptIfPossible()) e.preventDefault();
               }
               if (e.key === "ArrowRight" && suggestion) {
-                if (acceptIfPossible()) e.preventDefault();
+                if (acceptIfPossible()) { e.preventDefault(); onAcceptArrowSuggestion(); }
               }
             }}
             onFocus={() => setFocused(true)}
@@ -189,9 +189,14 @@ function ShareContent({
             </div>
           )}
         </div>
-        {showAcceptHint && (
+        {isMobile && showAcceptHint && (
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
             {t("share.spaceToAcceptHint")}
+          </p>
+        )}
+        {!isMobile && showArrowHint && suggestion.length > 0 && (
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            {t("share.arrowRightToAcceptHint")}
           </p>
         )}
       </div>
