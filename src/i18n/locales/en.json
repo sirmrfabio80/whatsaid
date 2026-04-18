@@ -693,7 +693,10 @@
       "fixedCount": "Fixed {{count}} tag(s)",
       "fixSomeErrors": "Fixed {{fixed}}, {{errors}} error(s)",
       "fixConfirmTitle": "Fix all flagged tags?",
-      "fixConfirmDesc": "This will translate {{count}} tag(s) to English and seed the original text as a translation in the detected source language."
+      "fixConfirmDesc": "This will translate {{count}} tag(s) to English and seed the original text as a translation in the detected source language.",
+      "scanNow": "Scan now",
+      "scanning": "Scanning…",
+      "scanResult": "Scanned {{scanned}} tag(s), flagged {{flagged}} non-English"
     }
   }
 }

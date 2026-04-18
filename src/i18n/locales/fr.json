@@ -661,7 +661,10 @@
       "fixedCount": "{{count}} tag(s) corrigé(s)",
       "fixSomeErrors": "{{fixed}} corrigé(s), {{errors}} erreur(s)",
       "fixConfirmTitle": "Corriger tous les tags signalés ?",
-      "fixConfirmDesc": "Cela traduira {{count}} tag(s) en anglais et enregistrera le texte original comme traduction dans la langue source détectée."
+      "fixConfirmDesc": "Cela traduira {{count}} tag(s) en anglais et enregistrera le texte original comme traduction dans la langue source détectée.",
+      "scanNow": "Scanner maintenant",
+      "scanning": "Analyse…",
+      "scanResult": "{{scanned}} tag(s) analysé(s), {{flagged}} signalé(s) non-anglais"
     }
   }
 }
