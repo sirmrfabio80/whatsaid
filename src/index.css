@@ -220,3 +220,34 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Reduced-motion safety net.
+
+   Tailwind's `motion-safe:` / `motion-reduce:` utilities only gate
+   class-applied animations. Animations defined directly in this file
+   (`.animate-page-enter`, `.animate-page-enter-flat`, `.animate-fade-in`,
+   `.animate-stagger > *`) and the always-on Tailwind `animate-pulse`
+   used for decorative cursor blinks would otherwise keep running for
+   users who set `prefers-reduced-motion: reduce`.
+
+   We disable purely decorative motion here while preserving:
+     - `animate-spin` (functional loading indicator, accepted by WCAG)
+     - Radix `animate-in` interaction transitions (short, user-triggered)
+   ───────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-enter,
+  .animate-page-enter-flat,
+  .animate-fade-in,
+  .animate-stagger > *,
+  .animate-pulse,
+  .animate-slide-down {
+    animation: none !important;
+  }
+  /* MobileMenu items use `opacity-0 animate-fade-in` with fill-forwards — once
+     the animation is suppressed they would stay invisible. Force them visible. */
+  .animate-fade-in {
+    opacity: 1 !important;
+  }
+}
+
