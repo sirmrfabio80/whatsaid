@@ -14,17 +14,17 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <img src={logoImg} alt="WhatSaid" className="w-7 h-7 rounded-lg" />
-              <span className="font-semibold text-sm">WhatSaid</span>
+              <span className="font-semibold text-secondary">WhatSaid</span>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
+            <p className="text-caption text-muted-foreground leading-relaxed max-w-xs">
               {t("footer.desc")}
             </p>
           </div>
 
           {/* Product */}
           <div>
-            <h4 className="font-semibold text-sm mb-3">{t("footer.product")}</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h4 className="text-h3 mb-3">{t("footer.product")}</h4>
+            <ul className="space-y-2 text-secondary text-muted-foreground">
               <li><Link to="/convert" className="hover:text-foreground transition-colors">{t("footer.convertAudio")}</Link></li>
               <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link></li>
               <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>
@@ -33,8 +33,8 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="font-semibold text-sm mb-3">{t("footer.legal")}</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h4 className="text-h3 mb-3">{t("footer.legal")}</h4>
+            <ul className="space-y-2 text-secondary text-muted-foreground">
               <li><Link to="/terms" className="hover:text-foreground transition-colors">{t("footer.terms")}</Link></li>
               <li><Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link></li>
               <li><Link to="/refund-policy" className="hover:text-foreground transition-colors">{t("footer.refundPolicy")}</Link></li>
@@ -43,8 +43,8 @@ export default function Footer() {
 
           {/* Support */}
           <div>
-            <h4 className="font-semibold text-sm mb-3">{t("footer.support")}</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h4 className="text-h3 mb-3">{t("footer.support")}</h4>
+            <ul className="space-y-2 text-secondary text-muted-foreground">
               <li>
                 <Link to="/help" className="hover:text-foreground transition-colors">
                   {t("footer.helpAndFaq")}
@@ -57,15 +57,15 @@ export default function Footer() {
                 </a>
               </li>
             </ul>
-            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+            <p className="text-caption text-muted-foreground mt-3 leading-relaxed">
               {t("footer.operator")}
             </p>
           </div>
         </div>
 
         <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-muted-foreground">{t("footer.copyright", { year: new Date().getFullYear() })}</p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">{t("footer.copyright", { year: new Date().getFullYear() })}</p>
+          <div className="flex items-center gap-2 text-caption text-muted-foreground">
             <Shield className="w-3 h-3" />
             <span>{t("footer.audioDeleted")}</span>
           </div>
