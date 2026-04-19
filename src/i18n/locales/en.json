@@ -27,6 +27,12 @@
     "settings": "Settings",
     "help": "Help"
   },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
   "home": {
     "tagline": "AI transcription + speaker labels",
     "heroEyebrow": "Premium AI transcription",
