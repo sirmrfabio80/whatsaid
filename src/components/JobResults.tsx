@@ -642,6 +642,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const activeTranscriptContent = transcript ? getContent(transcript) : "";
   const activeSummaryContent = summary ? getContent(summary) : null;
 
+  // Speech: language hint + latest visible answer for the Questions tab.
+  const speechLang = meta?.language_detected ?? outputLang ?? undefined;
+  const latestQuestionEntry = questionEntries.length > 0 ? questionEntries[questionEntries.length - 1] : null;
+  const latestAnswerContent = latestQuestionEntry
+    ? applySpeakerNames(getContent(latestQuestionEntry), speakerNames)
+    : "";
+
   const canonicalData = transcript ? buildCanonicalPayload({
     jobTitle: effectiveJobTitle, generatedTitle, originalFileName: meta?.file_name ?? null,
     createdAt: meta?.recorded_at ?? meta?.created_at ?? null, durationSeconds: meta?.duration_seconds ?? null,
@@ -651,7 +658,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   return (
     <div className="space-y-6 animate-page-enter-flat">
-      <Tabs defaultValue="summary" className="w-full">
+      <Tabs defaultValue="summary" className="w-full" onValueChange={() => speechManager.stop()}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <TabsList className="w-auto justify-start rounded-full bg-muted/40 p-1 h-auto gap-0.5">
             <TabsTrigger value="summary" className="rounded-full gap-1.5 px-3 sm:px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><Sparkles className="w-3.5 h-3.5" />{t("jobResults.summary")}</TabsTrigger>
