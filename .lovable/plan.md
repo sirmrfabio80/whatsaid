@@ -1,82 +1,83 @@
 
 
-## Revised plan: "Listen" control on JobDetail tabs
+## Revised plan: Listening preferences (voice + speed)
 
-### Files to add
+### 1. Migration — strict & non-nullable
 
-**1. `src/hooks/use-speech-synthesis.ts`** — module-level singleton playback manager
-- A single module-scoped `manager` object holds: `currentOwner`, `currentUtterances[]`, `state`, and a `Set<Listener>` of subscribers.
-- The hook (`useSpeechSynthesis()`) subscribes to the manager and returns:
-  - `isSupported: boolean`
-  - `state: 'idle' | 'playing' | 'paused'`
-  - `activeOwner: string | null`
-  - `isActiveOwner(ownerId): boolean`
-  - `play(ownerId, text, lang?)`
-  - `pause()`, `resume()`, `stop()`
-- **Lifecycle safety**: the hook does **not** call `cancel()` on unmount. Only the `JobResults` page-level unmount effect (and explicit user actions / tab change) call `manager.stop()`. Individual `ListenButton` unmounts simply unsubscribe their listener — they never touch playback. This guarantees a button rerender or conditional remount cannot kill an active session.
-- Mobile/Chrome safety: keep a heartbeat (`pause/resume` workaround for Chrome's 15s cutoff) running only while `state === 'playing'`.
+Add to `public.profiles`:
+- `preferred_voice text NOT NULL DEFAULT 'female' CHECK (preferred_voice IN ('male','female'))`
+- `playback_speed real NOT NULL DEFAULT 1.0 CHECK (playback_speed IN (0.75, 1.0, 1.25, 1.5))`
 
-**2. `src/lib/speech-text.ts`** — pure text extractors
-- `transcriptToSpeech(content, speakerNames)` — uses `parseSegments`, joins `"<Speaker>: <text>"` per segment, double-newline between turns (longer pause).
-- `summaryToSpeech(content)` — strips markdown (`#`, `*`, `_`, `` ` ``, list markers, `[txt](url)` → `txt`), preserves paragraph breaks.
-- `latestAnswerToSpeech(answer)` — strips markdown from the single newest visible answer string.
-- `chunkForSpeech(text)` — **revised chunking**:
-  1. Split on blank lines → paragraphs.
-  2. If a paragraph ≤ 600 chars, keep it whole (one utterance).
-  3. Otherwise split on sentence boundaries (`. ! ?` followed by space/newline) and greedily pack sentences into ≤ 600-char utterances.
-  4. Only if a single sentence exceeds 600 chars, fall back to splitting on commas/clauses with a 400-char floor.
-  - Result: natural prosody, far fewer audible seams than fixed 200-char chunks.
+No RLS changes — verified that existing `profiles` policies allow the user to `SELECT` and `UPDATE` their own row (`auth.uid() = user_id`), and the `profile` query in `Settings.tsx` already does `select("*")` and `update(...)` against `profiles`. New columns ride on those paths automatically.
 
-### Files to modify
+### 2. Single source of truth for seeding speech preferences
 
-**3. `src/components/JobResults.tsx`**
+**`src/contexts/AuthContext.tsx`** is the only seeding point:
+- Extend the existing `refreshProfile(uid)` query to also select `preferred_voice, playback_speed`.
+- After setting local profile state, call `setSpeechPreferences({ voice, rate })` from the speech hook module.
+- This effect already runs on user login and on profile refresh — covers session start and any later profile change.
 
-- Import the hook, helpers, and `Play`, `Pause`, `Square` icons from `lucide-react`.
-- Add a small inline `<ListenButton ownerId getText lang label />` component:
-  - Always rendered (never hidden) so layout is stable.
-  - **Unsupported browsers** → rendered `disabled` with `title` / `aria-label` "Listening isn't available in this browser" and a one-shot `toast.info(...)` only if the user clicks it (click handler short-circuits when `!isSupported`). No contradiction: control is visible + disabled, message is subtle and only on attempt.
-  - **Empty content** → `disabled` with `aria-label="Nothing to listen to yet"`.
-  - **Stable layout**: the component always reserves space for `[main button] [stop button]`. The Stop button uses `visibility: hidden` (not `display: none`) when `!isActiveOwner(ownerId)`, so the row never jumps when playback starts.
-  - Main button states (icon + label):
-    - idle → `Play` + `t('jobResults.listen.play')`
-    - active+playing → `Pause` + `t('jobResults.listen.pause')`
-    - active+paused → `Play` + `t('jobResults.listen.resume')`
-  - Stop button: icon-only `Square`, with `aria-label={t('jobResults.listen.stop')}` and `title` tooltip for sighted users.
-  - Sizing: `Button variant="ghost" size="sm"` with `rounded-full text-xs h-9 min-w-[44px] min-h-[44px] sm:h-8 sm:min-h-0` to meet the 44px mobile touch target without bloating desktop.
+**No changes to `src/components/JobResults.tsx`.** The Listen feature continues to read from the singleton manager only. No duplicate loaders, no Settings-side seeding (Settings only updates the manager for the test action and saves to DB).
 
-- **Placement (intentional & premium)**:
-  - **Transcript tab** → single Listen control in the existing top toolbar (`flex items-center gap-2 p-3 border-b`), placed at the leading edge before language `Globe`/`Select`. Owner id `"transcript"`.
-  - **Summary tab** → single Listen control in a thin right-aligned action row at the very top of the summary `CardContent`, above `ParticipantsPanel`. Owner id `"summary"`.
-  - **Questions tab** → **one** top-level Listen control in the tab's header/actions row. It plays **only the newest visible answer** in the tab (the most recent saved Q&A entry's answer text), read top-to-bottom. No per-entry Listen buttons. Owner id `"questions"`. If there is no answer yet → disabled.
+### 3. Speech hook — preferences + voice picker (`src/hooks/use-speech-synthesis.ts`)
 
-- **Tab change handling**: wrap `<Tabs onValueChange>` to call `manager.stop()` on every change so playback never bleeds across tabs.
+Add module-level state:
+```
+let preferences = { voice: 'female' as 'male'|'female', rate: 1.0 as number };
+export function setSpeechPreferences(prefs: Partial<typeof preferences>): void
+```
 
-- **Page-level cleanup**: a single `useEffect(() => () => manager.stop(), [])` at the top of `JobResults` ensures playback ends when the user leaves the job detail view. No other cleanup paths touch the manager.
+**`pickVoice(lang, gender)` selection order** (clear, deterministic):
+1. **Exact language match** (e.g. `voice.lang === 'en-US'` when requested).
+2. **Same language family / prefix** (`voice.lang.split('-')[0] === lang.split('-')[0]`).
+3. Within the candidate set, prefer `voice.localService === true`.
+4. Within the remaining candidates, apply gender heuristic regex on `voice.name` (female: `samantha|victoria|karen|fiona|moira|tessa|zira|hazel|amelie|amélie|audrey|virginie|alice|carla|federica|paola|female|woman`, male: `daniel|alex|fred|tom|david|mark|thomas|nicolas|sébastien|sebastien|paul|luca|cosimo|diego|male|man`).
+5. **Browser default** (`undefined` → `utt.voice` left unset).
 
-- **Language hint**: pass `meta?.language_detected ?? outputLang` as `utterance.lang`.
+> Comment in code: gender matching is best-effort only — browser voice metadata is inconsistent across OS/Chrome/Safari/Firefox, so heuristic mismatches are expected and we fall back gracefully.
 
-**4. `src/i18n/locales/en.json`, `fr.json`, `it.json`** — under `jobResults.listen`:
-- `play`, `pause`, `resume`, `stop`
-- `unsupported` ("Listening isn't available in this browser.")
-- `empty` ("Nothing to listen to yet.")
-- `ariaStop` ("Stop listening")
+**`voiceschanged` handling — concrete behaviour**:
+- Module init: read `window.speechSynthesis.getVoices()` once into `voicesCache`. If empty, register a one-time `voiceschanged` listener that refills `voicesCache` and removes itself.
+- `pickVoice` always reads the latest `voicesCache`. If still empty when called → return `undefined` (browser default).
+- The Settings **Test voice** button: if `voicesCache` is empty at click time, force a fresh `getVoices()` synchronously, then proceed. No retry timer, no race.
 
-### Acceptance mapping
-- Play / Pause / Resume / Stop → hook exposes all four; UI swaps icon + label per state.
-- One playback at a time → module-level singleton manager.
-- Switching tab stops playback → `Tabs onValueChange` → `stop()`.
-- Empty content disables control → `disabled` with aria-label.
-- Unsupported browser → control visible + disabled + one-shot toast on click. No contradiction.
-- Questions tab → exactly one Listen control reading only the newest visible answer.
-- No layout jump → Stop button uses `visibility: hidden` reservation.
-- Aria → explicit `aria-label` on the icon-only Stop and on disabled states.
-- Singleton lifecycle safety → only page unmount + explicit stop + tab change cancel playback; ListenButton unmounts only unsubscribe.
-- Chunking → paragraph-first, sentence-second, ≤600 char target — natural prosody.
+Apply to utterances inside `manager.play(...)`:
+- `utt.voice = pickVoice(lang, preferences.voice) ?? null`
+- `utt.rate = preferences.rate` (already validated to be one of {0.75, 1.0, 1.25, 1.5}).
+
+### 4. Settings UI — new "Listening" card (`src/pages/Settings.tsx`)
+
+Insert a new `Card` between "Preferences" and the password/security cards.
+
+- Title: `t('settings.listening.title')`
+- Helper: `t('settings.listening.desc')` ("Voice availability depends on your browser and device. We pick the closest match.")
+- **Voice** — `RadioGroup` with `male` / `female`. Local state seeded from `profile.preferred_voice` (defaults `'female'`).
+- **Speed** — `Select` with options `0.75`, `1.0`, `1.25`, `1.5`. Local state seeded from `profile.playback_speed`.
+- **Test voice** button (`Volume2` icon):
+  1. **Stop any active speech first**: call `speechManager.stop()`.
+  2. Push current local selections to manager via `setSpeechPreferences(...)`.
+  3. `manager.play('settings-test', t('settings.listening.sample'), i18n.language)`.
+
+**Persistence**:
+- Extend the existing `saveChanges()` in `Settings.tsx` (no new save flow). Include `preferred_voice` and `playback_speed` in the existing `profiles.update({...})` call.
+- **Validate before save**: define `ALLOWED_VOICES = ['male','female'] as const`, `ALLOWED_SPEEDS = [0.75, 1.0, 1.25, 1.5] as const`. Before the update call, assert both values are in their allowed set; on failure surface a toast and abort. This guards both the UI and the DB CHECK constraints.
+- After save success, also call `setSpeechPreferences(...)` so the live JobResults Listen feature picks up the new prefs immediately without page reload.
+
+### 5. i18n — `en.json`, `fr.json`, `it.json`
+
+Under `settings.listening`: `title`, `desc`, `voice`, `voiceMale`, `voiceFemale`, `speed`, `test`, `sample`, `invalidValue` (toast for validation failure).
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `supabase/migrations/<new>.sql` | Strict NOT NULL + CHECK columns on `profiles` |
+| `src/hooks/use-speech-synthesis.ts` | `preferences` state, `setSpeechPreferences`, `pickVoice` (5-step order), `voiceschanged` cache, apply `voice`/`rate` in `play()` |
+| `src/contexts/AuthContext.tsx` | Extend `refreshProfile` SELECT + call `setSpeechPreferences` after load (single seeding point) |
+| `src/pages/Settings.tsx` | Add Listening card; validate-before-save; extend existing `saveChanges` `profiles.update`; Test button stops first, then plays |
+| `src/i18n/locales/{en,fr,it}.json` | New `settings.listening.*` keys |
 
 ### Out of scope (unchanged)
-- `supabase/`, edge functions, DB schema
-- Export / Share / Copy logic
-- Speaker identification, translation, regeneration flows
-- `JobDetail.tsx` header (status chip, metadata)
-- Any other page
+- `src/components/JobResults.tsx` (no edits)
+- Any other Settings sections, billing, sharing, exports, edge functions, transcript pipeline
 
