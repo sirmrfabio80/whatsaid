@@ -16,10 +16,17 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, AlertCircle, Globe } from "lucide-react";
+import { Save, Lock, Trash2, AlertCircle, Globe, Volume2, Headphones } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { setSpeechPreferences, speechManager, useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
+
+const ALLOWED_VOICES = ["male", "female"] as const;
+type AllowedVoice = (typeof ALLOWED_VOICES)[number];
+const ALLOWED_SPEEDS = [0.75, 1.0, 1.25, 1.5] as const;
+type AllowedSpeed = (typeof ALLOWED_SPEEDS)[number];
 
 const UI_LANGUAGES = [
   { code: "en", label: "English" },
@@ -50,6 +57,9 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [preferredVoice, setPreferredVoice] = useState<AllowedVoice>("female");
+  const [playbackSpeed, setPlaybackSpeed] = useState<AllowedSpeed>(1.0);
+  const { isSupported: speechSupported } = useSpeechSynthesis();
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
 
@@ -80,6 +90,12 @@ export default function Settings() {
       setDisplayName(profile.display_name || "");
       setContactEmail(profile.email || user?.email || "");
       if (profile.ui_language) setUiLanguage(profile.ui_language);
+      const pv = (profile as { preferred_voice?: string }).preferred_voice;
+      if (pv === "male" || pv === "female") setPreferredVoice(pv);
+      const ps = (profile as { playback_speed?: number }).playback_speed;
+      if (typeof ps === "number" && (ALLOWED_SPEEDS as readonly number[]).includes(ps)) {
+        setPlaybackSpeed(ps as AllowedSpeed);
+      }
     }
   }, [profile, user?.email]);
 
