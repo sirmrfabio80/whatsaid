@@ -34,17 +34,26 @@ export default function JobDetail() {
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState<number | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [processingStage, setProcessingStage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
 
-  // Track job status (with realtime updates) for the live "processing" pulse-ring
+  // Track job status + processing_stage (with realtime updates) for the live progress badge
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from("jobs").select("status").eq("id", id).maybeSingle();
-      if (!cancelled && data?.status) setJobStatus(data.status as string);
+      const { data } = await supabase
+        .from("jobs")
+        .select("status, processing_stage" as never)
+        .eq("id", id)
+        .maybeSingle();
+      if (!cancelled && data) {
+        const row = data as { status?: string; processing_stage?: string | null };
+        if (row.status) setJobStatus(row.status);
+        if (row.processing_stage !== undefined) setProcessingStage(row.processing_stage ?? null);
+      }
     })();
     const channel = supabase
       .channel(`job-status-${id}`)
@@ -52,8 +61,9 @@ export default function JobDetail() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${id}` },
         (payload) => {
-          const next = (payload.new as { status?: string } | null)?.status;
-          if (next) setJobStatus(next);
+          const next = payload.new as { status?: string; processing_stage?: string | null } | null;
+          if (next?.status) setJobStatus(next.status);
+          if (next && "processing_stage" in next) setProcessingStage(next.processing_stage ?? null);
         }
       )
       .subscribe();
@@ -218,7 +228,9 @@ export default function JobDetail() {
                       <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
                       <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
                     </span>
-                    {t(`jobDetail.status.${jobStatus}`, { defaultValue: jobStatus })}
+                    {processingStage && processingStage !== "done" && jobStatus === "processing"
+                      ? t(`jobDetail.stage.${processingStage}`, { defaultValue: t(`jobDetail.status.${jobStatus}`, { defaultValue: jobStatus }) })
+                      : t(`jobDetail.status.${jobStatus}`, { defaultValue: jobStatus })}
                   </span>
                 )}
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>

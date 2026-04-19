@@ -409,6 +409,12 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
     const fileExt = (job.file_name ?? "").split(".").pop()?.toLowerCase() ?? "unknown";
     console.log(`[transcribe] Starting transcription for job ${job_id}, file: ${job.file_name}`);
 
+    // Mark job as actively transcribing so the UI can show real progress.
+    await supabase
+      .from("jobs")
+      .update({ processing_stage: "transcribing" } as never)
+      .eq("id", job_id);
+
     const tuningConfig = (job.transcription_config as Record<string, unknown>) ?? {};
 
     // Permanent default: "recovery" strategy is always on unless an explicit
@@ -700,9 +706,10 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
         duration_seconds: audioDuration,
         speech_model: actualSpeechModel,
         status: "processing",
+        processing_stage: "summarising",
         assemblyai_transcript_id: transcriptId,
         assemblyai_delete_status: "pending",
-      })
+      } as never)
       .eq("id", job_id);
 
     if (updateJobErr) {

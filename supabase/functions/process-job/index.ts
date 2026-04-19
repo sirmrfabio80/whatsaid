@@ -77,10 +77,10 @@ Deno.serve(async (req) => {
         .eq("id", job_id);
     }
 
-    // 3. Update job status to processing
+    // 3. Update job status to processing (initial stage: queued)
     await supabase
       .from("jobs")
-      .update({ status: "processing" })
+      .update({ status: "processing", processing_stage: "queued" } as never)
       .eq("id", job_id);
 
     console.log(`[process-job] Kicking off pipeline for job ${job_id}`);

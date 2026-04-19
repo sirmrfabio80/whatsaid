@@ -359,6 +359,7 @@ export type Database = {
           metadata_location_iso6709: string | null
           metadata_mvhd_creation: string | null
           output_language: string | null
+          processing_stage: string | null
           question_generation_count: number
           recorded_at: string | null
           recorded_at_source: string | null
@@ -399,6 +400,7 @@ export type Database = {
           metadata_location_iso6709?: string | null
           metadata_mvhd_creation?: string | null
           output_language?: string | null
+          processing_stage?: string | null
           question_generation_count?: number
           recorded_at?: string | null
           recorded_at_source?: string | null
@@ -439,6 +441,7 @@ export type Database = {
           metadata_location_iso6709?: string | null
           metadata_mvhd_creation?: string | null
           output_language?: string | null
+          processing_stage?: string | null
           question_generation_count?: number
           recorded_at?: string | null
           recorded_at_source?: string | null

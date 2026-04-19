@@ -359,6 +359,13 @@
       "completed": "Terminé",
       "failed": "Échec"
     },
+    "stage": {
+      "queued": "En file d'attente",
+      "transcribing": "Transcription de l'audio",
+      "summarising": "Génération du résumé",
+      "tagging": "Ajout des tags",
+      "done": "Finalisation"
+    },
     "tags": {
       "addPlaceholder": "Ajouter un tag…",
       "addLabel": "Ajouter un tag",

@@ -359,6 +359,13 @@
       "completed": "Completed",
       "failed": "Failed"
     },
+    "stage": {
+      "queued": "Queued",
+      "transcribing": "Transcribing audio",
+      "summarising": "Generating summary",
+      "tagging": "Adding tags",
+      "done": "Finishing up"
+    },
     "tags": {
       "addPlaceholder": "Add tag…",
       "addLabel": "Add a tag",
