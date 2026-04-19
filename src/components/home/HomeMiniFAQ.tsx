@@ -1,5 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -9,6 +12,8 @@ import {
 
 export function HomeMiniFAQ() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const items = [
     { q: "home.miniFaqQ1", a: "home.miniFaqA1" },
@@ -16,6 +21,8 @@ export function HomeMiniFAQ() {
     { q: "home.miniFaqQ3", a: "home.miniFaqA3" },
     { q: "home.miniFaqQ4", a: "home.miniFaqA4" },
   ];
+
+  const ctaHref = user ? "/convert" : "/signup";
 
   return (
     <section className="container mx-auto px-4 py-16 sm:py-24">
@@ -27,15 +34,25 @@ export function HomeMiniFAQ() {
           <h2 className="text-h1 sm:text-[1.875rem] mb-3">
             {t("home.miniFaqTitle")}
           </h2>
-          <p className="font-serif text-body text-muted-foreground mb-4 leading-relaxed">
+          <p className="font-serif text-body text-muted-foreground mb-5 leading-relaxed">
             {t("home.miniFaqDesc")}
           </p>
-          <Link
-            to="/help"
-            className="text-primary hover:underline text-secondary font-medium"
-          >
-            {t("home.miniFaqSeeAll")} →
-          </Link>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-2">
+            <Button
+              size="lg"
+              className="h-12 px-6 text-base font-medium rounded-lg"
+              onClick={() => navigate(ctaHref)}
+            >
+              {t("home.miniFaqClosingCta")}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            <Link
+              to="/help"
+              className="text-primary hover:underline text-secondary font-medium"
+            >
+              {t("home.miniFaqSeeAll")} →
+            </Link>
+          </div>
         </div>
         <div>
           <Accordion type="single" collapsible className="space-y-2">
