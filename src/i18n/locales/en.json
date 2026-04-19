@@ -236,6 +236,17 @@
     "preferences": "Preferences",
     "interfaceLanguage": "Interface language",
     "interfaceLanguageDesc": "Choose the language for the app interface. This does not affect transcription or summary languages.",
+    "listening": {
+      "title": "Listening",
+      "desc": "Voice availability depends on your browser and device. We pick the closest match.",
+      "voice": "Voice",
+      "voiceMale": "Male",
+      "voiceFemale": "Female",
+      "speed": "Playback speed",
+      "test": "Test voice",
+      "sample": "This is how the listen feature will sound on your device.",
+      "invalidValue": "Please choose a valid voice and speed."
+    },
     "security": "Security",
     "changePassword": "Change password",
     "changePasswordTitle": "Change password",

@@ -236,6 +236,17 @@
     "preferences": "Preferenze",
     "interfaceLanguage": "Lingua dell'interfaccia",
     "interfaceLanguageDesc": "Scegli la lingua dell'interfaccia dell'app. Questo non influisce sulla lingua di trascrizione o del riassunto.",
+    "listening": {
+      "title": "Ascolto",
+      "desc": "La disponibilità delle voci dipende dal tuo browser e dispositivo. Scegliamo l'opzione più vicina.",
+      "voice": "Voce",
+      "voiceMale": "Maschile",
+      "voiceFemale": "Femminile",
+      "speed": "Velocità di riproduzione",
+      "test": "Prova voce",
+      "sample": "Ecco come suonerà la funzione di ascolto sul tuo dispositivo.",
+      "invalidValue": "Seleziona una voce e una velocità valide."
+    },
     "security": "Sicurezza",
     "changePassword": "Cambia password",
     "changePasswordTitle": "Cambia password",

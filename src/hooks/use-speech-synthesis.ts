@@ -24,6 +24,89 @@ type Listener = (snapshot: ManagerSnapshot) => void;
 const isBrowser = typeof window !== "undefined";
 const isSupported = isBrowser && "speechSynthesis" in window && typeof window.SpeechSynthesisUtterance !== "undefined";
 
+// ---------- Listening preferences (singleton) ----------
+// Source of truth for user preferences applied to every utterance.
+// Updated from AuthContext after profile load and from Settings on save / Test action.
+export type PreferredVoice = "male" | "female";
+interface SpeechPreferences {
+  voice: PreferredVoice;
+  rate: number;
+}
+const preferences: SpeechPreferences = { voice: "female", rate: 1.0 };
+
+export function setSpeechPreferences(prefs: Partial<SpeechPreferences>): void {
+  if (prefs.voice === "male" || prefs.voice === "female") preferences.voice = prefs.voice;
+  if (typeof prefs.rate === "number" && Number.isFinite(prefs.rate)) {
+    preferences.rate = Math.min(2, Math.max(0.5, prefs.rate));
+  }
+}
+
+// ---------- Voices cache ----------
+let voicesCache: SpeechSynthesisVoice[] = [];
+let voicesListenerAttached = false;
+
+function refreshVoicesCache(): SpeechSynthesisVoice[] {
+  if (!isSupported) return [];
+  voicesCache = window.speechSynthesis.getVoices() ?? [];
+  return voicesCache;
+}
+
+if (isSupported) {
+  refreshVoicesCache();
+  if (voicesCache.length === 0 && !voicesListenerAttached) {
+    voicesListenerAttached = true;
+    const handler = () => {
+      refreshVoicesCache();
+      window.speechSynthesis.removeEventListener("voiceschanged", handler);
+      voicesListenerAttached = false;
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", handler);
+  }
+}
+
+// Gender heuristic — best-effort only. Browser voice metadata is inconsistent
+// across OS/Chrome/Safari/Firefox, so mismatches are expected; we fall back gracefully.
+const FEMALE_NAME_RE = /female|woman|samantha|victoria|karen|fiona|moira|tessa|zira|hazel|amelie|amélie|audrey|virginie|alice|carla|federica|paola/i;
+const MALE_NAME_RE = /\b(male|man|daniel|alex|fred|tom|david|mark|thomas|nicolas|sébastien|sebastien|paul|luca|cosimo|diego)\b/i;
+
+/**
+ * Pick the closest available voice using a deterministic order:
+ * 1. Exact language match (e.g. "en-US" === "en-US")
+ * 2. Same language family (prefix, e.g. "en")
+ * 3. Within candidates, prefer voice.localService === true
+ * 4. Within remaining candidates, apply gender name heuristic
+ * 5. Browser default (return undefined)
+ */
+export function pickVoice(lang: string | undefined, gender: PreferredVoice): SpeechSynthesisVoice | undefined {
+  if (!isSupported) return undefined;
+  const all = voicesCache.length ? voicesCache : refreshVoicesCache();
+  if (all.length === 0) return undefined;
+
+  const requested = (lang || "").toLowerCase();
+  const requestedPrefix = requested.split("-")[0];
+
+  // 1. Exact language match
+  let candidates = requested ? all.filter((v) => v.lang?.toLowerCase() === requested) : [];
+  // 2. Same language family
+  if (candidates.length === 0 && requestedPrefix) {
+    candidates = all.filter((v) => v.lang?.toLowerCase().split("-")[0] === requestedPrefix);
+  }
+  // Fallback: any voice
+  if (candidates.length === 0) candidates = all;
+
+  // 3. Prefer local-service voices when available
+  const local = candidates.filter((v) => v.localService);
+  const pool = local.length > 0 ? local : candidates;
+
+  // 4. Gender heuristic
+  const re = gender === "female" ? FEMALE_NAME_RE : MALE_NAME_RE;
+  const genderMatch = pool.find((v) => re.test(v.name));
+  if (genderMatch) return genderMatch;
+
+  // 5. Browser default — let UA pick
+  return undefined;
+}
+
 interface Manager {
   state: SpeechState;
   activeOwner: string | null;
@@ -96,10 +179,13 @@ const manager: Manager = {
     this.activeOwner = ownerId;
     this.state = "playing";
 
+    const chosenVoice = pickVoice(lang, preferences.voice);
+
     chunks.forEach((chunk, idx) => {
       const utt = new SpeechSynthesisUtterance(chunk);
       if (lang) utt.lang = lang;
-      utt.rate = 1;
+      if (chosenVoice) utt.voice = chosenVoice;
+      utt.rate = preferences.rate;
       utt.pitch = 1;
       if (idx === chunks.length - 1) {
         utt.onend = () => {
@@ -266,7 +352,10 @@ export function useSpeechSynthesis(): UseSpeechSynthesis {
   };
 }
 
-/** Direct access to the singleton — useful for page-level cleanup effects. */
+/** Direct access to the singleton — useful for page-level cleanup effects and the Settings test action. */
 export const speechManager = {
   stop: () => manager.stop(),
+  play: (ownerId: string, text: string, lang?: string) => manager.play(ownerId, text, lang),
+  pause: () => manager.pause(),
+  resume: () => manager.resume(),
 };

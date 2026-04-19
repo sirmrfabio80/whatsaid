@@ -236,6 +236,17 @@
     "preferences": "Préférences",
     "interfaceLanguage": "Langue de l'interface",
     "interfaceLanguageDesc": "Choisissez la langue de l'interface de l'application. Cela n'affecte pas la langue de transcription ou du résumé.",
+    "listening": {
+      "title": "Écoute",
+      "desc": "La disponibilité des voix dépend de votre navigateur et de votre appareil. Nous choisissons la plus proche.",
+      "voice": "Voix",
+      "voiceMale": "Masculine",
+      "voiceFemale": "Féminine",
+      "speed": "Vitesse de lecture",
+      "test": "Tester la voix",
+      "sample": "Voici comment la fonction d'écoute sonnera sur votre appareil.",
+      "invalidValue": "Veuillez choisir une voix et une vitesse valides."
+    },
     "security": "Sécurité",
     "changePassword": "Changer le mot de passe",
     "changePasswordTitle": "Changer le mot de passe",

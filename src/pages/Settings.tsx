@@ -16,10 +16,17 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, AlertCircle, Globe } from "lucide-react";
+import { Save, Lock, Trash2, AlertCircle, Globe, Volume2, Headphones } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { setSpeechPreferences, speechManager, useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
+
+const ALLOWED_VOICES = ["male", "female"] as const;
+type AllowedVoice = (typeof ALLOWED_VOICES)[number];
+const ALLOWED_SPEEDS = [0.75, 1.0, 1.25, 1.5] as const;
+type AllowedSpeed = (typeof ALLOWED_SPEEDS)[number];
 
 const UI_LANGUAGES = [
   { code: "en", label: "English" },
@@ -50,6 +57,9 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [preferredVoice, setPreferredVoice] = useState<AllowedVoice>("female");
+  const [playbackSpeed, setPlaybackSpeed] = useState<AllowedSpeed>(1.0);
+  const { isSupported: speechSupported } = useSpeechSynthesis();
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
 
@@ -80,6 +90,12 @@ export default function Settings() {
       setDisplayName(profile.display_name || "");
       setContactEmail(profile.email || user?.email || "");
       if (profile.ui_language) setUiLanguage(profile.ui_language);
+      const pv = (profile as { preferred_voice?: string }).preferred_voice;
+      if (pv === "male" || pv === "female") setPreferredVoice(pv);
+      const ps = (profile as { playback_speed?: number }).playback_speed;
+      if (typeof ps === "number" && (ALLOWED_SPEEDS as readonly number[]).includes(ps)) {
+        setPlaybackSpeed(ps as AllowedSpeed);
+      }
     }
   }, [profile, user?.email]);
 
@@ -90,6 +106,16 @@ export default function Settings() {
     // Validate email
     if (!contactEmail || !EMAIL_REGEX.test(contactEmail.trim())) {
       setEmailError(t("settings.invalidEmail"));
+      return;
+    }
+
+    // Validate listening preferences before save (guards UI + DB CHECK)
+    if (!(ALLOWED_VOICES as readonly string[]).includes(preferredVoice)) {
+      toast.error(t("settings.listening.invalidValue"));
+      return;
+    }
+    if (!(ALLOWED_SPEEDS as readonly number[]).includes(playbackSpeed)) {
+      toast.error(t("settings.listening.invalidValue"));
       return;
     }
 
@@ -115,10 +141,15 @@ export default function Settings() {
       }
     }
 
-    // Update profiles
+    // Update profiles (includes listening preferences)
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, email: trimmedEmail })
+      .update({
+        display_name: displayName,
+        email: trimmedEmail,
+        preferred_voice: preferredVoice,
+        playback_speed: playbackSpeed,
+      })
       .eq("user_id", user.id);
 
     if (profileError) {
@@ -126,6 +157,9 @@ export default function Settings() {
       setSaving(false);
       return;
     }
+
+    // Push prefs into the live speech manager so /job/:id picks them up immediately.
+    setSpeechPreferences({ voice: preferredVoice, rate: playbackSpeed });
 
     // Conditionally trigger auth email change for email-password users
     const authEmailChanged = hasEmailAuth && trimmedEmail.toLowerCase() !== (user.email || "").toLowerCase();
@@ -151,6 +185,21 @@ export default function Settings() {
     if (user) {
       await supabase.from("profiles").update({ ui_language: val }).eq("user_id", user.id);
     }
+  };
+
+  const handleTestVoice = () => {
+    if (!speechSupported) {
+      toast.info(t("jobResults.listen.unsupported"));
+      return;
+    }
+    // 1. Stop any active speech first to avoid collisions
+    speechManager.stop();
+    // 2. Push current local selections to the manager
+    setSpeechPreferences({ voice: preferredVoice, rate: playbackSpeed });
+    // 3. Play a localized sample sentence
+    const sample = t("settings.listening.sample");
+    const lang = i18n.language?.slice(0, 2) || "en";
+    speechManager.play("settings-test", sample, lang);
   };
 
   const changePassword = async () => {
@@ -248,6 +297,77 @@ export default function Settings() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-border bg-card shadow-sm">
+            <CardContent className="p-5 sm:p-6 space-y-5">
+              <div className="flex items-center gap-2">
+                <Headphones className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+                <h2 className="text-h2">{t("settings.listening.title")}</h2>
+              </div>
+              <p className="text-caption text-muted-foreground">{t("settings.listening.desc")}</p>
+
+              <div className="space-y-2">
+                <Label>{t("settings.listening.voice")}</Label>
+                <RadioGroup
+                  value={preferredVoice}
+                  onValueChange={(v) => {
+                    if (v === "male" || v === "female") setPreferredVoice(v);
+                  }}
+                  className="flex flex-wrap gap-4"
+                >
+                  <label htmlFor="voice-female" className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                    <RadioGroupItem value="female" id="voice-female" />
+                    <span className="text-body-sm">{t("settings.listening.voiceFemale")}</span>
+                  </label>
+                  <label htmlFor="voice-male" className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                    <RadioGroupItem value="male" id="voice-male" />
+                    <span className="text-body-sm">{t("settings.listening.voiceMale")}</span>
+                  </label>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="playback-speed">{t("settings.listening.speed")}</Label>
+                <Select
+                  value={String(playbackSpeed)}
+                  onValueChange={(v) => {
+                    const n = Number(v);
+                    if ((ALLOWED_SPEEDS as readonly number[]).includes(n)) {
+                      setPlaybackSpeed(n as AllowedSpeed);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="playback-speed" className="rounded-lg h-11 w-full sm:w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALLOWED_SPEEDS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>{`${s}x`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={handleTestVoice}
+                  disabled={!speechSupported}
+                  aria-label={t("settings.listening.test")}
+                >
+                  <Volume2 className="w-4 h-4 mr-1.5" />
+                  {t("settings.listening.test")}
+                </Button>
+                <Button className="rounded-lg" size="sm" onClick={saveChanges} disabled={saving}>
+                  {saving ? <InlineSpinner size="sm" className="mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
+                  {t("settings.saveChanges")}
+                </Button>
               </div>
             </CardContent>
           </Card>
