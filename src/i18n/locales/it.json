@@ -82,7 +82,7 @@
     "privacyBullet3": "Cancella singole trascrizioni o l'intero account quando vuoi",
     "pricingTeaserEyebrow": "Prezzi semplici",
     "pricingTeaserHeadlinePrefix": "Da ",
-    "pricingTeaserHeadlineSuffix": " — un credito copre fino a 15 minuti.",
+    "pricingTeaserHeadlineSuffix": " — pagamento singolo, niente abbonamenti.",
     "pricingTeaserSub": "Pagamento singolo, niente abbonamenti. Acquista una singola trascrizione o un pacchetto di crediti — i risultati restano salvati.",
     "pricingTeaserCta": "Vedi i prezzi",
     "miniFaqEyebrow": "Domande frequenti",
@@ -90,7 +90,7 @@
     "miniFaqDesc": "Risposte rapide alle domande più comuni. Il centro assistenza ha il quadro completo.",
     "miniFaqSeeAll": "Vedi tutte le risposte",
     "miniFaqQ1": "Cosa include un credito?",
-    "miniFaqA1": "Un credito elabora un file audio (fino a 15 minuti) e include la trascrizione completa, il riassunto strutturato e Q&A — tutto salvato nel tuo account.",
+    "miniFaqA1": "Un credito elabora un file audio e include la trascrizione completa, il riassunto strutturato e Q&A — tutto salvato nel tuo account. Il numero di crediti dipende dalla durata (vedi la tabella sulla pagina dei prezzi).",
     "miniFaqQ2": "I crediti scadono?",
     "miniFaqA2": "I crediti restano disponibili nel tuo account secondo i termini del prodotto. Non scompaiono dopo qualche giorno.",
     "miniFaqQ3": "Posso scaricare i risultati?",
@@ -548,7 +548,7 @@
   "pricing": {
     "heroEyebrow": "Pagamento singolo. Niente abbonamento.",
     "heroTitle": "Acquista ciò che usi, conserva ciò che ottieni",
-    "heroSubtitle": "Un credito trascrive fino a 15 minuti di audio e ti dà una trascrizione con relatori, un riassunto strutturato e Q&A — tutto salvato nel tuo account, tutto esportabile.",
+    "heroSubtitle": "Ogni credito sblocca una trascrizione con relatori, un riassunto strutturato e Q&A — tutto salvato nel tuo account, tutto esportabile.",
     "heroSupport": "Crea il tuo account in pochi secondi, carica il tuo file e mantieni tutto accessibile quando ne hai bisogno.",
     "heroCtaPrimary": "Inizia",
     "heroCtaSecondary": "Vedi le opzioni di prezzo",
@@ -615,7 +615,7 @@
     "faqAccountQ": "Devo avere un account prima di acquistare?",
     "faqAccountA": "Sì. Il tuo account mantiene trascrizione, riassunto, download e cronologia salvati e accessibili quando ne hai bisogno.",
     "faqCreditQ": "Cosa include un credito?",
-    "faqCreditA": "Un credito elabora un file audio (fino a 15 minuti) e include trascrizione completa, riassunto AI e domande di follow-up — il tutto scaricabile e salvato nel tuo account. I file più lunghi usano più crediti in fasce di 15 minuti.",
+    "faqCreditA": "Un credito elabora un file audio e include trascrizione completa, riassunto AI e domande di follow-up — il tutto scaricabile e salvato nel tuo account. I file più lunghi usano più crediti in fasce di 15 minuti (vedi la tabella qui sopra).",
     "faqExpireQ": "I crediti scadono?",
     "faqExpireA": "I crediti restano disponibili nel tuo account in base ai termini del prodotto.",
     "faqDownloadQ": "Posso scaricare i miei risultati in seguito?",
@@ -636,7 +636,9 @@
     "paddleNote": "I pagamenti sono elaborati in modo sicuro da Paddle, il nostro rivenditore ufficiale.",
     "consentPrefix": "Acquistando, accetti i nostri",
     "supportLine": "Hai bisogno di aiuto?",
-    "moreFaqLink": "Altre domande su crediti e pagamenti →"
+    "moreFaqLink": "Altre domande su crediti e pagamenti →",
+    "faqFailedQ": "Come vengono gestiti i crediti se un lavoro fallisce?",
+    "faqFailedA": "I crediti vengono detratti all'avvio dell'elaborazione. Se un lavoro fallisce a metà, contatta il supporto e rimborseremo i crediti. I lavori bloccati per troppo tempo vengono rilevati automaticamente e rimborsati dal nostro sistema."
   },
   "footer": {
     "desc": "Trascrizione IA premium con identificazione degli speaker, riassunti e analisi personalizzata. Audio eliminato dopo l'elaborazione.",
@@ -732,6 +734,7 @@
     }
   },
   "help": {
+    "eyebrow": "Aiuto e risposte",
     "metaTitle": "Guida — WhatSaid",
     "title": "Guida e FAQ",
     "lead": "Risposte rapide, come funziona WhatSaid e cosa fare se qualcosa va storto.",
