@@ -554,11 +554,11 @@ export default function Convert() {
 
                     <div className="p-4 rounded-xl bg-muted/50 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-secondary text-muted-foreground">
                           <Clock className="w-4 h-4" />
                           {t("convert.duration")}
                         </div>
-                        <span className="text-sm font-medium">{formatDuration(duration)}</span>
+                        <span className="text-secondary font-medium">{formatDuration(duration)}</span>
                       </div>
                     </div>
 
@@ -569,12 +569,12 @@ export default function Convert() {
                         onCheckedChange={(c) => setConsentChecked(c === true)}
                         className="mt-0.5"
                       />
-                      <label htmlFor="recording-consent" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                      <label htmlFor="recording-consent" className="text-secondary text-muted-foreground leading-snug cursor-pointer">
                         {t("convert.consentLabel")}
                       </label>
                     </div>
 
-                    <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                    <p className="text-caption text-muted-foreground flex items-start gap-1.5">
                       <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                       {t("convert.thirdPartyNotice")}{" "}
                       <Link to="/terms" className="text-primary hover:underline" target="_blank">{t("convert.terms")}</Link>{" "}{t("convert.and")}{" "}
