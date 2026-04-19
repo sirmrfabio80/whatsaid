@@ -377,6 +377,7 @@ export type Database = {
           transcription_config: Json | null
           updated_at: string
           user_id: string | null
+          watchdog_retry_count: number
         }
         Insert: {
           assemblyai_delete_status?: string | null
@@ -418,6 +419,7 @@ export type Database = {
           transcription_config?: Json | null
           updated_at?: string
           user_id?: string | null
+          watchdog_retry_count?: number
         }
         Update: {
           assemblyai_delete_status?: string | null
@@ -459,6 +461,7 @@ export type Database = {
           transcription_config?: Json | null
           updated_at?: string
           user_id?: string | null
+          watchdog_retry_count?: number
         }
         Relationships: []
       }
