@@ -2,9 +2,17 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Privacy() {
   const { t } = useTranslation();
+
+  usePageMeta({
+    title: "Privacy Policy — WhatSaid",
+    description:
+      "How WhatSaid handles your data: audio files are deleted immediately after processing. Read our full privacy policy.",
+    canonical: "https://whatsaid.app/privacy",
+  });
 
   const sections = [
     { title: "privacy.s1Title", type: "p", content: "privacy.s1Body" },

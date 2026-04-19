@@ -12,6 +12,7 @@ import { HomeBeyondGrid } from "@/components/home/HomeBeyondGrid";
 import { HomeMiniFAQ } from "@/components/home/HomeMiniFAQ";
 import { HeroProductMock } from "@/components/home/HeroProductMock";
 import { PricingTeaserStrip } from "@/components/home/PricingTeaserStrip";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Index() {
   const { user } = useAuth();
@@ -19,6 +20,13 @@ export default function Index() {
   const navigate = useNavigate();
   const howItWorks = useScrollReveal();
   const privacy = useScrollReveal();
+
+  usePageMeta({
+    title: "WhatSaid — AI Audio Transcription with Speaker Labels",
+    description:
+      "Upload audio and get instant transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.",
+    canonical: "https://whatsaid.app/",
+  });
 
   const heroPrimaryHref = user ? "/convert" : "/signup";
 
