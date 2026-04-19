@@ -161,7 +161,7 @@ export function SectionBody({ body }: { body: string }) {
       {lines.map((line, i) => {
         const { text, isHeading } = stripHeading(line);
         return (
-          <p key={i} className={`text-base sm:text-[17px] leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+          <p key={i} className={`text-base leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
             {renderLine(text)}
           </p>
         );
