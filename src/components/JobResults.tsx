@@ -811,23 +811,21 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              {/* Header row: Participants (left) + Listen (right) */}
+              {/* Header row: Participants chips + Listen, with full-width overview below */}
               {transcript && !regeneratingLang ? (
-                <div className="flex items-start justify-between gap-3 px-4 sm:px-5 pt-3 pb-3 border-b border-border/40">
-                  <div className="flex-1 min-w-0">
-                    <ParticipantsPanel
-                      segments={parseSegments(activeTranscriptContent)}
-                      speakerNames={speakerNames}
-                      durationSeconds={meta?.duration_seconds ?? null}
-                    />
-                  </div>
-                  <div className="shrink-0 pt-0.5">
-                    <ListenButton
-                      ownerId="summary"
-                      getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
-                      lang={speechLang}
-                    />
-                  </div>
+                <div className="px-4 sm:px-5 pt-3 pb-3 border-b border-border/40">
+                  <ParticipantsPanel
+                    segments={parseSegments(activeTranscriptContent)}
+                    speakerNames={speakerNames}
+                    durationSeconds={meta?.duration_seconds ?? null}
+                    rightSlot={
+                      <ListenButton
+                        ownerId="summary"
+                        getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
+                        lang={speechLang}
+                      />
+                    }
+                  />
                 </div>
               ) : (
                 <div className="flex items-center justify-end px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
