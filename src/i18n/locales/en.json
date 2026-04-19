@@ -132,7 +132,8 @@
     "buyCredits": "Buy credits",
     "autoOptimisedBadge": "Optimised for phone call recording",
     "autoOptimisedHint": "Mono audio detected — recovery mode and audio enhancement applied automatically.",
-    "advancedOptions": "Advanced transcription options"
+    "advancedOptions": "Advanced transcription options",
+    "eyebrow": "Upload & transcribe"
   },
   "login": {
     "title": "Sign in to WhatSaid",
@@ -194,7 +195,8 @@
     "minutesProcessed": "Minutes processed",
     "lastConversion": "Last conversion",
     "convertAudio": "Convert audio",
-    "viewHistory": "View history"
+    "viewHistory": "View history",
+    "eyebrow": "Your account"
   },
   "settings": {
     "title": "Settings",
@@ -684,7 +686,8 @@
     "creditsAddedBanner": "{{count}} credit(s) added to your account",
     "moreFaqLink": "More questions about credits and billing →",
     "faqFailedQ": "How are credits handled if a job fails?",
-    "faqFailedA": "Credits are deducted when processing starts. If a job fails partway through, contact support and we'll refund the credits. Jobs that get stuck for too long are detected automatically and refunded by our system."
+    "faqFailedA": "Credits are deducted when processing starts. If a job fails partway through, contact support and we'll refund the credits. Jobs that get stuck for too long are detected automatically and refunded by our system.",
+    "faqFailedRefundLink": "Read the full refund policy"
   },
   "transcriptionSettings": {
     "title": "Transcription settings",

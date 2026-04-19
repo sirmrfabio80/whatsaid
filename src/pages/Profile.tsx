@@ -85,6 +85,9 @@ export default function Profile() {
               onUploaded={() => refreshAvatar()}
             />
             <div>
+              <p className="font-serif italic text-caption text-primary mb-1">
+                {t("profile.eyebrow", { defaultValue: "Your account" })}
+              </p>
               <h1 className="text-h1 sm:text-[1.875rem]">{profile?.display_name || t("profile.user")}</h1>
               <p className="text-secondary text-muted-foreground">{profile?.email || user.email || ""}</p>
               {memberSince && <p className="text-caption text-muted-foreground mt-0.5">{t("profile.memberSince", { date: memberSince })}</p>}

@@ -547,20 +547,34 @@ export default function Pricing() {
             }`}
           >
             <Accordion type="single" collapsible className="space-y-2">
-              {faqs.map(({ q, a }, i) => (
-                <AccordionItem
-                  key={i}
-                  value={`faq-${i}`}
-                  className="border-b border-border/60 last:border-b-0 px-0"
-                >
-                  <AccordionTrigger className="text-secondary font-medium py-4 hover:no-underline text-left">
-                    {t(q)}
-                  </AccordionTrigger>
-                  <AccordionContent className="font-serif text-body text-muted-foreground pb-4 leading-relaxed">
-                    {t(a)}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+              {faqs.map(({ q, a }, i) => {
+                const isFailedFaq = q === "pricing.faqFailedQ";
+                return (
+                  <AccordionItem
+                    key={i}
+                    value={`faq-${i}`}
+                    className="border-b border-border/60 last:border-b-0 px-0"
+                  >
+                    <AccordionTrigger className="text-secondary font-medium py-4 hover:no-underline text-left">
+                      {t(q)}
+                    </AccordionTrigger>
+                    <AccordionContent className="font-serif text-body text-muted-foreground pb-4 leading-relaxed">
+                      {t(a)}
+                      {isFailedFaq && (
+                        <div className="mt-3 not-italic">
+                          <Link
+                            to="/refund-policy"
+                            className="text-caption text-primary hover:underline font-sans inline-flex items-center gap-1"
+                          >
+                            {t("pricing.faqFailedRefundLink", { defaultValue: "Read the full refund policy" })}
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           </div>
         </div>

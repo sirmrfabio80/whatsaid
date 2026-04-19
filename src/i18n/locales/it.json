@@ -132,7 +132,8 @@
     "buyCredits": "Acquista crediti",
     "autoOptimisedBadge": "Ottimizzato per registrazioni di chiamate telefoniche",
     "autoOptimisedHint": "Audio mono rilevato — modalità recupero e miglioramento audio applicati automaticamente.",
-    "advancedOptions": "Opzioni avanzate di trascrizione"
+    "advancedOptions": "Opzioni avanzate di trascrizione",
+    "eyebrow": "Carica e trascrivi"
   },
   "login": {
     "title": "Accedi a WhatSaid",
@@ -194,7 +195,8 @@
     "minutesProcessed": "Minuti elaborati",
     "lastConversion": "Ultima conversione",
     "convertAudio": "Converti audio",
-    "viewHistory": "Vedi cronologia"
+    "viewHistory": "Vedi cronologia",
+    "eyebrow": "Il tuo account"
   },
   "settings": {
     "title": "Impostazioni",
@@ -638,7 +640,8 @@
     "supportLine": "Hai bisogno di aiuto?",
     "moreFaqLink": "Altre domande su crediti e pagamenti →",
     "faqFailedQ": "Come vengono gestiti i crediti se un lavoro fallisce?",
-    "faqFailedA": "I crediti vengono detratti all'avvio dell'elaborazione. Se un lavoro fallisce a metà, contatta il supporto e rimborseremo i crediti. I lavori bloccati per troppo tempo vengono rilevati automaticamente e rimborsati dal nostro sistema."
+    "faqFailedA": "I crediti vengono detratti all'avvio dell'elaborazione. Se un lavoro fallisce a metà, contatta il supporto e rimborseremo i crediti. I lavori bloccati per troppo tempo vengono rilevati automaticamente e rimborsati dal nostro sistema.",
+    "faqFailedRefundLink": "Leggi la politica di rimborso completa"
   },
   "footer": {
     "desc": "Trascrizione IA premium con identificazione degli speaker, riassunti e analisi personalizzata. Audio eliminato dopo l'elaborazione.",

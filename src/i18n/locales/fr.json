@@ -132,7 +132,8 @@
     "buyCredits": "Acheter des crédits",
     "autoOptimisedBadge": "Optimisé pour l'enregistrement d'appel téléphonique",
     "autoOptimisedHint": "Audio mono détecté — mode récupération et amélioration audio appliqués automatiquement.",
-    "advancedOptions": "Options avancées de transcription"
+    "advancedOptions": "Options avancées de transcription",
+    "eyebrow": "Téléverser & transcrire"
   },
   "login": {
     "title": "Se connecter à WhatSaid",
@@ -194,7 +195,8 @@
     "minutesProcessed": "Minutes traitées",
     "lastConversion": "Dernière conversion",
     "convertAudio": "Convertir l'audio",
-    "viewHistory": "Voir l'historique"
+    "viewHistory": "Voir l'historique",
+    "eyebrow": "Votre compte"
   },
   "settings": {
     "title": "Paramètres",
@@ -638,7 +640,8 @@
     "supportLine": "Besoin d'aide ?",
     "moreFaqLink": "Plus de questions sur les crédits et la facturation →",
     "faqFailedQ": "Comment sont gérés les crédits si un traitement échoue ?",
-    "faqFailedA": "Les crédits sont déduits au démarrage du traitement. Si un traitement échoue en cours de route, contactez le support et nous rembourserons les crédits. Les traitements bloqués trop longtemps sont détectés automatiquement et remboursés par notre système."
+    "faqFailedA": "Les crédits sont déduits au démarrage du traitement. Si un traitement échoue en cours de route, contactez le support et nous rembourserons les crédits. Les traitements bloqués trop longtemps sont détectés automatiquement et remboursés par notre système.",
+    "faqFailedRefundLink": "Lire la politique de remboursement complète"
   },
   "footer": {
     "desc": "Transcription IA premium avec identification des intervenants, résumés et analyse personnalisée. Audio supprimé après traitement.",
