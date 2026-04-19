@@ -772,39 +772,79 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
       .update({ audio_deleted_at: new Date().toISOString() })
       .eq("id", job_id);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        job_id,
-        language_detected: detectedLanguage,
-        duration_seconds: audioDuration,
-        speaker_count: route === "multichannel"
-          ? ((transcript.audio_channels as number) ?? (uniqueSpeakers > 0 ? uniqueSpeakers : null))
-          : uniqueSpeakers > 0 ? uniqueSpeakers : null,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  } catch (error) {
-    console.error(`[transcribe] Error:`, error);
+    console.log(JSON.stringify({
+      event: "transcribe_pipeline_done",
+      job_id,
+      language_detected: detectedLanguage,
+      duration_seconds: audioDuration,
+      speaker_count: route === "multichannel"
+        ? ((transcript.audio_channels as number) ?? (uniqueSpeakers > 0 ? uniqueSpeakers : null))
+        : uniqueSpeakers > 0 ? uniqueSpeakers : null,
+    }));
 
+    // Chain post-processing. post-process wraps its own long-running work
+    // in EdgeRuntime.waitUntil and responds 202 quickly, so this fetch
+    // returns fast even when the AI pipeline takes minutes.
     try {
-      const { job_id } = await req.clone().json().catch(() => ({ job_id: null }));
-      await markJobFailed(createServiceClient(), job_id, error);
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (supabaseUrl && serviceKey) {
+        const ppRes = await fetch(`${supabaseUrl}/functions/v1/post-process`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ job_id, custom_prompt: requestBody?.custom_prompt ?? null }),
+        });
+        console.log(`[transcribe] post-process invoked for ${job_id}, status=${ppRes.status}`);
+      } else {
+        console.error(`[transcribe] Missing SUPABASE_URL or SERVICE_ROLE_KEY — cannot chain post-process`);
+      }
+    } catch (chainErr) {
+      console.error(`[transcribe] Failed to invoke post-process for ${job_id}:`, chainErr);
+      await markJobFailed(createServiceClient(), job_id, chainErr);
+    }
+  } catch (error) {
+    console.error(`[transcribe] Pipeline error:`, error);
+    try {
+      await markJobFailed(createServiceClient(), jobIdForFailure, error);
     } catch {
       // ignore cleanup errors
     }
-
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
   }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Validate up front so callers get an immediate 400 on bad input.
+  // The actual pipeline reads the body again from the original request.
+  const requestBody = await req.clone().json().catch(() => ({} as Record<string, unknown>));
+  const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
+  if (!job_id) {
+    return new Response(JSON.stringify({ error: "job_id is required" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Long-running work (AssemblyAI submit + poll, often >150s) must run in
+  // the background or the HTTP caller hits the 150s edge function idle
+  // timeout. The transcribe pipeline self-chains to post-process when done.
+  // @ts-ignore — EdgeRuntime is provided by the Supabase edge runtime
+  if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(runTranscriptionPipeline(req));
+  } else {
+    // Local Deno fallback (tests). Fire-and-forget.
+    runTranscriptionPipeline(req);
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, job_id, status: "processing" }),
+    { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
 });
