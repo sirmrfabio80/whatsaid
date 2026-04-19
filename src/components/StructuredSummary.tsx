@@ -187,15 +187,15 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
   }
 
   return (
-    <div className="space-y-4" role="region" aria-label="Summary sections">
+    <div className="space-y-5 sm:space-y-6" role="region" aria-label="Summary sections">
       {sections.map((section, i) => (
         <section
           key={i}
           aria-labelledby={section.heading ? `summary-section-${i}` : undefined}
-          className="rounded-xl bg-muted/40 p-3 sm:p-4"
+          className="rounded-xl bg-muted/40 p-4 sm:p-5"
         >
           {section.heading && (
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               {section.icon}
               <h3
                 id={`summary-section-${i}`}
