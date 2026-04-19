@@ -149,7 +149,7 @@ export default function Login() {
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="rounded-xl h-11" />
             </div>
             {error && (
-              <div className="flex items-center gap-2 text-destructive text-sm">
+              <div className="flex items-center gap-2 text-destructive text-secondary">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
