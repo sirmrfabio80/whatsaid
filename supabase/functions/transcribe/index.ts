@@ -700,9 +700,10 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
         duration_seconds: audioDuration,
         speech_model: actualSpeechModel,
         status: "processing",
+        processing_stage: "summarising",
         assemblyai_transcript_id: transcriptId,
         assemblyai_delete_status: "pending",
-      })
+      } as never)
       .eq("id", job_id);
 
     if (updateJobErr) {
