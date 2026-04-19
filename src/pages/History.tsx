@@ -140,7 +140,7 @@ export default function History() {
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-6">{t("history.title")}</h1>
+          <h1 className="text-h1 sm:text-[1.875rem] mb-6">{t("history.title")}</h1>
 
           {/* Filters — show when there are jobs */}
           {jobs.length > 0 && (
