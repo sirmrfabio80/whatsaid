@@ -266,6 +266,7 @@ export default function Pricing() {
   const faqs = [
     { q: "pricing.faqAccountQ", a: "pricing.faqAccountA" },
     { q: "pricing.faqCreditQ", a: "pricing.faqCreditA" },
+    { q: "pricing.faqFailedQ", a: "pricing.faqFailedA" },
     { q: "pricing.faqExpireQ", a: "pricing.faqExpireA" },
     { q: "pricing.faqDownloadQ", a: "pricing.faqDownloadA" },
     { q: "pricing.faqShareQ", a: "pricing.faqShareA" },
@@ -303,7 +304,7 @@ export default function Pricing() {
               heroReveal.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
             }`}
           >
-            <p className="font-serif italic text-caption text-primary/80 mb-4">
+            <p className="font-serif italic text-caption text-primary mb-4">
               {t("pricing.heroEyebrow")}
             </p>
             <h1 className="text-display sm:text-[2.75rem] lg:text-[3.25rem] mb-5">
@@ -463,7 +464,7 @@ export default function Pricing() {
             trustReveal.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
-          <p className="font-serif italic text-caption text-primary/80 mb-3">
+          <p className="font-serif italic text-caption text-primary mb-3">
             {t("pricing.trustEyebrow")}
           </p>
           <h2 className="text-h1 mb-3">{t("pricing.trustTitle")}</h2>
@@ -526,7 +527,7 @@ export default function Pricing() {
       <section ref={faqReveal.ref} className="container mx-auto px-4 py-16 sm:py-24">
         <div className="grid md:grid-cols-2 gap-10 lg:gap-16 max-w-5xl mx-auto">
           <div className="md:pt-2">
-            <p className="font-serif italic text-caption text-primary/80 mb-3">
+            <p className="font-serif italic text-caption text-primary mb-3">
               {t("pricing.faqEyebrow")}
             </p>
             <h2 className="text-h1 sm:text-[1.875rem] mb-3">{t("pricing.faqTitle")}</h2>

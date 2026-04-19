@@ -40,7 +40,7 @@ export default function Index() {
 
         <div className="container mx-auto px-4 py-20 sm:py-28 lg:py-32 relative">
           <div className="max-w-3xl mx-auto text-center">
-            <p className="font-serif italic text-caption text-primary/80 mb-5 animate-page-enter">
+            <p className="font-serif italic text-caption text-primary mb-5 animate-page-enter">
               {t("home.heroEyebrow")}
             </p>
             <h1 className="text-display sm:text-[3.25rem] lg:text-[4rem] mb-6 animate-page-enter">
@@ -153,7 +153,7 @@ export default function Index() {
         >
           <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
             <div>
-              <p className="font-serif italic text-caption text-primary/80 mb-3">
+              <p className="font-serif italic text-caption text-primary mb-3">
                 {t("home.privacyEyebrow")}
               </p>
               <h2 className="text-h1 mb-3">{t("home.privacyTitle")}</h2>
@@ -191,7 +191,7 @@ export default function Index() {
             pricingTeaser.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
-          <p className="font-serif italic text-caption text-primary/80 mb-3">
+          <p className="font-serif italic text-caption text-primary mb-3">
             {t("home.pricingTeaserEyebrow")}
           </p>
           <h2 className="text-h1 sm:text-[1.875rem] mb-3">

@@ -28,7 +28,7 @@ export function HomeOutcomeGrid() {
   return (
     <section className="container mx-auto px-4 py-16 sm:py-24">
       <div className="max-w-2xl mx-auto text-center mb-12">
-        <p className="font-serif italic text-caption text-primary/80 mb-3">
+        <p className="font-serif italic text-caption text-primary mb-3">
           {t("home.outcomeEyebrow")}
         </p>
         <h2 className="text-h1 sm:text-[1.875rem] mb-3">{t("home.outcomeTitle")}</h2>

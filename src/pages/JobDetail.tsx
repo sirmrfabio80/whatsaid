@@ -159,7 +159,7 @@ export default function JobDetail() {
                 ) : (
                   <>
                     <h1
-                      className="text-2xl sm:text-3xl font-bold truncate cursor-pointer hover:text-primary/80 transition-colors"
+                      className="text-2xl sm:text-3xl font-bold truncate cursor-pointer hover:text-primary transition-colors"
                       onClick={startEditing}
                       title={t("jobDetail.clickToRename")}
                       role="button"

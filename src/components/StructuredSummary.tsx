@@ -99,7 +99,7 @@ function renderLine(line: string): ReactNode {
     } else if (match[5] !== undefined) {
       // Link
       parts.push(
-        <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
+        <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary">
           {match[5]}
         </a>
       );

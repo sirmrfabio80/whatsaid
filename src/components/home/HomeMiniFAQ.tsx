@@ -21,7 +21,7 @@ export function HomeMiniFAQ() {
     <section className="container mx-auto px-4 py-16 sm:py-24">
       <div className="grid md:grid-cols-2 gap-10 lg:gap-16 max-w-5xl mx-auto">
         <div className="md:pt-2">
-          <p className="font-serif italic text-caption text-primary/80 mb-3">
+          <p className="font-serif italic text-caption text-primary mb-3">
             {t("home.miniFaqEyebrow")}
           </p>
           <h2 className="text-h1 sm:text-[1.875rem] mb-3">
