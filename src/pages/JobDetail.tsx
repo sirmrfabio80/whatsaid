@@ -34,6 +34,7 @@ export default function JobDetail() {
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState<number | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [processingStage, setProcessingStage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
