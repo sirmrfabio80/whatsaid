@@ -137,7 +137,7 @@ Type scale (`tailwind.config.ts → fontSize`):
 | `body-sm` | 0.8125rem | 1.5 | 400 | Dense UI text |
 | `caption` | 0.75rem | 1.4 | 500 | Helper text |
 | `micro` | 0.6875rem | 1.3 | 600 (tracked +0.04em) | Labels / overlines |
-| `button`, `button-sm` | 0.875 / 0.8125rem | 1 | 500 | Buttons |
+| `button`, `button-sm` | 0.875rem / 0.8125rem | 1 | 500 | Buttons |
 
 Body has `font-feature-settings: "ss01", "cv11", "cv05"` enabled for
 Inter's stylistic alternates; `.font-serif` opts into `kern, liga, calt`.
