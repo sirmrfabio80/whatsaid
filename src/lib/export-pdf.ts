@@ -199,14 +199,17 @@ function runsToWords(runs: TextRun[]): FmtWord[] {
 class Pen {
   pdf: jsPDF;
   y = MT;
+  serifAvailable: boolean;
 
-  constructor(pdf: jsPDF) {
+  constructor(pdf: jsPDF, serifAvailable: boolean) {
     this.pdf = pdf;
+    this.serifAvailable = serifAvailable;
   }
 
-  private setF(bold: boolean, italic: boolean, sz: number) {
+  private setF(bold: boolean, italic: boolean, sz: number, useSerif = false) {
     const style = bold && italic ? "bolditalic" : bold ? "bold" : italic ? "italic" : "normal";
-    this.pdf.setFont("helvetica", style);
+    const family = useSerif && this.serifAvailable ? SERIF_FONT : SANS_FONT;
+    this.pdf.setFont(family, style);
     this.pdf.setFontSize(sz);
   }
 
