@@ -418,17 +418,47 @@ class Pen {
 /*  Markdown → PDF rendering                                           */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Look ahead in `lines` starting at `startIdx` and return the total rendered
+ * height (mm) of the next `count` non-empty, non-heading content lines.
+ * Stops early at the next heading — that heading runs its own keep-with-next.
+ */
+function measureNextLines(pen: Pen, lines: string[], startIdx: number, count: number): number {
+  let total = 0;
+  let taken = 0;
+  for (let i = startIdx; i < lines.length && taken < count; i++) {
+    const l = lines[i].trimEnd();
+    if (/^#{1,6}\s/.test(l)) break;
+    if (l.trim() === "") continue;
+    total += pen.measureLine(l);
+    taken += 1;
+  }
+  return total;
+}
+
+function headingReserve(level: 1 | 2 | 3 | 4): number {
+  const sz = [0, F.h1, F.h2, F.h3, F.h4][level];
+  const before = level === 1 ? 0 : level === 2 ? 5 : 3;
+  const after = level === 1 ? 3 : 2;
+  return before + ptMm(sz) * HLH + after;
+}
+
 function renderMarkdown(pen: Pen, text: string) {
-  for (const raw of text.split("\n")) {
-    const line = raw.trimEnd();
-    if (/^####\s/.test(line)) {
-      pen.heading(line.slice(5), 4);
-    } else if (/^###\s/.test(line)) {
-      pen.heading(line.slice(4), 4);
-    } else if (/^##\s/.test(line)) {
-      pen.heading(line.slice(3), 3);
-    } else if (/^#\s/.test(line)) {
-      pen.heading(line.slice(2), 2);
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trimEnd();
+    let level: 1 | 2 | 3 | 4 | null = null;
+    let headingText = "";
+    if (/^####\s/.test(line)) { level = 4; headingText = line.slice(5); }
+    else if (/^###\s/.test(line)) { level = 4; headingText = line.slice(4); }
+    else if (/^##\s/.test(line)) { level = 3; headingText = line.slice(3); }
+    else if (/^#\s/.test(line)) { level = 2; headingText = line.slice(2); }
+
+    if (level !== null) {
+      // Keep-with-next: heading + next 2 non-empty body lines must fit together.
+      const need = headingReserve(level) + measureNextLines(pen, lines, i + 1, 2);
+      pen.pageBreakHard(need);
+      pen.heading(headingText, level);
     } else if (/^\s*[-*]\s+/.test(line)) {
       pen.bullet(line.replace(/^\s*[-*]\s+/, ""));
     } else if (line.trim() === "") {
@@ -437,6 +467,11 @@ function renderMarkdown(pen: Pen, text: string) {
       pen.rich(parseInline(line), F.body, C.body);
     }
   }
+}
+
+/** Measure first N lines of a markdown block (used to gate sectionHeading). */
+function measureMarkdownHead(pen: Pen, text: string, count: number): number {
+  return measureNextLines(pen, text.split("\n"), 0, count);
 }
 
 /* ------------------------------------------------------------------ */
