@@ -443,8 +443,7 @@
       "resume": "Reprendre",
       "stop": "Arrêter",
       "unsupported": "L'écoute n'est pas disponible dans ce navigateur.",
-      "empty": "Rien à écouter pour le moment.",
-      "ariaStop": "Arrêter l'écoute"
+      "empty": "Rien à écouter pour le moment."
     }
   },
   "share": {
