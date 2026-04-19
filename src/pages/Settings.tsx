@@ -354,6 +354,14 @@ export default function Settings() {
                     <span className="text-body-sm">{t("settings.listening.voiceMale")}</span>
                   </label>
                 </RadioGroup>
+                {matchedVoiceLabel && (
+                  <p
+                    className="text-caption text-muted-foreground mt-1"
+                    aria-live="polite"
+                  >
+                    {matchedVoiceLabel}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
