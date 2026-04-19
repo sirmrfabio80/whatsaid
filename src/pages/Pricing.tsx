@@ -94,16 +94,16 @@ function PricingCard({
     >
       {product.badge && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="bg-primary text-primary-foreground px-3 py-0.5 text-xs font-semibold rounded-full">
+          <Badge className="bg-primary text-primary-foreground px-3 py-0.5 text-micro rounded-full">
             {t(product.badge)}
           </Badge>
         </div>
       )}
       <CardContent className="p-6 sm:p-8 flex flex-col h-full">
-        <h3 className="text-lg font-semibold mb-1">
+        <h3 className="text-h2 mb-1">
           {t(product.title)}
         </h3>
-        <p className="text-sm text-muted-foreground mb-5">
+        <p className="text-secondary text-muted-foreground mb-5">
           {t(product.subtitle)}
         </p>
 
@@ -119,7 +119,7 @@ function PricingCard({
 
         <ul className="space-y-2.5 mb-8 flex-1">
           {product.features.map((f) => (
-            <li key={f} className="flex items-start gap-2 text-sm">
+            <li key={f} className="flex items-start gap-2 text-secondary">
               <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <span className="text-muted-foreground">{t(f)}</span>
             </li>
@@ -262,13 +262,13 @@ export default function Pricing() {
                 : "opacity-0 translate-y-6"
             }`}
           >
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-5 leading-[1.15]">
+            <h1 className="text-display sm:text-[3rem] lg:text-[3.5rem] mb-5">
               {t("pricing.heroTitle")}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto mb-3 leading-relaxed">
               {t("pricing.heroSubtitle")}
             </p>
-            <p className="text-sm text-muted-foreground max-w-lg mx-auto mb-8">
+            <p className="text-secondary text-muted-foreground max-w-lg mx-auto mb-8">
               {t("pricing.heroSupport")}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -310,7 +310,7 @@ export default function Pricing() {
                 : "opacity-0 translate-y-6"
             }`}
           >
-            <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
+            <h2 className="text-h1 sm:text-[1.875rem] mb-3">
               {t("pricing.valueTitle")}
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
@@ -359,10 +359,10 @@ export default function Pricing() {
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
                     <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-sm mb-1">
+                  <h3 className="text-h3 mb-1">
                     {t(title)}
                   </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-caption text-muted-foreground leading-relaxed">
                     {t(desc)}
                   </p>
                 </CardContent>
@@ -385,7 +385,7 @@ export default function Pricing() {
               : "opacity-0 translate-y-6"
           }`}
         >
-          <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
+          <h2 className="text-h1 sm:text-[1.875rem] mb-3">
             {t("pricing.cardsTitle")}
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
@@ -418,13 +418,13 @@ export default function Pricing() {
           })}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6 max-w-lg mx-auto">
+        <p className="text-center text-caption text-muted-foreground mt-6 max-w-lg mx-auto">
           {t("pricing.disclaimer")}
         </p>
-        <p className="text-center text-xs text-muted-foreground mt-3 max-w-lg mx-auto">
+        <p className="text-center text-caption text-muted-foreground mt-3 max-w-lg mx-auto">
           {t("pricing.paddleNote")}
         </p>
-        <p className="text-center text-xs text-muted-foreground mt-2 max-w-lg mx-auto">
+        <p className="text-center text-caption text-muted-foreground mt-2 max-w-lg mx-auto">
           {t("pricing.consentPrefix")}{" "}
           <Link to="/terms" className="text-primary hover:underline">{t("footer.terms")}</Link>
           {" "}{t("convert.and")}{" "}
@@ -435,11 +435,11 @@ export default function Pricing() {
       {/* Support/trust note */}
       <section className="container mx-auto px-4 pb-8">
         <div className="max-w-lg mx-auto text-center space-y-1">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-secondary text-muted-foreground">
             {t("pricing.supportLine")}{" "}
             <a href="mailto:support@whatsaid.app" className="text-primary hover:underline">support@whatsaid.app</a>
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             <Link to="/terms" className="hover:underline">{t("footer.terms")}</Link>
             {" · "}
             <Link to="/privacy" className="hover:underline">{t("footer.privacy")}</Link>
@@ -465,13 +465,13 @@ export default function Pricing() {
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
               <UserPlus className="w-6 h-6 text-primary" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-semibold mb-3">
+            <h2 className="text-h2 sm:text-[1.25rem] mb-3">
               {t("pricing.trustTitle")}
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-4">
               {t("pricing.trustBody")}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-secondary text-muted-foreground">
               {t("pricing.trustReason")}
             </p>
           </div>
@@ -487,7 +487,7 @@ export default function Pricing() {
               : "opacity-0 translate-y-6"
           }`}
         >
-          <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
+          <h2 className="text-h1 sm:text-[1.875rem] mb-3">
             {t("pricing.howTitle")}
           </h2>
         </div>
@@ -507,13 +507,13 @@ export default function Pricing() {
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Icon className="w-6 h-6 text-primary" />
               </div>
-              <div className="text-xs font-medium text-primary mb-1">
+              <div className="text-micro text-primary mb-1">
                 {t("home.step", { number: step })}
               </div>
-              <h3 className="font-semibold text-lg mb-2">
+              <h3 className="text-h2 mb-2">
                 {t(title)}
               </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-secondary text-muted-foreground leading-relaxed">
                 {t(desc)}
               </p>
             </div>
@@ -534,7 +534,7 @@ export default function Pricing() {
                 : "opacity-0 translate-y-6"
             }`}
           >
-            <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
+            <h2 className="text-h1 sm:text-[1.875rem] mb-3">
               {t("pricing.faqTitle")}
             </h2>
           </div>
@@ -552,16 +552,16 @@ export default function Pricing() {
                   value={`faq-${i}`}
                   className="bg-card border border-border/50 rounded-xl px-5"
                 >
-                  <AccordionTrigger className="text-sm font-medium py-4 hover:no-underline">
+                  <AccordionTrigger className="text-secondary font-medium py-4 hover:no-underline">
                     {t(q)}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground pb-4">
+                  <AccordionContent className="text-secondary text-muted-foreground pb-4">
                     {t(a)}
                   </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
-            <p className="text-center text-sm text-muted-foreground mt-6">
+            <p className="text-center text-secondary text-muted-foreground mt-6">
               <a href="/help#faq-pricing-credits" className="text-primary hover:underline">
                 {t("pricing.moreFaqLink")}
               </a>
@@ -579,7 +579,7 @@ export default function Pricing() {
               : "opacity-0 translate-y-6"
           }`}
         >
-          <h2 className="text-2xl sm:text-3xl font-semibold mb-4">
+          <h2 className="text-h1 sm:text-[1.875rem] mb-4">
             {t("pricing.finalTitle")}
           </h2>
           <p className="text-muted-foreground mb-8 max-w-md mx-auto">
