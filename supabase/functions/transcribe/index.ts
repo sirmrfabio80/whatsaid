@@ -345,11 +345,11 @@ async function submitAndPollTranscript(
   throw new Error(`Transcription timed out after ${Math.round((maxPolls * pollIntervalMs) / 60000)} minutes`);
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
+// Core transcription pipeline. Long-running (can take >150s for big files
+// when polling AssemblyAI). Must be invoked via EdgeRuntime.waitUntil so
+// the HTTP caller doesn't hit the edge function idle timeout.
+async function runTranscriptionPipeline(req: Request): Promise<void> {
+  let jobIdForFailure: string | null = null;
   try {
     const ASSEMBLYAI_API_KEY = Deno.env.get("ASSEMBLYAI_API_KEY");
     if (!ASSEMBLYAI_API_KEY) {
