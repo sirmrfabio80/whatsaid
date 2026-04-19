@@ -48,6 +48,20 @@ export function useJobTags(jobId: string | undefined) {
 
   useEffect(() => { fetchTags(); }, [fetchTags]);
 
+  // Refetch when job_tags rows are inserted/deleted for this job (e.g. auto-tag finishes after page load)
+  useEffect(() => {
+    if (!jobId) return;
+    const channel = supabase
+      .channel(`job-tags-${jobId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_tags", filter: `job_id=eq.${jobId}` },
+        () => { fetchTags(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [jobId, fetchTags]);
+
   const addTag = useCallback(async (name: string) => {
     if (!user || !jobId) return;
     const trimmed = name.trim();
