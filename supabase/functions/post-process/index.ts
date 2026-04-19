@@ -22,24 +22,19 @@ function extractShortSummary(summaryContent: string): string {
   return plain.slice(0, 200);
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
+// Core post-processing pipeline. Two AI calls (summary + optional custom
+// output) plus auto-tagging — can exceed the 150s edge function idle
+// timeout, so this MUST run in EdgeRuntime.waitUntil.
+async function runPostProcessPipeline(
+  job_id: string,
+  custom_prompt: string | null,
+): Promise<void> {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabase = createServiceClient();
 
-    const { job_id, custom_prompt } = await req.json();
-    if (!job_id) {
-      return new Response(JSON.stringify({ error: "job_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     // 1. Read the transcript
     const { data: transcriptRow, error: txError } = await supabase
