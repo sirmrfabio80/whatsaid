@@ -37,6 +37,11 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [mobileOpen]);
 
+  // Auto-close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   const initials = user
     ? (displayName || user.user_metadata?.full_name || user.email || "U")
         .split(" ")
