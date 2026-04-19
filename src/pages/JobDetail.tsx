@@ -33,9 +33,35 @@ export default function JobDetail() {
   const [recordedIso, setRecordedIso] = useState<string | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState<number | null>(null);
+  const [jobStatus, setJobStatus] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
+
+  // Track job status (with realtime updates) for the live "processing" pulse-ring
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("jobs").select("status").eq("id", id).maybeSingle();
+      if (!cancelled && data?.status) setJobStatus(data.status as string);
+    })();
+    const channel = supabase
+      .channel(`job-status-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${id}` },
+        (payload) => {
+          const next = (payload.new as { status?: string } | null)?.status;
+          if (next) setJobStatus(next);
+        }
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
 
   const getEffectiveIso = (m: JobMeta) => m.recorded_at ?? m.created_at;
 
