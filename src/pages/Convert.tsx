@@ -495,14 +495,14 @@ export default function Convert() {
                   </div>
 
                   {step === "failed" && errorMessage && (
-                    <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-sm max-w-sm">
+                    <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-secondary max-w-sm">
                       <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                       <span>{errorMessage}</span>
                     </div>
                   )}
 
                   {file && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-secondary text-muted-foreground">
                       <FileAudio className="w-4 h-4" />
                       <span className="truncate max-w-[200px]">{file.name}</span>
                       <span>· {formatDuration(duration)}</span>
