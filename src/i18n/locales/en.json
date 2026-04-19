@@ -24,7 +24,8 @@
     "pricing": "Pricing",
     "profile": "Profile",
     "history": "History",
-    "settings": "Settings"
+    "settings": "Settings",
+    "help": "Help"
   },
   "home": {
     "tagline": "AI transcription + speaker labels",
@@ -69,7 +70,8 @@
     "footerPrivacy": "Privacy Policy",
     "footerTerms": "Terms of Service",
     "footerCopyright": "© {{year}} WhatSaid. All rights reserved.",
-    "footerAudioDeleted": "Audio deleted after processing"
+    "footerAudioDeleted": "Audio deleted after processing",
+    "helpLink": "Browse the Help centre"
   },
   "convert": {
     "title": "Convert your audio",
@@ -219,7 +221,8 @@
       "title": "Set your password",
       "desc": "Set a password so you can sign in anytime.",
       "setPasswordBtn": "Set password"
-    }
+    },
+    "helpLink": "Account help"
   },
   "setPassword": {
     "title": "Welcome to WhatSaid",
@@ -551,7 +554,8 @@
     "support": "Support",
     "operator": "Operated by Fabio Petito, trading as WhatSaid",
     "copyright": "© {{year}} WhatSaid. All rights reserved.",
-    "audioDeleted": "Audio deleted after processing"
+    "audioDeleted": "Audio deleted after processing",
+    "helpAndFaq": "Help & FAQ"
   },
   "pricing": {
     "heroTitle": "Turn recordings into usable results",
@@ -626,7 +630,8 @@
     "finalCtaLoggedIn": "Continue",
     "comingSoon": "Payment system is being finalised — check back soon.",
     "purchaseSuccess": "Purchase complete! Your credits have been added.",
-    "creditsAddedBanner": "{{count}} credit(s) added to your account"
+    "creditsAddedBanner": "{{count}} credit(s) added to your account",
+    "moreFaqLink": "More questions about credits and billing →"
   },
   "transcriptionSettings": {
     "title": "Transcription settings",
@@ -705,6 +710,63 @@
       "scanNow": "Scan now",
       "scanning": "Scanning…",
       "scanResult": "Scanned {{scanned}} tag(s), flagged {{flagged}} non-English"
+    }
+  },
+  "help": {
+    "metaTitle": "Help — WhatSaid",
+    "title": "Help & FAQ",
+    "lead": "Quick answers, how WhatSaid works, and what to do when something goes wrong.",
+    "filterPlaceholder": "Filter help…",
+    "filterAriaLabel": "Filter Help page",
+    "quick": {
+      "upload": "Upload audio",
+      "pricing": "Pricing & credits",
+      "privacy": "Privacy",
+      "contact": "Contact us"
+    },
+    "toc": {
+      "workflow": "How it works",
+      "features": "Feature guide",
+      "faq": "FAQ",
+      "troubleshooting": "Troubleshooting",
+      "privacy": "Privacy",
+      "contact": "Contact"
+    },
+    "workflow": {
+      "title": "How WhatSaid works",
+      "lead": "From upload to download in a few simple steps."
+    },
+    "features": {
+      "title": "Feature guide",
+      "lead": "Everything you can do with a transcript.",
+      "openLink": "Open"
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "lead": "Tap a question to see the answer.",
+      "mostAsked": "Most asked",
+      "feedbackPrompt": "Was this helpful?",
+      "feedbackYes": "Yes",
+      "feedbackNo": "No",
+      "feedbackYesAria": "Mark this answer as helpful",
+      "feedbackNoAria": "Mark this answer as not helpful",
+      "feedbackThanks": "Thanks for the feedback."
+    },
+    "troubleshooting": {
+      "title": "Troubleshooting",
+      "lead": "Common issues and what to try first."
+    },
+    "privacy": {
+      "title": "Privacy at a glance",
+      "b1": "Your audio is deleted right after processing.",
+      "b2": "Transcripts and summaries stay only in your account.",
+      "b3": "We never sell or share your content.",
+      "readMore": "Read the full Privacy Policy"
+    },
+    "contact": {
+      "title": "Still need help?",
+      "body": "Can't find an answer? Reach out — we read every message.",
+      "accountIssue": "Account issue? Open Settings"
     }
   }
 }

@@ -32,6 +32,7 @@ const ClaimShare = lazy(() => import("./pages/ClaimShare"));
 const SharedPdfDownload = lazy(() => import("./pages/SharedPdfDownload"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Admin = lazy(() => import("./pages/Admin"));
+const Help = lazy(() => import("./pages/Help"));
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/shared-pdf/:token" element={<SharedPdfDownload />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/help" element={<Help />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>

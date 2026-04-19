@@ -5,6 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { faq, type FaqGroup } from "@/content/help/faq";
 import { pickLocale } from "@/content/help/pickLocale";
+import HelpFaqFeedback from "@/components/help/HelpFaqFeedback";
 
 interface HelpFAQProps {
   filter: string;
@@ -86,7 +87,8 @@ export default function HelpFAQ({ filter }: HelpFAQProps) {
                       </span>
                     </AccordionTrigger>
                     <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4">
-                      {pickLocale(item.a, i18n.language)}
+                      <div>{pickLocale(item.a, i18n.language)}</div>
+                      <HelpFaqFeedback anchor={anchor} />
                     </AccordionContent>
                   </AccordionItem>
                 );

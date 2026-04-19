@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown, Shield } from "lucide-react";
+import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown, Shield, HelpCircle } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "@/components/NotificationBell";
@@ -107,6 +107,10 @@ export default function Navbar() {
                     <Settings className="w-4 h-4 mr-2" />
                     {t("nav.settings")}
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/help")} className="rounded-lg">
+                    <HelpCircle className="w-4 h-4 mr-2" />
+                    {t("nav.help")}
+                  </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem onClick={() => navigate("/admin")} className="rounded-lg">
                       <Shield className="w-4 h-4 mr-2" />
@@ -187,6 +191,11 @@ export default function Navbar() {
                   <Settings className="w-5 h-5" />{t("nav.settings")}
                 </Button>
               </Link>
+              <Link to="/help" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "340ms", animationFillMode: "forwards" }}>
+                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
+                  <HelpCircle className="w-5 h-5" />{t("nav.help")}
+                </Button>
+              </Link>
               {isAdmin && (
                 <Link to="/admin" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "350ms", animationFillMode: "forwards" }}>
                   <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
@@ -202,11 +211,18 @@ export default function Navbar() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-3 opacity-0 animate-fade-in" style={{ animationDelay: "150ms", animationFillMode: "forwards" }}>
-              <LanguageSwitcher />
-              <Link to="/login" onClick={() => setMobileOpen(false)} className="flex-1">
-                <Button className="w-full rounded-lg h-12 text-base">{t("common.signIn")}</Button>
+            <div className="space-y-1">
+              <Link to="/help" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "150ms", animationFillMode: "forwards" }}>
+                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
+                  <HelpCircle className="w-5 h-5" />{t("nav.help")}
+                </Button>
               </Link>
+              <div className="flex items-center justify-between gap-3 pt-2 opacity-0 animate-fade-in" style={{ animationDelay: "210ms", animationFillMode: "forwards" }}>
+                <LanguageSwitcher />
+                <Link to="/login" onClick={() => setMobileOpen(false)} className="flex-1">
+                  <Button className="w-full rounded-lg h-12 text-base">{t("common.signIn")}</Button>
+                </Link>
+              </div>
             </div>
           )}
         </div>

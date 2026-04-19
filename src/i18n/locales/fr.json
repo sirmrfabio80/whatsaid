@@ -24,7 +24,8 @@
     "pricing": "Tarifs",
     "profile": "Profil",
     "history": "Historique",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "help": "Aide"
   },
   "home": {
     "tagline": "Transcription IA + identification des intervenants",
@@ -69,7 +70,8 @@
     "footerPrivacy": "Politique de confidentialité",
     "footerTerms": "Conditions d'utilisation",
     "footerCopyright": "© {{year}} WhatSaid. Tous droits réservés.",
-    "footerAudioDeleted": "Audio supprimé après traitement"
+    "footerAudioDeleted": "Audio supprimé après traitement",
+    "helpLink": "Parcourir le centre d'aide"
   },
   "convert": {
     "title": "Convertir votre audio",
@@ -219,7 +221,8 @@
       "title": "Définir votre mot de passe",
       "desc": "Définissez un mot de passe pour pouvoir vous connecter à tout moment.",
       "setPasswordBtn": "Définir le mot de passe"
-    }
+    },
+    "helpLink": "Aide compte"
   },
   "setPassword": {
     "title": "Bienvenue sur WhatSaid",
@@ -581,7 +584,8 @@
     "creditsAddedBanner": "{{count}} crédit(s) ajouté(s) à votre compte",
     "paddleNote": "Les paiements sont traités de manière sécurisée par Paddle, notre revendeur officiel.",
     "consentPrefix": "En achetant, vous acceptez nos",
-    "supportLine": "Besoin d'aide ?"
+    "supportLine": "Besoin d'aide ?",
+    "moreFaqLink": "Plus de questions sur les crédits et la facturation →"
   },
   "footer": {
     "desc": "Transcription IA premium avec identification des intervenants, résumés et analyse personnalisée. Audio supprimé après traitement.",
@@ -594,7 +598,8 @@
     "support": "Support",
     "operator": "Exploité par Fabio Petito, trading as WhatSaid",
     "copyright": "© {{year}} WhatSaid. Tous droits réservés.",
-    "audioDeleted": "Audio supprimé après traitement"
+    "audioDeleted": "Audio supprimé après traitement",
+    "helpAndFaq": "Aide et FAQ"
   },
   "transcriptionSettings": {
     "title": "Paramètres de transcription",
@@ -673,6 +678,63 @@
       "scanNow": "Scanner maintenant",
       "scanning": "Analyse…",
       "scanResult": "{{scanned}} tag(s) analysé(s), {{flagged}} signalé(s) non-anglais"
+    }
+  },
+  "help": {
+    "metaTitle": "Aide — WhatSaid",
+    "title": "Aide et FAQ",
+    "lead": "Réponses rapides, fonctionnement de WhatSaid et que faire en cas de problème.",
+    "filterPlaceholder": "Filtrer l'aide…",
+    "filterAriaLabel": "Filtrer la page d'aide",
+    "quick": {
+      "upload": "Téléverser un audio",
+      "pricing": "Tarifs et crédits",
+      "privacy": "Confidentialité",
+      "contact": "Nous contacter"
+    },
+    "toc": {
+      "workflow": "Comment ça marche",
+      "features": "Guide des fonctionnalités",
+      "faq": "FAQ",
+      "troubleshooting": "Dépannage",
+      "privacy": "Confidentialité",
+      "contact": "Contact"
+    },
+    "workflow": {
+      "title": "Comment fonctionne WhatSaid",
+      "lead": "Du téléversement au téléchargement en quelques étapes simples."
+    },
+    "features": {
+      "title": "Guide des fonctionnalités",
+      "lead": "Tout ce que vous pouvez faire avec une transcription.",
+      "openLink": "Ouvrir"
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "lead": "Touchez une question pour voir la réponse.",
+      "mostAsked": "Plus demandées",
+      "feedbackPrompt": "Cela vous a-t-il aidé ?",
+      "feedbackYes": "Oui",
+      "feedbackNo": "Non",
+      "feedbackYesAria": "Marquer cette réponse comme utile",
+      "feedbackNoAria": "Marquer cette réponse comme non utile",
+      "feedbackThanks": "Merci pour votre retour."
+    },
+    "troubleshooting": {
+      "title": "Dépannage",
+      "lead": "Problèmes courants et premières choses à essayer."
+    },
+    "privacy": {
+      "title": "Confidentialité en bref",
+      "b1": "Votre audio est supprimé juste après le traitement.",
+      "b2": "Transcriptions et résumés restent uniquement dans votre compte.",
+      "b3": "Nous ne vendons ni ne partageons votre contenu.",
+      "readMore": "Lire la politique de confidentialité complète"
+    },
+    "contact": {
+      "title": "Toujours besoin d'aide ?",
+      "body": "Pas de réponse trouvée ? Écrivez-nous — nous lisons chaque message.",
+      "accountIssue": "Problème de compte ? Ouvrir les paramètres"
     }
   }
 }

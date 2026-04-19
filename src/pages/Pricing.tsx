@@ -561,6 +561,11 @@ export default function Pricing() {
                 </AccordionItem>
               ))}
             </Accordion>
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              <a href="/help#faq-pricing-credits" className="text-primary hover:underline">
+                {t("pricing.moreFaqLink")}
+              </a>
+            </p>
           </div>
         </div>
       </section>
