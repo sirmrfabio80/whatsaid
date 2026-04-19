@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useJsonLd } from "@/hooks/use-json-ld";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 function PrivacyLinkedText({ text }: { text: string }) {
   if (!text.includes("<privacyLink>")) return <>{text}</>;

@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useJsonLd } from "@/hooks/use-json-ld";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 export default function RefundPolicy() {
   const { t } = useTranslation();
@@ -14,6 +16,11 @@ export default function RefundPolicy() {
     canonical: "https://whatsaid.app/refund-policy",
     ogImage: "https://whatsaid.app/og-refund.png",
   });
+
+  useJsonLd(
+    "ld-breadcrumb-refund",
+    buildBreadcrumbList([{ name: "Refund Policy", path: "/refund-policy" }]),
+  );
 
 
   return (

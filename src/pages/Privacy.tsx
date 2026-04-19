@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useJsonLd } from "@/hooks/use-json-ld";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 export default function Privacy() {
   const { t } = useTranslation();
@@ -14,6 +16,11 @@ export default function Privacy() {
     canonical: "https://whatsaid.app/privacy",
     ogImage: "https://whatsaid.app/og-privacy.png",
   });
+
+  useJsonLd(
+    "ld-breadcrumb-privacy",
+    buildBreadcrumbList([{ name: "Privacy Policy", path: "/privacy" }]),
+  );
 
   const sections = [
     { title: "privacy.s1Title", type: "p", content: "privacy.s1Body" },
