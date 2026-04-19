@@ -12,6 +12,7 @@ import HelpContactCard from "@/components/help/HelpContactCard";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { useJsonLd } from "@/hooks/use-json-ld";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 import { faq } from "@/content/help/faq";
 import { pickLocale } from "@/content/help/pickLocale";
 
@@ -41,24 +42,27 @@ export default function Help() {
 
   const faqJsonLd = useMemo(() => {
     const locale = i18n.language ?? "en";
-    const items = faq.flatMap((group) =>
-      group.items.map((item) => ({
-        "@type": "Question",
-        name: pickLocale(item.q, locale),
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: pickLocale(item.a, locale),
-        },
-      })),
-    );
     return {
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: items,
+      mainEntity: faq.flatMap((group) =>
+        group.items.map((item) => ({
+          "@type": "Question",
+          name: pickLocale(item.q, locale),
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: pickLocale(item.a, locale),
+          },
+        })),
+      ),
     };
   }, [i18n.language]);
 
   useJsonLd("ld-faq", faqJsonLd);
+  useJsonLd(
+    "ld-breadcrumb-help",
+    buildBreadcrumbList([{ name: "Help", path: "/help" }]),
+  );
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">

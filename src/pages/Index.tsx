@@ -37,7 +37,6 @@ export default function Index() {
     logo: "https://whatsaid.app/favicon.png",
     description:
       "WhatSaid converts audio into accurate transcripts, summaries, and custom AI analysis with speaker labels.",
-    sameAs: [],
   });
 
   useJsonLd("ld-website", {

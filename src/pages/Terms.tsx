@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useJsonLd } from "@/hooks/use-json-ld";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 function PrivacyLinkedText({ text }: { text: string }) {
   if (!text.includes("<privacyLink>")) return <>{text}</>;
@@ -40,6 +42,11 @@ export default function Terms() {
     canonical: "https://whatsaid.app/terms",
     ogImage: "https://whatsaid.app/og-terms.png",
   });
+
+  useJsonLd(
+    "ld-breadcrumb-terms",
+    buildBreadcrumbList([{ name: "Terms of Service", path: "/terms" }]),
+  );
 
   const sections = [
     { key: "s1", type: "p" },

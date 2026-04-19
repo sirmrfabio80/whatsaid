@@ -38,6 +38,7 @@ import { PerCreditValue } from "@/components/pricing/PerCreditValue";
 import { PricingStudioMock } from "@/components/pricing/PricingStudioMock";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { useJsonLd } from "@/hooks/use-json-ld";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 // ---------------------------------------------------------------------------
 // Currency toggle
@@ -220,6 +221,11 @@ export default function Pricing() {
       };
     }),
   });
+
+  useJsonLd(
+    "ld-breadcrumb-pricing",
+    buildBreadcrumbList([{ name: "Pricing", path: "/pricing" }]),
+  );
 
   const heroReveal = useScrollReveal();
   const valueReveal = useScrollReveal();

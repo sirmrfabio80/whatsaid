@@ -6,7 +6,10 @@ import { useEffect } from "react";
  * unmounting cleans it up — preventing duplicate or stale schema across SPA
  * navigation.
  */
-export function useJsonLd(id: string, data: Record<string, unknown> | Array<Record<string, unknown>> | null) {
+export function useJsonLd(
+  id: string,
+  data: Record<string, unknown> | Array<Record<string, unknown>> | null,
+) {
   useEffect(() => {
     if (!data) return;
     let el = document.getElementById(id) as HTMLScriptElement | null;
