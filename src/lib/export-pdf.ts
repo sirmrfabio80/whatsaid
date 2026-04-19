@@ -157,6 +157,39 @@ class Pen {
     }
   }
 
+  /**
+   * Force a page break if `need` mm cannot fit in the remaining page space.
+   * Same logic as pageBreak but named to make "keep-with-next" intent explicit
+   * at call sites (see renderMarkdown / sectionHeading).
+   */
+  pageBreakHard(need: number) {
+    if (this.y + need > MAX_Y) {
+      this.pdf.addPage();
+      this.y = MT;
+    }
+  }
+
+  /**
+   * Measure the rendered height (mm) of a single body/bullet/plain markdown line
+   * using the same wrapping path as plain()/rich(). Pure measurement — no draw,
+   * no y mutation, no page break.
+   */
+  measureLine(line: string): number {
+    const trimmed = line.trimEnd();
+    if (trimmed.trim() === "") return 2; // gap()
+    const isBullet = /^\s*[-*]\s+/.test(trimmed);
+    const text = isBullet ? trimmed.replace(/^\s*[-*]\s+/, "") : trimmed;
+    // Strip inline markdown markers for width measurement (close enough; bold
+    // is slightly wider but the 2-line lookahead is a heuristic, not exact).
+    const plainText = text.replace(/\*+/g, "");
+    const fontSize = isBullet ? F.bullet : F.body;
+    const maxW = isBullet ? CW - 7 : CW;
+    const lineH = ptMm(fontSize) * LH;
+    this.setF(false, false, fontSize);
+    const wrapped: string[] = this.pdf.splitTextToSize(plainText, maxW);
+    return Math.max(1, wrapped.length) * lineH;
+  }
+
   newPage() {
     if (this.y > MT + 1) {
       this.pdf.addPage();
@@ -257,8 +290,10 @@ class Pen {
     this.y += after;
   }
 
-  sectionHeading(text: string) {
-    this.pageBreak(14);
+  sectionHeading(text: string, firstBodyHeightMm = 0) {
+    // Reserve: divider gap (4mm) + heading height + first body block height
+    const headingHeight = ptMm(F.h2) * HLH + 5 + 2; // before(5) + after(2)
+    this.pageBreakHard(4 + headingHeight + firstBodyHeightMm);
     this.pdf.setDrawColor(...hexRgb(C.accent));
     this.pdf.setLineWidth(0.5);
     this.pdf.line(ML, this.y, PAGE_W - MR, this.y);
@@ -383,17 +418,47 @@ class Pen {
 /*  Markdown → PDF rendering                                           */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Look ahead in `lines` starting at `startIdx` and return the total rendered
+ * height (mm) of the next `count` non-empty, non-heading content lines.
+ * Stops early at the next heading — that heading runs its own keep-with-next.
+ */
+function measureNextLines(pen: Pen, lines: string[], startIdx: number, count: number): number {
+  let total = 0;
+  let taken = 0;
+  for (let i = startIdx; i < lines.length && taken < count; i++) {
+    const l = lines[i].trimEnd();
+    if (/^#{1,6}\s/.test(l)) break;
+    if (l.trim() === "") continue;
+    total += pen.measureLine(l);
+    taken += 1;
+  }
+  return total;
+}
+
+function headingReserve(level: 1 | 2 | 3 | 4): number {
+  const sz = [0, F.h1, F.h2, F.h3, F.h4][level];
+  const before = level === 1 ? 0 : level === 2 ? 5 : 3;
+  const after = level === 1 ? 3 : 2;
+  return before + ptMm(sz) * HLH + after;
+}
+
 function renderMarkdown(pen: Pen, text: string) {
-  for (const raw of text.split("\n")) {
-    const line = raw.trimEnd();
-    if (/^####\s/.test(line)) {
-      pen.heading(line.slice(5), 4);
-    } else if (/^###\s/.test(line)) {
-      pen.heading(line.slice(4), 4);
-    } else if (/^##\s/.test(line)) {
-      pen.heading(line.slice(3), 3);
-    } else if (/^#\s/.test(line)) {
-      pen.heading(line.slice(2), 2);
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trimEnd();
+    let level: 1 | 2 | 3 | 4 | null = null;
+    let headingText = "";
+    if (/^####\s/.test(line)) { level = 4; headingText = line.slice(5); }
+    else if (/^###\s/.test(line)) { level = 4; headingText = line.slice(4); }
+    else if (/^##\s/.test(line)) { level = 3; headingText = line.slice(3); }
+    else if (/^#\s/.test(line)) { level = 2; headingText = line.slice(2); }
+
+    if (level !== null) {
+      // Keep-with-next: heading + next 2 non-empty body lines must fit together.
+      const need = headingReserve(level) + measureNextLines(pen, lines, i + 1, 2);
+      pen.pageBreakHard(need);
+      pen.heading(headingText, level);
     } else if (/^\s*[-*]\s+/.test(line)) {
       pen.bullet(line.replace(/^\s*[-*]\s+/, ""));
     } else if (line.trim() === "") {
@@ -402,6 +467,11 @@ function renderMarkdown(pen: Pen, text: string) {
       pen.rich(parseInline(line), F.body, C.body);
     }
   }
+}
+
+/** Measure first N lines of a markdown block (used to gate sectionHeading). */
+function measureMarkdownHead(pen: Pen, text: string, count: number): number {
+  return measureNextLines(pen, text.split("\n"), 0, count);
 }
 
 /* ------------------------------------------------------------------ */
@@ -436,6 +506,9 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
   // ── Summary ──
   if (data.summary) {
+    // Keep "Summary" heading with first 2 body lines.
+    const need = headingReserve(2) + measureMarkdownHead(pen, data.summary, 2);
+    pen.pageBreakHard(need);
     pen.heading("Summary", 2);
     renderMarkdown(pen, data.summary);
     pen.gap(4);
@@ -444,10 +517,19 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
   // ── Questions & Answers ──
   if (data.questions?.length) {
     pen.newPage();
-    pen.sectionHeading("Questions & Answers");
+    // Reserve Q&A heading + first prompt line + first 2 answer lines so the
+    // section title never lands alone at the bottom of a page.
+    const firstQa = data.questions[0];
+    const qaPromptH = firstQa?.prompt ? ptMm(F.qa) * LH + 4 : 0;
+    const qaAnswerH = firstQa?.answer ? measureMarkdownHead(pen, firstQa.answer, 2) : 0;
+    pen.sectionHeading("Questions & Answers", qaPromptH + qaAnswerH);
     for (const qa of data.questions) {
       if (qa.prompt) {
         pen.gap(3);
+        // Keep Q prompt with first 2 lines of its answer.
+        const promptH = ptMm(F.qa) * LH;
+        const answerH = qa.answer ? measureMarkdownHead(pen, qa.answer, 2) : 0;
+        pen.pageBreakHard(promptH + 1 + answerH);
         pen.rich(
           [{ text: "Q: ", bold: true }, { text: qa.prompt, bold: true }],
           F.qa,
@@ -463,7 +545,9 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
   // ── Transcript ──
   if (data.transcript) {
     pen.newPage();
-    pen.sectionHeading("Transcript");
+    // Reserve heading + first 2 transcript lines (approx via line height).
+    const firstTwoH = 2 * ptMm(F.transcript) * LH;
+    pen.sectionHeading("Transcript", firstTwoH);
 
     const speakerColorMap = new Map<string, string>();
 
