@@ -18,7 +18,8 @@ export function PricingStudioMock() {
   return (
     <div
       aria-hidden="true"
-      className="relative w-full max-w-[640px] mx-auto rounded-2xl border border-border/70 bg-card shadow-2xl shadow-primary/10 overflow-hidden"
+      className="relative w-full max-w-[640px] mx-auto rounded-2xl border border-border/70 bg-card shadow-2xl shadow-primary/10 overflow-hidden motion-safe:animate-hero-mock-rise motion-reduce:animate-none"
+      style={{ animationDelay: "120ms" }}
     >
       {/* Window chrome */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-muted/40">
@@ -128,7 +129,10 @@ export function PricingStudioMock() {
       {/* Status bar — mirrors hero mock */}
       <div className="flex items-center justify-between gap-2 px-5 py-2.5 border-t border-border/60 bg-muted/30">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          <span className="relative inline-flex w-1.5 h-1.5">
+            <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-accent/50" />
+            <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-accent" />
+          </span>
           <span className="text-[11px] text-foreground/70 inline-flex items-center gap-1.5">
             <Check className="w-3 h-3 text-accent" />
             Pay once · no subscription
