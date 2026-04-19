@@ -587,8 +587,8 @@ export default function Convert() {
                           <div className="flex items-start gap-2.5 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
                             <CreditCard className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
                             <div className="space-y-1.5">
-                              <p className="text-sm font-medium text-destructive">{t("convert.noCreditsTitle")}</p>
-                              <p className="text-xs text-destructive/80">{t("convert.noCreditsDesc", { required: credits, balance: creditBalance ?? 0 })}</p>
+                              <p className="text-secondary font-medium text-destructive">{t("convert.noCreditsTitle")}</p>
+                              <p className="text-caption text-destructive/80">{t("convert.noCreditsDesc", { required: credits, balance: creditBalance ?? 0 })}</p>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -611,7 +611,7 @@ export default function Convert() {
                       </>
                     ) : (
                       <div className="text-center space-y-3">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-secondary text-muted-foreground">
                           {t("convert.signInToConvert")}
                         </p>
                         <Button className="w-full rounded-xl" onClick={() => navigate("/login")}>
