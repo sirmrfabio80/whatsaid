@@ -88,7 +88,7 @@ export default function SetPassword() {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-destructive text-sm">
+                <div className="flex items-center gap-2 text-destructive text-secondary">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -104,12 +104,12 @@ export default function SetPassword() {
 
               <button
                 onClick={handleSkip}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                className="w-full text-center text-secondary text-muted-foreground hover:text-foreground transition-colors py-2"
               >
                 {t("setPassword.skipForNow")}
               </button>
 
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-caption text-muted-foreground text-center">
                 {t("setPassword.skipHint")}
               </p>
             </div>
