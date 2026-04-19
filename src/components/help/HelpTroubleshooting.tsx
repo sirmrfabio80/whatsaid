@@ -24,10 +24,10 @@ export default function HelpTroubleshooting({ filter }: HelpTroubleshootingProps
   return (
     <section id="troubleshooting" className="container mx-auto px-5 sm:px-6 py-10 scroll-mt-24">
       <div className="mb-6">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-1">
+        <h2 className="text-h1 sm:text-[1.5rem] mb-1">
           {t("help.troubleshooting.title")}
         </h2>
-        <p className="text-sm text-muted-foreground">{t("help.troubleshooting.lead")}</p>
+        <p className="text-secondary text-muted-foreground">{t("help.troubleshooting.lead")}</p>
       </div>
 
       <Accordion
@@ -43,7 +43,7 @@ export default function HelpTroubleshooting({ filter }: HelpTroubleshootingProps
                   {pickLocale(it.problem, i18n.language)}
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4">
+              <AccordionContent className="text-secondary text-muted-foreground leading-relaxed pb-4">
                 {pickLocale(it.fix, i18n.language)}
               </AccordionContent>
             </AccordionItem>

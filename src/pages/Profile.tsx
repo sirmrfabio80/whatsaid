@@ -85,9 +85,9 @@ export default function Profile() {
               onUploaded={() => refreshAvatar()}
             />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">{profile?.display_name || t("profile.user")}</h1>
-              <p className="text-sm text-muted-foreground">{profile?.email || user.email || ""}</p>
-              {memberSince && <p className="text-xs text-muted-foreground mt-0.5">{t("profile.memberSince", { date: memberSince })}</p>}
+              <h1 className="text-h1 sm:text-[1.875rem]">{profile?.display_name || t("profile.user")}</h1>
+              <p className="text-secondary text-muted-foreground">{profile?.email || user.email || ""}</p>
+              {memberSince && <p className="text-caption text-muted-foreground mt-0.5">{t("profile.memberSince", { date: memberSince })}</p>}
             </div>
           </div>
 
@@ -96,7 +96,7 @@ export default function Profile() {
               <div className="flex items-center gap-3">
                 <div className="bg-muted border border-border px-3 py-1.5 rounded-lg">
                   <span className="font-bold text-lg">{creditBalance}</span>
-                  <span className="text-sm text-muted-foreground ml-1.5">{t("common.credits")}</span>
+                  <span className="text-secondary text-muted-foreground ml-1.5">{t("common.credits")}</span>
                 </div>
               </div>
               <Button variant="outline" size="sm" className="rounded-lg" onClick={() => navigate("/pricing")}>

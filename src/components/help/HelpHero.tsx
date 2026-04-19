@@ -12,7 +12,7 @@ export default function HelpHero({ query, onQueryChange }: HelpHeroProps) {
   return (
     <section className="container mx-auto px-5 sm:px-6 pt-10 pb-6 sm:pt-14 sm:pb-8">
       <div className="max-w-3xl mx-auto text-center animate-page-enter">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
+        <h1 className="text-display sm:text-[2.5rem] lg:text-[3rem] mb-3">
           {t("help.title")}
         </h1>
         <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-6 max-w-xl mx-auto">
