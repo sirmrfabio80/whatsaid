@@ -426,7 +426,7 @@ export default function Convert() {
             <p className="text-lg font-medium text-foreground">
               {t("pricing.processingPurchase", "Processing purchase…")}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-secondary text-muted-foreground">
               {t("pricing.processingPurchaseDesc", "Your credits will appear shortly.")}
             </p>
           </div>
