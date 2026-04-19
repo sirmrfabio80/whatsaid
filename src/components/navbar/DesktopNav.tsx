@@ -1,10 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { CreditCard } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotificationBell from "@/components/NotificationBell";
 import UserMenu from "./UserMenu";
+import CreditBadge from "./CreditBadge";
 import type { User } from "@supabase/supabase-js";
 
 interface DesktopNavProps {
@@ -44,10 +44,7 @@ export default function DesktopNav({
 
       {user ? (
         <div className="flex items-center gap-2">
-          <div className="bg-muted border border-border px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm">
-            <CreditCard className="w-3.5 h-3.5 text-primary" />
-            <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
-          </div>
+          <CreditBadge balance={creditBalance} isAdmin={isAdmin} />
           <NotificationBell />
           <UserMenu avatarUrl={avatarUrl} initials={initials} isAdmin={isAdmin} signOut={signOut} />
         </div>
