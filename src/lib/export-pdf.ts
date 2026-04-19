@@ -280,12 +280,13 @@ class Pen {
     x = ML,
     maxW = CW,
     lhMul = LH,
+    useSerif = false,
   ): number {
     const words = runsToWords(runs);
     if (!words.length) return 0;
 
     const lineH = ptMm(fontSize) * lhMul;
-    this.setF(false, false, fontSize);
+    this.setF(false, false, fontSize, useSerif);
     const spaceW = this.pdf.getTextWidth(" ");
 
     // Word-wrap into lines
@@ -294,7 +295,7 @@ class Pen {
     let curW = 0;
 
     for (const w of words) {
-      this.setF(w.bold, w.italic, fontSize);
+      this.setF(w.bold, w.italic, fontSize, useSerif);
       const ww = this.pdf.getTextWidth(w.text);
       const need = curLine.length ? spaceW + ww : ww;
       if (curW + need > maxW && curLine.length) {
@@ -315,7 +316,7 @@ class Pen {
       let cx = x;
       const bl = this.baseline(fontSize);
       for (let i = 0; i < ln.length; i++) {
-        this.setF(ln[i].bold, ln[i].italic, fontSize);
+        this.setF(ln[i].bold, ln[i].italic, fontSize, useSerif);
         this.setC(color);
         this.pdf.text(ln[i].text, cx, bl);
         cx += this.pdf.getTextWidth(ln[i].text);
@@ -337,9 +338,10 @@ class Pen {
     x = ML,
     maxW = CW,
     lhMul = LH,
+    useSerif = false,
   ): number {
     const lineH = ptMm(fontSize) * lhMul;
-    this.setF(bold, italic, fontSize);
+    this.setF(bold, italic, fontSize, useSerif);
     this.setC(color);
     const lines: string[] = this.pdf.splitTextToSize(text, maxW);
     let totalH = 0;
@@ -357,7 +359,8 @@ class Pen {
     const before = level === 1 ? 0 : level === 2 ? 5 : 3;
     const after = level === 1 ? 3 : 2;
     this.y += before;
-    this.plain(text, sz, C.heading, true, false, ML, CW, HLH);
+    // Headings stay on sans (chrome) for visual separation from reading body.
+    this.plain(text, sz, C.heading, true, false, ML, CW, HLH, false);
     this.y += after;
   }
 
@@ -372,13 +375,13 @@ class Pen {
     this.heading(text, 2);
   }
 
-  bullet(text: string) {
+  bullet(text: string, useSerif = false) {
     const lineH = ptMm(F.bullet) * LH;
     this.pageBreak(lineH);
-    this.setF(false, false, F.bullet);
+    this.setF(false, false, F.bullet, useSerif);
     this.setC(C.body);
     this.pdf.text("•", ML + 2, this.baseline(F.bullet));
-    this.rich(parseInline(text), F.bullet, C.body, ML + 7, CW - 7);
+    this.rich(parseInline(text), F.bullet, C.body, ML + 7, CW - 7, LH, useSerif);
   }
 
   /** Render a transcript speaker line with colored dot, timestamp, bold speaker, and wrapped text */
