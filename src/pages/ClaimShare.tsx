@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, XCircle, FileText, AlertTriangle } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { usePageMeta } from "@/hooks/use-page-meta";
-import { usePageMeta } from "@/hooks/use-page-meta";
 
 type ClaimStatus = "loading" | "ready" | "claiming" | "claimed" | "error" | "needsAuth";
 
