@@ -85,7 +85,7 @@ export default function Login() {
           <CardContent>
             {resetSent ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary text-sm">
+                <div className="flex items-center gap-2 text-primary text-secondary">
                   <Check className="w-4 h-4" />
                   <span>{t("login.resetLinkSent")} <strong>{email}</strong></span>
                 </div>
