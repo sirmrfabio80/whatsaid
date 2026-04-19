@@ -60,10 +60,10 @@ export default function JobAuditCard({ job }: { job: JobRow }) {
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-lg truncate">
+            <CardTitle className="text-h2 truncate">
               {job.title || job.file_name}
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1 font-mono break-all">
+            <p className="text-caption text-muted-foreground mt-1 font-mono break-all">
               {job.id}
             </p>
           </div>
@@ -94,7 +94,7 @@ export default function JobAuditCard({ job }: { job: JobRow }) {
         {/* Language audit */}
         <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold">Language audit</h4>
+            <h4 className="text-h3">Language audit</h4>
             {langMismatch && (
               <Badge variant="destructive" className="gap-1">
                 <AlertTriangle className="h-3 w-3" /> Mismatch
@@ -179,7 +179,7 @@ function StrategyPromptAudit({ cfg }: { cfg: Record<string, unknown> }) {
 
   return (
     <div className={cn("rounded-lg border p-3 space-y-2", toneClasses[tone])}>
-      <h4 className="text-sm font-semibold">Strategy &amp; prompt</h4>
+      <h4 className="text-h3">Strategy &amp; prompt</h4>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <LangPill label="configured strategy" value={strategy ?? "—"} />
       </div>
@@ -255,7 +255,7 @@ function AudioEnhancementAudit({ cfg }: { cfg: Record<string, unknown> }) {
   return (
     <div className={cn("rounded-lg border p-3 space-y-2", toneClasses[tone])}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-sm font-semibold">Audio enhancement</h4>
+        <h4 className="text-h3">Audio enhancement</h4>
         {softClipPct != null && Number.isFinite(softClipPct) && (
           <SoftClipPill pct={softClipPct} />
         )}

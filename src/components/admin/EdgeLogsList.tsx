@@ -34,8 +34,8 @@ export default function EdgeLogsList({ logs }: { logs: EdgeLog[] }) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">
-          Edge function logs <span className="text-xs font-normal text-muted-foreground">({logs.length})</span>
+        <CardTitle className="text-h3">
+          Edge function logs <span className="text-caption font-normal text-muted-foreground">({logs.length})</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
