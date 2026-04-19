@@ -77,7 +77,7 @@ export default function Login() {
         <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
           <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-            <CardTitle className="text-2xl">{t("login.resetTitle")}</CardTitle>
+            <CardTitle className="text-h1">{t("login.resetTitle")}</CardTitle>
             <CardDescription>
               {resetSent ? t("login.resetDescSent") : t("login.resetDescDefault")}
             </CardDescription>
