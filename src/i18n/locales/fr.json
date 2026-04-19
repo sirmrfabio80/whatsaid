@@ -245,7 +245,10 @@
       "speed": "Vitesse de lecture",
       "test": "Tester la voix",
       "sample": "Voici comment la fonction d'écoute sonnera sur votre appareil.",
-      "invalidValue": "Veuillez choisir une voix et une vitesse valides."
+      "invalidValue": "Veuillez choisir une voix et une vitesse valides.",
+      "matchedVoice": "Voix retenue : {{name}}",
+      "matchedVoiceDefault": "Voix par défaut du navigateur",
+      "matchedVoiceLoading": "Détection des voix disponibles…"
     },
     "security": "Sécurité",
     "changePassword": "Changer le mot de passe",
