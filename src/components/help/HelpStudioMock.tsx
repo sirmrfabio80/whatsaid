@@ -140,9 +140,17 @@ export function HelpStudioMock() {
             {t("help.mock.helpfulQuestion")}
           </span>
           <span className="text-[11px] font-mono tabular-nums text-foreground">
-            <span className="text-primary font-medium">94%</span>
-            {" · "}
-            {t("help.mock.helpfulVotes", { percent: "", count: 312 }).replace(/^%\s·\s/, "")}
+            {t("help.mock.helpfulVotes", { percent: 94, count: 312 })
+              .split(/(\d+%?)/)
+              .map((part, i) =>
+                /^\d+%?$/.test(part) && i === 1 ? (
+                  <span key={i} className="text-primary font-medium">
+                    {part}
+                  </span>
+                ) : (
+                  <span key={i}>{part}</span>
+                )
+              )}
           </span>
         </div>
       </div>
