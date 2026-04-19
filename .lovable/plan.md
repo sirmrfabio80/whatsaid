@@ -1,83 +1,69 @@
 
+The user is clarifying the cap behavior. They want: if audio > 120 min, the user must spend a **second credit** (not be rejected). So the cap isn't a hard rejection — it's a per-credit ceiling.
 
-## Revised plan: Listening preferences (voice + speed)
+Let me re-examine: they're now describing a hybrid — flat 1 credit per file *up to* 120 min, then +1 credit per additional 120-min block. This is a bracket again, but with a 120-min granularity instead of 15-min.
 
-### 1. Migration — strict & non-nullable
+Need to confirm: is there an absolute upper file-length limit at all (e.g. 240 min, 480 min)? And does the existing 100 MB size cap stay?
 
-Add to `public.profiles`:
-- `preferred_voice text NOT NULL DEFAULT 'female' CHECK (preferred_voice IN ('male','female'))`
-- `playback_speed real NOT NULL DEFAULT 1.0 CHECK (playback_speed IN (0.75, 1.0, 1.25, 1.5))`
+I'll revise the plan accordingly and ask one clarifying question on the absolute ceiling.
 
-No RLS changes — verified that existing `profiles` policies allow the user to `SELECT` and `UPDATE` their own row (`auth.uid() = user_id`), and the `profile` query in `Settings.tsx` already does `select("*")` and `update(...)` against `profiles`. New columns ride on those paths automatically.
+## Revised Plan — 1 credit per 120-min block
 
-### 2. Single source of truth for seeding speech preferences
+### New pricing rule
+- **1 credit covers up to 120 minutes** of audio in a single file.
+- Files **longer than 120 min cost additional credits** (1 extra credit per extra 120-min block).
+  - 0–120 min → 1 credit
+  - 120–240 min → 2 credits
+  - 240–360 min → 3 credits
+  - …and so on.
+- Regenerations stay free.
+- 100 MB file-size cap unchanged.
 
-**`src/contexts/AuthContext.tsx`** is the only seeding point:
-- Extend the existing `refreshProfile(uid)` query to also select `preferred_voice, playback_speed`.
-- After setting local profile state, call `setSpeechPreferences({ voice, rate })` from the speech hook module.
-- This effect already runs on user login and on profile refresh — covers session start and any later profile change.
+### Why backend code stays untouched
+`creditsForDuration(duration)` is the single source of truth. Every caller (`Convert.tsx` → `jobs.credits_charged` → `process-job` deduction → `watchdog-stale-jobs` refund) already passes through it. Changing only this function propagates correctly: the atomic `deduct_credits` RPC, refund logic, and admin bypass all keep working.
 
-**No changes to `src/components/JobResults.tsx`.** The Listen feature continues to read from the singleton manager only. No duplicate loaders, no Settings-side seeding (Settings only updates the manager for the test action and saves to DB).
+### Files to change
 
-### 3. Speech hook — preferences + voice picker (`src/hooks/use-speech-synthesis.ts`)
+**1. `src/lib/pricing.ts`** — core rule
+- `creditsForDuration` → `Math.max(1, Math.ceil(durationSeconds / 60 / 120))`.
+- `MAX_DURATION` → raise to the chosen ceiling (see question below) or remove if unlimited within size cap.
 
-Add module-level state:
-```
-let preferences = { voice: 'female' as 'male'|'female', rate: 1.0 as number };
-export function setSpeechPreferences(prefs: Partial<typeof preferences>): void
-```
+**2. `src/components/AudioUploader.tsx`**
+- Replace hardcoded `dur > 3600` with the `MAX_DURATION` import so the cap check is centralised.
+- Update the per-file price preview to reflect multi-credit cost where applicable.
 
-**`pickVoice(lang, gender)` selection order** (clear, deterministic):
-1. **Exact language match** (e.g. `voice.lang === 'en-US'` when requested).
-2. **Same language family / prefix** (`voice.lang.split('-')[0] === lang.split('-')[0]`).
-3. Within the candidate set, prefer `voice.localService === true`.
-4. Within the remaining candidates, apply gender heuristic regex on `voice.name` (female: `samantha|victoria|karen|fiona|moira|tessa|zira|hazel|amelie|amélie|audrey|virginie|alice|carla|federica|paola|female|woman`, male: `daniel|alex|fred|tom|david|mark|thomas|nicolas|sébastien|sebastien|paul|luca|cosimo|diego|male|man`).
-5. **Browser default** (`undefined` → `utt.voice` left unset).
+**3. `src/components/pricing/CreditDurationTable.tsx`**
+- Replace bracket grid with a clear "1 credit = up to 120 min · longer files use additional credits" card (single tile + a one-line note).
 
-> Comment in code: gender matching is best-effort only — browser voice metadata is inconsistent across OS/Chrome/Safari/Firefox, so heuristic mismatches are expected and we fall back gracefully.
+**4. `src/components/pricing/PricingStudioMock.tsx`**
+- Fix subline: "5 audio files · up to 120 min each".
 
-**`voiceschanged` handling — concrete behaviour**:
-- Module init: read `window.speechSynthesis.getVoices()` once into `voicesCache`. If empty, register a one-time `voiceschanged` listener that refills `voicesCache` and removes itself.
-- `pickVoice` always reads the latest `voicesCache`. If still empty when called → return `undefined` (browser default).
-- The Settings **Test voice** button: if `voicesCache` is empty at click time, force a fresh `getVoices()` synchronously, then proceed. No retry timer, no race.
+**5. i18n — `src/i18n/locales/{en,fr,it}.json`**
+- `audioUploader.dropDesc`: "max 60 min" → "max 120 min per credit".
+- `audioUploader.fileTooLong`: rephrase to reflect the absolute ceiling (or remove if no rejection ceiling).
+- `pricing.creditTableTitle/Sub`, `featureOneFile`, `featureOneCreditPerFile`: rewrite to the new 120-min-per-credit framing.
+- `convert.howCreditStep1Desc`: aligned wording.
 
-Apply to utterances inside `manager.play(...)`:
-- `utt.voice = pickVoice(lang, preferences.voice) ?? null`
-- `utt.rate = preferences.rate` (already validated to be one of {0.75, 1.0, 1.25, 1.5}).
+**6. Help/FAQ — `src/content/help/{faq,workflow,troubleshooting}.ts`**
+- Update credit-cost FAQ + max-length lines (3 langs each).
 
-### 4. Settings UI — new "Listening" card (`src/pages/Settings.tsx`)
+**7. `docs/product/capabilities.md`** — CAP-001 + credit-charging capability + audio-limits footer.
 
-Insert a new `Card` between "Preferences" and the password/security cards.
+**8. `docs/ARCHITECTURE.md` §5.2** — replace bracket table with the per-120-min model + show new formula.
 
-- Title: `t('settings.listening.title')`
-- Helper: `t('settings.listening.desc')` ("Voice availability depends on your browser and device. We pick the closest match.")
-- **Voice** — `RadioGroup` with `male` / `female`. Local state seeded from `profile.preferred_voice` (defaults `'female'`).
-- **Speed** — `Select` with options `0.75`, `1.0`, `1.25`, `1.5`. Local state seeded from `profile.playback_speed`.
-- **Test voice** button (`Volume2` icon):
-  1. **Stop any active speech first**: call `speechManager.stop()`.
-  2. Push current local selections to manager via `setSpeechPreferences(...)`.
-  3. `manager.play('settings-test', t('settings.listening.sample'), i18n.language)`.
+**9. Memory**
+- `mem://index.md` Core: "Credit model: 1 credit covers up to 120 min audio; longer files cost +1 credit per extra 120-min block."
+- `mem://features/pricing` §2/§3: same update; mark per-credit cost recomputation as estimate.
 
-**Persistence**:
-- Extend the existing `saveChanges()` in `Settings.tsx` (no new save flow). Include `preferred_voice` and `playback_speed` in the existing `profiles.update({...})` call.
-- **Validate before save**: define `ALLOWED_VOICES = ['male','female'] as const`, `ALLOWED_SPEEDS = [0.75, 1.0, 1.25, 1.5] as const`. Before the update call, assert both values are in their allowed set; on failure surface a toast and abort. This guards both the UI and the DB CHECK constraints.
-- After save success, also call `setSpeechPreferences(...)` so the live JobResults Listen feature picks up the new prefs immediately without page reload.
+### Validation
+- `npm run docs:check:all`.
+- Manual: 80-min file → 1 credit; 130-min file → 2 credits; verify balance drop and refund-on-failure both match.
 
-### 5. i18n — `en.json`, `fr.json`, `it.json`
+### One open question
 
-Under `settings.listening`: `title`, `desc`, `voice`, `voiceMale`, `voiceFemale`, `speed`, `test`, `sample`, `invalidValue` (toast for validation failure).
+**What's the absolute maximum file length you want to accept?**
+- (a) **240 min (2 credits max)** — keeps things contained, simplest UX.
+- (b) **480 min (4 credits max)** — fits long workshops/lectures.
+- (c) **No upper limit beyond the 100 MB size cap** — file size will naturally cap practical duration.
 
-### Files changed
-
-| File | Change |
-|---|---|
-| `supabase/migrations/<new>.sql` | Strict NOT NULL + CHECK columns on `profiles` |
-| `src/hooks/use-speech-synthesis.ts` | `preferences` state, `setSpeechPreferences`, `pickVoice` (5-step order), `voiceschanged` cache, apply `voice`/`rate` in `play()` |
-| `src/contexts/AuthContext.tsx` | Extend `refreshProfile` SELECT + call `setSpeechPreferences` after load (single seeding point) |
-| `src/pages/Settings.tsx` | Add Listening card; validate-before-save; extend existing `saveChanges` `profiles.update`; Test button stops first, then plays |
-| `src/i18n/locales/{en,fr,it}.json` | New `settings.listening.*` keys |
-
-### Out of scope (unchanged)
-- `src/components/JobResults.tsx` (no edits)
-- Any other Settings sections, billing, sharing, exports, edge functions, transcript pipeline
-
+I'll proceed with whichever you pick (or default to **(b) 480 min** if you don't specify, since it's the most common "long meeting / half-day workshop" ceiling and still bounded).
