@@ -144,9 +144,14 @@ export default function Index() {
       {/* Trust strip */}
       <section ref={trust.ref} className="border-t border-border bg-muted/30">
         <div className={`container mx-auto px-4 py-8 transition-all duration-700 ${trust.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-          <div className="flex items-start sm:items-center justify-center gap-3 text-sm text-muted-foreground px-2 sm:px-0">
-            <Shield className="w-5 h-5 sm:w-4 sm:h-4 text-primary shrink-0 mt-0.5 sm:mt-0" />
-            <span>{t("home.trustStrip")}</span>
+          <div className="flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground px-2 sm:px-0">
+            <div className="flex items-start sm:items-center justify-center gap-3">
+              <Shield className="w-5 h-5 sm:w-4 sm:h-4 text-primary shrink-0 mt-0.5 sm:mt-0" />
+              <span>{t("home.trustStrip")}</span>
+            </div>
+            <Link to="/help" className="text-primary hover:underline text-xs sm:text-sm">
+              {t("home.helpLink")} →
+            </Link>
           </div>
         </div>
       </section>
