@@ -409,15 +409,16 @@ class Pen {
       x += this.pdf.getTextWidth(timestamp) + 2;
     }
 
-    // Speaker name (bold)
-    this.setF(true, false, F.transcript);
+    // Speaker name (bold) — sans for clear chrome separation
+    this.setF(true, false, F.transcript, false);
     this.setC(C.heading);
     const label = `${speakerName}: `;
     this.pdf.text(label, x, this.baseline(F.transcript));
     x += this.pdf.getTextWidth(label);
 
-    // Body text — first line after prefix, subsequent lines wrap at ML+5
-    this.setF(false, false, F.transcript);
+    // Body text — first line after prefix, subsequent lines wrap at ML+5.
+    // Use serif for the actual transcript prose to match in-app reading.
+    this.setF(false, false, F.transcript, true);
     this.setC(C.body);
 
     const firstMax = ML + CW - x;
@@ -427,7 +428,7 @@ class Pen {
     // If prefix is too wide, start text on next line
     if (firstMax < 15) {
       this.y += lineH;
-      this.plain(text, F.transcript, C.body, false, false, wrapX, wrapMax);
+      this.plain(text, F.transcript, C.body, false, false, wrapX, wrapMax, LH, true);
       this.y += 0.5;
       return;
     }
@@ -482,9 +483,9 @@ class Pen {
     this.y += 0.5;
   }
 
-  /** Render a plain transcript line (no speaker match) */
+  /** Render a plain transcript line (no speaker match) — serif body */
   transcriptLine(text: string) {
-    this.plain(text, F.transcript, C.body, false, false, ML + 5, CW - 5);
+    this.plain(text, F.transcript, C.body, false, false, ML + 5, CW - 5, LH, true);
   }
 }
 
