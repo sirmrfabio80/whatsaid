@@ -67,6 +67,25 @@ export default function MobileMenu({ user, isAdmin, signOut, onClose }: MobileMe
             </Link>
           )}
           <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "370ms", animationFillMode: "forwards" }} />
+          <div className="px-1 opacity-0 animate-fade-in" style={{ animationDelay: "385ms", animationFillMode: "forwards" }}>
+            <div className="text-caption text-muted-foreground mb-1.5 px-1">{t("theme.label", "Theme")}</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {themeOptions.map(({ value, icon: Icon, label }) => (
+                <Button
+                  key={value}
+                  variant={theme === value ? "default" : "ghost"}
+                  size="sm"
+                  className={cn("rounded-lg h-10 flex-col gap-0.5 text-[11px]", theme === value && "ring-2 ring-primary/30")}
+                  onClick={() => setTheme(value)}
+                  aria-pressed={theme === value}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "395ms", animationFillMode: "forwards" }} />
           <div className="opacity-0 animate-fade-in" style={{ animationDelay: "400ms", animationFillMode: "forwards" }}>
             <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3" onClick={() => { signOut(); onClose(); }}>
               <LogOut className="w-5 h-5" />{t("common.signOut")}
