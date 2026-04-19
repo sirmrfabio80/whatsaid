@@ -358,12 +358,24 @@ src/
 - `src/content/help/{faq,features,workflow,troubleshooting}.ts` are the
   runtime sources for the Help page (typed `Localized<T>` records).
 - `docs/product/capabilities.md` is the canonical capability registry
-  (`CAP-001 …`). Two scripts enforce drift safety:
-  - `scripts/check-capabilities-sources.mjs` — every `**Source files:**`
-    path in the doc must exist on disk.
-  - `scripts/check-help-faq-coverage.mjs` — every public capability
-    with FAQ seeds must be referenced by at least one FAQ item's
-    `caps:[]`, and every referenced ID must exist.
+  (`CAP-001 …`).
+
+### 7.6 Drift guards
+
+Three Node scripts (no extra deps) act as guard rails between the
+source of truth (code, capability registry) and the docs that describe
+them. Run them all locally with **`npm run docs:check:all`**; CI uses
+the same entrypoint.
+
+| Script | npm alias | Protects against |
+|---|---|---|
+| `scripts/check-capabilities-sources.mjs` | `docs:check` | Stale `**Source files:**` paths in `docs/product/capabilities.md` (file renamed/deleted but doc not updated). |
+| `scripts/check-help-faq-coverage.mjs` | `docs:check:faq` | Public capability with non-empty `FAQ seeds` that has no matching entry in `src/content/help/faq.ts` (`caps:[]`), or an FAQ entry referencing a non-existent capability ID. |
+| `scripts/check-design-tokens-drift.mjs` | `docs:check:tokens` | Color tokens (`:root` / `.dark` HSL triplets in `src/index.css`), preferred font families, and the type scale (`tailwind.config.ts → fontSize` — name + size + lineHeight + non-default fontWeight) drifting from §4.1 / §4.2 of this document. |
+
+When a guard fails, the fix is almost always **update the doc** (the
+code is the source of truth). Only revert the source change if the
+drift was unintentional.
 
 ---
 
