@@ -868,7 +868,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
               )}
               {/* Participants panel */}
               {transcript && !regeneratingLang && (
-                <div className="px-5 sm:px-6 pt-5 sm:pt-6">
+                <div className="px-5 sm:px-6 pt-3 sm:pt-4">
                   <ParticipantsPanel
                     segments={parseSegments(activeTranscriptContent)}
                     speakerNames={speakerNames}
