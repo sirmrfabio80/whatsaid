@@ -178,6 +178,8 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
           const vMap: Record<string, string> = {};
           for (const v of variantRows) vMap[v.job_output_id] = v.content;
           setVariants(vMap);
+        } else {
+          setVariants({});
         }
       } else {
         setVariants({});
@@ -186,9 +188,29 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       onMetaLoaded?.(m as JobMeta);
     }
     setLoading(false);
-  }, [jobId]);
+  }, [jobId, onMetaLoaded]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`job-results-${jobId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_outputs", filter: `job_id=eq.${jobId}` },
+        () => { void fetchData(); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${jobId}` },
+        () => { void fetchData(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [jobId, fetchData]);
 
   // Page-level speech cleanup: stop any active playback when the JobResults
   // page unmounts (route change). Individual ListenButton unmounts MUST NOT
