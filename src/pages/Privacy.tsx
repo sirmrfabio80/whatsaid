@@ -12,6 +12,7 @@ export default function Privacy() {
     description:
       "How WhatSaid handles your data: audio files are deleted immediately after processing. Read our full privacy policy.",
     canonical: "https://whatsaid.app/privacy",
+    ogImage: "https://whatsaid.app/og-privacy.png",
   });
 
   const sections = [
