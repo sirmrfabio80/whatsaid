@@ -144,6 +144,10 @@ export default {
           "0%": { width: "0%" },
           "100%": { width: "92%" },
         },
+        "hero-mock-rise": {
+          "0%": { opacity: "0", transform: "translateY(16px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -152,6 +156,7 @@ export default {
         "slide-down": "slide-down 0.25s ease-out",
         "waveform-scroll": "waveform-scroll 18s linear infinite",
         "progress-fill-92": "progress-fill-92 1.4s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "hero-mock-rise": "hero-mock-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },
