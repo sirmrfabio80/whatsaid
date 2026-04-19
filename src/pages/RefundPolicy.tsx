@@ -15,36 +15,36 @@ export default function RefundPolicy() {
           </Button>
 
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">{t("refund.title")}</h1>
-          <p className="text-secondary text-muted-foreground mb-8">{t("refund.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
+          <p className="text-body-sm text-muted-foreground mb-8">{t("refund.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
             <section>
               <h2 className="text-h2 mb-2">{t("refund.s1Title")}</h2>
-              <p className="text-secondary text-muted-foreground leading-relaxed">{t("refund.s1Body")}</p>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">{t("refund.s1Body")}</p>
             </section>
             <section>
               <h2 className="text-h2 mb-2">{t("refund.s2Title")}</h2>
-              <p className="text-secondary text-muted-foreground leading-relaxed">{t("refund.s2Body")}</p>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">{t("refund.s2Body")}</p>
             </section>
             <section>
               <h2 className="text-h2 mb-2">{t("refund.s3Title")}</h2>
-              <p className="text-secondary text-muted-foreground leading-relaxed">{t("refund.s3Body")}</p>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">{t("refund.s3Body")}</p>
             </section>
             <section>
               <h2 className="text-h2 mb-2">{t("refund.s4Title")}</h2>
-              <p className="text-secondary text-muted-foreground leading-relaxed">{t("refund.s4Body")}</p>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">{t("refund.s4Body")}</p>
             </section>
             <section>
               <h2 className="text-h2 mb-2">{t("refund.s5Title")}</h2>
-              <p className="text-secondary text-muted-foreground leading-relaxed">{t("refund.s5Body")}</p>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">{t("refund.s5Body")}</p>
             </section>
             <section>
               <h2 className="text-h2 mb-2">{t("refund.s6Title")}</h2>
-              <p className="text-secondary text-muted-foreground leading-relaxed">{t("refund.s6Body")}</p>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">{t("refund.s6Body")}</p>
             </section>
             <section>
               <h2 className="text-h2 mb-2">{t("refund.s7Title")}</h2>
-              <p className="text-secondary text-muted-foreground leading-relaxed">{t("refund.s7Body")}</p>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">{t("refund.s7Body")}</p>
             </section>
           </div>
         </div>

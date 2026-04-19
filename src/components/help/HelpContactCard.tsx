@@ -21,7 +21,7 @@ export default function HelpContactCard() {
           <h2 className="text-h2 sm:text-[1.25rem] mb-2">
             {t("help.contact.title")}
           </h2>
-          <p className="text-secondary text-muted-foreground leading-relaxed mb-5 max-w-md mx-auto">
+          <p className="text-body-sm text-muted-foreground leading-relaxed mb-5 max-w-md mx-auto">
             {t("help.contact.body")}
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">

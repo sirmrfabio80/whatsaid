@@ -28,7 +28,7 @@ export default function HelpWorkflow() {
         <h2 className="text-h1 sm:text-[1.5rem] mb-1">
           {t("help.workflow.title")}
         </h2>
-        <p className="text-secondary text-muted-foreground">{t("help.workflow.lead")}</p>
+        <p className="text-body-sm text-muted-foreground">{t("help.workflow.lead")}</p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -45,13 +45,13 @@ export default function HelpWorkflow() {
                     <h3 className="text-h3 mb-1.5 leading-snug">
                       {pickLocale(step.title, i18n.language)}
                     </h3>
-                    <p className="text-secondary text-muted-foreground leading-relaxed">
+                    <p className="text-body-sm text-muted-foreground leading-relaxed">
                       {pickLocale(step.body, i18n.language)}
                     </p>
                     {step.cta && (
                       <Link
                         to={step.cta.href}
-                        className="inline-flex items-center gap-1 text-secondary text-primary hover:underline mt-3"
+                        className="inline-flex items-center gap-1 text-body-sm text-primary hover:underline mt-3"
                       >
                         {pickLocale(step.cta.label, i18n.language)}
                         <ArrowRight className="w-3.5 h-3.5" />

@@ -134,7 +134,7 @@ function PricingCard({
       )}
       <CardContent className="p-6 sm:p-8 flex flex-col h-full">
         <h3 className="text-h2 mb-1">{t(product.title)}</h3>
-        <p className="text-secondary text-muted-foreground mb-5">
+        <p className="text-body-sm text-muted-foreground mb-5">
           {t(product.subtitle)}
         </p>
 
@@ -151,7 +151,7 @@ function PricingCard({
 
         <ul className="space-y-2.5 mt-6 mb-8 flex-1">
           {product.features.map((f) => (
-            <li key={f} className="flex items-start gap-2 text-secondary">
+            <li key={f} className="flex items-start gap-2 text-body-sm">
               <Check aria-hidden="true" className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <span className="text-muted-foreground">{t(f)}</span>
             </li>
@@ -329,7 +329,7 @@ export default function Pricing() {
                     .getElementById("credit-table")
                     ?.scrollIntoView({ behavior: "smooth" })
                 }
-                className="text-secondary font-medium text-foreground hover:text-primary inline-flex items-center gap-1.5 transition-colors"
+                className="text-body-sm font-medium text-foreground hover:text-primary inline-flex items-center gap-1.5 transition-colors"
               >
                 {t("pricing.heroCtaHowCredits")}
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -394,7 +394,7 @@ export default function Pricing() {
           }`}
         >
           <h2 className="text-h1 sm:text-[1.875rem] mb-3">{t("pricing.cardsTitle")}</h2>
-          <p className="text-secondary text-muted-foreground max-w-md mx-auto mb-5">
+          <p className="text-body-sm text-muted-foreground max-w-md mx-auto mb-5">
             {t("pricing.cardsSubtitle")}
           </p>
           <CurrencySelector value={displayCurrency} onChange={(c) => setSelectedCurrency(c)} />
@@ -443,7 +443,7 @@ export default function Pricing() {
         </p>
 
         <div className="max-w-lg mx-auto text-center space-y-1 mt-8">
-          <p className="text-secondary text-muted-foreground">
+          <p className="text-body-sm text-muted-foreground">
             {t("pricing.supportLine")}{" "}
             <a href="mailto:support@whatsaid.app" className="text-primary hover:underline">support@whatsaid.app</a>
           </p>
@@ -471,7 +471,7 @@ export default function Pricing() {
           <p className="font-serif text-body text-muted-foreground leading-relaxed mb-3 max-w-2xl mx-auto">
             {t("pricing.trustBody")}
           </p>
-          <p className="text-secondary text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-body-sm text-muted-foreground max-w-2xl mx-auto">
             {t("pricing.trustReason")}
           </p>
         </div>
@@ -485,7 +485,7 @@ export default function Pricing() {
           }`}
         >
           <h2 className="text-h1 sm:text-[1.875rem] mb-3">{t("pricing.howCreditTitle")}</h2>
-          <p className="text-secondary text-muted-foreground max-w-md mx-auto">
+          <p className="text-body-sm text-muted-foreground max-w-md mx-auto">
             {t("pricing.howCreditSub")}
           </p>
         </div>
@@ -514,7 +514,7 @@ export default function Pricing() {
                   <Icon className="w-4 h-4" />
                 </div>
                 <h3 className="text-h3 mb-2">{t(title)}</h3>
-                <p className="text-secondary text-muted-foreground leading-relaxed max-w-xs mx-auto">
+                <p className="text-body-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
                   {t(desc)}
                 </p>
               </div>
@@ -536,7 +536,7 @@ export default function Pricing() {
             </p>
             <a
               href="/help#faq-pricing-credits"
-              className="text-primary hover:underline text-secondary font-medium"
+              className="text-primary hover:underline text-body-sm font-medium"
             >
               {t("pricing.moreFaqLink")}
             </a>
@@ -555,7 +555,7 @@ export default function Pricing() {
                     value={`faq-${i}`}
                     className="border-b border-border/60 last:border-b-0 px-0"
                   >
-                    <AccordionTrigger className="text-secondary font-medium py-4 hover:no-underline text-left">
+                    <AccordionTrigger className="text-body-sm font-medium py-4 hover:no-underline text-left">
                       {t(q)}
                     </AccordionTrigger>
                     <AccordionContent className="font-serif text-body text-muted-foreground pb-4 leading-relaxed">

@@ -49,30 +49,30 @@ export default function Privacy() {
           </Button>
 
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">{t("privacy.title")}</h1>
-          <p className="text-secondary text-muted-foreground mb-8">{t("privacy.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
+          <p className="text-body-sm text-muted-foreground mb-8">{t("privacy.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
             {sections.map((s, i) => (
               <section key={i}>
                 <h2 className="text-h2 mb-2">{t(s.title)}</h2>
                 {s.type === "p" && (
-                  <p className="text-secondary text-muted-foreground leading-relaxed">{t(s.content!)}</p>
+                  <p className="text-body-sm text-muted-foreground leading-relaxed">{t(s.content!)}</p>
                 )}
                 {s.type === "ul" && (
-                  <ul className="text-secondary text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                  <ul className="text-body-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
                     {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
                   </ul>
                 )}
                 {s.type === "multi" && s.paragraphs!.map((p) => (
-                  <p key={p} className="text-secondary text-muted-foreground leading-relaxed">{t(p)}</p>
+                  <p key={p} className="text-body-sm text-muted-foreground leading-relaxed">{t(p)}</p>
                 ))}
                 {s.type === "intro-ul" && (
                   <>
-                    <p className="text-secondary text-muted-foreground leading-relaxed">{t(s.intro!)}</p>
-                    <ul className="text-secondary text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                    <p className="text-body-sm text-muted-foreground leading-relaxed">{t(s.intro!)}</p>
+                    <ul className="text-body-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
                       {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
                     </ul>
-                    {s.outro && <p className="text-secondary text-muted-foreground leading-relaxed mt-2">{t(s.outro)}</p>}
+                    {s.outro && <p className="text-body-sm text-muted-foreground leading-relaxed mt-2">{t(s.outro)}</p>}
                   </>
                 )}
               </section>

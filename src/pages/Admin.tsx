@@ -14,7 +14,7 @@ export default function Admin() {
           <h1 className="text-h1 tracking-tight">
             Admin
           </h1>
-          <p className="text-secondary text-muted-foreground mt-1">
+          <p className="text-body-sm text-muted-foreground mt-1">
             Internal controls. Visible only to admins.
           </p>
         </header>

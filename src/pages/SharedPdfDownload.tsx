@@ -105,7 +105,7 @@ export default function SharedPdfDownload() {
           {status === "loading" && (
             <>
               <InlineSpinner size="lg" tone="primary" className="mx-auto" />
-              <p className="text-secondary text-muted-foreground">Checking secure download access…</p>
+              <p className="text-body-sm text-muted-foreground">Checking secure download access…</p>
             </>
           )}
 
@@ -116,7 +116,7 @@ export default function SharedPdfDownload() {
               </div>
               <div>
                 <h1 className="text-h1">Sign in to download the PDF</h1>
-                <p className="text-secondary text-muted-foreground mt-1">
+                <p className="text-body-sm text-muted-foreground mt-1">
                   For security, shared PDFs are only available to logged-in WhatSaid accounts.
                 </p>
               </div>
@@ -134,7 +134,7 @@ export default function SharedPdfDownload() {
           {status === "downloading" && (
             <>
               <InlineSpinner size="lg" tone="primary" className="mx-auto" />
-              <p className="text-secondary text-muted-foreground">Preparing your PDF…</p>
+              <p className="text-body-sm text-muted-foreground">Preparing your PDF…</p>
             </>
           )}
 
@@ -143,7 +143,7 @@ export default function SharedPdfDownload() {
               <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
               <div>
                 <h1 className="text-h1">Your download has started</h1>
-                <p className="text-secondary text-muted-foreground mt-1">If it did not start automatically, use the button below.</p>
+                <p className="text-body-sm text-muted-foreground mt-1">If it did not start automatically, use the button below.</p>
               </div>
               <Button onClick={() => void handleDownload()} className="w-full rounded-xl gap-2">
                 <Download className="w-4 h-4" />
