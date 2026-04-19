@@ -153,6 +153,7 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-ring": "pulse-ring 1.5s ease-out infinite",
+        "pulse-ring-slow": "pulse-ring 2s ease-out infinite",
         "slide-down": "slide-down 0.25s ease-out",
         "waveform-scroll": "waveform-scroll 18s linear infinite",
         "progress-fill-92": "progress-fill-92 1.4s cubic-bezier(0.22, 1, 0.36, 1) both",
