@@ -199,7 +199,7 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
               {section.icon}
               <h3
                 id={`summary-section-${i}`}
-                className="font-serif text-[17px] sm:text-[18px] font-semibold tracking-tight"
+                className="font-serif text-base sm:text-[17px] font-semibold tracking-tight"
               >
                 {section.heading}
               </h3>
