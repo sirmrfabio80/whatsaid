@@ -146,7 +146,7 @@ export function SectionBody({ body }: { body: string }) {
           {bullets.map((b, i) => {
             const { text, isHeading } = stripHeading(b);
             return (
-              <li key={i} className={`text-base sm:text-[17px] leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+              <li key={i} className={`text-base leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
                 {renderLine(text)}
               </li>
             );
