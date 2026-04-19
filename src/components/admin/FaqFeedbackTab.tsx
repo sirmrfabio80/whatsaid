@@ -186,7 +186,7 @@ export default function FaqFeedbackTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Per-answer breakdown</CardTitle>
+          <CardTitle className="text-h3">Per-answer breakdown</CardTitle>
           <CardDescription>
             Sorted by helpful ratio ascending — the worst-performing answers appear first.
           </CardDescription>

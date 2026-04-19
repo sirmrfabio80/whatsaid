@@ -11,10 +11,10 @@ export default function Admin() {
     <AdminGuard>
       <main className="container mx-auto px-4 py-10 max-w-6xl">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-h1 tracking-tight">
             Admin
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-secondary text-muted-foreground mt-1">
             Internal controls. Visible only to admins.
           </p>
         </header>

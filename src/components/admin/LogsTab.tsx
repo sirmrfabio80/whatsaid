@@ -196,7 +196,7 @@ export default function LogsTab() {
       {/* AAI request */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">AssemblyAI request payload</CardTitle>
+          <CardTitle className="text-h3">AssemblyAI request payload</CardTitle>
         </CardHeader>
         <CardContent>
           <JsonBlock
@@ -209,7 +209,7 @@ export default function LogsTab() {
       {/* AAI response */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">AssemblyAI raw response</CardTitle>
+          <CardTitle className="text-h3">AssemblyAI raw response</CardTitle>
         </CardHeader>
         <CardContent>
           <JsonBlock
@@ -224,16 +224,16 @@ export default function LogsTab() {
       {/* Outputs list */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">
+          <CardTitle className="text-h3">
             Post-processing outputs{" "}
-            <span className="text-xs font-normal text-muted-foreground">
+            <span className="text-caption font-normal text-muted-foreground">
               ({data.outputs.length})
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.outputs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No outputs yet.</p>
+            <p className="text-secondary text-muted-foreground">No outputs yet.</p>
           ) : (
             data.outputs.map((o) => (
               <details
