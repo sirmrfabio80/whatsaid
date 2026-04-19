@@ -436,13 +436,13 @@ export default function Convert() {
         <div className="max-w-2xl mx-auto">
           {creditsAdded !== null && (
             <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 animate-enter">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <div className="flex items-center gap-2 text-secondary font-medium text-foreground">
                 <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
                 <span>{t("pricing.creditsAddedBanner", { count: creditsAdded })}</span>
               </div>
               <button
                 onClick={() => setCreditsAdded(null)}
-                className="text-muted-foreground hover:text-foreground text-xs shrink-0"
+                className="text-muted-foreground hover:text-foreground text-caption shrink-0"
                 aria-label={t("common.cancel")}
               >
                 ✕
