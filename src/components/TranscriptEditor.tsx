@@ -647,7 +647,7 @@ export default function TranscriptEditor({
 
       {/* Transcript segments */}
       <div className="p-4 sm:p-5">
-        <div className="space-y-2">
+        <div className="mx-auto max-w-[68ch] space-y-3 sm:space-y-4">
           {segments.map((seg, i) => {
             const isActive = activeIndex === i;
             const isEmpty = !seg.text.trim() && !seg.speaker;

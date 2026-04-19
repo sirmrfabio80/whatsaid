@@ -136,13 +136,13 @@ export function SectionBody({ body }: { body: string }) {
     }
 
     return (
-      <div className="space-y-2 font-serif">
+      <div className="space-y-3 font-serif">
         {proseLines.length > 0 && (
           <p className="text-base sm:text-[17px] leading-[1.7] text-foreground/90">
             {renderLine(proseLines.join(" "))}
           </p>
         )}
-        <ul className="space-y-2 list-disc list-outside pl-4 marker:text-primary/40">
+        <ul className="space-y-2.5 list-disc list-outside pl-4 marker:text-primary/40">
           {bullets.map((b, i) => {
             const { text, isHeading } = stripHeading(b);
             return (
@@ -157,7 +157,7 @@ export function SectionBody({ body }: { body: string }) {
   }
 
   return (
-    <div className="space-y-2 font-serif">
+    <div className="space-y-3 font-serif">
       {lines.map((line, i) => {
         const { text, isHeading } = stripHeading(line);
         return (
@@ -187,15 +187,15 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
   }
 
   return (
-    <div className="space-y-4" role="region" aria-label="Summary sections">
+    <div className="space-y-5 sm:space-y-6" role="region" aria-label="Summary sections">
       {sections.map((section, i) => (
         <section
           key={i}
           aria-labelledby={section.heading ? `summary-section-${i}` : undefined}
-          className="rounded-xl bg-muted/40 p-3 sm:p-4"
+          className="rounded-xl bg-muted/40 p-4 sm:p-5"
         >
           {section.heading && (
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               {section.icon}
               <h3
                 id={`summary-section-${i}`}
