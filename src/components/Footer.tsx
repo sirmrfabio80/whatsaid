@@ -46,6 +46,11 @@ export default function Footer() {
             <h4 className="font-heading font-semibold text-sm mb-3">{t("footer.support")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
+                <Link to="/help" className="hover:text-foreground transition-colors">
+                  {t("footer.helpAndFaq")}
+                </Link>
+              </li>
+              <li>
                 <a href="mailto:support@whatsaid.app" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
                   <Mail className="w-3.5 h-3.5" />
                   support@whatsaid.app
