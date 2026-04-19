@@ -136,13 +136,13 @@ export function SectionBody({ body }: { body: string }) {
     }
 
     return (
-      <div className="space-y-2 font-serif">
+      <div className="space-y-3 font-serif">
         {proseLines.length > 0 && (
           <p className="text-base sm:text-[17px] leading-[1.7] text-foreground/90">
             {renderLine(proseLines.join(" "))}
           </p>
         )}
-        <ul className="space-y-2 list-disc list-outside pl-4 marker:text-primary/40">
+        <ul className="space-y-2.5 list-disc list-outside pl-4 marker:text-primary/40">
           {bullets.map((b, i) => {
             const { text, isHeading } = stripHeading(b);
             return (
