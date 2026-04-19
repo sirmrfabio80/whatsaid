@@ -932,7 +932,7 @@ export default function TranscriptEditor({
                   }}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[15px] leading-[1.7] flex-1">
+                    <p className="font-serif text-base sm:text-[17px] leading-[1.75] flex-1">
                       {searchQuery.trim()
                         ? renderHighlighted(
                             displayedText,
