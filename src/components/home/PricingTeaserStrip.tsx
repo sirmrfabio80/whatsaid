@@ -29,7 +29,7 @@ export function PricingTeaserStrip() {
           <h2 className="text-h1 sm:text-[1.875rem] mb-3">
             {t("home.pricingTeaserTitleNew")}
           </h2>
-          <p className="text-secondary text-muted-foreground max-w-md mx-auto">
+          <p className="text-[13px] leading-[1.5] text-muted-foreground max-w-md mx-auto">
             {t("home.pricingTeaserSubNew")}
           </p>
         </div>

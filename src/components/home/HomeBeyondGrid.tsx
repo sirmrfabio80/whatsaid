@@ -9,7 +9,7 @@ export function HomeBeyondGrid() {
       <div className="container mx-auto px-4 py-16 sm:py-20">
         <div className="max-w-2xl mx-auto text-center mb-10">
           <h2 className="text-h1 sm:text-[1.5rem] mb-3">{t("home.beyondTitle")}</h2>
-          <p className="text-secondary text-muted-foreground">
+          <p className="text-[13px] leading-[1.5] text-muted-foreground">
             {t("home.beyondDesc")}
           </p>
         </div>
@@ -20,7 +20,7 @@ export function HomeBeyondGrid() {
           <div className="lg:col-span-2 lg:row-span-2 rounded-2xl border border-border/60 bg-card p-6 sm:p-7 hover:border-primary/30 transition-colors flex flex-col">
             <Pencil aria-hidden="true" className="w-5 h-5 text-primary mb-3" />
             <h3 className="text-h3 mb-1.5">{t("home.beyondEditTitle")}</h3>
-            <p className="text-secondary text-muted-foreground leading-relaxed mb-5">
+            <p className="text-[13px] leading-[1.5] text-muted-foreground leading-relaxed mb-5">
               {t("home.beyondEditDesc")}
             </p>
 
@@ -46,7 +46,7 @@ export function HomeBeyondGrid() {
           <div className="rounded-2xl border border-border/60 bg-card p-5 hover:border-primary/30 transition-colors">
             <Search aria-hidden="true" className="w-5 h-5 text-primary mb-3" />
             <h3 className="text-h3 mb-1.5">{t("home.beyondSearchTitle")}</h3>
-            <p className="text-secondary text-muted-foreground leading-relaxed mb-4">
+            <p className="text-[13px] leading-[1.5] text-muted-foreground leading-relaxed mb-4">
               {t("home.beyondSearchDesc")}
             </p>
             <div aria-hidden="true" className="space-y-2">
@@ -69,7 +69,7 @@ export function HomeBeyondGrid() {
           <div className="rounded-2xl border border-border/60 bg-card p-5 hover:border-primary/30 transition-colors">
             <Share2 aria-hidden="true" className="w-5 h-5 text-primary mb-3" />
             <h3 className="text-h3 mb-1.5">{t("home.beyondShareTitle")}</h3>
-            <p className="text-secondary text-muted-foreground leading-relaxed mb-4">
+            <p className="text-[13px] leading-[1.5] text-muted-foreground leading-relaxed mb-4">
               {t("home.beyondShareDesc")}
             </p>
             <div aria-hidden="true" className="flex items-center gap-2">
@@ -90,7 +90,7 @@ export function HomeBeyondGrid() {
               <div className="flex-1 min-w-0">
                 <Download aria-hidden="true" className="w-5 h-5 text-primary mb-3" />
                 <h3 className="text-h3 mb-1.5">{t("home.beyondExportTitle")}</h3>
-                <p className="text-secondary text-muted-foreground leading-relaxed">
+                <p className="text-[13px] leading-[1.5] text-muted-foreground leading-relaxed">
                   {t("home.beyondExportDesc")}
                 </p>
               </div>
