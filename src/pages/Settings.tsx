@@ -184,7 +184,12 @@ export default function Settings() {
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-2xl mx-auto space-y-6">
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold">{t("settings.title")}</h1>
+          <div className="flex items-baseline justify-between gap-4 flex-wrap">
+            <h1 className="font-heading text-2xl sm:text-3xl font-bold">{t("settings.title")}</h1>
+            <a href="/help#account" className="text-sm text-primary hover:underline whitespace-nowrap">
+              {t("settings.helpLink")}
+            </a>
+          </div>
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
