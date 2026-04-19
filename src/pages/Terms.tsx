@@ -38,6 +38,7 @@ export default function Terms() {
     description:
       "Terms of service for WhatSaid: account use, credits, payments, and acceptable use policy.",
     canonical: "https://whatsaid.app/terms",
+    ogImage: "https://whatsaid.app/og-terms.png",
   });
 
   const sections = [

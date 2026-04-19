@@ -19,6 +19,7 @@ export default function Signup() {
     description:
       "Create a WhatSaid account to transcribe audio with speaker labels, summaries, and AI Q&A. No subscription — pay-as-you-go credits.",
     canonical: "https://whatsaid.app/signup",
+    ogImage: "https://whatsaid.app/og-signup.png",
   });
 
   const [email, setEmail] = useState("");
