@@ -157,6 +157,39 @@ class Pen {
     }
   }
 
+  /**
+   * Force a page break if `need` mm cannot fit in the remaining page space.
+   * Same logic as pageBreak but named to make "keep-with-next" intent explicit
+   * at call sites (see renderMarkdown / sectionHeading).
+   */
+  pageBreakHard(need: number) {
+    if (this.y + need > MAX_Y) {
+      this.pdf.addPage();
+      this.y = MT;
+    }
+  }
+
+  /**
+   * Measure the rendered height (mm) of a single body/bullet/plain markdown line
+   * using the same wrapping path as plain()/rich(). Pure measurement — no draw,
+   * no y mutation, no page break.
+   */
+  measureLine(line: string): number {
+    const trimmed = line.trimEnd();
+    if (trimmed.trim() === "") return 2; // gap()
+    const isBullet = /^\s*[-*]\s+/.test(trimmed);
+    const text = isBullet ? trimmed.replace(/^\s*[-*]\s+/, "") : trimmed;
+    // Strip inline markdown markers for width measurement (close enough; bold
+    // is slightly wider but the 2-line lookahead is a heuristic, not exact).
+    const plainText = text.replace(/\*+/g, "");
+    const fontSize = isBullet ? F.bullet : F.body;
+    const maxW = isBullet ? CW - 7 : CW;
+    const lineH = ptMm(fontSize) * LH;
+    this.setF(false, false, fontSize);
+    const wrapped: string[] = this.pdf.splitTextToSize(plainText, maxW);
+    return Math.max(1, wrapped.length) * lineH;
+  }
+
   newPage() {
     if (this.y > MT + 1) {
       this.pdf.addPage();
