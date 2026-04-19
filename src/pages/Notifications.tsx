@@ -34,14 +34,14 @@ export default function Notifications() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-lg font-semibold">{t("notifications.title")}</h1>
+            <h1 className="text-h2">{t("notifications.title")}</h1>
           </div>
           <div className="flex items-center gap-1">
             {unreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs h-9 px-3 text-muted-foreground"
+                className="text-caption h-9 px-3 text-muted-foreground"
                 onClick={() => markAllRead()}
               >
                 {t("notifications.markAllRead")}
