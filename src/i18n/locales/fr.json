@@ -248,7 +248,8 @@
       "invalidValue": "Veuillez choisir une voix et une vitesse valides.",
       "matchedVoice": "Voix retenue : {{name}}",
       "matchedVoiceDefault": "Voix par défaut du navigateur",
-      "matchedVoiceLoading": "Détection des voix disponibles…"
+      "matchedVoiceLoading": "Détection des voix disponibles…",
+      "learnMore": "En savoir plus"
     },
     "security": "Sécurité",
     "changePassword": "Changer le mot de passe",
