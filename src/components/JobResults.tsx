@@ -713,9 +713,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                 </div>
               )}
               <div className="p-5 sm:p-6">
-                {regeneratingLang ? <InlineSpinner layout="block" label={t("jobResults.translatingContent")} />
-                  : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
-                  : <p className="text-sm text-muted-foreground">{t("jobResults.noSummary")}</p>}
+                <div className="mx-auto max-w-[68ch]">
+                  {regeneratingLang ? <InlineSpinner layout="block" label={t("jobResults.translatingContent")} />
+                    : summary ? <StructuredSummary content={applySpeakerNames(activeSummaryContent ?? "", speakerNames)} />
+                    : <p className="text-sm text-muted-foreground">{t("jobResults.noSummary")}</p>}
+                </div>
               </div>
             </CardContent>
           </Card>
