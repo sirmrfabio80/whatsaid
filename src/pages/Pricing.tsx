@@ -291,49 +291,66 @@ export default function Pricing() {
         </div>
       )}
 
-      {/* 1 — Hero */}
+      {/* 1 — Hero — Studio split layout, mirrors homepage hero */}
       <section ref={heroReveal.ref} className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent pointer-events-none" />
+        {/* Layered ambient gradients (lg only) — primary top-right + accent bottom-left */}
         <div
           aria-hidden="true"
-          className="hidden lg:block absolute top-16 right-[-4rem] w-[20rem] h-[20rem] rounded-full bg-primary/8 blur-3xl pointer-events-none"
+          className="hidden lg:block absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(60rem 32rem at 88% 8%, hsl(var(--primary) / 0.12), transparent 60%), radial-gradient(40rem 24rem at 8% 92%, hsl(var(--accent) / 0.08), transparent 60%)",
+          }}
         />
-        <div className="container mx-auto px-4 py-20 sm:py-24 relative">
+        {/* Mobile/tablet ambient — subtle vertical wash */}
+        <div
+          aria-hidden="true"
+          className="lg:hidden absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent pointer-events-none"
+        />
+        <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24 relative">
           <div
-            className={`max-w-3xl mx-auto text-center transition-all duration-700 ${
+            className={`grid lg:grid-cols-12 gap-10 lg:gap-12 items-center transition-all duration-700 ${
               heroReveal.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
             }`}
           >
-            <p className="font-serif italic text-caption text-primary mb-4">
-              {t("pricing.heroEyebrow")}
-            </p>
-            <h1 className="text-display sm:text-[2.75rem] lg:text-[3.25rem] mb-5">
-              {t("pricing.heroTitle")}
-            </h1>
-            <p className="font-serif text-body sm:text-lg text-muted-foreground max-w-[58ch] mx-auto mb-8 leading-relaxed">
-              {t("pricing.heroSubtitle")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-              <Button
-                size="lg"
-                className="h-12 px-8 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                onClick={handleGetStarted}
-              >
-                {t("pricing.heroCtaPrimary")}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-              <button
-                type="button"
-                onClick={() =>
-                  document
-                    .getElementById("credit-table")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="text-body-sm font-medium text-foreground hover:text-primary inline-flex items-center gap-1.5 transition-colors"
-              >
-                {t("pricing.heroCtaHowCredits")}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+            {/* Left column — copy + CTAs */}
+            <div className="lg:col-span-5 text-center lg:text-left">
+              <p className="font-serif italic text-caption text-primary mb-4">
+                {t("pricing.heroEyebrow")}
+              </p>
+              <h1 className="text-display sm:text-[2.75rem] lg:text-[3.25rem] mb-5">
+                {t("pricing.heroTitle")}
+              </h1>
+              <p className="font-serif text-body sm:text-lg text-muted-foreground max-w-[58ch] mx-auto lg:mx-0 mb-8 leading-relaxed">
+                {t("pricing.heroSubtitle")}
+              </p>
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 sm:gap-4">
+                <Button
+                  size="lg"
+                  className="h-12 px-8 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  onClick={handleGetStarted}
+                >
+                  {t("pricing.heroCtaPrimary")}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById("credit-table")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="text-body-sm font-medium text-foreground hover:text-primary inline-flex items-center gap-1.5 transition-colors h-12"
+                >
+                  {t("pricing.heroCtaHowCredits")}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Right column — Studio mock */}
+            <div className="lg:col-span-7">
+              <PricingStudioMock />
             </div>
           </div>
         </div>
