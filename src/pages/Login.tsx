@@ -101,7 +101,7 @@ export default function Login() {
                   <Input id="reset-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="rounded-xl h-11" />
                 </div>
                 {error && (
-                  <div className="flex items-center gap-2 text-destructive text-sm">
+                  <div className="flex items-center gap-2 text-destructive text-secondary">
                     <AlertCircle className="w-4 h-4" />
                     <span>{error}</span>
                   </div>
@@ -109,7 +109,7 @@ export default function Login() {
                 <Button type="submit" className="w-full h-11 rounded-xl" disabled={resetLoading}>
                   {resetLoading ? t("login.sending") : t("login.sendResetLink")}
                 </Button>
-                <Button variant="ghost" type="button" className="w-full text-sm" onClick={() => { setForgotMode(false); setError(null); }}>
+                <Button variant="ghost" type="button" className="w-full text-secondary" onClick={() => { setForgotMode(false); setError(null); }}>
                   <ArrowLeft className="w-4 h-4 mr-1.5" />
                   {t("login.backToSignIn")}
                 </Button>
