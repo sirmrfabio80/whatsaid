@@ -218,7 +218,7 @@ export default function JobDetail() {
                       <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
                       <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
                     </span>
-                    {jobStatus}
+                    {t(`jobDetail.status.${jobStatus}`, { defaultValue: jobStatus })}
                   </span>
                 )}
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>

@@ -327,6 +327,13 @@
     "wordsLabel": "{{count}} parole",
     "readingTimeMinLabel": "{{minutes}} min di lettura",
     "readingTimeSecLabel": "<1 min di lettura",
+    "status": {
+      "pending": "In attesa",
+      "uploading": "Caricamento",
+      "processing": "In elaborazione",
+      "completed": "Completato",
+      "failed": "Fallito"
+    },
     "tags": {
       "addPlaceholder": "Aggiungi tag…",
       "addLabel": "Aggiungi un tag",
