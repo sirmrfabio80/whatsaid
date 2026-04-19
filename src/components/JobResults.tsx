@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X, Play, Pause as PauseIcon } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X, Play, Pause as PauseIcon, MessageSquare } from "lucide-react";
 import { useSpeechSynthesis, speechManager } from "@/hooks/use-speech-synthesis";
 import { transcriptToSpeech, summaryToSpeech, latestAnswerToSpeech } from "@/lib/speech-text";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
@@ -903,12 +903,22 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex items-center justify-end px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
-                <ListenButton
-                  ownerId="questions"
-                  getText={() => latestAnswerToSpeech(latestAnswerContent)}
-                  lang={speechLang}
-                />
+              <div className="flex items-center justify-between gap-3 px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
+                <div className="min-w-0 flex-1 text-xs text-muted-foreground">
+                  {questionEntries.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 px-2.5 py-1 font-medium">
+                      <MessageSquare className="w-3 h-3" aria-hidden="true" />
+                      {t("jobResults.questionsCount", { count: questionEntries.length, defaultValue: "{{count}} question" })}
+                    </span>
+                  )}
+                </div>
+                <div className="shrink-0">
+                  <ListenButton
+                    ownerId="questions"
+                    getText={() => latestAnswerToSpeech(latestAnswerContent)}
+                    lang={speechLang}
+                  />
+                </div>
               </div>
               <div className="p-4 sm:p-5 border-b border-border/40">
                 <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">{t("jobResults.askQuestion")}</label>

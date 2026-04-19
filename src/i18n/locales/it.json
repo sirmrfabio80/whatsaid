@@ -426,6 +426,8 @@
     "questionsLeft_one": "{{count}} domanda rimanente",
     "questionsLeft_other": "{{count}} domande rimanenti",
     "noQuestionsLeft": "Nessuna domanda rimanente",
+    "questionsCount_one": "{{count}} domanda",
+    "questionsCount_other": "{{count}} domande",
     "editQuestion": "Modifica domanda",
     "deleteQuestion": "Elimina domanda",
     "regeneratingAnswer": "Rigenerazione risposta…",
