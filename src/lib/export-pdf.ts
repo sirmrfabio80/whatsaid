@@ -464,6 +464,18 @@ function renderMarkdown(pen: Pen, text: string) {
     } else if (line.trim() === "") {
       pen.gap(2);
     } else {
+      // Keep-with-next: if this paragraph is immediately followed (after any
+      // blank lines) by a bullet list, keep paragraph + first bullet together.
+      let nextContentIdx = i + 1;
+      while (nextContentIdx < lines.length && lines[nextContentIdx].trim() === "") {
+        nextContentIdx++;
+      }
+      const nextLine = nextContentIdx < lines.length ? lines[nextContentIdx].trimEnd() : "";
+      if (/^\s*[-*]\s+/.test(nextLine)) {
+        const paraH = pen.measureLine(line);
+        const bulletH = pen.measureLine(nextLine);
+        pen.pageBreakHard(paraH + bulletH);
+      }
       pen.rich(parseInline(line), F.body, C.body);
     }
   }
