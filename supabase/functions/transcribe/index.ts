@@ -380,11 +380,9 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
     const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
 
     if (!job_id) {
-      return new Response(JSON.stringify({ error: "job_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw new Error("job_id is required");
     }
+    jobIdForFailure = job_id;
 
     const { data: job, error: jobError } = await supabase
       .from("jobs")
