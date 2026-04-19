@@ -290,7 +290,7 @@ function StatCard({
         {icon}
         <span>{label}</span>
       </div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
+      <div className={`mt-1 text-h2 ${toneClass}`}>{value}</div>
       {hint && <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );

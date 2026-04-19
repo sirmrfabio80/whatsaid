@@ -85,9 +85,9 @@ export default function AdminInviteCard() {
       <CardContent className="p-5 sm:p-6 space-y-4">
         <div className="flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-lg">{t("settings.admin.title")}</h2>
+          <h2 className="text-h2">{t("settings.admin.title")}</h2>
         </div>
-        <p className="text-sm text-muted-foreground">{t("settings.admin.desc")}</p>
+        <p className="text-secondary text-muted-foreground">{t("settings.admin.desc")}</p>
 
         <div className="space-y-3">
           <div className="space-y-1.5">

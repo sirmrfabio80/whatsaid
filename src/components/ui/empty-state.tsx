@@ -29,9 +29,9 @@ export function EmptyState({
   const inner = (
     <div className={cn("flex flex-col items-center justify-center text-center", variant === "card" ? "py-16" : "py-10", className)}>
       {Icon ? <Icon className="w-12 h-12 text-muted-foreground/50 mb-4" aria-hidden="true" /> : null}
-      <p className="font-medium text-lg mb-1">{title}</p>
+      <p className="text-h3 mb-1">{title}</p>
       {description ? (
-        <p className="text-muted-foreground text-sm mb-6">{description}</p>
+        <p className="text-muted-foreground text-secondary mb-6">{description}</p>
       ) : action ? (
         <div className="mb-2" />
       ) : null}

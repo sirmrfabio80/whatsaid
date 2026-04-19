@@ -27,9 +27,9 @@ export function ErrorState({
       <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
         <AlertTriangle className="w-6 h-6 text-destructive" aria-hidden="true" />
       </div>
-      <p className="font-medium text-lg mb-1">{title}</p>
+      <p className="text-h3 mb-1">{title}</p>
       {description ? (
-        <p className="text-muted-foreground text-sm mb-6 max-w-md">{description}</p>
+        <p className="text-muted-foreground text-secondary mb-6 max-w-md">{description}</p>
       ) : null}
       {action}
     </div>
