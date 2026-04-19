@@ -152,6 +152,12 @@ async function runPostProcessPipeline(
       console.error(`[post-process] Tagging error for job ${job_id}:`, tagError);
     }
 
+    // Final stage marker — pipeline fully done
+    await supabase
+      .from("jobs")
+      .update({ processing_stage: "done" } as never)
+      .eq("id", job_id);
+
     console.log(`[post-process] Job ${job_id} completed`);
   } catch (error) {
     console.error(`[post-process] Pipeline error for job ${job_id}:`, error);
