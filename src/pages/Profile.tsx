@@ -122,7 +122,7 @@ export default function Profile() {
                   ) : (
                     <p className="font-semibold text-base sm:text-lg">{value}</p>
                   )}
-                  <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{label}</p>
+                  <p className="text-caption text-muted-foreground leading-tight">{label}</p>
                 </CardContent>
               </Card>
             ))}

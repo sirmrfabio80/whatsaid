@@ -134,7 +134,7 @@ export default function JobDetailTags({ jobId }: Props) {
               {tag.displayName}
             </span>
             {tag.source === "ai" && (
-              <span className="text-[10px] text-muted-foreground opacity-60 ml-0.5">AI</span>
+              <span className="text-micro text-muted-foreground opacity-60 ml-0.5">AI</span>
             )}
             <button
               onClick={() => removeTag(tag.id)}
@@ -178,7 +178,7 @@ export default function JobDetailTags({ jobId }: Props) {
                 <TagIcon className="w-3 h-3 text-muted-foreground shrink-0" />
                 <span className="truncate">{s.displayName}</span>
                 {s.source === "ai" && (
-                  <span className="text-[10px] text-muted-foreground ml-auto">AI</span>
+                  <span className="text-micro text-muted-foreground ml-auto">AI</span>
                 )}
               </button>
             ))}

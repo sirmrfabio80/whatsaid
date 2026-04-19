@@ -86,7 +86,7 @@ export default function HistoryFilters({
               <Tag className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">{t("history.tags")}</span>
               {selectedTags.length > 0 && (
-                <span className="ml-0.5 text-[11px] bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                <span className="ml-0.5 text-micro bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {selectedTags.length}
                 </span>
               )}
@@ -123,7 +123,7 @@ export default function HistoryFilters({
                           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                         )}
                         <span className="truncate">{tag.displayName ?? tag.name}</span>
-                        <span className="ml-auto text-[10px] text-muted-foreground/60 uppercase">{tag.source}</span>
+                        <span className="ml-auto text-micro text-muted-foreground/60 uppercase">{tag.source}</span>
                       </button>
                     ))
                   )}

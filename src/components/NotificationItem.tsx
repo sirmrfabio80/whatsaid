@@ -93,16 +93,16 @@ export default function NotificationItem({ notification, onClose }: Notification
             </p>
           )}
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-[11px] text-muted-foreground">{timeAgo(notification.created_at)}</span>
+            <span className="text-caption text-muted-foreground">{timeAgo(notification.created_at)}</span>
             {isFile && !downloading && (
-              <span className="text-[11px] text-primary flex items-center gap-0.5">
+              <span className="text-caption text-primary flex items-center gap-0.5">
                 <FileText className="w-3 h-3" /> View PDF
               </span>
             )}
             {isPdfExportFailed && (
               <button
                 onClick={handleRetry}
-                className="text-[11px] text-primary flex items-center gap-0.5 hover:underline"
+                className="text-caption text-primary flex items-center gap-0.5 hover:underline"
               >
                 <RotateCw className="w-3 h-3" /> {t("notifications.retry")}
               </button>
