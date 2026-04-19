@@ -662,32 +662,71 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
               {transcript && (
-                <div className="flex items-center gap-2 p-3 border-b border-border/40 hidden sm:flex">
-                  <ListenButton
-                    ownerId="transcript"
-                    getText={() => transcriptToSpeech(activeTranscriptContent, speakerNames)}
-                    lang={speechLang}
-                  />
-                  <div className="flex items-center gap-2 min-w-0 flex-1"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} enableDrag onIdentifySpeakers={runSpeakerIdentification} identifyingInProgress={identifyingInProgress} /></div>
-                  <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                    <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                    <Select value={outputLang} onValueChange={handleOutputLanguageChange} disabled={regeneratingLang}>
-                      <SelectTrigger id="output-lang" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.outputLanguage")}><SelectValue /></SelectTrigger>
-                      <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                    {regeneratingLang && <InlineSpinner size="xs" tone="primary" />}
+                <div className="hidden sm:block border-b border-border/40">
+                  <div className="flex items-start gap-3 px-3 pt-2.5 pb-1">
+                    <div className="flex-1 min-w-0">
+                      <SpeakerChips
+                        variant="primary"
+                        speakers={allSpeakers}
+                        speakerNames={speakerNames}
+                        speakerSegmentCounts={speakerSegmentCounts}
+                        deletableSpeakers={deletableSpeakers}
+                        onRename={handleRenameSpeaker}
+                        onAddSpeaker={handleAddSpeaker}
+                        onDeleteSpeaker={handleDeleteSpeaker}
+                        onSuggestSpeaker={handleSuggestSpeaker}
+                        suggestingForSpeaker={suggestingForSpeaker}
+                        enableDrag
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto shrink-0">
+                      <ListenButton
+                        ownerId="transcript"
+                        getText={() => transcriptToSpeech(activeTranscriptContent, speakerNames)}
+                        lang={speechLang}
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Select value={outputLang} onValueChange={handleOutputLanguageChange} disabled={regeneratingLang}>
+                          <SelectTrigger id="output-lang" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.outputLanguage")}><SelectValue /></SelectTrigger>
+                          <SelectContent>{LANGUAGES.filter((l) => l.code !== "auto").map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                        {regeneratingLang && <InlineSpinner size="xs" tone="primary" />}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-3 pb-2">
+                    <SpeakerChips
+                      variant="secondary"
+                      speakers={allSpeakers}
+                      speakerNames={speakerNames}
+                      onRename={handleRenameSpeaker}
+                      onReset={handleResetSpeakerNames}
+                      onIdentifySpeakers={runSpeakerIdentification}
+                      identifyingInProgress={identifyingInProgress}
+                    />
                   </div>
                 </div>
               )}
-              <div className="px-4 py-3 border-b border-border/40 sm:hidden">
-                <SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} onIdentifySpeakers={runSpeakerIdentification} identifyingInProgress={identifyingInProgress} />
-                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <div className="px-4 py-3 border-b border-border/40 sm:hidden space-y-2">
+                <SpeakerChips
+                  variant="primary"
+                  speakers={allSpeakers}
+                  speakerNames={speakerNames}
+                  speakerSegmentCounts={speakerSegmentCounts}
+                  deletableSpeakers={deletableSpeakers}
+                  onRename={handleRenameSpeaker}
+                  onAddSpeaker={handleAddSpeaker}
+                  onDeleteSpeaker={handleDeleteSpeaker}
+                  onSuggestSpeaker={handleSuggestSpeaker}
+                  suggestingForSpeaker={suggestingForSpeaker}
+                />
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   {transcript && (
                     <ListenButton
                       ownerId="transcript"
                       getText={() => transcriptToSpeech(activeTranscriptContent, speakerNames)}
                       lang={speechLang}
-                      className="mr-auto"
                     />
                   )}
                   <Globe className="w-3.5 h-3.5 text-muted-foreground" />
@@ -697,6 +736,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </Select>
                   {regeneratingLang && <InlineSpinner size="xs" tone="primary" />}
                 </div>
+                <SpeakerChips
+                  variant="secondary"
+                  speakers={allSpeakers}
+                  speakerNames={speakerNames}
+                  onRename={handleRenameSpeaker}
+                  onReset={handleResetSpeakerNames}
+                  onIdentifySpeakers={runSpeakerIdentification}
+                  identifyingInProgress={identifyingInProgress}
+                />
               </div>
               {/* AI Speaker Identification Banner */}
               {!identificationBannerDismissed && identifications.filter((s) => s.status === "applied" || s.status === "suggested").length > 0 && (
