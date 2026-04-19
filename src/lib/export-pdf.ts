@@ -506,6 +506,9 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
 
   // ── Summary ──
   if (data.summary) {
+    // Keep "Summary" heading with first 2 body lines.
+    const need = headingReserve(2) + measureMarkdownHead(pen, data.summary, 2);
+    pen.pageBreakHard(need);
     pen.heading("Summary", 2);
     renderMarkdown(pen, data.summary);
     pen.gap(4);
@@ -514,10 +517,19 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
   // ── Questions & Answers ──
   if (data.questions?.length) {
     pen.newPage();
-    pen.sectionHeading("Questions & Answers");
+    // Reserve Q&A heading + first prompt line + first 2 answer lines so the
+    // section title never lands alone at the bottom of a page.
+    const firstQa = data.questions[0];
+    const qaPromptH = firstQa?.prompt ? ptMm(F.qa) * LH + 4 : 0;
+    const qaAnswerH = firstQa?.answer ? measureMarkdownHead(pen, firstQa.answer, 2) : 0;
+    pen.sectionHeading("Questions & Answers", qaPromptH + qaAnswerH);
     for (const qa of data.questions) {
       if (qa.prompt) {
         pen.gap(3);
+        // Keep Q prompt with first 2 lines of its answer.
+        const promptH = ptMm(F.qa) * LH;
+        const answerH = qa.answer ? measureMarkdownHead(pen, qa.answer, 2) : 0;
+        pen.pageBreakHard(promptH + 1 + answerH);
         pen.rich(
           [{ text: "Q: ", bold: true }, { text: qa.prompt, bold: true }],
           F.qa,
@@ -533,7 +545,9 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
   // ── Transcript ──
   if (data.transcript) {
     pen.newPage();
-    pen.sectionHeading("Transcript");
+    // Reserve heading + first 2 transcript lines (approx via line height).
+    const firstTwoH = 2 * ptMm(F.transcript) * LH;
+    pen.sectionHeading("Transcript", firstTwoH);
 
     const speakerColorMap = new Map<string, string>();
 
