@@ -25,10 +25,10 @@ export default function HelpWorkflow() {
   return (
     <section id="workflow" className="container mx-auto px-5 sm:px-6 py-10 scroll-mt-24">
       <div className="mb-6">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-1">
+        <h2 className="text-h1 sm:text-[1.5rem] mb-1">
           {t("help.workflow.title")}
         </h2>
-        <p className="text-sm text-muted-foreground">{t("help.workflow.lead")}</p>
+        <p className="text-secondary text-muted-foreground">{t("help.workflow.lead")}</p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -42,16 +42,16 @@ export default function HelpWorkflow() {
                     <Icon className="w-4.5 h-4.5 text-primary" aria-hidden />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base mb-1.5 leading-snug">
+                    <h3 className="text-h3 mb-1.5 leading-snug">
                       {pickLocale(step.title, i18n.language)}
                     </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-secondary text-muted-foreground leading-relaxed">
                       {pickLocale(step.body, i18n.language)}
                     </p>
                     {step.cta && (
                       <Link
                         to={step.cta.href}
-                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-3"
+                        className="inline-flex items-center gap-1 text-secondary text-primary hover:underline mt-3"
                       >
                         {pickLocale(step.cta.label, i18n.language)}
                         <ArrowRight className="w-3.5 h-3.5" />

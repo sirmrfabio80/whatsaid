@@ -18,10 +18,10 @@ export default function HelpContactCard() {
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Mail className="w-5 h-5 text-primary" aria-hidden />
           </div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-2">
+          <h2 className="text-h2 sm:text-[1.25rem] mb-2">
             {t("help.contact.title")}
           </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-5 max-w-md mx-auto">
+          <p className="text-secondary text-muted-foreground leading-relaxed mb-5 max-w-md mx-auto">
             {t("help.contact.body")}
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">

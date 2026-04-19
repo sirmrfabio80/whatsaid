@@ -185,15 +185,15 @@ export default function Settings() {
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="flex items-baseline justify-between gap-4 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-bold">{t("settings.title")}</h1>
-            <a href="/help#account" className="text-sm text-primary hover:underline whitespace-nowrap">
+            <h1 className="text-h1 sm:text-[1.875rem]">{t("settings.title")}</h1>
+            <a href="/help#account" className="text-secondary text-primary hover:underline whitespace-nowrap">
               {t("settings.helpLink")}
             </a>
           </div>
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-semibold text-lg">{t("settings.account")}</h2>
+              <h2 className="text-h2">{t("settings.account")}</h2>
               <div className="space-y-2">
                 <Label htmlFor="display-name">{t("settings.displayName")}</Label>
                 <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-lg h-11" />
@@ -209,7 +209,7 @@ export default function Settings() {
                 />
                 
                 {emailError && (
-                  <div className="flex items-center gap-2 text-destructive text-sm">
+                  <div className="flex items-center gap-2 text-destructive text-secondary">
                     <AlertCircle className="w-4 h-4" /><span>{emailError}</span>
                   </div>
                 )}
@@ -221,7 +221,7 @@ export default function Settings() {
                 </Button>
               </div>
               {authEmail && contactEmail && authEmail.toLowerCase() !== contactEmail.toLowerCase() && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <p className="text-caption text-muted-foreground flex items-center gap-1.5">
                   <Lock className="w-3 h-3" />
                   {t("settings.signedInAs", { email: authEmail })}
                 </p>
@@ -231,10 +231,10 @@ export default function Settings() {
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-semibold text-lg">{t("settings.preferences")}</h2>
+              <h2 className="text-h2">{t("settings.preferences")}</h2>
               <div className="space-y-2">
                 <Label htmlFor="ui-language">{t("settings.interfaceLanguage")}</Label>
-                <p className="text-xs text-muted-foreground">{t("settings.interfaceLanguageDesc")}</p>
+                <p className="text-caption text-muted-foreground">{t("settings.interfaceLanguageDesc")}</p>
                 <Select value={uiLanguage} onValueChange={handleLanguageChange}>
                   <SelectTrigger id="ui-language" className="rounded-lg h-11 w-full sm:w-[240px]">
                     <div className="flex items-center gap-2">
@@ -255,8 +255,8 @@ export default function Settings() {
           {needsPasswordSetup && (
             <Card className="rounded-xl border-primary/30 bg-card shadow-sm">
               <CardContent className="p-5 sm:p-6 space-y-4">
-                <h2 className="font-semibold text-lg">{t("settings.setPasswordCard.title")}</h2>
-                <p className="text-sm text-muted-foreground">{t("settings.setPasswordCard.desc")}</p>
+                <h2 className="text-h2">{t("settings.setPasswordCard.title")}</h2>
+                <p className="text-secondary text-muted-foreground">{t("settings.setPasswordCard.desc")}</p>
                 <div className="space-y-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="setup-pw">{t("settings.newPasswordLabel")}</Label>
@@ -266,7 +266,7 @@ export default function Settings() {
                     <Label htmlFor="setup-confirm-pw">{t("settings.confirmPasswordLabel")}</Label>
                     <Input id="setup-confirm-pw" type="password" value={setupConfirmPassword} onChange={(e) => { setSetupConfirmPassword(e.target.value); setSetupError(null); }} className="rounded-lg h-11" />
                   </div>
-                  {setupError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{setupError}</span></div>}
+                  {setupError && <div className="flex items-center gap-2 text-destructive text-secondary"><AlertCircle className="w-4 h-4" /><span>{setupError}</span></div>}
                   <Button onClick={handleSetupPassword} disabled={setupSaving} className="rounded-lg" size="sm">
                     <Lock className="w-4 h-4 mr-1.5" />{setupSaving ? t("setPassword.saving") : t("settings.setPasswordCard.setPasswordBtn")}
                   </Button>
@@ -277,7 +277,7 @@ export default function Settings() {
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-semibold text-lg">{t("settings.security")}</h2>
+              <h2 className="text-h2">{t("settings.security")}</h2>
               <Dialog open={passwordOpen} onOpenChange={(open) => { setPasswordOpen(open); if (!open) { setPasswordError(null); setPasswordSaved(false); } }}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="rounded-lg" size="sm"><Lock className="w-4 h-4 mr-1.5" />{t("settings.changePassword")}</Button>
@@ -296,8 +296,8 @@ export default function Settings() {
                       <Label htmlFor="confirm-pw">{t("settings.confirmPasswordLabel")}</Label>
                       <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null); }} className="rounded-lg h-11" />
                     </div>
-                    {passwordError && <div className="flex items-center gap-2 text-destructive text-sm"><AlertCircle className="w-4 h-4" /><span>{passwordError}</span></div>}
-                    {passwordSaved && <div className="flex items-center gap-2 text-primary text-sm"><span>✓ {t("settings.passwordUpdated")}</span></div>}
+                    {passwordError && <div className="flex items-center gap-2 text-destructive text-secondary"><AlertCircle className="w-4 h-4" /><span>{passwordError}</span></div>}
+                    {passwordSaved && <div className="flex items-center gap-2 text-primary text-secondary"><span>✓ {t("settings.passwordUpdated")}</span></div>}
                   </div>
                   <DialogFooter>
                     <Button onClick={changePassword} className="rounded-lg">{t("settings.updatePasswordBtn")}</Button>
@@ -311,8 +311,8 @@ export default function Settings() {
 
           <Card className="rounded-xl border-destructive/30 bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-semibold text-lg text-destructive">{t("settings.dangerZone")}</h2>
-              <p className="text-sm text-muted-foreground">{t("settings.dangerDesc")}</p>
+              <h2 className="text-h2 text-destructive">{t("settings.dangerZone")}</h2>
+              <p className="text-secondary text-muted-foreground">{t("settings.dangerDesc")}</p>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm" className="rounded-lg"><Trash2 className="w-4 h-4 mr-1.5" />{t("settings.deleteAccount")}</Button>
