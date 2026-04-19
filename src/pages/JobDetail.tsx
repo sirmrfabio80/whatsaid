@@ -39,13 +39,21 @@ export default function JobDetail() {
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
 
-  // Track job status (with realtime updates) for the live "processing" pulse-ring
+  // Track job status + processing_stage (with realtime updates) for the live progress badge
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from("jobs").select("status").eq("id", id).maybeSingle();
-      if (!cancelled && data?.status) setJobStatus(data.status as string);
+      const { data } = await supabase
+        .from("jobs")
+        .select("status, processing_stage" as never)
+        .eq("id", id)
+        .maybeSingle();
+      if (!cancelled && data) {
+        const row = data as { status?: string; processing_stage?: string | null };
+        if (row.status) setJobStatus(row.status);
+        if (row.processing_stage !== undefined) setProcessingStage(row.processing_stage ?? null);
+      }
     })();
     const channel = supabase
       .channel(`job-status-${id}`)
@@ -53,8 +61,9 @@ export default function JobDetail() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${id}` },
         (payload) => {
-          const next = (payload.new as { status?: string } | null)?.status;
-          if (next) setJobStatus(next);
+          const next = payload.new as { status?: string; processing_stage?: string | null } | null;
+          if (next?.status) setJobStatus(next.status);
+          if (next && "processing_stage" in next) setProcessingStage(next.processing_stage ?? null);
         }
       )
       .subscribe();
