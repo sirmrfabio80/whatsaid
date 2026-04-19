@@ -334,7 +334,15 @@ export default function Settings() {
                 <Headphones className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                 <h2 className="text-h2">{t("settings.listening.title")}</h2>
               </div>
-              <p className="text-caption text-muted-foreground">{t("settings.listening.desc")}</p>
+              <p className="text-caption text-muted-foreground">
+                {t("settings.listening.desc")}{" "}
+                <a
+                  href="/help#faq-account-listening-voice-picker"
+                  className="text-primary hover:underline"
+                >
+                  {t("settings.listening.learnMore")}
+                </a>
+              </p>
 
               <div className="space-y-2">
                 <Label>{t("settings.listening.voice")}</Label>
