@@ -8,6 +8,8 @@ interface ParticipantsPanelProps {
   segments: Segment[];
   speakerNames: Record<string, string>;
   durationSeconds: number | null;
+  /** Optional element rendered to the right of the speaker chips on the first row (e.g. Listen button). */
+  rightSlot?: React.ReactNode;
 }
 
 interface SpeakerStats {
