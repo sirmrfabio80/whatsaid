@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { supabase } from "@/integrations/supabase/client";
 
 import {
   ArrowRight, Shield, Globe, Trash2, Users, Languages, Upload, Cpu, Download,
@@ -15,12 +17,34 @@ import { PricingTeaserStrip } from "@/components/home/PricingTeaserStrip";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { useJsonLd } from "@/hooks/use-json-ld";
 
+// Google requires aggregateRating to be backed by real reviews. Only inject
+// when we have a meaningful sample size — otherwise omit the property.
+const MIN_REVIEWS_FOR_AGGREGATE = 5;
+
 export default function Index() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const howItWorks = useScrollReveal();
   const privacy = useScrollReveal();
+  const [aggregate, setAggregate] = useState<{ ratingValue: number; reviewCount: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.rpc("get_review_aggregate");
+      if (cancelled || error || !data || !Array.isArray(data) || data.length === 0) return;
+      const row = data[0] as { rating_value: number | string; review_count: number | string };
+      const ratingValue = Number(row.rating_value);
+      const reviewCount = Number(row.review_count);
+      if (Number.isFinite(ratingValue) && Number.isFinite(reviewCount) && reviewCount >= MIN_REVIEWS_FOR_AGGREGATE) {
+        setAggregate({ ratingValue, reviewCount });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   usePageMeta({
     title: "WhatSaid — AI Audio Transcription with Speaker Labels",
@@ -80,6 +104,17 @@ export default function Index() {
       name: "WhatSaid",
       url: "https://whatsaid.app/",
     },
+    ...(aggregate
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: aggregate.ratingValue.toFixed(2),
+            reviewCount: aggregate.reviewCount,
+            bestRating: "5",
+            worstRating: "1",
+          },
+        }
+      : {}),
   });
 
   const heroPrimaryHref = user ? "/convert" : "/signup";
