@@ -695,7 +695,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       </div>
                     </div>
                   </div>
-                  <div className="px-3 pb-2">
+                  <div className="px-3 py-1.5 mt-1.5 border-t border-border/30 bg-muted/20">
                     <SpeakerChips
                       variant="secondary"
                       speakers={allSpeakers}
