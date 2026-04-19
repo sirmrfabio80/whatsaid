@@ -1,5 +1,9 @@
 import { jsPDF } from "jspdf";
 import logoUrl from "@/assets/logo.png";
+import ss4RegularUrl from "@/assets/fonts/SourceSerif4-Regular.ttf?url";
+import ss4BoldUrl from "@/assets/fonts/SourceSerif4-Bold.ttf?url";
+import ss4ItalicUrl from "@/assets/fonts/SourceSerif4-Italic.ttf?url";
+import ss4BoldItalicUrl from "@/assets/fonts/SourceSerif4-BoldItalic.ttf?url";
 import type { CanonicalExportData } from "./export-types";
 
 /* ------------------------------------------------------------------ */
@@ -24,6 +28,70 @@ async function getLogoDataUrl(): Promise<string | null> {
     console.warn("Could not load logo for PDF footer");
     return null;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Source Serif 4 font cache (for reading surfaces)                   */
+/* ------------------------------------------------------------------ */
+
+/** jsPDF font name registered for Source Serif 4 (matches in-app reading font) */
+const SERIF_FONT = "SourceSerif4";
+/** Sans fallback used for chrome (titles, metadata, footers, transcript timestamps) */
+const SANS_FONT = "helvetica";
+
+interface Ss4Cache {
+  regular: string;
+  bold: string;
+  italic: string;
+  bolditalic: string;
+}
+let _ss4Cache: Ss4Cache | null = null;
+let _ss4Promise: Promise<Ss4Cache | null> | null = null;
+
+async function fetchAsBase64(url: string): Promise<string> {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Failed to fetch font: ${url}`);
+  const buf = await resp.arrayBuffer();
+  // Convert to base64 in chunks to avoid call stack overflow on large fonts
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)) as number[]);
+  }
+  return btoa(binary);
+}
+
+async function loadSourceSerif4(): Promise<Ss4Cache | null> {
+  if (_ss4Cache) return _ss4Cache;
+  if (_ss4Promise) return _ss4Promise;
+  _ss4Promise = (async () => {
+    try {
+      const [regular, bold, italic, bolditalic] = await Promise.all([
+        fetchAsBase64(ss4RegularUrl),
+        fetchAsBase64(ss4BoldUrl),
+        fetchAsBase64(ss4ItalicUrl),
+        fetchAsBase64(ss4BoldItalicUrl),
+      ]);
+      _ss4Cache = { regular, bold, italic, bolditalic };
+      return _ss4Cache;
+    } catch (e) {
+      console.warn("Could not load Source Serif 4 for PDF — falling back to Helvetica", e);
+      return null;
+    }
+  })();
+  return _ss4Promise;
+}
+
+function registerSerifFont(pdf: jsPDF, cache: Ss4Cache) {
+  pdf.addFileToVFS("SourceSerif4-Regular.ttf", cache.regular);
+  pdf.addFont("SourceSerif4-Regular.ttf", SERIF_FONT, "normal");
+  pdf.addFileToVFS("SourceSerif4-Bold.ttf", cache.bold);
+  pdf.addFont("SourceSerif4-Bold.ttf", SERIF_FONT, "bold");
+  pdf.addFileToVFS("SourceSerif4-Italic.ttf", cache.italic);
+  pdf.addFont("SourceSerif4-Italic.ttf", SERIF_FONT, "italic");
+  pdf.addFileToVFS("SourceSerif4-BoldItalic.ttf", cache.bolditalic);
+  pdf.addFont("SourceSerif4-BoldItalic.ttf", SERIF_FONT, "bolditalic");
 }
 
 /* ------------------------------------------------------------------ */
@@ -131,14 +199,17 @@ function runsToWords(runs: TextRun[]): FmtWord[] {
 class Pen {
   pdf: jsPDF;
   y = MT;
+  serifAvailable: boolean;
 
-  constructor(pdf: jsPDF) {
+  constructor(pdf: jsPDF, serifAvailable: boolean) {
     this.pdf = pdf;
+    this.serifAvailable = serifAvailable;
   }
 
-  private setF(bold: boolean, italic: boolean, sz: number) {
+  private setF(bold: boolean, italic: boolean, sz: number, useSerif = false) {
     const style = bold && italic ? "bolditalic" : bold ? "bold" : italic ? "italic" : "normal";
-    this.pdf.setFont("helvetica", style);
+    const family = useSerif && this.serifAvailable ? SERIF_FONT : SANS_FONT;
+    this.pdf.setFont(family, style);
     this.pdf.setFontSize(sz);
   }
 
@@ -209,12 +280,13 @@ class Pen {
     x = ML,
     maxW = CW,
     lhMul = LH,
+    useSerif = false,
   ): number {
     const words = runsToWords(runs);
     if (!words.length) return 0;
 
     const lineH = ptMm(fontSize) * lhMul;
-    this.setF(false, false, fontSize);
+    this.setF(false, false, fontSize, useSerif);
     const spaceW = this.pdf.getTextWidth(" ");
 
     // Word-wrap into lines
@@ -223,7 +295,7 @@ class Pen {
     let curW = 0;
 
     for (const w of words) {
-      this.setF(w.bold, w.italic, fontSize);
+      this.setF(w.bold, w.italic, fontSize, useSerif);
       const ww = this.pdf.getTextWidth(w.text);
       const need = curLine.length ? spaceW + ww : ww;
       if (curW + need > maxW && curLine.length) {
@@ -244,7 +316,7 @@ class Pen {
       let cx = x;
       const bl = this.baseline(fontSize);
       for (let i = 0; i < ln.length; i++) {
-        this.setF(ln[i].bold, ln[i].italic, fontSize);
+        this.setF(ln[i].bold, ln[i].italic, fontSize, useSerif);
         this.setC(color);
         this.pdf.text(ln[i].text, cx, bl);
         cx += this.pdf.getTextWidth(ln[i].text);
@@ -266,9 +338,10 @@ class Pen {
     x = ML,
     maxW = CW,
     lhMul = LH,
+    useSerif = false,
   ): number {
     const lineH = ptMm(fontSize) * lhMul;
-    this.setF(bold, italic, fontSize);
+    this.setF(bold, italic, fontSize, useSerif);
     this.setC(color);
     const lines: string[] = this.pdf.splitTextToSize(text, maxW);
     let totalH = 0;
@@ -286,7 +359,8 @@ class Pen {
     const before = level === 1 ? 0 : level === 2 ? 5 : 3;
     const after = level === 1 ? 3 : 2;
     this.y += before;
-    this.plain(text, sz, C.heading, true, false, ML, CW, HLH);
+    // Headings stay on sans (chrome) for visual separation from reading body.
+    this.plain(text, sz, C.heading, true, false, ML, CW, HLH, false);
     this.y += after;
   }
 
@@ -301,13 +375,13 @@ class Pen {
     this.heading(text, 2);
   }
 
-  bullet(text: string) {
+  bullet(text: string, useSerif = false) {
     const lineH = ptMm(F.bullet) * LH;
     this.pageBreak(lineH);
-    this.setF(false, false, F.bullet);
+    this.setF(false, false, F.bullet, useSerif);
     this.setC(C.body);
     this.pdf.text("•", ML + 2, this.baseline(F.bullet));
-    this.rich(parseInline(text), F.bullet, C.body, ML + 7, CW - 7);
+    this.rich(parseInline(text), F.bullet, C.body, ML + 7, CW - 7, LH, useSerif);
   }
 
   /** Render a transcript speaker line with colored dot, timestamp, bold speaker, and wrapped text */
@@ -335,15 +409,16 @@ class Pen {
       x += this.pdf.getTextWidth(timestamp) + 2;
     }
 
-    // Speaker name (bold)
-    this.setF(true, false, F.transcript);
+    // Speaker name (bold) — sans for clear chrome separation
+    this.setF(true, false, F.transcript, false);
     this.setC(C.heading);
     const label = `${speakerName}: `;
     this.pdf.text(label, x, this.baseline(F.transcript));
     x += this.pdf.getTextWidth(label);
 
-    // Body text — first line after prefix, subsequent lines wrap at ML+5
-    this.setF(false, false, F.transcript);
+    // Body text — first line after prefix, subsequent lines wrap at ML+5.
+    // Use serif for the actual transcript prose to match in-app reading.
+    this.setF(false, false, F.transcript, true);
     this.setC(C.body);
 
     const firstMax = ML + CW - x;
@@ -353,7 +428,7 @@ class Pen {
     // If prefix is too wide, start text on next line
     if (firstMax < 15) {
       this.y += lineH;
-      this.plain(text, F.transcript, C.body, false, false, wrapX, wrapMax);
+      this.plain(text, F.transcript, C.body, false, false, wrapX, wrapMax, LH, true);
       this.y += 0.5;
       return;
     }
@@ -408,9 +483,9 @@ class Pen {
     this.y += 0.5;
   }
 
-  /** Render a plain transcript line (no speaker match) */
+  /** Render a plain transcript line (no speaker match) — serif body */
   transcriptLine(text: string) {
-    this.plain(text, F.transcript, C.body, false, false, ML + 5, CW - 5);
+    this.plain(text, F.transcript, C.body, false, false, ML + 5, CW - 5, LH, true);
   }
 }
 
@@ -460,7 +535,8 @@ function renderMarkdown(pen: Pen, text: string) {
       pen.pageBreakHard(need);
       pen.heading(headingText, level);
     } else if (/^\s*[-*]\s+/.test(line)) {
-      pen.bullet(line.replace(/^\s*[-*]\s+/, ""));
+      // Reading-surface bullet → serif body.
+      pen.bullet(line.replace(/^\s*[-*]\s+/, ""), true);
     } else if (line.trim() === "") {
       pen.gap(2);
     } else {
@@ -476,7 +552,8 @@ function renderMarkdown(pen: Pen, text: string) {
         const bulletH = pen.measureLine(nextLine);
         pen.pageBreakHard(paraH + bulletH);
       }
-      pen.rich(parseInline(line), F.body, C.body);
+      // Reading-surface paragraph → serif body.
+      pen.rich(parseInline(line), F.body, C.body, ML, CW, LH, true);
     }
   }
 }
@@ -506,7 +583,12 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
     author: "WhatSaid",
   });
 
-  const pen = new Pen(pdf);
+  // Load Source Serif 4 (used for reading surfaces: summary, Q&A answers, transcript).
+  // Falls back to Helvetica if loading fails so the export never breaks.
+  const ss4 = await loadSourceSerif4();
+  if (ss4) registerSerifFont(pdf, ss4);
+
+  const pen = new Pen(pdf, !!ss4);
 
   // ── Header ──
   pen.heading(data.title, 1);
