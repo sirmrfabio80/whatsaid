@@ -245,7 +245,10 @@
       "speed": "Velocità di riproduzione",
       "test": "Prova voce",
       "sample": "Ecco come suonerà la funzione di ascolto sul tuo dispositivo.",
-      "invalidValue": "Seleziona una voce e una velocità valide."
+      "invalidValue": "Seleziona una voce e una velocità valide.",
+      "matchedVoice": "Voce selezionata: {{name}}",
+      "matchedVoiceDefault": "Voce predefinita del browser",
+      "matchedVoiceLoading": "Rilevamento delle voci disponibili…"
     },
     "security": "Sicurezza",
     "changePassword": "Cambia password",

@@ -245,7 +245,10 @@
       "speed": "Playback speed",
       "test": "Test voice",
       "sample": "This is how the listen feature will sound on your device.",
-      "invalidValue": "Please choose a valid voice and speed."
+      "invalidValue": "Please choose a valid voice and speed.",
+      "matchedVoice": "Matched: {{name}}",
+      "matchedVoiceDefault": "Browser default voice",
+      "matchedVoiceLoading": "Detecting available voices…"
     },
     "security": "Security",
     "changePassword": "Change password",

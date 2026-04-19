@@ -19,7 +19,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, Lock, Trash2, AlertCircle, Globe, Volume2, Headphones } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { setSpeechPreferences, speechManager, useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
+import {
+  setSpeechPreferences,
+  speechManager,
+  useSpeechSynthesis,
+  pickVoice,
+  subscribeVoices,
+  getCachedVoices,
+} from "@/hooks/use-speech-synthesis";
 import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
 
@@ -60,6 +67,26 @@ export default function Settings() {
   const [preferredVoice, setPreferredVoice] = useState<AllowedVoice>("female");
   const [playbackSpeed, setPlaybackSpeed] = useState<AllowedSpeed>(1.0);
   const { isSupported: speechSupported } = useSpeechSynthesis();
+  // Bump on voiceschanged so the matched-voice indicator updates once the browser populates voices.
+  const [voicesTick, setVoicesTick] = useState(0);
+  useEffect(() => {
+    if (!speechSupported) return;
+    if (getCachedVoices().length === 0) {
+      const unsub = subscribeVoices(() => setVoicesTick((n) => n + 1));
+      return unsub;
+    }
+  }, [speechSupported]);
+
+  const matchedVoiceLabel = (() => {
+    if (!speechSupported) return null;
+    const lang = i18n.language?.slice(0, 2) || "en";
+    if (getCachedVoices().length === 0) return t("settings.listening.matchedVoiceLoading");
+    const v = pickVoice(lang, preferredVoice);
+    if (!v) return t("settings.listening.matchedVoiceDefault");
+    return t("settings.listening.matchedVoice", { name: `${v.name} (${v.lang})` });
+  })();
+  // Reference voicesTick so React tracks it as a dependency for re-render.
+  void voicesTick;
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
 
@@ -327,6 +354,14 @@ export default function Settings() {
                     <span className="text-body-sm">{t("settings.listening.voiceMale")}</span>
                   </label>
                 </RadioGroup>
+                {matchedVoiceLabel && (
+                  <p
+                    className="text-caption text-muted-foreground mt-1"
+                    aria-live="polite"
+                  >
+                    {matchedVoiceLabel}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

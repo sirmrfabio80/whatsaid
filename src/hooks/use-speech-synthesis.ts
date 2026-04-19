@@ -44,6 +44,11 @@ export function setSpeechPreferences(prefs: Partial<SpeechPreferences>): void {
 // ---------- Voices cache ----------
 let voicesCache: SpeechSynthesisVoice[] = [];
 let voicesListenerAttached = false;
+const voicesListeners = new Set<() => void>();
+
+function emitVoicesChanged(): void {
+  voicesListeners.forEach((l) => l());
+}
 
 function refreshVoicesCache(): SpeechSynthesisVoice[] {
   if (!isSupported) return [];
@@ -57,11 +62,25 @@ if (isSupported) {
     voicesListenerAttached = true;
     const handler = () => {
       refreshVoicesCache();
+      emitVoicesChanged();
       window.speechSynthesis.removeEventListener("voiceschanged", handler);
       voicesListenerAttached = false;
     };
     window.speechSynthesis.addEventListener("voiceschanged", handler);
   }
+}
+
+/** Subscribe to voice-cache readiness updates. Returns an unsubscribe fn. */
+export function subscribeVoices(listener: () => void): () => void {
+  voicesListeners.add(listener);
+  return () => {
+    voicesListeners.delete(listener);
+  };
+}
+
+/** Returns the current cached voices (may be empty before voiceschanged fires). */
+export function getCachedVoices(): SpeechSynthesisVoice[] {
+  return voicesCache;
 }
 
 // Gender heuristic — best-effort only. Browser voice metadata is inconsistent
