@@ -443,8 +443,7 @@
       "resume": "Resume",
       "stop": "Stop",
       "unsupported": "Listening isn't available in this browser.",
-      "empty": "Nothing to listen to yet.",
-      "ariaStop": "Stop listening"
+      "empty": "Nothing to listen to yet."
     }
   },
   "share": {
