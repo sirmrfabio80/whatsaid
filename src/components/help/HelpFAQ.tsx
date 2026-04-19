@@ -80,7 +80,7 @@ export default function HelpFAQ({ filter }: HelpFAQProps) {
                           {pickLocale(item.q, i18n.language)}
                         </span>
                         {item.highlighted && (
-                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide shrink-0">
+                          <Badge variant="secondary" className="text-micro uppercase tracking-wide shrink-0">
                             {t("help.faq.mostAsked")}
                           </Badge>
                         )}

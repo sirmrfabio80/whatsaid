@@ -191,12 +191,12 @@ function ShareContent({
           )}
         </div>
         {isMobile && showAcceptHint && (
-          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
             {t("share.spaceToAcceptHint")}
           </p>
         )}
         {!isMobile && showArrowHint && suggestion.length > 0 && (
-          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
             {t("share.arrowRightToAcceptHint")}
           </p>
         )}

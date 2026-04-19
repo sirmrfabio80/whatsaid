@@ -75,7 +75,7 @@ export default function SpeakerIdentificationBanner({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full"
+              className="h-6 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full"
               onClick={onRerun}
               disabled={isRerunning}
             >
@@ -86,7 +86,7 @@ export default function SpeakerIdentificationBanner({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full"
+            className="h-6 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full"
             onClick={onDismiss}
           >
             {t("speakerIdentification.dismissAll")}
@@ -198,7 +198,7 @@ export default function SpeakerIdentificationBanner({
                   : s.inferred_name}
               </span>
               
-              <span className="text-[10px] text-muted-foreground/50 px-1.5 py-0.5 rounded-full bg-muted/50">
+              <span className="text-micro text-muted-foreground/60 px-1.5 py-0.5 rounded-full bg-muted/50">
                 {t("speakerIdentification.suggested")}
               </span>
               <Tooltip>

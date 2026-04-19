@@ -71,12 +71,12 @@ export default function SpeakerChips({
         </button>
       )}
       {hasRenames && onReset && (
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full" onClick={onReset} aria-label={t("speakerChips.resetNames")}>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full" onClick={onReset} aria-label={t("speakerChips.resetNames")}>
           {t("speakerChips.resetNames")}
         </Button>
       )}
       {onIdentifySpeakers && (
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-full gap-1" onClick={onIdentifySpeakers} disabled={identifyingInProgress} aria-label={t("speakerChips.identifySpeakers")}>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full gap-1" onClick={onIdentifySpeakers} disabled={identifyingInProgress} aria-label={t("speakerChips.identifySpeakers")}>
           {identifyingInProgress ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanSearch className="w-3 h-3" />}
           {t("speakerChips.identifySpeakers")}
         </Button>
@@ -115,7 +115,7 @@ function SpeakerChip({
         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={cancel} aria-label={t("common.cancel")}><X className="w-3 h-3" /></Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-muted-foreground shrink-0">{t("speakerChips.suggestions")}</Button>
+            <Button variant="ghost" size="sm" className="h-6 px-1.5 text-micro text-muted-foreground shrink-0">{t("speakerChips.suggestions")}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[120px]">
             {ROLE_SUGGESTIONS.map((role) => (

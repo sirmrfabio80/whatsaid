@@ -365,7 +365,7 @@ function LangPill({
         highlight ? "border-destructive/60 bg-destructive/10" : "bg-background",
       )}
     >
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-micro uppercase tracking-wide text-muted-foreground">{label}</span>
       <span className="font-mono text-sm">{value}</span>
     </div>
   );

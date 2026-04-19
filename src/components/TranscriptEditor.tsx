@@ -944,7 +944,7 @@ export default function TranscriptEditor({
                     </p>
                     {hasSuggestionHighlight && (
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                        <span className="inline-flex items-center text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                        <span className="inline-flex items-center text-micro text-primary bg-primary/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">
                           → {displaySpeaker(suggestion.speaker)}
                         </span>
                         <button
@@ -1053,7 +1053,7 @@ function SpeakerBadge({
         className="w-44 p-1"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-[10px] font-medium text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
+        <div className="text-micro text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
           {t("jobResults.changeSpeaker")}
         </div>
         {speakers.filter((s) => s !== null).map((sp) => {
@@ -1116,7 +1116,7 @@ function UnassignedBadge({
   const [open, setOpen] = useState(false);
 
   const badge = (
-    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 select-none whitespace-nowrap border border-dashed border-muted-foreground/40 rounded-md text-muted-foreground cursor-pointer hover:border-muted-foreground/60 hover:text-foreground transition-colors">
+    <span className="inline-flex items-center gap-1.5 text-caption font-medium px-1.5 py-0.5 select-none whitespace-nowrap border border-dashed border-muted-foreground/40 rounded-md text-muted-foreground cursor-pointer hover:border-muted-foreground/60 hover:text-foreground transition-colors">
       {t("jobResults.unassigned")}
     </span>
   );
@@ -1141,7 +1141,7 @@ function UnassignedBadge({
         className="w-44 p-1"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-[10px] font-medium text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
+        <div className="text-micro text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
           {t("jobResults.changeSpeaker")}
         </div>
         {speakers.filter((s) => s !== null).map((sp) => {

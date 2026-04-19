@@ -205,7 +205,7 @@ export default function ParticipantsPanel({ segments, speakerNames, durationSeco
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
                       <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-semibold text-white"
+                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-micro font-semibold text-white"
                         style={{ backgroundColor: getSpeakerColor(i) }}
                         aria-hidden="true"
                       >
@@ -215,7 +215,7 @@ export default function ParticipantsPanel({ segments, speakerNames, durationSeco
                       {/* Name + meta */}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{stat.displayName}</p>
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <div className="flex items-center gap-3 text-caption text-muted-foreground">
                           {stat.totalSeconds > 0 && (
                             <span>
                               {t("participants.spoken")}: {formatDuration(stat.totalSeconds)}

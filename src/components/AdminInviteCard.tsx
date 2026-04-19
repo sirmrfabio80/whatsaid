@@ -194,7 +194,7 @@ export default function AdminInviteCard() {
                     </span>
                     <Badge
                       variant={inv.claimed ? "default" : "secondary"}
-                      className="text-[10px] px-1.5"
+                      className="text-micro px-1.5"
                     >
                       {inv.claimed
                         ? t("settings.admin.claimed")

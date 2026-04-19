@@ -692,7 +692,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                           {regeneratingSummary ? <InlineSpinner size="xs" /> : <RefreshCw className="w-3.5 h-3.5" />}
                           {regeneratingSummary ? t("jobResults.regeneratingSummary") : t("jobResults.regenerateSummary")}
                         </Button>
-                        <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                        <span className="text-caption text-muted-foreground tabular-nums whitespace-nowrap">
                           {t("jobResults.summaryRegenRemaining", { remaining: 3 - summaryRegenCount })}
                         </span>
                       </>
@@ -833,7 +833,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                                       href={`/job/${src.id}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 rounded-full bg-secondary/70 hover:bg-secondary px-2 py-0.5 text-[11px] text-secondary-foreground transition-colors max-w-[200px]"
+                                      className="inline-flex items-center gap-1 rounded-full bg-secondary/70 hover:bg-secondary px-2 py-0.5 text-caption text-secondary-foreground transition-colors max-w-[200px]"
                                       title={src.title}
                                     >
                                       <FileText className="w-2.5 h-2.5 shrink-0 text-muted-foreground" />
