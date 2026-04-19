@@ -552,6 +552,20 @@ export const faq: FaqGroup[] = [
         },
       },
       {
+        id: "listening-voice-picker",
+        caps: ["CAP-028"],
+        q: {
+          en: "How does the Listening voice picker work, and why don't I see male/female options on every browser?",
+          it: "Come funziona il selettore di voce Ascolto e perché su alcuni browser non vedo le opzioni maschile/femminile?",
+          fr: "Comment fonctionne le sélecteur de voix d'Écoute, et pourquoi ne vois-je pas les options masculine/féminine sur tous les navigateurs ?",
+        },
+        a: {
+          en: "The Listen feature on each job uses your browser's built-in text-to-speech voices — WhatSaid does not generate audio itself. In Settings → Listening you can pick a preferred voice (male or female) and a playback speed; we then match those choices against the voices your browser and operating system actually expose, in this order: exact language, same language family, locally installed voice, then a name-based gender guess. The matched voice name is shown right under the selector. Because browsers report voice metadata inconsistently — some don't tag voices by gender at all, and mobile browsers often ship only one or two voices per language — your selection may map to the same voice in both modes, or fall back to your browser's default. Your speed choice is always applied.",
+          it: "La funzione Ascolta in ogni lavoro usa le voci di sintesi vocale integrate nel browser — WhatSaid non genera audio. In Impostazioni → Ascolto puoi scegliere una voce preferita (maschile o femminile) e una velocità di riproduzione; poi le confrontiamo con le voci effettivamente esposte dal browser e dal sistema operativo, in quest'ordine: lingua esatta, stessa famiglia linguistica, voce installata localmente, infine un'ipotesi di genere basata sul nome. Il nome della voce selezionata viene mostrato sotto il selettore. Poiché i browser riportano i metadati delle voci in modo incoerente — alcuni non etichettano le voci per genere e i browser mobili spesso offrono solo una o due voci per lingua — la tua scelta potrebbe ricadere sulla stessa voce in entrambe le modalità o tornare alla voce predefinita. La velocità scelta viene sempre applicata.",
+          fr: "La fonction Écouter sur chaque travail utilise les voix de synthèse vocale intégrées à votre navigateur — WhatSaid ne génère pas d'audio. Dans Paramètres → Écoute, vous pouvez choisir une voix préférée (masculine ou féminine) et une vitesse de lecture ; nous comparons ensuite ces choix aux voix réellement exposées par votre navigateur et votre système d'exploitation, dans cet ordre : langue exacte, même famille linguistique, voix installée localement, puis une estimation du genre basée sur le nom. Le nom de la voix retenue s'affiche sous le sélecteur. Parce que les navigateurs publient les métadonnées des voix de façon incohérente — certains ne taguent pas les voix par genre et les navigateurs mobiles n'offrent souvent qu'une ou deux voix par langue — votre sélection peut aboutir à la même voix dans les deux modes ou retomber sur la voix par défaut. Votre choix de vitesse est toujours appliqué.",
+        },
+      },
+      {
         id: "delete-account",
         caps: ["CAP-030"],
         q: { en: "How do I delete my account?", it: "Come faccio a eliminare il mio account?", fr: "Comment supprimer mon compte ?" },
