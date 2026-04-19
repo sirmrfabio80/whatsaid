@@ -418,7 +418,13 @@ export default function Convert() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat relative overflow-hidden">
+      {/* Off-axis decorative orb (desktop only) — matches marketing pages identity */}
+      <div
+        aria-hidden="true"
+        className="hidden lg:block absolute top-8 right-[-8rem] w-[24rem] h-[24rem] rounded-full bg-primary/10 blur-3xl pointer-events-none"
+      />
+
       {processingPurchase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 shadow-lg">
@@ -432,7 +438,7 @@ export default function Convert() {
           </div>
         </div>
       )}
-      <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
+      <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10 relative">
         <div className="max-w-2xl mx-auto">
           {creditsAdded !== null && (
             <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 animate-enter">
@@ -450,8 +456,11 @@ export default function Convert() {
             </div>
           )}
           <div className="text-center mb-8">
+            <p className="font-serif italic text-caption text-primary mb-2">
+              {t("convert.eyebrow", { defaultValue: "Upload & transcribe" })}
+            </p>
             <h1 className="text-h1 sm:text-[1.875rem] mb-2">{t("convert.title")}</h1>
-            <p className="text-muted-foreground">{t("convert.subtitle")}</p>
+            <p className="font-serif text-body text-muted-foreground">{t("convert.subtitle")}</p>
           </div>
 
           {processing || step === "failed" ? (
