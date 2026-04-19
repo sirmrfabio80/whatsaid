@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "docs:check": "node scripts/check-capabilities-sources.mjs",
-    "docs:check:tokens": "node scripts/check-design-tokens-drift.mjs"
+    "docs:check:tokens": "node scripts/check-design-tokens-drift.mjs",
+    "docs:check:all": "npm run docs:check && npm run docs:check:faq && npm run docs:check:tokens",
+    "docs:check:faq": "node scripts/check-help-faq-coverage.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
