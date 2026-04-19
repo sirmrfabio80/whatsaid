@@ -9,7 +9,7 @@
 ## 1. Product overview
 
 WhatSaid converts uploaded audio (`.m4a`, `.mp3`, `.wav` — up to 100 MB,
-≤ 60 minutes) into:
+≤ 480 minutes) into:
 
 1. A full transcript with timestamps and speaker labels.
 2. A structured summary (key points + key actions).
@@ -189,16 +189,22 @@ can only access their own rows except where noted. Roles are stored in a
 ### 5.2 Credits & billing
 
 **Credit model (source of truth: `src/lib/pricing.ts → creditsForDuration`).**
-Cost is computed from the audio's duration in **15-minute brackets**, not
-per minute and not per file. Maximum accepted duration is 60 minutes
-(`MAX_DURATION = 3600` s in `src/lib/pricing.ts`).
+Pricing is **per file**, not per minute or per bracket: a single credit
+buys a full transcription for any file up to **120 minutes**. Files
+longer than 120 min cost **+1 credit per additional 120-min block**.
+The hard ceiling per file is **480 minutes** (`MAX_DURATION = 480 * 60`
+in `src/lib/pricing.ts`), so a single upload can cost at most 4 credits.
+
+```
+creditsForDuration(seconds) = max(1, ceil(seconds / 60 / 120))
+```
 
 | Duration | Credits charged |
 |---|---|
-| ≤ 15 min | 1 |
-| ≤ 30 min | 2 |
-| ≤ 45 min | 3 |
-| ≤ 60 min | 4 |
+| 0 – 120 min | 1 |
+| 121 – 240 min | 2 |
+| 241 – 360 min | 3 |
+| 361 – 480 min | 4 |
 
 A single charge covers the full pipeline for that job: **transcript +
 structured summary + Q&A + tags + title**. Regenerating the summary,
@@ -234,12 +240,9 @@ with a `.99-rounded` GBP→FX fallback if Paddle.js is unavailable):
 | `5-pack` (highlighted) | 5 | £14.99 | `pri_01kp91hv62g2nx9jxqta2766hf` |
 | `20-pack` | 20 | £39.99 | `pri_01kp91m77g15bhgemezzcsvh2n` |
 
-Note that **packs sell credits, not jobs.** A 5-pack equals 5 × 15 min of
-audio — i.e. one 60-minute file would consume 4 of those 5 credits. The
-"Use one credit per file" / "1 uploaded file" copy on `/pricing` is a
-marketing simplification valid only for files ≤ 15 min; the authoritative
-"How a credit maps to audio length" table on the same page reflects the
-real bracket model.
+Packs sell credits, and **1 credit = 1 transcription up to 120 min**, so
+a 5-pack covers 5 standard transcriptions (or fewer transcriptions if
+some files exceed 120 min and consume multiple credits each).
 
 **Tables backing the model:**
 

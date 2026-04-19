@@ -2,8 +2,8 @@
 title: WhatSaid — Product Capabilities
 purpose: Single source of truth for documentation, FAQ, help content, and marketing copy extraction.
 audience: internal (product, support, marketing, AI assistants)
-last_reviewed: 2026-04-18
-review_notes: First pass after Q&A extra-sources feature shipped. Verify items in "Needs review" before public extraction.
+last_reviewed: 2026-04-19
+review_notes: Pricing model switched to per-file credits (1 credit per file ≤120 min, +1 credit per additional 120-min block, max 480 min).
 ---
 
 # WhatSaid — Product Capabilities
@@ -37,7 +37,7 @@ When you change code that touches a capability, update the matching block in the
 
 ## Product summary
 
-WhatSaid is a web app for turning uploaded audio (.m4a, .mp3, .wav up to 100 MB / 60 minutes) into a clean, editable transcript with speaker labels, a structured summary, custom Q&A, and exports (TXT, JSON, DOC, PDF). It is account-based, prepaid via credit packs, available in English / Italian / French, and deletes uploaded audio after processing.
+WhatSaid is a web app for turning uploaded audio (.m4a, .mp3, .wav up to 100 MB / 480 minutes) into a clean, editable transcript with speaker labels, a structured summary, custom Q&A, and exports (TXT, JSON, DOC, PDF). It is account-based, prepaid via credit packs (1 credit per file up to 120 min — longer files cost +1 credit per extra 120-min block), available in English / Italian / French, and deletes uploaded audio after processing.
 
 ---
 
@@ -46,7 +46,7 @@ WhatSaid is a web app for turning uploaded audio (.m4a, .mp3, .wav up to 100 MB 
 - **Job** — a single audio upload and its lifecycle (pending → processing → completed / failed).
 - **Output** — a generated artefact attached to a job: transcript, summary, custom answer, title, tags.
 - **Variant** — a translated copy of an output stored in `job_output_variants`.
-- **Credit** — prepaid unit consumed by transcription; 1 credit covers up to 15 minutes of audio.
+- **Credit** — prepaid unit consumed by transcription; 1 credit covers 1 transcription up to 120 minutes. Files longer than 120 minutes cost +1 credit per additional 120-min block (max 480 min per file).
 - **Transcript** — the full speaker-labelled text of a job.
 - **Summary** — the structured key-points / key-actions output derived from the transcript.
 - **Q&A** — a custom user prompt answered against the transcript (optionally grounded with extra transcripts).
@@ -60,7 +60,7 @@ WhatSaid is a web app for turning uploaded audio (.m4a, .mp3, .wav up to 100 MB 
 
 | ID | Category | Name | Status | Audience | Public copy |
 |---|---|---|---|---|---|
-| CAP-001 | Audio ingestion | Audio upload (.m4a/.mp3/.wav, ≤100 MB, ≤60 min) | live | user | yes |
+| CAP-001 | Audio ingestion | Audio upload (.m4a/.mp3/.wav, ≤100 MB, ≤480 min) | live | user | yes |
 | CAP-002 | Audio ingestion | Auto language detection + manual override | live | user | yes |
 | CAP-003 | Transcription | Full transcript with timestamps | live | user | yes |
 | CAP-004 | Transcription | Speaker diarization & speaker labels | live | user | yes |
@@ -123,12 +123,12 @@ WhatSaid is a web app for turning uploaded audio (.m4a, .mp3, .wav up to 100 MB 
 - **Public copy eligible:** yes
 - **Audience:** authenticated user
 - **Where it appears:** `/convert` page, drag-and-drop / file picker.
-- **What it does:** Accepts a single audio file up to 100 MB and 60 minutes for transcription.
+- **What it does:** Accepts a single audio file up to 100 MB and 480 minutes (8 hours) for transcription.
 - **How it works:** Client validates extension and MIME type, then uploads to private storage and creates a job record.
-- **Dependencies / preconditions:** Signed-in account; sufficient credits to cover the duration.
-- **Limits / constraints:** `.m4a`, `.mp3`, `.wav` only; ≤100 MB; ≤60 min.
-- **Homepage seed:** Upload audio up to 60 minutes; m4a / mp3 / wav supported.
-- **Pricing seed:** Up to 60 minutes per upload.
+- **Dependencies / preconditions:** Signed-in account; sufficient credits to cover the duration (1 credit per 120-min block).
+- **Limits / constraints:** `.m4a`, `.mp3`, `.wav` only; ≤100 MB; ≤480 min.
+- **Homepage seed:** Upload audio up to 480 minutes; m4a / mp3 / wav supported.
+- **Pricing seed:** 1 credit per file up to 120 min — longer files use additional credits.
 - **FAQ seeds:** What audio formats are supported? What's the maximum file size and length?
 - **Help topic:** Uploading audio
 - **Source files:** `src/pages/Convert.tsx`, `src/components/AudioUploader.tsx`, `src/lib/pricing.ts`
@@ -666,11 +666,11 @@ WhatSaid is a web app for turning uploaded audio (.m4a, .mp3, .wav up to 100 MB 
 - **Public copy eligible:** yes
 - **Audience:** authenticated user
 - **Where it appears:** `/convert` price preview; `/pricing`.
-- **What it does:** Charges credits per transcription based on duration brackets: 1 credit ≤15 min, 2 ≤30, 3 ≤45, 4 ≤60.
+- **What it does:** Charges credits per transcription using a per-file model: 1 credit for any file up to 120 minutes, +1 credit per additional 120-min block (max 4 credits at 480 min).
 - **Dependencies / preconditions:** Sufficient credit balance to cover the upload.
-- **Limits / constraints:** Brackets are 15-minute steps up to 60 minutes.
-- **Homepage seed:** 1 credit covers up to 15 minutes of audio.
-- **Pricing seed:** 15-min brackets: 1 / 2 / 3 / 4 credits up to 60 min.
+- **Limits / constraints:** 1 credit per transcription up to 120 min; +1 credit per extra 120-min block; ceiling 480 min per file.
+- **Homepage seed:** 1 credit covers a full transcription up to 120 minutes.
+- **Pricing seed:** 1 credit per file up to 120 min; longer files use additional credits (1 per extra 120 min).
 - **FAQ seeds:** How many credits does a transcription cost? How is duration measured?
 - **Help topic:** How credits are charged
 - **Source files:** `src/lib/pricing.ts`, `src/pages/Convert.tsx`
@@ -772,7 +772,7 @@ Plumbing — never surface to users.
 ## Cross-cutting properties
 
 - **Audio formats:** `.m4a`, `.mp3`, `.wav`. (`.m4a` is first-class.)
-- **Audio limits:** ≤100 MB per file; ≤60 minutes per file.
+- **Audio limits:** ≤100 MB per file; ≤480 minutes (8 h) per file. Credits charged: 1 per file up to 120 min, +1 per additional 120-min block.
 - **UI languages:** English, Italian, French.
 - **Output / summary languages:** Translation variants generated on demand; underlying language coverage is provider-driven (treat any "99 languages" claim as inferred).
 - **Export formats:** TXT, JSON, DOC (sync); PDF (async).
@@ -850,3 +850,4 @@ These are real user-facing features but should not be surfaced in homepage / pri
 | Date | Change | Author |
 |---|---|---|
 | 2026-04-18 | Initial document. | AI assistant (post Q&A extra-sources release) |
+| 2026-04-19 | Switched credit model to per-file: 1 credit per transcription up to 120 min, +1 credit per extra 120-min block, max 480 min per file. Updated CAP-001, CAP-032, glossary, summary, audio-limits footer. | AI assistant |
