@@ -212,6 +212,15 @@ export default function JobDetail() {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
+                {jobStatus && (jobStatus === "processing" || jobStatus === "pending" || jobStatus === "uploading") && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 text-warning border border-warning/20 px-2.5 py-1 text-xs font-medium">
+                    <span className="relative inline-flex w-1.5 h-1.5" aria-hidden="true">
+                      <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
+                      <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
+                    </span>
+                    {jobStatus}
+                  </span>
+                )}
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <button className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium hover:bg-muted/60 transition-colors cursor-pointer">
