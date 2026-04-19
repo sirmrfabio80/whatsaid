@@ -27,6 +27,12 @@
     "settings": "Paramètres",
     "help": "Aide"
   },
+  "theme": {
+    "label": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
   "home": {
     "tagline": "Transcription IA + identification des intervenants",
     "heroEyebrow": "Transcription IA premium",
