@@ -25,7 +25,7 @@ export default function HelpWorkflow() {
   return (
     <section id="workflow" className="container mx-auto px-5 sm:px-6 py-10 scroll-mt-24">
       <div className="mb-6">
-        <h2 className="font-heading text-xl sm:text-2xl font-semibold mb-1">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-1">
           {t("help.workflow.title")}
         </h2>
         <p className="text-sm text-muted-foreground">{t("help.workflow.lead")}</p>
@@ -42,7 +42,7 @@ export default function HelpWorkflow() {
                     <Icon className="w-4.5 h-4.5 text-primary" aria-hidden />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-heading font-semibold text-base mb-1.5 leading-snug">
+                    <h3 className="font-semibold text-base mb-1.5 leading-snug">
                       {pickLocale(step.title, i18n.language)}
                     </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">

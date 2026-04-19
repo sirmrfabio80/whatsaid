@@ -83,7 +83,7 @@ export default function Help() {
                     <Shield className="w-4.5 h-4.5 text-primary" aria-hidden />
                   </div>
                   <div className="flex-1">
-                    <h2 className="font-heading text-lg font-semibold mb-2">{t("help.privacy.title")}</h2>
+                    <h2 className="text-lg font-semibold mb-2">{t("help.privacy.title")}</h2>
                     <ul className="space-y-1.5 text-sm text-muted-foreground leading-relaxed list-disc pl-5 mb-3">
                       <li>{t("help.privacy.b1")}</li>
                       <li>{t("help.privacy.b2")}</li>

@@ -100,7 +100,7 @@ function PricingCard({
         </div>
       )}
       <CardContent className="p-6 sm:p-8 flex flex-col h-full">
-        <h3 className="font-heading text-lg font-semibold mb-1">
+        <h3 className="text-lg font-semibold mb-1">
           {t(product.title)}
         </h3>
         <p className="text-sm text-muted-foreground mb-5">
@@ -111,7 +111,7 @@ function PricingCard({
           {loading ? (
             <Skeleton className="h-10 w-28 rounded-md" />
           ) : (
-            <span className="font-heading text-3xl sm:text-4xl font-bold tracking-tight">
+            <span className="text-3xl sm:text-4xl font-bold tracking-tight">
               {formattedPrice}
             </span>
           )}
@@ -262,7 +262,7 @@ export default function Pricing() {
                 : "opacity-0 translate-y-6"
             }`}
           >
-            <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-5 leading-[1.15]">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-5 leading-[1.15]">
               {t("pricing.heroTitle")}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto mb-3 leading-relaxed">
@@ -310,7 +310,7 @@ export default function Pricing() {
                 : "opacity-0 translate-y-6"
             }`}
           >
-            <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">
+            <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
               {t("pricing.valueTitle")}
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
@@ -359,7 +359,7 @@ export default function Pricing() {
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
                     <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="font-heading font-semibold text-sm mb-1">
+                  <h3 className="font-semibold text-sm mb-1">
                     {t(title)}
                   </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
@@ -385,7 +385,7 @@ export default function Pricing() {
               : "opacity-0 translate-y-6"
           }`}
         >
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
             {t("pricing.cardsTitle")}
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
@@ -465,7 +465,7 @@ export default function Pricing() {
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
               <UserPlus className="w-6 h-6 text-primary" />
             </div>
-            <h2 className="font-heading text-xl sm:text-2xl font-semibold mb-3">
+            <h2 className="text-xl sm:text-2xl font-semibold mb-3">
               {t("pricing.trustTitle")}
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-4">
@@ -487,7 +487,7 @@ export default function Pricing() {
               : "opacity-0 translate-y-6"
           }`}
         >
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
             {t("pricing.howTitle")}
           </h2>
         </div>
@@ -510,7 +510,7 @@ export default function Pricing() {
               <div className="text-xs font-medium text-primary mb-1">
                 {t("home.step", { number: step })}
               </div>
-              <h3 className="font-heading font-semibold text-lg mb-2">
+              <h3 className="font-semibold text-lg mb-2">
                 {t(title)}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
@@ -534,7 +534,7 @@ export default function Pricing() {
                 : "opacity-0 translate-y-6"
             }`}
           >
-            <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">
+            <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
               {t("pricing.faqTitle")}
             </h2>
           </div>
@@ -579,7 +579,7 @@ export default function Pricing() {
               : "opacity-0 translate-y-6"
           }`}
         >
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-4">
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-4">
             {t("pricing.finalTitle")}
           </h2>
           <p className="text-muted-foreground mb-8 max-w-md mx-auto">

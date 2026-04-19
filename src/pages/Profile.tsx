@@ -85,7 +85,7 @@ export default function Profile() {
               onUploaded={() => refreshAvatar()}
             />
             <div>
-              <h1 className="font-heading text-2xl sm:text-3xl font-bold">{profile?.display_name || t("profile.user")}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">{profile?.display_name || t("profile.user")}</h1>
               <p className="text-sm text-muted-foreground">{profile?.email || user.email || ""}</p>
               {memberSince && <p className="text-xs text-muted-foreground mt-0.5">{t("profile.memberSince", { date: memberSince })}</p>}
             </div>
@@ -95,7 +95,7 @@ export default function Profile() {
             <CardContent className="p-5 sm:p-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-muted border border-border px-3 py-1.5 rounded-lg">
-                  <span className="font-heading font-bold text-lg">{creditBalance}</span>
+                  <span className="font-bold text-lg">{creditBalance}</span>
                   <span className="text-sm text-muted-foreground ml-1.5">{t("common.credits")}</span>
                 </div>
               </div>
@@ -114,13 +114,13 @@ export default function Profile() {
                   {isStatsLoading ? (
                     <Skeleton className="h-6 w-12 mx-auto mb-1 rounded-lg" />
                   ) : dateValue ? (
-                    <p className="font-heading font-semibold text-base sm:text-lg leading-tight">
+                    <p className="font-semibold text-base sm:text-lg leading-tight">
                       <span>{dateValue.dayMonth}</span>
                       <br className="sm:hidden" />
                       <span className="sm:ml-1">{dateValue.year}</span>
                     </p>
                   ) : (
-                    <p className="font-heading font-semibold text-base sm:text-lg">{value}</p>
+                    <p className="font-semibold text-base sm:text-lg">{value}</p>
                   )}
                   <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{label}</p>
                 </CardContent>

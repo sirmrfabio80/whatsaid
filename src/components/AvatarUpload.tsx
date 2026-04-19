@@ -87,7 +87,7 @@ export default function AvatarUpload({
     >
       <Avatar className={cn(sizeClasses, "rounded-xl")}>
         {displayUrl && <AvatarImage src={displayUrl} alt="Avatar" />}
-        <AvatarFallback className="rounded-xl bg-primary/10 text-primary font-heading font-semibold">
+        <AvatarFallback className="rounded-xl bg-primary/10 text-primary font-semibold">
           {initials}
         </AvatarFallback>
       </Avatar>

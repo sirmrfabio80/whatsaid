@@ -58,7 +58,7 @@ export default function HelpFeatureGrid({ filter }: HelpFeatureGridProps) {
   return (
     <section id="features" className="container mx-auto px-5 sm:px-6 py-10 scroll-mt-24">
       <div className="mb-6">
-        <h2 className="font-heading text-xl sm:text-2xl font-semibold mb-1">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-1">
           {t("help.features.title")}
         </h2>
         <p className="text-sm text-muted-foreground">{t("help.features.lead")}</p>
@@ -67,7 +67,7 @@ export default function HelpFeatureGrid({ filter }: HelpFeatureGridProps) {
       <div className="space-y-8">
         {filteredGroups.map((group) => (
           <div key={group.id}>
-            <h3 className="font-heading text-base font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            <h3 className="text-base font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
               {pickLocale(group.title, i18n.language)}
             </h3>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -80,7 +80,7 @@ export default function HelpFeatureGrid({ filter }: HelpFeatureGridProps) {
                         <Icon className="w-4 h-4 text-primary" aria-hidden />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-heading font-semibold text-sm mb-1 leading-snug">
+                        <h4 className="font-semibold text-sm mb-1 leading-snug">
                           {pickLocale(item.title, i18n.language)}
                         </h4>
                         <p className="text-xs text-muted-foreground leading-relaxed">

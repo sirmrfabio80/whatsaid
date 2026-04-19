@@ -14,7 +14,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <img src={logoImg} alt="WhatSaid" className="w-7 h-7 rounded-lg" />
-              <span className="font-heading font-semibold text-sm">WhatSaid</span>
+              <span className="font-semibold text-sm">WhatSaid</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
               {t("footer.desc")}
@@ -23,7 +23,7 @@ export default function Footer() {
 
           {/* Product */}
           <div>
-            <h4 className="font-heading font-semibold text-sm mb-3">{t("footer.product")}</h4>
+            <h4 className="font-semibold text-sm mb-3">{t("footer.product")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/convert" className="hover:text-foreground transition-colors">{t("footer.convertAudio")}</Link></li>
               <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link></li>
@@ -33,7 +33,7 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="font-heading font-semibold text-sm mb-3">{t("footer.legal")}</h4>
+            <h4 className="font-semibold text-sm mb-3">{t("footer.legal")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/terms" className="hover:text-foreground transition-colors">{t("footer.terms")}</Link></li>
               <li><Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link></li>
@@ -43,7 +43,7 @@ export default function Footer() {
 
           {/* Support */}
           <div>
-            <h4 className="font-heading font-semibold text-sm mb-3">{t("footer.support")}</h4>
+            <h4 className="font-semibold text-sm mb-3">{t("footer.support")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link to="/help" className="hover:text-foreground transition-colors">
