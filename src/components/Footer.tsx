@@ -14,7 +14,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <img src={logoImg} alt="WhatSaid" className="w-7 h-7 rounded-lg" />
-              <span className="font-semibold text-secondary">WhatSaid</span>
+              <span className="font-semibold text-body-sm">WhatSaid</span>
             </div>
             <p className="text-caption text-muted-foreground leading-relaxed max-w-xs">
               {t("footer.desc")}
@@ -24,7 +24,7 @@ export default function Footer() {
           {/* Product */}
           <div>
             <h4 className="text-h3 mb-3">{t("footer.product")}</h4>
-            <ul className="space-y-2 text-secondary text-muted-foreground">
+            <ul className="space-y-2 text-body-sm text-muted-foreground">
               <li><Link to="/convert" className="hover:text-foreground transition-colors">{t("footer.convertAudio")}</Link></li>
               <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link></li>
               <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>
@@ -34,7 +34,7 @@ export default function Footer() {
           {/* Legal */}
           <div>
             <h4 className="text-h3 mb-3">{t("footer.legal")}</h4>
-            <ul className="space-y-2 text-secondary text-muted-foreground">
+            <ul className="space-y-2 text-body-sm text-muted-foreground">
               <li><Link to="/terms" className="hover:text-foreground transition-colors">{t("footer.terms")}</Link></li>
               <li><Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link></li>
               <li><Link to="/refund-policy" className="hover:text-foreground transition-colors">{t("footer.refundPolicy")}</Link></li>
@@ -44,7 +44,7 @@ export default function Footer() {
           {/* Support */}
           <div>
             <h4 className="text-h3 mb-3">{t("footer.support")}</h4>
-            <ul className="space-y-2 text-secondary text-muted-foreground">
+            <ul className="space-y-2 text-body-sm text-muted-foreground">
               <li>
                 <Link to="/help" className="hover:text-foreground transition-colors">
                   {t("footer.helpAndFaq")}

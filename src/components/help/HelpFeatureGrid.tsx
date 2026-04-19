@@ -61,7 +61,7 @@ export default function HelpFeatureGrid({ filter }: HelpFeatureGridProps) {
         <h2 className="text-h1 sm:text-[1.5rem] mb-1">
           {t("help.features.title")}
         </h2>
-        <p className="text-secondary text-muted-foreground">{t("help.features.lead")}</p>
+        <p className="text-body-sm text-muted-foreground">{t("help.features.lead")}</p>
       </div>
 
       <div className="space-y-8">
@@ -80,7 +80,7 @@ export default function HelpFeatureGrid({ filter }: HelpFeatureGridProps) {
                         <Icon className="w-4 h-4 text-primary" aria-hidden />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-secondary mb-1 leading-snug">
+                        <h4 className="font-semibold text-body-sm mb-1 leading-snug">
                           {pickLocale(item.title, i18n.language)}
                         </h4>
                         <p className="text-caption text-muted-foreground leading-relaxed">

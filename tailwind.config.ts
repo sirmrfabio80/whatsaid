@@ -113,7 +113,7 @@ export default {
         h3: ["1rem", { lineHeight: "1.35", letterSpacing: "-0.005em", fontWeight: "600" }],
         reading: ["1rem", { lineHeight: "1.7", letterSpacing: "0" }],
         body: ["0.9375rem", { lineHeight: "1.6", letterSpacing: "0" }],
-        secondary: ["0.8125rem", { lineHeight: "1.5", letterSpacing: "0" }],
+        "body-sm": ["0.8125rem", { lineHeight: "1.5", letterSpacing: "0" }],
         caption: ["0.75rem", { lineHeight: "1.4", letterSpacing: "0", fontWeight: "500" }],
         micro: ["0.6875rem", { lineHeight: "1.3", letterSpacing: "0.04em", fontWeight: "600" }],
         button: ["0.875rem", { lineHeight: "1", letterSpacing: "0", fontWeight: "500" }],

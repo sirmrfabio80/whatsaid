@@ -61,7 +61,7 @@ export default function SetPassword() {
                 <Lock className="w-6 h-6 text-primary" />
               </div>
               <h1 className="text-h1">{t("setPassword.title")}</h1>
-              <p className="text-muted-foreground text-secondary">{t("setPassword.subtitle")}</p>
+              <p className="text-muted-foreground text-body-sm">{t("setPassword.subtitle")}</p>
             </div>
 
             <div className="space-y-4">
@@ -88,7 +88,7 @@ export default function SetPassword() {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-destructive text-secondary">
+                <div className="flex items-center gap-2 text-destructive text-body-sm">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -104,7 +104,7 @@ export default function SetPassword() {
 
               <button
                 onClick={handleSkip}
-                className="w-full text-center text-secondary text-muted-foreground hover:text-foreground transition-colors py-2"
+                className="w-full text-center text-body-sm text-muted-foreground hover:text-foreground transition-colors py-2"
               >
                 {t("setPassword.skipForNow")}
               </button>

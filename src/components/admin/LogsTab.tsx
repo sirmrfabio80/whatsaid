@@ -233,7 +233,7 @@ export default function LogsTab() {
         </CardHeader>
         <CardContent className="space-y-3">
           {data.outputs.length === 0 ? (
-            <p className="text-secondary text-muted-foreground">No outputs yet.</p>
+            <p className="text-body-sm text-muted-foreground">No outputs yet.</p>
           ) : (
             data.outputs.map((o) => (
               <details

@@ -29,7 +29,7 @@ export function ErrorState({
       </div>
       <p className="text-h3 mb-1">{title}</p>
       {description ? (
-        <p className="text-muted-foreground text-secondary mb-6 max-w-md">{description}</p>
+        <p className="text-muted-foreground text-body-sm mb-6 max-w-md">{description}</p>
       ) : null}
       {action}
     </div>

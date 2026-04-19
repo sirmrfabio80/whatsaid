@@ -74,7 +74,7 @@ export default function ResetPassword() {
         <CardContent>
           {success ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-primary text-secondary">
+              <div className="flex items-center gap-2 text-primary text-body-sm">
                 <Check className="w-4 h-4" />
                 <span>{t("resetPassword.passwordUpdated")}</span>
               </div>
@@ -90,7 +90,7 @@ export default function ResetPassword() {
                 <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required placeholder="••••••••" className="rounded-xl h-11" />
               </div>
               {error && (
-                <div className="flex items-center gap-2 text-destructive text-secondary">
+                <div className="flex items-center gap-2 text-destructive text-body-sm">
                   <AlertCircle className="w-4 h-4" />
                   <span>{error}</span>
                 </div>

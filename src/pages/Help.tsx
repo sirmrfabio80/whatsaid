@@ -84,12 +84,12 @@ export default function Help() {
                   </div>
                   <div className="flex-1">
                     <h2 className="text-h2 mb-2">{t("help.privacy.title")}</h2>
-                    <ul className="space-y-1.5 text-secondary text-muted-foreground leading-relaxed list-disc pl-5 mb-3">
+                    <ul className="space-y-1.5 text-body-sm text-muted-foreground leading-relaxed list-disc pl-5 mb-3">
                       <li>{t("help.privacy.b1")}</li>
                       <li>{t("help.privacy.b2")}</li>
                       <li>{t("help.privacy.b3")}</li>
                     </ul>
-                    <Link to="/privacy" className="text-secondary text-primary hover:underline">
+                    <Link to="/privacy" className="text-body-sm text-primary hover:underline">
                       {t("help.privacy.readMore")} →
                     </Link>
                   </div>

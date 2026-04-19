@@ -85,7 +85,7 @@ export default function Login() {
           <CardContent>
             {resetSent ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary text-secondary">
+                <div className="flex items-center gap-2 text-primary text-body-sm">
                   <Check className="w-4 h-4" />
                   <span>{t("login.resetLinkSent")} <strong>{email}</strong></span>
                 </div>
@@ -101,7 +101,7 @@ export default function Login() {
                   <Input id="reset-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="rounded-xl h-11" />
                 </div>
                 {error && (
-                  <div className="flex items-center gap-2 text-destructive text-secondary">
+                  <div className="flex items-center gap-2 text-destructive text-body-sm">
                     <AlertCircle className="w-4 h-4" />
                     <span>{error}</span>
                   </div>
@@ -109,7 +109,7 @@ export default function Login() {
                 <Button type="submit" className="w-full h-11 rounded-xl" disabled={resetLoading}>
                   {resetLoading ? t("login.sending") : t("login.sendResetLink")}
                 </Button>
-                <Button variant="ghost" type="button" className="w-full text-secondary" onClick={() => { setForgotMode(false); setError(null); }}>
+                <Button variant="ghost" type="button" className="w-full text-body-sm" onClick={() => { setForgotMode(false); setError(null); }}>
                   <ArrowLeft className="w-4 h-4 mr-1.5" />
                   {t("login.backToSignIn")}
                 </Button>
@@ -149,7 +149,7 @@ export default function Login() {
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="rounded-xl h-11" />
             </div>
             {error && (
-              <div className="flex items-center gap-2 text-destructive text-secondary">
+              <div className="flex items-center gap-2 text-destructive text-body-sm">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
@@ -169,7 +169,7 @@ export default function Login() {
             {googleLoading ? t("login.signingIn") : t("login.continueWithGoogle")}
           </Button>
 
-          <p className="text-center text-secondary text-muted-foreground mt-4">
+          <p className="text-center text-body-sm text-muted-foreground mt-4">
             {t("login.privateBeta")}
           </p>
         </CardContent>
