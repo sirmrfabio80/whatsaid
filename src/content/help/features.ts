@@ -296,9 +296,9 @@ export const features: FeatureGroup[] = [
         icon: "creditCard",
         title: { en: "Credits & top-ups", it: "Crediti e ricariche", fr: "Crédits et recharges" },
         body: {
-          en: "Buy credit packs of 1, 5, or 20 from the Pricing page. Pay in GBP, USD, or EUR. Transcription costs 1 credit per 15 minutes (rounded up to the next 15-minute bracket).",
-          it: "Acquista pacchetti di crediti da 1, 5 o 20 dalla pagina Prezzi. Paga in GBP, USD o EUR. La trascrizione costa 1 credito ogni 15 minuti (arrotondato al successivo intervallo di 15 minuti).",
-          fr: "Achetez des packs de crédits de 1, 5 ou 20 depuis la page Tarifs. Payez en GBP, USD ou EUR. La transcription coûte 1 crédit par 15 minutes (arrondi au palier de 15 minutes supérieur).",
+          en: "Buy credit packs of 1, 5, or 20 from the Pricing page. Pay in GBP, USD, or EUR. Transcription costs 1 credit per file up to 120 minutes; longer files cost 1 extra credit per additional 120-minute block.",
+          it: "Acquista pacchetti di crediti da 1, 5 o 20 dalla pagina Prezzi. Paga in GBP, USD o EUR. La trascrizione costa 1 credito per file fino a 120 minuti; i file più lunghi costano 1 credito aggiuntivo per ogni blocco di 120 minuti in più.",
+          fr: "Achetez des packs de crédits de 1, 5 ou 20 depuis la page Tarifs. Payez en GBP, USD ou EUR. La transcription coûte 1 crédit par fichier jusqu'à 120 minutes ; les fichiers plus longs coûtent 1 crédit supplémentaire par tranche additionnelle de 120 minutes.",
         },
         href: "/pricing",
       },
