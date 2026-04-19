@@ -36,6 +36,7 @@ import {
 import { CreditDurationTable } from "@/components/pricing/CreditDurationTable";
 import { PerCreditValue } from "@/components/pricing/PerCreditValue";
 import { PricingStudioMock } from "@/components/pricing/PricingStudioMock";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 // ---------------------------------------------------------------------------
 // Currency toggle
