@@ -548,6 +548,8 @@ export type Database = {
           email: string | null
           id: string
           needs_password_setup: boolean
+          playback_speed: number
+          preferred_voice: string
           ui_language: string | null
           updated_at: string
           user_id: string
@@ -559,6 +561,8 @@ export type Database = {
           email?: string | null
           id?: string
           needs_password_setup?: boolean
+          playback_speed?: number
+          preferred_voice?: string
           ui_language?: string | null
           updated_at?: string
           user_id: string
@@ -570,6 +574,8 @@ export type Database = {
           email?: string | null
           id?: string
           needs_password_setup?: boolean
+          playback_speed?: number
+          preferred_voice?: string
           ui_language?: string | null
           updated_at?: string
           user_id?: string
