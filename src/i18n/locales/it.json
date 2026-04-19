@@ -443,8 +443,7 @@
       "resume": "Riprendi",
       "stop": "Ferma",
       "unsupported": "L'ascolto non è disponibile in questo browser.",
-      "empty": "Nulla da ascoltare al momento.",
-      "ariaStop": "Ferma l'ascolto"
+      "empty": "Nulla da ascoltare al momento."
     }
   },
   "share": {

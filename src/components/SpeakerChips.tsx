@@ -22,15 +22,47 @@ interface SpeakerChipsProps {
   enableDrag?: boolean;
   onIdentifySpeakers?: () => void;
   identifyingInProgress?: boolean;
+  /**
+   * Layout variant:
+   * - "primary": label + chips + "+ Speaker" (no reset, no identify)
+   * - "secondary": only Reset names + Identify speakers as small ghost actions
+   * - undefined (default): legacy single-row layout with everything inline
+   */
+  variant?: "primary" | "secondary";
 }
 
 export default function SpeakerChips({
   speakers, speakerNames, speakerSegmentCounts, deletableSpeakers, onRename, onReset, onAddSpeaker,
   onDeleteSpeaker, onSuggestSpeaker, suggestingForSpeaker, enableDrag, onIdentifySpeakers, identifyingInProgress,
+  variant,
 }: SpeakerChipsProps) {
   const { t } = useTranslation();
-  if (speakers.length === 0 && !onAddSpeaker) return null;
   const hasRenames = Object.values(speakerNames).some((v) => !!v);
+
+  // ── Secondary variant: only utility actions ───────────────────────────────
+  if (variant === "secondary") {
+    const showReset = hasRenames && !!onReset;
+    const showIdentify = !!onIdentifySpeakers;
+    if (!showReset && !showIdentify) return null;
+    return (
+      <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Speaker management">
+        {showReset && (
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full" onClick={onReset} aria-label={t("speakerChips.resetNames")}>
+            {t("speakerChips.resetNames")}
+          </Button>
+        )}
+        {showIdentify && (
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full gap-1" onClick={onIdentifySpeakers} disabled={identifyingInProgress} aria-label={t("speakerChips.identifySpeakers")}>
+            {identifyingInProgress ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanSearch className="w-3 h-3" />}
+            {t("speakerChips.identifySpeakers")}
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Primary / default variant: label + chips + add ────────────────────────
+  if (speakers.length === 0 && !onAddSpeaker) return null;
 
   return (
     <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Speaker labels">
@@ -70,12 +102,12 @@ export default function SpeakerChips({
           <span>{t("speakerChips.addSpeaker")}</span>
         </button>
       )}
-      {hasRenames && onReset && (
+      {variant === undefined && hasRenames && onReset && (
         <Button variant="ghost" size="sm" className="h-7 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full" onClick={onReset} aria-label={t("speakerChips.resetNames")}>
           {t("speakerChips.resetNames")}
         </Button>
       )}
-      {onIdentifySpeakers && (
+      {variant === undefined && onIdentifySpeakers && (
         <Button variant="ghost" size="sm" className="h-7 px-2 text-caption text-muted-foreground hover:text-foreground rounded-full gap-1" onClick={onIdentifySpeakers} disabled={identifyingInProgress} aria-label={t("speakerChips.identifySpeakers")}>
           {identifyingInProgress ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanSearch className="w-3 h-3" />}
           {t("speakerChips.identifySpeakers")}
