@@ -83,37 +83,15 @@ Deno.serve(async (req) => {
       .update({ status: "processing" })
       .eq("id", job_id);
 
-    console.log(`[process-job] Starting pipeline for job ${job_id}`);
+    console.log(`[process-job] Kicking off pipeline for job ${job_id}`);
 
-    // Run the long-running pipeline (transcribe + post-process) in the
-    // background so we don't hit the 150s edge function idle timeout for
-    // longer audio. The client polls the job row for status updates.
-    const runPipeline = async () => {
+    // Fire transcribe and return immediately. transcribe wraps its own
+    // long-running work in EdgeRuntime.waitUntil and self-chains to
+    // post-process when done. The HTTP call itself returns 202 quickly,
+    // so we no longer hit the 150s edge function idle timeout for big files.
+    const kickoff = async () => {
       try {
-        console.log(`[process-job] Step 1: Transcribing...`);
         const transcribeRes = await fetch(`${supabaseUrl}/functions/v1/transcribe`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${supabaseServiceKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ job_id }),
-        });
-
-        if (!transcribeRes.ok) {
-          const errBody = await transcribeRes.text();
-          throw new Error(`Transcription failed: ${errBody}`);
-        }
-
-        const transcribeResult = await transcribeRes.json();
-        if (!transcribeResult.success) {
-          throw new Error(`Transcription failed: ${transcribeResult.error || "Unknown error"}`);
-        }
-
-        console.log(`[process-job] Transcription complete. Language: ${transcribeResult.language_detected}`);
-
-        console.log(`[process-job] Step 2: Post-processing...`);
-        const postProcessRes = await fetch(`${supabaseUrl}/functions/v1/post-process`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${supabaseServiceKey}`,
@@ -122,21 +100,15 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ job_id, custom_prompt: custom_prompt || null }),
         });
 
-        if (!postProcessRes.ok) {
-          const errBody = await postProcessRes.text();
-          throw new Error(`Post-processing failed: ${errBody}`);
+        if (!transcribeRes.ok) {
+          const errBody = await transcribeRes.text();
+          throw new Error(`Transcribe kickoff failed [${transcribeRes.status}]: ${errBody}`);
         }
-
-        const postProcessResult = await postProcessRes.json();
-        if (!postProcessResult.success) {
-          throw new Error(`Post-processing failed: ${postProcessResult.error || "Unknown error"}`);
-        }
-
-        console.log(`[process-job] Pipeline complete for job ${job_id}`);
-      } catch (pipelineError) {
-        console.error(`[process-job] Pipeline error for job ${job_id}:`, pipelineError);
+        console.log(`[process-job] transcribe accepted for job ${job_id}, status=${transcribeRes.status}`);
+      } catch (kickoffError) {
+        console.error(`[process-job] Kickoff error for job ${job_id}:`, kickoffError);
         try {
-          await markJobFailed(createServiceClient(), job_id, pipelineError);
+          await markJobFailed(createServiceClient(), job_id, kickoffError);
         } catch (markErr) {
           console.error(`[process-job] Failed to mark job as failed:`, markErr);
         }
@@ -146,10 +118,9 @@ Deno.serve(async (req) => {
     // @ts-ignore — EdgeRuntime is provided by the Supabase edge runtime
     if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
       // @ts-ignore
-      EdgeRuntime.waitUntil(runPipeline());
+      EdgeRuntime.waitUntil(kickoff());
     } else {
-      // Fallback: fire-and-forget (e.g. in local Deno tests).
-      runPipeline();
+      kickoff();
     }
 
     // Return immediately — client polls the job row for progress.
