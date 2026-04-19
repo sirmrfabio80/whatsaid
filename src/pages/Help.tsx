@@ -10,6 +10,7 @@ import HelpFAQ from "@/components/help/HelpFAQ";
 import HelpTroubleshooting from "@/components/help/HelpTroubleshooting";
 import HelpContactCard from "@/components/help/HelpContactCard";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Help() {
   const { t } = useTranslation();
@@ -25,10 +26,15 @@ export default function Help() {
     { id: "contact", label: t("help.toc.contact") },
   ];
 
-  // Set page title for SEO
-  if (typeof document !== "undefined") {
-    document.title = t("help.metaTitle");
-  }
+  usePageMeta({
+    title: t("help.metaTitle"),
+    description: t("help.metaDescription", {
+      defaultValue:
+        "Help & FAQ for WhatSaid. Learn how to upload audio, transcribe, summarise, and ask questions about your recordings.",
+    }),
+    ogImage: "https://whatsaid.app/og-help.png",
+    canonical: "https://whatsaid.app/help",
+  });
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">

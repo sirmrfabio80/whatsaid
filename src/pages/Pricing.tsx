@@ -190,6 +190,14 @@ export default function Pricing() {
     initPaddle();
   }, []);
 
+  usePageMeta({
+    title: "Pricing — WhatSaid",
+    description:
+      "Simple pay-as-you-go pricing for AI audio transcription. No subscription. Buy credits from £4.99 and transcribe up to 8 hours per file.",
+    ogImage: "https://whatsaid.app/og-pricing.png",
+    canonical: "https://whatsaid.app/pricing",
+  });
+
   const heroReveal = useScrollReveal();
   const valueReveal = useScrollReveal();
   const pricingReveal = useScrollReveal();
