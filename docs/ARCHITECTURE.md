@@ -188,14 +188,71 @@ can only access their own rows except where noted. Roles are stored in a
 
 ### 5.2 Credits & billing
 
+**Credit model (source of truth: `src/lib/pricing.ts → creditsForDuration`).**
+Cost is computed from the audio's duration in **15-minute brackets**, not
+per minute and not per file. Maximum accepted duration is 60 minutes
+(`MAX_DURATION = 3600` s in `src/lib/pricing.ts`).
+
+| Duration | Credits charged |
+|---|---|
+| ≤ 15 min | 1 |
+| ≤ 30 min | 2 |
+| ≤ 45 min | 3 |
+| ≤ 60 min | 4 |
+
+A single charge covers the full pipeline for that job: **transcript +
+structured summary + Q&A + tags + title**. Regenerating the summary,
+asking additional questions, generating tags, or translating outputs
+costs **0 additional credits** — none of those edge functions
+(`regenerate`, `post-process`, `generate-tags`, `generate-title`,
+`translate-tags`) call `deduct_credits`. Counters
+(`regeneration_count`, `summary_regen_count`, `question_generation_count`)
+exist for analytics / abuse limiting only.
+
+**Charge lifecycle:**
+1. `pages/Convert` computes `credits = creditsForDuration(duration)` and
+   inserts the `jobs` row with `credits_charged = credits`,
+   `status = 'uploading'`. No deduction yet.
+2. `process-job` (edge) is invoked. Before any provider work it calls
+   `rpc('deduct_credits', { p_user_id, p_amount: credits_charged, p_job_id })`.
+   The RPC is atomic (`UPDATE … WHERE balance >= p_amount RETURNING …`)
+   so two concurrent jobs cannot over-spend a balance.
+3. If the deduct returns `false`, the job is marked `failed` with
+   `error_message = 'Insufficient credits'` and 402 is returned.
+4. If the job later goes stale, `watchdog-stale-jobs` calls `add_credits`
+   with the same `credits_charged` to refund the user.
+5. **Admins** (`user_roles.role = 'admin'`) bypass deduction entirely
+   in both `process-job` and the watchdog refund path.
+
+**Pricing packs (`src/lib/paddle-pricing.ts → PRICING_PRODUCTS`).**
+All prices are GBP base (other currencies via Paddle `PricePreview`,
+with a `.99-rounded` GBP→FX fallback if Paddle.js is unavailable):
+
+| Pack | Credits | Base price | Paddle price ID |
+|---|---|---|---|
+| `one-time` | 1 | £4.99 | `pri_01kp91g9954gq9a4k080fdgedw` |
+| `5-pack` (highlighted) | 5 | £14.99 | `pri_01kp91hv62g2nx9jxqta2766hf` |
+| `20-pack` | 20 | £39.99 | `pri_01kp91m77g15bhgemezzcsvh2n` |
+
+Note that **packs sell credits, not jobs.** A 5-pack equals 5 × 15 min of
+audio — i.e. one 60-minute file would consume 4 of those 5 credits. The
+"Use one credit per file" / "1 uploaded file" copy on `/pricing` is a
+marketing simplification valid only for files ≤ 15 min; the authoritative
+"How a credit maps to audio length" table on the same page reflects the
+real bracket model.
+
+**Tables backing the model:**
+
 - **`credit_balances`** — current balance per user. SELECT-only for
-  users; mutated by SECURITY DEFINER RPC `add_credits()` /
+  users; mutated by SECURITY DEFINER RPCs `add_credits()` /
   `deduct_credits()`.
-- **`credit_transactions`** — append-only ledger of every
-  add / deduct event with `reason`, optional `job_id`,
-  `stripe_session_id` (legacy column, also reused for Paddle).
+- **`credit_transactions`** — append-only ledger of every add/deduct
+  event with `reason`, optional `job_id`, `stripe_session_id` (legacy
+  column, also reused for Paddle transaction IDs — see
+  `paddle-webhook` line 161).
 - **`pending_invites`** — admin-issued credit grants pending account
   creation, claimed via the `redeem-invite` edge function.
+
 
 ### 5.3 Jobs & outputs
 
