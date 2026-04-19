@@ -142,31 +142,44 @@ async function runPostProcessPipeline(
     }
 
     console.log(`[post-process] Job ${job_id} completed`);
-
-    return new Response(
-      JSON.stringify({ success: true, job_id }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
   } catch (error) {
-    console.error(`[post-process] Error:`, error);
-
-    // Try to mark job as failed and insert failure notification
+    console.error(`[post-process] Pipeline error for job ${job_id}:`, error);
     try {
-      const body = await req.clone().json().catch(() => ({}));
-      await markJobFailed(createServiceClient(), body.job_id, error, { notify: true });
+      await markJobFailed(createServiceClient(), job_id, error, { notify: true });
     } catch {
       // ignore cleanup errors
     }
-
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
   }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  const body = await req.json().catch(() => ({} as Record<string, unknown>));
+  const job_id = typeof body?.job_id === "string" ? body.job_id : "";
+  const custom_prompt = typeof body?.custom_prompt === "string" ? body.custom_prompt : null;
+
+  if (!job_id) {
+    return new Response(JSON.stringify({ error: "job_id is required" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Long-running AI work — must run in background to avoid the 150s
+  // edge function idle timeout for callers.
+  // @ts-ignore — EdgeRuntime is provided by the Supabase edge runtime
+  if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(runPostProcessPipeline(job_id, custom_prompt));
+  } else {
+    runPostProcessPipeline(job_id, custom_prompt);
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, job_id, status: "processing" }),
+    { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
 });
