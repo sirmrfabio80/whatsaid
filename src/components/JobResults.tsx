@@ -903,60 +903,60 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex items-center justify-between gap-3 px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
-                <div className="min-w-0 flex-1 text-xs text-muted-foreground">
-                  {questionEntries.length > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 px-2.5 py-1 font-medium">
-                      <MessageSquare className="w-3 h-3" aria-hidden="true" />
-                      {t("jobResults.questionsCount", { count: questionEntries.length, defaultValue: "{{count}} question" })}
-                    </span>
-                  )}
+              <div className="flex items-start gap-4 px-4 sm:px-5 pt-3 pb-4 border-b border-border/40">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <label htmlFor="question-input" className="text-sm font-medium">{t("jobResults.askQuestion")}</label>
+                    {questionEntries.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        <MessageSquare className="w-3 h-3" aria-hidden="true" />
+                        {t("jobResults.questionsCount", { count: questionEntries.length, defaultValue: "{{count}} question" })}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
+                  <div className="relative">
+                    <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-base md:text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
+                    <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
+                      {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
+                    </Button>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <Switch
+                        checked={useExtraSources}
+                        onCheckedChange={(checked) => {
+                          setUseExtraSources(checked);
+                          if (!checked) setExtraSources([]);
+                        }}
+                        aria-label={t("jobResults.extraSources.toggleLabel")}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {t("jobResults.extraSources.toggleLabel")}
+                      </span>
+                    </label>
+                    {useExtraSources && (
+                      <QuestionExtraSourcesPicker
+                        currentJobId={jobId}
+                        value={extraSources}
+                        onChange={setExtraSources}
+                        max={5}
+                      />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground text-right mt-1.5">
+                    {isQuestionLimitReached
+                      ? t("jobResults.noQuestionsLeft")
+                      : t("jobResults.questionsLeft", { count: questionsRemaining })}
+                  </p>
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 pt-0.5">
                   <ListenButton
                     ownerId="questions"
                     getText={() => latestAnswerToSpeech(latestAnswerContent)}
                     lang={speechLang}
                   />
                 </div>
-              </div>
-              <div className="p-4 sm:p-5 border-b border-border/40">
-                <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">{t("jobResults.askQuestion")}</label>
-                <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
-                <div className="relative">
-                  <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-base md:text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
-                  <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
-                    {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
-                  </Button>
-                </div>
-                <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <Switch
-                      checked={useExtraSources}
-                      onCheckedChange={(checked) => {
-                        setUseExtraSources(checked);
-                        if (!checked) setExtraSources([]);
-                      }}
-                      aria-label={t("jobResults.extraSources.toggleLabel")}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {t("jobResults.extraSources.toggleLabel")}
-                    </span>
-                  </label>
-                  {useExtraSources && (
-                    <QuestionExtraSourcesPicker
-                      currentJobId={jobId}
-                      value={extraSources}
-                      onChange={setExtraSources}
-                      max={5}
-                    />
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground text-right mt-1.5">
-                  {isQuestionLimitReached
-                    ? t("jobResults.noQuestionsLeft")
-                    : t("jobResults.questionsLeft", { count: questionsRemaining })}
-                </p>
               </div>
 
               <div role="log" aria-live="polite" aria-label="Saved questions and answers">
