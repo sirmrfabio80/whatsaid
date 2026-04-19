@@ -166,7 +166,7 @@ export default function WatchdogTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Auto-failed jobs</CardTitle>
+          <CardTitle className="text-h3">Auto-failed jobs</CardTitle>
           <CardDescription>Jobs marked failed by the watchdog.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -216,7 +216,7 @@ export default function WatchdogTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Refunds</CardTitle>
+          <CardTitle className="text-h3">Refunds</CardTitle>
           <CardDescription>Credits refunded by the watchdog.</CardDescription>
         </CardHeader>
         <CardContent>

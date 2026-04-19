@@ -314,7 +314,7 @@ export default function TranscribeTemplatesTab() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Templates</CardTitle>
+            <CardTitle className="text-h3">Templates</CardTitle>
             <Button
               size="sm"
               variant="ghost"
@@ -379,7 +379,7 @@ export default function TranscribeTemplatesTab() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-lg">
+                <CardTitle className="text-h2">
                   {selected?.name ?? "Select a template"}
                 </CardTitle>
                 {selected?.is_active && (

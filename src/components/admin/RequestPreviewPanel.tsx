@@ -79,7 +79,7 @@ export default function RequestPreviewPanel({ config }: Props) {
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <Eye className="w-4 h-4 text-muted-foreground" />
-              <CardTitle className="text-base">
+              <CardTitle className="text-h3">
                 Last AssemblyAI request preview
               </CardTitle>
               <Badge variant="outline" className="text-[10px]">
