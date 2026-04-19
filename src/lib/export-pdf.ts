@@ -1,5 +1,9 @@
 import { jsPDF } from "jspdf";
 import logoUrl from "@/assets/logo.png";
+import ss4RegularUrl from "@/assets/fonts/SourceSerif4-Regular.ttf?url";
+import ss4BoldUrl from "@/assets/fonts/SourceSerif4-Bold.ttf?url";
+import ss4ItalicUrl from "@/assets/fonts/SourceSerif4-Italic.ttf?url";
+import ss4BoldItalicUrl from "@/assets/fonts/SourceSerif4-BoldItalic.ttf?url";
 import type { CanonicalExportData } from "./export-types";
 
 /* ------------------------------------------------------------------ */
@@ -24,6 +28,70 @@ async function getLogoDataUrl(): Promise<string | null> {
     console.warn("Could not load logo for PDF footer");
     return null;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Source Serif 4 font cache (for reading surfaces)                   */
+/* ------------------------------------------------------------------ */
+
+/** jsPDF font name registered for Source Serif 4 (matches in-app reading font) */
+const SERIF_FONT = "SourceSerif4";
+/** Sans fallback used for chrome (titles, metadata, footers, transcript timestamps) */
+const SANS_FONT = "helvetica";
+
+interface Ss4Cache {
+  regular: string;
+  bold: string;
+  italic: string;
+  bolditalic: string;
+}
+let _ss4Cache: Ss4Cache | null = null;
+let _ss4Promise: Promise<Ss4Cache | null> | null = null;
+
+async function fetchAsBase64(url: string): Promise<string> {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Failed to fetch font: ${url}`);
+  const buf = await resp.arrayBuffer();
+  // Convert to base64 in chunks to avoid call stack overflow on large fonts
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)) as number[]);
+  }
+  return btoa(binary);
+}
+
+async function loadSourceSerif4(): Promise<Ss4Cache | null> {
+  if (_ss4Cache) return _ss4Cache;
+  if (_ss4Promise) return _ss4Promise;
+  _ss4Promise = (async () => {
+    try {
+      const [regular, bold, italic, bolditalic] = await Promise.all([
+        fetchAsBase64(ss4RegularUrl),
+        fetchAsBase64(ss4BoldUrl),
+        fetchAsBase64(ss4ItalicUrl),
+        fetchAsBase64(ss4BoldItalicUrl),
+      ]);
+      _ss4Cache = { regular, bold, italic, bolditalic };
+      return _ss4Cache;
+    } catch (e) {
+      console.warn("Could not load Source Serif 4 for PDF — falling back to Helvetica", e);
+      return null;
+    }
+  })();
+  return _ss4Promise;
+}
+
+function registerSerifFont(pdf: jsPDF, cache: Ss4Cache) {
+  pdf.addFileToVFS("SourceSerif4-Regular.ttf", cache.regular);
+  pdf.addFont("SourceSerif4-Regular.ttf", SERIF_FONT, "normal");
+  pdf.addFileToVFS("SourceSerif4-Bold.ttf", cache.bold);
+  pdf.addFont("SourceSerif4-Bold.ttf", SERIF_FONT, "bold");
+  pdf.addFileToVFS("SourceSerif4-Italic.ttf", cache.italic);
+  pdf.addFont("SourceSerif4-Italic.ttf", SERIF_FONT, "italic");
+  pdf.addFileToVFS("SourceSerif4-BoldItalic.ttf", cache.bolditalic);
+  pdf.addFont("SourceSerif4-BoldItalic.ttf", SERIF_FONT, "bolditalic");
 }
 
 /* ------------------------------------------------------------------ */
