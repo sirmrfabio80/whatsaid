@@ -772,6 +772,20 @@
     "lead": "Réponses rapides, fonctionnement de WhatSaid et que faire en cas de problème.",
     "filterPlaceholder": "Filtrer l'aide…",
     "filterAriaLabel": "Filtrer la page d'aide",
+    "mock": {
+      "windowLabel": "base-de-connaissances · centre-d'aide",
+      "tabFaq": "FAQ",
+      "tabWorkflow": "Étapes",
+      "tabTroubleshooting": "Dépannage",
+      "matched": "{{count}} réponses correspondantes",
+      "demoQ1": "Comment fonctionne le système de crédits ?",
+      "demoQ2": "Quels formats audio puis-je téléverser ?",
+      "demoQ3": "Mes audios sont-ils conservés après traitement ?",
+      "demoAnswer": "1 crédit transcrit jusqu'à 15 minutes d'audio. Les crédits n'expirent jamais et couvrent les résumés, les questions personnalisées et les régénérations sans frais supplémentaires.",
+      "helpfulQuestion": "Cette réponse vous a-t-elle aidé ?",
+      "helpfulVotes": "{{percent}} % · {{count}} votes",
+      "statusLive": "En direct · {{count}} articles · toujours gratuit"
+    },
     "quick": {
       "upload": "Téléverser un audio",
       "pricing": "Tarifs et crédits",
