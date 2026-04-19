@@ -100,7 +100,7 @@ export default function Signup() {
                 onCheckedChange={(c) => setAcceptedTerms(c === true)}
                 className="mt-0.5"
               />
-              <label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+              <label htmlFor="terms" className="text-secondary text-muted-foreground leading-snug cursor-pointer">
                 {t("signup.termsAgree")}{" "}
                 <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank">{t("signup.termsOfService")}</Link>
                 {" "}{t("signup.and")}{" "}
@@ -109,7 +109,7 @@ export default function Signup() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-destructive text-sm">
+              <div className="flex items-center gap-2 text-destructive text-secondary">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
@@ -120,7 +120,7 @@ export default function Signup() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          <p className="text-center text-secondary text-muted-foreground mt-6">
             {t("signup.alreadyHaveAccount")}{" "}
             <Link to="/login" className="text-primary hover:underline font-medium">{t("common.signIn")}</Link>
           </p>
