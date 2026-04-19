@@ -535,7 +535,8 @@ function renderMarkdown(pen: Pen, text: string) {
       pen.pageBreakHard(need);
       pen.heading(headingText, level);
     } else if (/^\s*[-*]\s+/.test(line)) {
-      pen.bullet(line.replace(/^\s*[-*]\s+/, ""));
+      // Reading-surface bullet → serif body.
+      pen.bullet(line.replace(/^\s*[-*]\s+/, ""), true);
     } else if (line.trim() === "") {
       pen.gap(2);
     } else {
@@ -551,7 +552,8 @@ function renderMarkdown(pen: Pen, text: string) {
         const bulletH = pen.measureLine(nextLine);
         pen.pageBreakHard(paraH + bulletH);
       }
-      pen.rich(parseInline(line), F.body, C.body);
+      // Reading-surface paragraph → serif body.
+      pen.rich(parseInline(line), F.body, C.body, ML, CW, LH, true);
     }
   }
 }
@@ -581,7 +583,12 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
     author: "WhatSaid",
   });
 
-  const pen = new Pen(pdf);
+  // Load Source Serif 4 (used for reading surfaces: summary, Q&A answers, transcript).
+  // Falls back to Helvetica if loading fails so the export never breaks.
+  const ss4 = await loadSourceSerif4();
+  if (ss4) registerSerifFont(pdf, ss4);
+
+  const pen = new Pen(pdf, !!ss4);
 
   // ── Header ──
   pen.heading(data.title, 1);
