@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import {
 import { HomeOutcomeGrid } from "@/components/home/HomeOutcomeGrid";
 import { HomeBeyondGrid } from "@/components/home/HomeBeyondGrid";
 import { HomeMiniFAQ } from "@/components/home/HomeMiniFAQ";
+import { HeroProductMock } from "@/components/home/HeroProductMock";
+import { PricingTeaserStrip } from "@/components/home/PricingTeaserStrip";
 
 export default function Index() {
   const { user } = useAuth();
@@ -17,7 +19,6 @@ export default function Index() {
   const navigate = useNavigate();
   const howItWorks = useScrollReveal();
   const privacy = useScrollReveal();
-  const pricingTeaser = useScrollReveal();
 
   const heroPrimaryHref = user ? "/convert" : "/signup";
 
@@ -29,76 +30,86 @@ export default function Index() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
-      {/* 1 — Hero */}
+      {/* 1 — Hero (split layout) */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent pointer-events-none" />
-        {/* Off-axis decorative orb (desktop only) */}
+        {/* Layered ambient field */}
         <div
           aria-hidden="true"
-          className="hidden lg:block absolute top-12 right-[-6rem] w-[28rem] h-[28rem] rounded-full bg-primary/15 blur-3xl pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(60rem 40rem at 90% -10%, hsl(var(--primary) / 0.15), transparent 60%), radial-gradient(40rem 30rem at -10% 90%, hsl(var(--accent) / 0.08), transparent 60%)",
+          }}
         />
 
-        <div className="container mx-auto px-4 py-20 sm:py-28 lg:py-32 relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="font-serif italic text-caption text-primary mb-5 animate-page-enter">
-              {t("home.heroEyebrow")}
-            </p>
-            <h1 className="text-display sm:text-[3.25rem] lg:text-[4rem] mb-6 animate-page-enter">
-              {t("home.heroTitlePart1")}{" "}
-              <span className="bg-primary/10 rounded-md px-2 py-0.5 text-primary">
-                {t("home.heroTitleHighlight")}
-              </span>
-              <br className="hidden sm:inline" />
-              {" "}{t("home.heroTitlePart2")}
-            </h1>
-            <p className="font-serif text-body sm:text-lg text-muted-foreground max-w-[60ch] mx-auto mb-8 leading-relaxed animate-page-enter">
-              {t("home.heroDescNew")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 animate-page-enter">
-              <Button
-                size="lg"
-                className="h-12 px-8 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                onClick={() => navigate(heroPrimaryHref)}
-              >
-                {t("home.ctaPrimary")}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-              <Link
-                to="/pricing"
-                className="text-secondary font-medium text-foreground hover:text-primary inline-flex items-center gap-1.5 transition-colors"
-              >
-                {t("home.ctaPricing")}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+        <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24 relative">
+          <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Left: text */}
+            <div className="lg:col-span-5 text-center lg:text-left">
+              <p className="font-serif italic text-caption text-primary mb-5">
+                {t("home.heroEyebrow")}
+              </p>
+              <h1 className="text-display sm:text-[3.25rem] lg:text-[4.25rem] leading-[1.05] mb-6">
+                {t("home.heroTitlePart1")}{" "}
+                <span className="font-serif italic text-primary">
+                  {t("home.heroTitleHighlight")}
+                </span>{" "}
+                {t("home.heroTitlePart2")}
+              </h1>
+              <p className="font-serif text-body lg:text-lg text-muted-foreground max-w-[52ch] mx-auto lg:mx-0 mb-6 leading-relaxed">
+                {t("home.heroSubline")}
+              </p>
+
+              {/* Trust chips — light, no border */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-2 mb-7 text-caption text-muted-foreground">
+                {[
+                  { icon: Users, label: t("home.trustChipSpeakers") },
+                  { icon: Languages, label: t("home.trustChipLanguage") },
+                  { icon: Shield, label: t("home.trustChipPrivacy") },
+                ].map(({ icon: Icon, label }) => (
+                  <span key={label} className="inline-flex items-center gap-1.5">
+                    <Icon aria-hidden="true" className="w-3.5 h-3.5 text-primary" />
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row items-center lg:items-stretch justify-center lg:justify-start gap-3">
+                <Button
+                  size="lg"
+                  className="h-12 px-7 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow w-full sm:w-auto"
+                  onClick={() => navigate(heroPrimaryHref)}
+                >
+                  {t("home.ctaPrimary")}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-7 text-base font-medium rounded-lg w-full sm:w-auto"
+                  onClick={() => navigate("/pricing")}
+                >
+                  {t("home.ctaPricingDetailed")}
+                </Button>
+              </div>
             </div>
 
-            {/* Trust chips (absorbs old stats strip) */}
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 animate-page-enter">
-              {[
-                { icon: Users, label: t("home.trustChipSpeakers") },
-                { icon: Languages, label: t("home.trustChipLanguage") },
-                { icon: Shield, label: t("home.trustChipPrivacy") },
-              ].map(({ icon: Icon, label }) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1.5 text-caption text-muted-foreground bg-muted/40 border border-border/60 rounded-full px-3 py-1.5"
-                >
-                  <Icon aria-hidden="true" className="w-3.5 h-3.5 text-primary" />
-                  {label}
-                </span>
-              ))}
+            {/* Right: product mock */}
+            <div className="lg:col-span-7">
+              <HeroProductMock />
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2 — Outcome grid (asymmetric) */}
+      {/* 2 — Outcome showcase */}
       <HomeOutcomeGrid />
 
-      {/* 3 — Beyond the transcript (dense, flat — rhythm contrast) */}
+      {/* 3 — Beyond the transcript (bento) */}
       <HomeBeyondGrid />
 
-      {/* 4 — How it works (typographic timeline) */}
+      {/* 4 — How it works (typographic card-lets) */}
       <section ref={howItWorks.ref} className="container mx-auto px-4 py-16 sm:py-24">
         <div
           className={`text-center mb-12 transition-all duration-700 ${
@@ -114,69 +125,68 @@ export default function Index() {
             howItWorks.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
-          {/* Dashed connector line on md+ */}
+          {/* Desktop dashed connector — through numerals */}
           <div
             aria-hidden="true"
-            className="hidden md:block absolute left-[12%] right-[12%] top-7 border-t border-dashed border-border"
+            className="hidden md:block absolute left-[16%] right-[16%] top-1/2 -translate-y-1/2 border-t border-dashed border-border"
           />
-          <div className="grid md:grid-cols-3 gap-10 md:gap-8 relative">
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8 relative">
             {steps.map(({ step, icon: Icon, title, desc }) => (
-              <div key={step} className="text-center relative">
+              <div
+                key={step}
+                className="relative rounded-2xl border border-border/60 bg-card p-5 sm:p-6 flex items-start gap-4"
+              >
                 <div
                   aria-hidden="true"
-                  className="font-serif italic text-h1 text-primary/40 mb-2 leading-none"
+                  className="font-serif italic text-[2.75rem] leading-none text-primary/35 shrink-0"
                 >
                   {step}
                 </div>
-                <div
-                  aria-hidden="true"
-                  className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-card border border-border/60 text-primary mb-4"
-                >
-                  <Icon className="w-4 h-4" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Icon aria-hidden="true" className="w-4 h-4 text-primary" />
+                    <h3 className="text-h3">{title}</h3>
+                  </div>
+                  <p className="text-secondary text-muted-foreground leading-relaxed">
+                    {desc}
+                  </p>
                 </div>
-                <h3 className="text-h3 mb-2">{title}</h3>
-                <p className="text-secondary text-muted-foreground leading-relaxed max-w-xs mx-auto">
-                  {desc}
-                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 5 — Privacy & trust (gradient card) */}
-      <section ref={privacy.ref} className="container mx-auto px-4 pb-16 sm:pb-24">
-        <div
-          className={`max-w-5xl mx-auto rounded-2xl border border-border/60 bg-gradient-to-br from-muted/40 via-card to-muted/30 p-8 sm:p-12 transition-all duration-700 ${
-            privacy.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-          }`}
-        >
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
-            <div>
-              <p className="font-serif italic text-caption text-primary mb-3">
-                {t("home.privacyEyebrow")}
-              </p>
-              <h2 className="text-h1 mb-3">{t("home.privacyTitle")}</h2>
-              <p className="font-serif text-body text-muted-foreground leading-relaxed">
-                {t("home.privacyBody")}
-              </p>
-            </div>
-            <ul className="space-y-4">
+      {/* 5 — Privacy & trust (full-bleed inverted band) */}
+      <section
+        ref={privacy.ref}
+        className="bg-foreground text-background dark:bg-muted/40 dark:text-foreground"
+      >
+        <div className="container mx-auto px-4 py-16 sm:py-20">
+          <div
+            className={`max-w-4xl mx-auto text-center transition-all duration-700 ${
+              privacy.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+            }`}
+          >
+            <p className="font-serif italic text-caption text-primary mb-3 dark:text-primary">
+              {t("home.privacyEyebrowNew")}
+            </p>
+            <h2 className="text-h1 sm:text-[2.25rem] mb-4">{t("home.privacyTitle")}</h2>
+            <p className="font-serif text-body sm:text-lg text-background/80 dark:text-muted-foreground max-w-[60ch] mx-auto leading-relaxed mb-8">
+              {t("home.privacyBody")}
+            </p>
+            <ul className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
               {[
                 { icon: Trash2, label: t("home.privacyBullet1") },
                 { icon: Globe, label: t("home.privacyBullet2") },
                 { icon: Shield, label: t("home.privacyBullet3") },
               ].map(({ icon: Icon, label }) => (
-                <li key={label} className="flex items-start gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5"
-                  >
-                    <Icon className="w-4 h-4" />
-                  </span>
-                  <span className="text-secondary text-foreground/90 leading-relaxed">
-                    {label}
-                  </span>
+                <li
+                  key={label}
+                  className="inline-flex items-center gap-2 rounded-full border border-background/20 dark:border-border bg-background/5 dark:bg-card/40 px-3.5 py-2 text-caption"
+                >
+                  <Icon aria-hidden="true" className="w-3.5 h-3.5 text-primary" />
+                  <span>{label}</span>
                 </li>
               ))}
             </ul>
@@ -184,36 +194,10 @@ export default function Index() {
         </div>
       </section>
 
-      {/* 6 — Pricing teaser */}
-      <section ref={pricingTeaser.ref} className="container mx-auto px-4 pb-16 sm:pb-24">
-        <div
-          className={`max-w-4xl mx-auto rounded-2xl border-2 border-primary/20 bg-primary/5 p-8 sm:p-12 text-center transition-all duration-700 ${
-            pricingTeaser.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-          }`}
-        >
-          <p className="font-serif italic text-caption text-primary mb-3">
-            {t("home.pricingTeaserEyebrow")}
-          </p>
-          <h2 className="text-h1 sm:text-[1.875rem] mb-3">
-            {t("home.pricingTeaserHeadlinePrefix")}{" "}
-            <span className="font-serif italic text-primary">£4.99</span>
-            {t("home.pricingTeaserHeadlineSuffix")}
-          </h2>
-          <p className="text-secondary text-muted-foreground max-w-md mx-auto mb-6">
-            {t("home.pricingTeaserSub")}
-          </p>
-          <Button
-            size="lg"
-            className="h-12 px-8 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            onClick={() => navigate("/pricing")}
-          >
-            {t("home.pricingTeaserCta")}
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </section>
+      {/* 6 — Pricing teaser strip */}
+      <PricingTeaserStrip />
 
-      {/* 7 — Mini FAQ */}
+      {/* 7 — Mini FAQ (with closing CTA) */}
       <HomeMiniFAQ />
     </div>
   );
