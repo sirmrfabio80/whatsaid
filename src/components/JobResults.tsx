@@ -695,7 +695,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       </div>
                     </div>
                   </div>
-                  <div className="px-3 pb-2">
+                  <div className="px-3 py-1.5 mt-1.5 border-t border-border/30 bg-muted/20">
                     <SpeakerChips
                       variant="secondary"
                       speakers={allSpeakers}
@@ -736,15 +736,17 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </Select>
                   {regeneratingLang && <InlineSpinner size="xs" tone="primary" />}
                 </div>
-                <SpeakerChips
-                  variant="secondary"
-                  speakers={allSpeakers}
-                  speakerNames={speakerNames}
-                  onRename={handleRenameSpeaker}
-                  onReset={handleResetSpeakerNames}
-                  onIdentifySpeakers={runSpeakerIdentification}
-                  identifyingInProgress={identifyingInProgress}
-                />
+                <div className="-mx-4 px-4 pt-2 mt-1 border-t border-border/30 bg-muted/20">
+                  <SpeakerChips
+                    variant="secondary"
+                    speakers={allSpeakers}
+                    speakerNames={speakerNames}
+                    onRename={handleRenameSpeaker}
+                    onReset={handleResetSpeakerNames}
+                    onIdentifySpeakers={runSpeakerIdentification}
+                    identifyingInProgress={identifyingInProgress}
+                  />
+                </div>
               </div>
               {/* AI Speaker Identification Banner */}
               {!identificationBannerDismissed && identifications.filter((s) => s.status === "applied" || s.status === "suggested").length > 0 && (
