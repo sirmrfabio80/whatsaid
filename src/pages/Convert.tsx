@@ -486,7 +486,7 @@ export default function Convert() {
                           ) : (
                             <div className="w-5 h-5 rounded-full border-2 border-current shrink-0" />
                           )}
-                          <span className={`text-sm font-medium ${isCurrent ? "text-foreground" : ""}`}>
+                          <span className={`text-secondary font-medium ${isCurrent ? "text-foreground" : ""}`}>
                             {STEP_LABELS[s]}
                           </span>
                         </div>
