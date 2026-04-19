@@ -682,7 +682,9 @@
     "comingSoon": "Payment system is being finalised — check back soon.",
     "purchaseSuccess": "Purchase complete! Your credits have been added.",
     "creditsAddedBanner": "{{count}} credit(s) added to your account",
-    "moreFaqLink": "More questions about credits and billing →"
+    "moreFaqLink": "More questions about credits and billing →",
+    "faqFailedQ": "How are credits handled if a job fails?",
+    "faqFailedA": "Credits are deducted when processing starts. If a job fails partway through, contact support and we'll refund the credits. Jobs that get stuck for too long are detected automatically and refunded by our system."
   },
   "transcriptionSettings": {
     "title": "Transcription settings",
@@ -764,6 +766,7 @@
     }
   },
   "help": {
+    "eyebrow": "Help & answers",
     "metaTitle": "Help — WhatSaid",
     "title": "Help & FAQ",
     "lead": "Quick answers, how WhatSaid works, and what to do when something goes wrong.",

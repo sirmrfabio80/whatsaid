@@ -636,7 +636,9 @@
     "paddleNote": "Les paiements sont traités de manière sécurisée par Paddle, notre revendeur officiel.",
     "consentPrefix": "En achetant, vous acceptez nos",
     "supportLine": "Besoin d'aide ?",
-    "moreFaqLink": "Plus de questions sur les crédits et la facturation →"
+    "moreFaqLink": "Plus de questions sur les crédits et la facturation →",
+    "faqFailedQ": "Comment sont gérés les crédits si un traitement échoue ?",
+    "faqFailedA": "Les crédits sont déduits au démarrage du traitement. Si un traitement échoue en cours de route, contactez le support et nous rembourserons les crédits. Les traitements bloqués trop longtemps sont détectés automatiquement et remboursés par notre système."
   },
   "footer": {
     "desc": "Transcription IA premium avec identification des intervenants, résumés et analyse personnalisée. Audio supprimé après traitement.",
@@ -732,6 +734,7 @@
     }
   },
   "help": {
+    "eyebrow": "Aide & réponses",
     "metaTitle": "Aide — WhatSaid",
     "title": "Aide et FAQ",
     "lead": "Réponses rapides, fonctionnement de WhatSaid et que faire en cas de problème.",

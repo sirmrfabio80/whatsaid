@@ -636,7 +636,9 @@
     "paddleNote": "I pagamenti sono elaborati in modo sicuro da Paddle, il nostro rivenditore ufficiale.",
     "consentPrefix": "Acquistando, accetti i nostri",
     "supportLine": "Hai bisogno di aiuto?",
-    "moreFaqLink": "Altre domande su crediti e pagamenti →"
+    "moreFaqLink": "Altre domande su crediti e pagamenti →",
+    "faqFailedQ": "Come vengono gestiti i crediti se un lavoro fallisce?",
+    "faqFailedA": "I crediti vengono detratti all'avvio dell'elaborazione. Se un lavoro fallisce a metà, contatta il supporto e rimborseremo i crediti. I lavori bloccati per troppo tempo vengono rilevati automaticamente e rimborsati dal nostro sistema."
   },
   "footer": {
     "desc": "Trascrizione IA premium con identificazione degli speaker, riassunti e analisi personalizzata. Audio eliminato dopo l'elaborazione.",
@@ -732,6 +734,7 @@
     }
   },
   "help": {
+    "eyebrow": "Aiuto e risposte",
     "metaTitle": "Guida — WhatSaid",
     "title": "Guida e FAQ",
     "lead": "Risposte rapide, come funziona WhatSaid e cosa fare se qualcosa va storto.",
