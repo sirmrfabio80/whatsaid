@@ -12,6 +12,7 @@ export default function RefundPolicy() {
     description:
       "WhatSaid refund policy for credit purchases. Learn when refunds are available and how to request one.",
     canonical: "https://whatsaid.app/refund-policy",
+    ogImage: "https://whatsaid.app/og-refund.png",
   });
 
 

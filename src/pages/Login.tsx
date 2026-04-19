@@ -19,6 +19,7 @@ export default function Login() {
     description:
       "Log in to WhatSaid to access your transcripts, summaries, and credits.",
     canonical: "https://whatsaid.app/login",
+    ogImage: "https://whatsaid.app/og-login.png",
   });
 
   const [email, setEmail] = useState("");
