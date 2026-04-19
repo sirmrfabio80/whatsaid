@@ -57,33 +57,33 @@ export default function Terms() {
             <Link to="/"><ArrowLeft className="w-4 h-4" />{t("common.backToHome")}</Link>
           </Button>
 
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("terms.title")}</h1>
-          <p className="text-sm text-muted-foreground mb-8">{t("terms.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
+          <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">{t("terms.title")}</h1>
+          <p className="text-secondary text-muted-foreground mb-8">{t("terms.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
             {sections.map(({ key, type, items }) => (
               <section key={key}>
-                <h2 className="text-lg font-semibold mb-2">{t(`terms.${key}Title`)}</h2>
+                <h2 className="text-h2 mb-2">{t(`terms.${key}Title`)}</h2>
 
                 {type === "p" && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-secondary text-muted-foreground leading-relaxed">
                     <RefundLinkedText text={t(`terms.${key}Body`)} />
                   </p>
                 )}
 
                 {type === "ul" && (
-                  <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                  <ul className="text-secondary text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
                     {items!.map((item) => <li key={item}>{t(`terms.${item}`)}</li>)}
                   </ul>
                 )}
 
                 {type === "intro-ul-outro" && (
                   <>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{t(`terms.${key}Intro`)}</p>
-                    <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                    <p className="text-secondary text-muted-foreground leading-relaxed">{t(`terms.${key}Intro`)}</p>
+                    <ul className="text-secondary text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
                       {items!.map((item) => <li key={item}>{t(`terms.${item}`)}</li>)}
                     </ul>
-                    <p className="text-sm text-muted-foreground leading-relaxed mt-2">{t(`terms.${key}Outro`)}</p>
+                    <p className="text-secondary text-muted-foreground leading-relaxed mt-2">{t(`terms.${key}Outro`)}</p>
                   </>
                 )}
               </section>
