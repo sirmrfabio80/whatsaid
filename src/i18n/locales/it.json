@@ -27,6 +27,12 @@
     "settings": "Impostazioni",
     "help": "Guida"
   },
+  "theme": {
+    "label": "Tema",
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "system": "Sistema"
+  },
   "home": {
     "tagline": "Trascrizione AI + etichette relatori",
     "heroEyebrow": "Trascrizione AI premium",
