@@ -171,20 +171,118 @@ for (const [key, family] of families) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+// 3b. Extract type-scale tokens from tailwind.config.ts → fontSize
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Parse `fontSize: { ... }` block. Each entry looks like:
+ *   display: ["2.25rem", { lineHeight: "1.05", letterSpacing: "-0.02em", fontWeight: "600" }],
+ *   body: ["0.9375rem", { lineHeight: "1.6", letterSpacing: "0" }],
+ * We capture the token name, size, and (optional) lineHeight + fontWeight.
+ * fontWeight defaults to "400" when absent (Tailwind body convention).
+ */
+function extractTypeScale(source) {
+  const block = source.match(/fontSize\s*:\s*\{([\s\S]*?)\n\s{6}\},/);
+  if (!block) return new Map();
+  const body = block[1];
+  const out = new Map();
+  // Match:  name: ["size", { ... }],   — name may be quoted ("body-sm")
+  const entryRe =
+    /(?:"([\w-]+)"|([\w-]+))\s*:\s*\[\s*"([^"]+)"\s*(?:,\s*\{([^}]*)\})?\s*\]/g;
+  for (const m of body.matchAll(entryRe)) {
+    const name = m[1] || m[2];
+    const size = m[3];
+    const meta = m[4] || "";
+    const lh = (meta.match(/lineHeight\s*:\s*"([^"]+)"/) || [])[1] || null;
+    const fw = (meta.match(/fontWeight\s*:\s*"([^"]+)"/) || [])[1] || "400";
+    out.set(name, { size, lineHeight: lh, fontWeight: fw });
+  }
+  return out;
+}
+
+const typeScale = extractTypeScale(tw);
+const typeScaleProblems = [];
+
+if (typeScale.size === 0) {
+  typeScaleProblems.push("Could not parse fontSize block in tailwind.config.ts");
+}
+
+// Restrict the doc search to the §4.2 Typography section so a stray
+// number elsewhere in the doc doesn't accidentally satisfy a check.
+function extractDocSection(docText, headingRe, nextHeadingRe) {
+  const startMatch = docText.match(headingRe);
+  if (!startMatch) return null;
+  const startIdx = startMatch.index + startMatch[0].length;
+  const rest = docText.slice(startIdx);
+  const endMatch = rest.match(nextHeadingRe);
+  return endMatch ? rest.slice(0, endMatch.index) : rest;
+}
+
+const typographySection = extractDocSection(
+  doc,
+  /^### 4\.2 Typography\s*$/m,
+  /^### 4\.\d/m,
+);
+
+if (typeScale.size > 0 && !typographySection) {
+  typeScaleProblems.push(
+    "Could not locate `### 4.2 Typography` section in docs/ARCHITECTURE.md",
+  );
+}
+
+if (typographySection) {
+  for (const [name, { size, lineHeight, fontWeight }] of typeScale) {
+    // 1. Token name must be referenced (backtick-wrapped to avoid
+    //    accidental prose matches like "body" appearing in sentences).
+    if (!typographySection.includes(`\`${name}\``)) {
+      typeScaleProblems.push(
+        `fontSize.${name} → token name not listed in §4.2 type-scale table`,
+      );
+      continue;
+    }
+    // 2. Size value must appear somewhere in §4.2.
+    if (!typographySection.includes(size)) {
+      typeScaleProblems.push(
+        `fontSize.${name} → size "${size}" not present in §4.2 (drift)`,
+      );
+    }
+    // 3. lineHeight value must appear (when defined in source).
+    if (lineHeight && !typographySection.includes(lineHeight)) {
+      typeScaleProblems.push(
+        `fontSize.${name} → lineHeight "${lineHeight}" not present in §4.2 (drift)`,
+      );
+    }
+    // 4. fontWeight: only enforce when explicitly set in source AND
+    //    not the implicit body default. Doc is allowed to summarise
+    //    weight per row; we just check the value appears.
+    if (fontWeight && fontWeight !== "400" && !typographySection.includes(fontWeight)) {
+      typeScaleProblems.push(
+        `fontSize.${name} → fontWeight "${fontWeight}" not present in §4.2 (drift)`,
+      );
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // 4. Report
 // ──────────────────────────────────────────────────────────────────────
 
-const problems = [...missing.map((t) => `Missing token in docs: ${t}`), ...valueDrift, ...missingFamilies];
+const problems = [
+  ...missing.map((t) => `Missing token in docs: ${t}`),
+  ...valueDrift,
+  ...missingFamilies,
+  ...typeScaleProblems,
+];
 
 if (problems.length > 0) {
   console.error("✗ Design-tokens drift detected — docs/ARCHITECTURE.md is out of sync:\n");
   for (const p of problems) console.error(`  • ${p}`);
   console.error(
-    "\nUpdate docs/ARCHITECTURE.md (§4.1 color tokens / §4.2 typography) to match the current source, or revert the source change.",
+    "\nUpdate docs/ARCHITECTURE.md (§4.1 color tokens / §4.2 typography incl. type scale) to match the current source, or revert the source change.",
   );
   process.exit(1);
 }
 
 console.log(
-  `✓ Design-tokens in sync — ${allTokenNames.size} color tokens and ${families.size} font families verified against docs/ARCHITECTURE.md`,
+  `✓ Design-tokens in sync — ${allTokenNames.size} color tokens, ${families.size} font families, and ${typeScale.size} type-scale tokens verified against docs/ARCHITECTURE.md`,
 );
