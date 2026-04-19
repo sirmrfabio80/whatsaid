@@ -580,6 +580,24 @@ export default function Convert() {
                         </div>
                         <span className="text-body-sm font-medium">{formatDuration(duration)}</span>
                       </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 text-body-sm text-muted-foreground">
+                          <CreditCard className="w-4 h-4" />
+                          {t("convert.cost")}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-body-sm font-medium">
+                            {credits === 1
+                              ? t("convert.costOneCredit")
+                              : t("convert.costMultipleCredits", { count: credits })}
+                          </span>
+                          {credits > 1 && (
+                            <p className="text-caption text-muted-foreground mt-0.5">
+                              {t("convert.costMultipleCreditsHint", { minutes: Math.ceil(duration / 60) })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex items-start gap-2">
