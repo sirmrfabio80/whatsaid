@@ -60,8 +60,8 @@ export default function SetPassword() {
               <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                 <Lock className="w-6 h-6 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold">{t("setPassword.title")}</h1>
-              <p className="text-muted-foreground text-sm">{t("setPassword.subtitle")}</p>
+              <h1 className="text-h1">{t("setPassword.title")}</h1>
+              <p className="text-muted-foreground text-secondary">{t("setPassword.subtitle")}</p>
             </div>
 
             <div className="space-y-4">
