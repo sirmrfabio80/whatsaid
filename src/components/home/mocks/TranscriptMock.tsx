@@ -9,7 +9,7 @@ export function TranscriptMock() {
         {[
           { name: "Sarah", dot: "bg-primary" },
           { name: "Marco", dot: "bg-accent" },
-          { name: "Priya", dot: "bg-muted-foreground/50" },
+          { name: "Priya", dot: "bg-foreground/40" },
         ].map((s) => (
           <span
             key={s.name}
@@ -26,16 +26,16 @@ export function TranscriptMock() {
         {[
           { name: "Sarah", time: "00:14", text: "We need to ship before Q2 — that's the bar.", dot: "bg-primary" },
           { name: "Marco", time: "00:22", text: "Agreed. I'll own the rollout plan.", dot: "bg-accent" },
-          { name: "Priya", time: "00:31", text: "Let's review next Tuesday with design.", dot: "bg-muted-foreground/50" },
+          { name: "Priya", time: "00:31", text: "Let's review next Tuesday with design.", dot: "bg-foreground/40" },
         ].map((l) => (
           <div key={l.time} className="flex items-start gap-2.5">
             <span className={`mt-2 w-1.5 h-1.5 rounded-full ${l.dot} shrink-0`} />
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="font-serif italic text-caption text-foreground">{l.name}</span>
-                <span className="font-mono text-[10px] text-muted-foreground tabular-nums">{l.time}</span>
+                <span className="font-serif italic text-[12px] font-medium text-foreground">{l.name}</span>
+                <span className="font-mono text-[10px] text-foreground/60 tabular-nums">{l.time}</span>
               </div>
-              <p className="font-serif text-caption text-foreground/80 leading-relaxed">{l.text}</p>
+              <p className="font-serif text-[13px] text-foreground/85 leading-relaxed">{l.text}</p>
             </div>
           </div>
         ))}
@@ -45,11 +45,11 @@ export function TranscriptMock() {
           <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
           <div className="flex-1">
             <div className="flex items-baseline gap-2">
-              <span className="font-serif italic text-caption text-foreground">Sarah</span>
-              <span className="font-mono text-[10px] text-muted-foreground tabular-nums">00:47</span>
+              <span className="font-serif italic text-[12px] font-medium text-foreground">Sarah</span>
+              <span className="font-mono text-[10px] text-foreground/60 tabular-nums">00:47</span>
             </div>
             <div className="rounded-md border-2 border-primary/60 bg-primary/5 px-2 py-1">
-              <p className="font-serif text-caption text-foreground leading-relaxed">
+              <p className="font-serif text-[13px] text-foreground leading-relaxed">
                 I'll commit to the launch date<span className="inline-block w-px h-3 bg-primary ml-0.5 align-middle animate-pulse" />
               </p>
             </div>
