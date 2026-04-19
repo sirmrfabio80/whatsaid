@@ -63,6 +63,12 @@ async function runPostProcessPipeline(
     // Build language instruction — ALWAYS specify output language
     const langLabel = detectedLang || "en";
 
+    // Mark stage: summarising
+    await supabase
+      .from("jobs")
+      .update({ processing_stage: "summarising" } as never)
+      .eq("id", job_id);
+
     // 2. Generate summary with structured sections
     const summaryContent = await callAiGateway({
       apiKey: LOVABLE_API_KEY,
@@ -104,7 +110,12 @@ async function runPostProcessPipeline(
     // 6. Mark job as completed and record summary language + short summary
     await supabase
       .from("jobs")
-      .update({ status: "completed", summary_language: langLabel, short_summary: shortSummary })
+      .update({
+        status: "completed",
+        summary_language: langLabel,
+        short_summary: shortSummary,
+        processing_stage: "tagging",
+      } as never)
       .eq("id", job_id);
 
     // 6b. Fetch job to get user_id and title for notification
