@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { useRedeemInvites } from "@/hooks/use-redeem-invites";
+import { setSpeechPreferences } from "@/hooks/use-speech-synthesis";
 
 interface AuthContextType {
   user: User | null;
@@ -71,12 +72,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("avatar_url, needs_password_setup, display_name")
+      .select("avatar_url, needs_password_setup, display_name, preferred_voice, playback_speed")
       .eq("user_id", uid)
       .single();
     setAvatarUrl(data?.avatar_url ?? null);
     setDisplayName(data?.display_name ?? null);
     setNeedsPasswordSetup(data?.needs_password_setup ?? false);
+    // Single source of truth: seed speech playback preferences for the session.
+    const voice = (data as { preferred_voice?: string } | null)?.preferred_voice;
+    const rate = (data as { playback_speed?: number } | null)?.playback_speed;
+    setSpeechPreferences({
+      voice: voice === "male" || voice === "female" ? voice : "female",
+      rate: typeof rate === "number" ? rate : 1.0,
+    });
   }, []);
 
   const refreshAdminStatus = useCallback(async (uid: string) => {
