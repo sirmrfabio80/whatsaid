@@ -187,6 +187,21 @@ export default function Settings() {
     }
   };
 
+  const handleTestVoice = () => {
+    if (!speechSupported) {
+      toast.info(t("jobResults.listen.unsupported"));
+      return;
+    }
+    // 1. Stop any active speech first to avoid collisions
+    speechManager.stop();
+    // 2. Push current local selections to the manager
+    setSpeechPreferences({ voice: preferredVoice, rate: playbackSpeed });
+    // 3. Play a localized sample sentence
+    const sample = t("settings.listening.sample");
+    const lang = i18n.language?.slice(0, 2) || "en";
+    speechManager.play("settings-test", sample, lang);
+  };
+
   const changePassword = async () => {
     setPasswordError(null); setPasswordSaved(false);
     if (newPassword.length < 6) { setPasswordError(t("settings.minLength")); return; }
@@ -286,7 +301,77 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {needsPasswordSetup && (
+          <Card className="rounded-xl border-border bg-card shadow-sm">
+            <CardContent className="p-5 sm:p-6 space-y-5">
+              <div className="flex items-center gap-2">
+                <Headphones className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+                <h2 className="text-h2">{t("settings.listening.title")}</h2>
+              </div>
+              <p className="text-caption text-muted-foreground">{t("settings.listening.desc")}</p>
+
+              <div className="space-y-2">
+                <Label>{t("settings.listening.voice")}</Label>
+                <RadioGroup
+                  value={preferredVoice}
+                  onValueChange={(v) => {
+                    if (v === "male" || v === "female") setPreferredVoice(v);
+                  }}
+                  className="flex flex-wrap gap-4"
+                >
+                  <label htmlFor="voice-female" className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                    <RadioGroupItem value="female" id="voice-female" />
+                    <span className="text-body-sm">{t("settings.listening.voiceFemale")}</span>
+                  </label>
+                  <label htmlFor="voice-male" className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                    <RadioGroupItem value="male" id="voice-male" />
+                    <span className="text-body-sm">{t("settings.listening.voiceMale")}</span>
+                  </label>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="playback-speed">{t("settings.listening.speed")}</Label>
+                <Select
+                  value={String(playbackSpeed)}
+                  onValueChange={(v) => {
+                    const n = Number(v);
+                    if ((ALLOWED_SPEEDS as readonly number[]).includes(n)) {
+                      setPlaybackSpeed(n as AllowedSpeed);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="playback-speed" className="rounded-lg h-11 w-full sm:w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALLOWED_SPEEDS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>{`${s}x`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={handleTestVoice}
+                  disabled={!speechSupported}
+                  aria-label={t("settings.listening.test")}
+                >
+                  <Volume2 className="w-4 h-4 mr-1.5" />
+                  {t("settings.listening.test")}
+                </Button>
+                <Button className="rounded-lg" size="sm" onClick={saveChanges} disabled={saving}>
+                  {saving ? <InlineSpinner size="sm" className="mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
+                  {t("settings.saveChanges")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
             <Card className="rounded-xl border-primary/30 bg-card shadow-sm">
               <CardContent className="p-5 sm:p-6 space-y-4">
                 <h2 className="text-h2">{t("settings.setPasswordCard.title")}</h2>
