@@ -372,6 +372,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {needsPasswordSetup && (
             <Card className="rounded-xl border-primary/30 bg-card shadow-sm">
               <CardContent className="p-5 sm:p-6 space-y-4">
                 <h2 className="text-h2">{t("settings.setPasswordCard.title")}</h2>
