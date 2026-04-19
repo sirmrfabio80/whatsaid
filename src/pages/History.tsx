@@ -140,7 +140,7 @@ export default function History() {
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-6">{t("history.title")}</h1>
+          <h1 className="text-h1 sm:text-[1.875rem] mb-6">{t("history.title")}</h1>
 
           {/* Filters — show when there are jobs */}
           {jobs.length > 0 && (
@@ -213,14 +213,14 @@ export default function History() {
                               <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
                             </div>
                           </div>
-                          {job.title && <p className="text-xs text-muted-foreground/60 truncate">{job.file_name}</p>}
-                          <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                          {job.title && <p className="text-caption text-muted-foreground/60 truncate">{job.file_name}</p>}
+                          <div className="flex items-center gap-2 sm:gap-3 mt-1 text-caption text-muted-foreground flex-wrap">
                             {job.duration_seconds && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(job.duration_seconds)}</span>}
                             <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
                             <span>{new Date(job.created_at).toLocaleDateString()}</span>
                           </div>
                           {job.short_summary && (
-                            <p className="text-xs text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
+                            <p className="text-caption text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
                           )}
                           {/* Tag chips */}
                           {jobTags.length > 0 && (

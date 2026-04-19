@@ -48,31 +48,31 @@ export default function Privacy() {
             <Link to="/"><ArrowLeft className="w-4 h-4" />{t("common.backToHome")}</Link>
           </Button>
 
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("privacy.title")}</h1>
-          <p className="text-sm text-muted-foreground mb-8">{t("privacy.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
+          <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">{t("privacy.title")}</h1>
+          <p className="text-secondary text-muted-foreground mb-8">{t("privacy.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
             {sections.map((s, i) => (
               <section key={i}>
-                <h2 className="text-lg font-semibold mb-2">{t(s.title)}</h2>
+                <h2 className="text-h2 mb-2">{t(s.title)}</h2>
                 {s.type === "p" && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{t(s.content!)}</p>
+                  <p className="text-secondary text-muted-foreground leading-relaxed">{t(s.content!)}</p>
                 )}
                 {s.type === "ul" && (
-                  <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                  <ul className="text-secondary text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
                     {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
                   </ul>
                 )}
                 {s.type === "multi" && s.paragraphs!.map((p) => (
-                  <p key={p} className="text-sm text-muted-foreground leading-relaxed">{t(p)}</p>
+                  <p key={p} className="text-secondary text-muted-foreground leading-relaxed">{t(p)}</p>
                 ))}
                 {s.type === "intro-ul" && (
                   <>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{t(s.intro!)}</p>
-                    <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                    <p className="text-secondary text-muted-foreground leading-relaxed">{t(s.intro!)}</p>
+                    <ul className="text-secondary text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
                       {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
                     </ul>
-                    {s.outro && <p className="text-sm text-muted-foreground leading-relaxed mt-2">{t(s.outro)}</p>}
+                    {s.outro && <p className="text-secondary text-muted-foreground leading-relaxed mt-2">{t(s.outro)}</p>}
                   </>
                 )}
               </section>

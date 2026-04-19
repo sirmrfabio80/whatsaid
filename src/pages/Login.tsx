@@ -77,7 +77,7 @@ export default function Login() {
         <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
           <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-            <CardTitle className="text-2xl">{t("login.resetTitle")}</CardTitle>
+            <CardTitle className="text-h1">{t("login.resetTitle")}</CardTitle>
             <CardDescription>
               {resetSent ? t("login.resetDescSent") : t("login.resetDescDefault")}
             </CardDescription>
@@ -85,7 +85,7 @@ export default function Login() {
           <CardContent>
             {resetSent ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary text-sm">
+                <div className="flex items-center gap-2 text-primary text-secondary">
                   <Check className="w-4 h-4" />
                   <span>{t("login.resetLinkSent")} <strong>{email}</strong></span>
                 </div>
@@ -101,7 +101,7 @@ export default function Login() {
                   <Input id="reset-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="rounded-xl h-11" />
                 </div>
                 {error && (
-                  <div className="flex items-center gap-2 text-destructive text-sm">
+                  <div className="flex items-center gap-2 text-destructive text-secondary">
                     <AlertCircle className="w-4 h-4" />
                     <span>{error}</span>
                   </div>
@@ -109,7 +109,7 @@ export default function Login() {
                 <Button type="submit" className="w-full h-11 rounded-xl" disabled={resetLoading}>
                   {resetLoading ? t("login.sending") : t("login.sendResetLink")}
                 </Button>
-                <Button variant="ghost" type="button" className="w-full text-sm" onClick={() => { setForgotMode(false); setError(null); }}>
+                <Button variant="ghost" type="button" className="w-full text-secondary" onClick={() => { setForgotMode(false); setError(null); }}>
                   <ArrowLeft className="w-4 h-4 mr-1.5" />
                   {t("login.backToSignIn")}
                 </Button>
@@ -126,7 +126,7 @@ export default function Login() {
       <Card className="w-full max-w-md rounded-xl border-border/50 shadow-sm">
         <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-h1">
             {purchaseIntent ? t("login.purchaseTitle") : t("login.title")}
           </CardTitle>
           <CardDescription>
@@ -142,14 +142,14 @@ export default function Login() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">{t("login.password")}</Label>
-                <button type="button" onClick={() => { setForgotMode(true); setError(null); }} className="text-xs text-primary hover:underline">
+                <button type="button" onClick={() => { setForgotMode(true); setError(null); }} className="text-caption text-primary hover:underline">
                   {t("login.forgotPassword")}
                 </button>
               </div>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="rounded-xl h-11" />
             </div>
             {error && (
-              <div className="flex items-center gap-2 text-destructive text-sm">
+              <div className="flex items-center gap-2 text-destructive text-secondary">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
@@ -161,7 +161,7 @@ export default function Login() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">{t("common.or")}</span></div>
+            <div className="relative flex justify-center text-micro"><span className="bg-card px-2 text-muted-foreground">{t("common.or")}</span></div>
           </div>
 
           <Button variant="outline" className="w-full h-11 rounded-xl" onClick={handleGoogleLogin} disabled={googleLoading}>
@@ -169,7 +169,7 @@ export default function Login() {
             {googleLoading ? t("login.signingIn") : t("login.continueWithGoogle")}
           </Button>
 
-          <p className="text-center text-sm text-muted-foreground mt-4">
+          <p className="text-center text-secondary text-muted-foreground mt-4">
             {t("login.privateBeta")}
           </p>
         </CardContent>

@@ -57,8 +57,8 @@ export default function Signup() {
         <Card className="w-full max-w-md rounded-xl border-border/50">
           <CardContent className="p-8 text-center space-y-4">
             <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
-            <h2 className="text-xl font-bold">{t("signup.accountCreated")}</h2>
-            <p className="text-sm text-muted-foreground">{t("signup.checkEmail")}</p>
+            <h2 className="text-h1">{t("signup.accountCreated")}</h2>
+            <p className="text-secondary text-muted-foreground">{t("signup.checkEmail")}</p>
             <Button className="rounded-xl" onClick={() => navigate(redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : "/login")}>{t("signup.goToSignIn")}</Button>
           </CardContent>
         </Card>
@@ -71,7 +71,7 @@ export default function Signup() {
       <Card className="w-full max-w-md rounded-xl border-border/50">
         <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-h1">
             {purchaseIntent ? t("signup.purchaseTitle") : t("signup.title")}
           </CardTitle>
           <CardDescription>
@@ -100,7 +100,7 @@ export default function Signup() {
                 onCheckedChange={(c) => setAcceptedTerms(c === true)}
                 className="mt-0.5"
               />
-              <label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+              <label htmlFor="terms" className="text-secondary text-muted-foreground leading-snug cursor-pointer">
                 {t("signup.termsAgree")}{" "}
                 <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank">{t("signup.termsOfService")}</Link>
                 {" "}{t("signup.and")}{" "}
@@ -109,7 +109,7 @@ export default function Signup() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-destructive text-sm">
+              <div className="flex items-center gap-2 text-destructive text-secondary">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
@@ -120,7 +120,7 @@ export default function Signup() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          <p className="text-center text-secondary text-muted-foreground mt-6">
             {t("signup.alreadyHaveAccount")}{" "}
             <Link to="/login" className="text-primary hover:underline font-medium">{t("common.signIn")}</Link>
           </p>

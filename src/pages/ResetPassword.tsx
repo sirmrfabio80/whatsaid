@@ -48,7 +48,7 @@ export default function ResetPassword() {
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Mic className="w-6 h-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl">{t("resetPassword.invalidTitle")}</CardTitle>
+            <CardTitle className="text-h1">{t("resetPassword.invalidTitle")}</CardTitle>
             <CardDescription>{t("resetPassword.invalidDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -68,13 +68,13 @@ export default function ResetPassword() {
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Mic className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">{t("resetPassword.title")}</CardTitle>
+          <CardTitle className="text-h1">{t("resetPassword.title")}</CardTitle>
           <CardDescription>{t("resetPassword.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           {success ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-primary text-sm">
+              <div className="flex items-center gap-2 text-primary text-secondary">
                 <Check className="w-4 h-4" />
                 <span>{t("resetPassword.passwordUpdated")}</span>
               </div>
@@ -90,7 +90,7 @@ export default function ResetPassword() {
                 <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required placeholder="••••••••" className="rounded-xl h-11" />
               </div>
               {error && (
-                <div className="flex items-center gap-2 text-destructive text-sm">
+                <div className="flex items-center gap-2 text-destructive text-secondary">
                   <AlertCircle className="w-4 h-4" />
                   <span>{error}</span>
                 </div>

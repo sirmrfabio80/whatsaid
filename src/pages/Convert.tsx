@@ -426,7 +426,7 @@ export default function Convert() {
             <p className="text-lg font-medium text-foreground">
               {t("pricing.processingPurchase", "Processing purchase…")}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-secondary text-muted-foreground">
               {t("pricing.processingPurchaseDesc", "Your credits will appear shortly.")}
             </p>
           </div>
@@ -436,13 +436,13 @@ export default function Convert() {
         <div className="max-w-2xl mx-auto">
           {creditsAdded !== null && (
             <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 animate-enter">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <div className="flex items-center gap-2 text-secondary font-medium text-foreground">
                 <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
                 <span>{t("pricing.creditsAddedBanner", { count: creditsAdded })}</span>
               </div>
               <button
                 onClick={() => setCreditsAdded(null)}
-                className="text-muted-foreground hover:text-foreground text-xs shrink-0"
+                className="text-muted-foreground hover:text-foreground text-caption shrink-0"
                 aria-label={t("common.cancel")}
               >
                 ✕
@@ -450,7 +450,7 @@ export default function Convert() {
             </div>
           )}
           <div className="text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("convert.title")}</h1>
+            <h1 className="text-h1 sm:text-[1.875rem] mb-2">{t("convert.title")}</h1>
             <p className="text-muted-foreground">{t("convert.subtitle")}</p>
           </div>
 
@@ -486,7 +486,7 @@ export default function Convert() {
                           ) : (
                             <div className="w-5 h-5 rounded-full border-2 border-current shrink-0" />
                           )}
-                          <span className={`text-sm font-medium ${isCurrent ? "text-foreground" : ""}`}>
+                          <span className={`text-secondary font-medium ${isCurrent ? "text-foreground" : ""}`}>
                             {STEP_LABELS[s]}
                           </span>
                         </div>
@@ -495,14 +495,14 @@ export default function Convert() {
                   </div>
 
                   {step === "failed" && errorMessage && (
-                    <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-sm max-w-sm">
+                    <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-secondary max-w-sm">
                       <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                       <span>{errorMessage}</span>
                     </div>
                   )}
 
                   {file && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-secondary text-muted-foreground">
                       <FileAudio className="w-4 h-4" />
                       <span className="truncate max-w-[200px]">{file.name}</span>
                       <span>· {formatDuration(duration)}</span>
@@ -527,10 +527,10 @@ export default function Convert() {
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                       <FileAudio className="w-5 h-5 text-primary shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatDuration(duration)} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
+                        <p className="text-secondary font-medium truncate">{file.name}</p>
+                        <p className="text-caption text-muted-foreground">{formatDuration(duration)} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
                       </div>
-                      <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={handleReset}>
+                      <Button variant="ghost" size="sm" className="rounded-xl text-caption" onClick={handleReset}>
                         {t("common.change")}
                       </Button>
                     </div>
@@ -539,7 +539,7 @@ export default function Convert() {
                       <LanguageSelector value={language} onChange={setLanguage} />
 
                       <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor="custom-prompt">
+                        <label className="text-secondary font-medium" htmlFor="custom-prompt">
                           {t("convert.customPromptLabel")} <span className="text-muted-foreground font-normal">{t("convert.customPromptOptional")}</span>
                         </label>
                         <Textarea
@@ -554,11 +554,11 @@ export default function Convert() {
 
                     <div className="p-4 rounded-xl bg-muted/50 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-secondary text-muted-foreground">
                           <Clock className="w-4 h-4" />
                           {t("convert.duration")}
                         </div>
-                        <span className="text-sm font-medium">{formatDuration(duration)}</span>
+                        <span className="text-secondary font-medium">{formatDuration(duration)}</span>
                       </div>
                     </div>
 
@@ -569,12 +569,12 @@ export default function Convert() {
                         onCheckedChange={(c) => setConsentChecked(c === true)}
                         className="mt-0.5"
                       />
-                      <label htmlFor="recording-consent" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                      <label htmlFor="recording-consent" className="text-secondary text-muted-foreground leading-snug cursor-pointer">
                         {t("convert.consentLabel")}
                       </label>
                     </div>
 
-                    <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                    <p className="text-caption text-muted-foreground flex items-start gap-1.5">
                       <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                       {t("convert.thirdPartyNotice")}{" "}
                       <Link to="/terms" className="text-primary hover:underline" target="_blank">{t("convert.terms")}</Link>{" "}{t("convert.and")}{" "}
@@ -587,8 +587,8 @@ export default function Convert() {
                           <div className="flex items-start gap-2.5 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
                             <CreditCard className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
                             <div className="space-y-1.5">
-                              <p className="text-sm font-medium text-destructive">{t("convert.noCreditsTitle")}</p>
-                              <p className="text-xs text-destructive/80">{t("convert.noCreditsDesc", { required: credits, balance: creditBalance ?? 0 })}</p>
+                              <p className="text-secondary font-medium text-destructive">{t("convert.noCreditsTitle")}</p>
+                              <p className="text-caption text-destructive/80">{t("convert.noCreditsDesc", { required: credits, balance: creditBalance ?? 0 })}</p>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -611,7 +611,7 @@ export default function Convert() {
                       </>
                     ) : (
                       <div className="text-center space-y-3">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-secondary text-muted-foreground">
                           {t("convert.signInToConvert")}
                         </p>
                         <Button className="w-full rounded-xl" onClick={() => navigate("/login")}>
