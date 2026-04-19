@@ -780,6 +780,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
+              <div className="flex items-center justify-end px-4 sm:px-5 pt-3 pb-2 border-b border-border/40">
+                <ListenButton
+                  ownerId="summary"
+                  getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
+                  lang={speechLang}
+                />
+              </div>
               {summaryNeedsRegen && (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 border-b border-warning/30 bg-warning/5">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -854,6 +861,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
+              <div className="flex items-center justify-end px-4 sm:px-5 pt-3 pb-2 border-b border-border/40">
+                <ListenButton
+                  ownerId="questions"
+                  getText={() => latestAnswerToSpeech(latestAnswerContent)}
+                  lang={speechLang}
+                />
+              </div>
               <div className="p-4 sm:p-5 border-b border-border/40">
                 <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">{t("jobResults.askQuestion")}</label>
                 <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
