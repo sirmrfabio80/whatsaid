@@ -290,8 +290,10 @@ class Pen {
     this.y += after;
   }
 
-  sectionHeading(text: string) {
-    this.pageBreak(14);
+  sectionHeading(text: string, firstBodyHeightMm = 0) {
+    // Reserve: divider gap (4mm) + heading height + first body block height
+    const headingHeight = ptMm(F.h2) * HLH + 5 + 2; // before(5) + after(2)
+    this.pageBreakHard(4 + headingHeight + firstBodyHeightMm);
     this.pdf.setDrawColor(...hexRgb(C.accent));
     this.pdf.setLineWidth(0.5);
     this.pdf.line(ML, this.y, PAGE_W - MR, this.y);
