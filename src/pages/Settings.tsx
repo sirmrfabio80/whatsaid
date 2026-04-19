@@ -67,6 +67,26 @@ export default function Settings() {
   const [preferredVoice, setPreferredVoice] = useState<AllowedVoice>("female");
   const [playbackSpeed, setPlaybackSpeed] = useState<AllowedSpeed>(1.0);
   const { isSupported: speechSupported } = useSpeechSynthesis();
+  // Bump on voiceschanged so the matched-voice indicator updates once the browser populates voices.
+  const [voicesTick, setVoicesTick] = useState(0);
+  useEffect(() => {
+    if (!speechSupported) return;
+    if (getCachedVoices().length === 0) {
+      const unsub = subscribeVoices(() => setVoicesTick((n) => n + 1));
+      return unsub;
+    }
+  }, [speechSupported]);
+
+  const matchedVoiceLabel = (() => {
+    if (!speechSupported) return null;
+    const lang = i18n.language?.slice(0, 2) || "en";
+    if (getCachedVoices().length === 0) return t("settings.listening.matchedVoiceLoading");
+    const v = pickVoice(lang, preferredVoice);
+    if (!v) return t("settings.listening.matchedVoiceDefault");
+    return t("settings.listening.matchedVoice", { name: `${v.name} (${v.lang})` });
+  })();
+  // Reference voicesTick so React tracks it as a dependency for re-render.
+  void voicesTick;
 
   useEffect(() => { if (!loading && !user) navigate("/login"); }, [user, loading, navigate]);
 
