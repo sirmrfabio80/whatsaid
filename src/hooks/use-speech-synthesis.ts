@@ -352,7 +352,10 @@ export function useSpeechSynthesis(): UseSpeechSynthesis {
   };
 }
 
-/** Direct access to the singleton — useful for page-level cleanup effects. */
+/** Direct access to the singleton — useful for page-level cleanup effects and the Settings test action. */
 export const speechManager = {
   stop: () => manager.stop(),
+  play: (ownerId: string, text: string, lang?: string) => manager.play(ownerId, text, lang),
+  pause: () => manager.pause(),
+  resume: () => manager.resume(),
 };
