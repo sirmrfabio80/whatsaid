@@ -35,6 +35,7 @@ import {
 } from "@/lib/paddle-pricing";
 import { CreditDurationTable } from "@/components/pricing/CreditDurationTable";
 import { PerCreditValue } from "@/components/pricing/PerCreditValue";
+import { PricingStudioMock } from "@/components/pricing/PricingStudioMock";
 
 // ---------------------------------------------------------------------------
 // Currency toggle
