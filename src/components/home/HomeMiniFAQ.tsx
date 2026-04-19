@@ -48,7 +48,7 @@ export function HomeMiniFAQ() {
             </Button>
             <Link
               to="/help"
-              className="text-primary hover:underline text-secondary font-medium"
+              className="text-primary hover:underline text-[13px] leading-[1.5] font-medium"
             >
               {t("home.miniFaqSeeAll")} →
             </Link>
@@ -62,7 +62,7 @@ export function HomeMiniFAQ() {
                 value={`mini-faq-${i}`}
                 className="border-b border-border/60 last:border-b-0 px-0"
               >
-                <AccordionTrigger className="text-secondary font-medium py-4 hover:no-underline text-left">
+                <AccordionTrigger className="text-[13px] leading-[1.5] font-medium py-4 hover:no-underline text-left">
                   {t(q)}
                 </AccordionTrigger>
                 <AccordionContent className="font-serif text-body text-muted-foreground pb-4 leading-relaxed">

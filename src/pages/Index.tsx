@@ -147,7 +147,7 @@ export default function Index() {
                     <Icon aria-hidden="true" className="w-4 h-4 text-primary" />
                     <h3 className="text-h3">{title}</h3>
                   </div>
-                  <p className="text-secondary text-muted-foreground leading-relaxed">
+                  <p className="text-[13px] leading-[1.5] text-muted-foreground leading-relaxed">
                     {desc}
                   </p>
                 </div>
