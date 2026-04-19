@@ -197,6 +197,33 @@ export type Database = {
         }
         Relationships: []
       }
+      help_faq_feedback: {
+        Row: {
+          created_at: string
+          faq_anchor: string
+          helpful: boolean
+          id: string
+          locale: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          faq_anchor: string
+          helpful: boolean
+          id?: string
+          locale: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          faq_anchor?: string
+          helpful?: boolean
+          id?: string
+          locale?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       job_output_variants: {
         Row: {
           content: string
