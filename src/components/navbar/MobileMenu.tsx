@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { LogOut, History, User as UserIcon, Settings, Shield, HelpCircle } from "lucide-react";
+import { LogOut, History, User as UserIcon, Settings, Shield, HelpCircle, Sun, Moon, Monitor } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useTheme, type ThemeMode } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 
 interface MobileMenuProps {
@@ -14,6 +16,13 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ user, isAdmin, signOut, onClose }: MobileMenuProps) {
   const { t } = useTranslation();
+  const { theme, setTheme } = useTheme();
+
+  const themeOptions: { value: ThemeMode; icon: typeof Sun; label: string }[] = [
+    { value: "light", icon: Sun, label: t("theme.light", "Light") },
+    { value: "dark", icon: Moon, label: t("theme.dark", "Dark") },
+    { value: "system", icon: Monitor, label: t("theme.system", "System") },
+  ];
 
   return (
     <div className="relative z-50 md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-4 py-3 origin-top animate-slide-down">
