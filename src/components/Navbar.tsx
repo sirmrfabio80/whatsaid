@@ -1,12 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import DesktopNav from "@/components/navbar/DesktopNav";
 import MobileMenu from "@/components/navbar/MobileMenu";
+import CreditBadge from "@/components/navbar/CreditBadge";
 
 export default function Navbar() {
   const { user, creditBalance, isAdmin, avatarUrl, displayName, signOut } = useAuth();
@@ -64,10 +65,7 @@ export default function Navbar() {
         <div className="flex md:hidden items-center gap-2">
           {user && (
             <>
-              <div className="bg-muted border border-border px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs">
-                <CreditCard className="w-3 h-3 text-primary" />
-                <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
-              </div>
+              <CreditBadge balance={creditBalance} isAdmin={isAdmin} size="sm" />
               <NotificationBell />
             </>
           )}
