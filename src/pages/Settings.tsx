@@ -109,6 +109,16 @@ export default function Settings() {
       return;
     }
 
+    // Validate listening preferences before save (guards UI + DB CHECK)
+    if (!(ALLOWED_VOICES as readonly string[]).includes(preferredVoice)) {
+      toast.error(t("settings.listening.invalidValue"));
+      return;
+    }
+    if (!(ALLOWED_SPEEDS as readonly number[]).includes(playbackSpeed)) {
+      toast.error(t("settings.listening.invalidValue"));
+      return;
+    }
+
     setSaving(true);
     const trimmedEmail = contactEmail.trim();
 
@@ -131,10 +141,15 @@ export default function Settings() {
       }
     }
 
-    // Update profiles
+    // Update profiles (includes listening preferences)
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, email: trimmedEmail })
+      .update({
+        display_name: displayName,
+        email: trimmedEmail,
+        preferred_voice: preferredVoice,
+        playback_speed: playbackSpeed,
+      })
       .eq("user_id", user.id);
 
     if (profileError) {
@@ -142,6 +157,9 @@ export default function Settings() {
       setSaving(false);
       return;
     }
+
+    // Push prefs into the live speech manager so /job/:id picks them up immediately.
+    setSpeechPreferences({ voice: preferredVoice, rate: playbackSpeed });
 
     // Conditionally trigger auth email change for email-password users
     const authEmailChanged = hasEmailAuth && trimmedEmail.toLowerCase() !== (user.email || "").toLowerCase();
