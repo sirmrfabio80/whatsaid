@@ -3,6 +3,7 @@ import AdminGuard from "@/components/admin/AdminGuard";
 import TranscribeTemplatesTab from "@/components/admin/TranscribeTemplatesTab";
 import LogsTab from "@/components/admin/LogsTab";
 import WatchdogTab from "@/components/admin/WatchdogTab";
+import FaqFeedbackTab from "@/components/admin/FaqFeedbackTab";
 import OthersTab from "@/components/admin/OthersTab";
 
 export default function Admin() {
@@ -23,6 +24,7 @@ export default function Admin() {
             <TabsTrigger value="transcribe">Transcribe settings</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="watchdog">Watchdog</TabsTrigger>
+            <TabsTrigger value="faq-feedback">FAQ feedback</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
@@ -33,6 +35,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="watchdog" className="space-y-6">
             <WatchdogTab />
+          </TabsContent>
+          <TabsContent value="faq-feedback" className="space-y-6">
+            <FaqFeedbackTab />
           </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
