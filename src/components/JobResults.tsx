@@ -622,7 +622,9 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const activeSummaryContent = summary ? getContent(summary) : null;
 
   // Speech: language hint + latest visible answer for the Questions tab.
-  const speechLang = meta?.language_detected ?? outputLang ?? undefined;
+  // When viewing a translation, the displayed text is in outputLang, so speech must use outputLang
+  // (not language_detected) to pick the correct voice.
+  const speechLang = isViewingTranslation ? outputLang : (meta?.language_detected ?? outputLang ?? undefined);
   const latestQuestionEntry = questionEntries.length > 0 ? questionEntries[questionEntries.length - 1] : null;
   const latestAnswerContent = latestQuestionEntry
     ? applySpeakerNames(getContent(latestQuestionEntry), speakerNames)
