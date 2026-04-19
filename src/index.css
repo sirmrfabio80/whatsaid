@@ -240,8 +240,14 @@
   .animate-page-enter-flat,
   .animate-fade-in,
   .animate-stagger > *,
-  .animate-pulse {
+  .animate-pulse,
+  .animate-slide-down {
     animation: none !important;
+  }
+  /* MobileMenu items use `opacity-0 animate-fade-in` with fill-forwards — once
+     the animation is suppressed they would stay invisible. Force them visible. */
+  .animate-fade-in {
+    opacity: 1 !important;
   }
 }
 
