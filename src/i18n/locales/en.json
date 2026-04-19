@@ -804,6 +804,20 @@
     "lead": "Quick answers, how WhatSaid works, and what to do when something goes wrong.",
     "filterPlaceholder": "Filter help…",
     "filterAriaLabel": "Filter Help page",
+    "mock": {
+      "windowLabel": "knowledge-base · help-center",
+      "tabFaq": "FAQ",
+      "tabWorkflow": "Workflow",
+      "tabTroubleshooting": "Troubleshooting",
+      "matched": "{{count}} matching answers",
+      "demoQ1": "How does the credit system work?",
+      "demoQ2": "What audio formats can I upload?",
+      "demoQ3": "Is my audio stored after processing?",
+      "demoAnswer": "1 credit transcribes up to 15 minutes of audio. Credits never expire and apply to summaries, custom questions, and re-runs at no extra cost.",
+      "helpfulQuestion": "Was this helpful?",
+      "helpfulVotes": "{{percent}}% · {{count}} votes",
+      "statusLive": "Live · {{count}} articles · always free"
+    },
     "quick": {
       "upload": "Upload audio",
       "pricing": "Pricing & credits",
