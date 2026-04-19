@@ -10,7 +10,7 @@ export function HeroProductMock() {
     <div
       aria-hidden="true"
       className="relative w-full max-w-[640px] mx-auto rounded-2xl border border-border/70 bg-card shadow-2xl shadow-primary/10 overflow-hidden motion-safe:animate-hero-mock-rise motion-reduce:animate-none"
-      style={{ animationDelay: "120ms" }}
+      style={{ animationDelay: "320ms" }}
     >
       {/* Window chrome */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-muted/40">

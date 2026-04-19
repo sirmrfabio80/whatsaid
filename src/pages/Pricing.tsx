@@ -315,7 +315,7 @@ export default function Pricing() {
             }`}
           >
             {/* Left column — copy + CTAs */}
-            <div className="lg:col-span-5 text-center lg:text-left">
+            <div className="lg:col-span-5 text-center lg:text-left motion-safe:animate-hero-text-rise motion-reduce:animate-none">
               <p className="font-serif italic text-caption text-primary mb-4">
                 {t("pricing.heroEyebrow")}
               </p>

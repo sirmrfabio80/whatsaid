@@ -45,7 +45,7 @@ export default function Index() {
         <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24 relative">
           <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             {/* Left: text */}
-            <div className="lg:col-span-5 text-center lg:text-left">
+            <div className="lg:col-span-5 text-center lg:text-left motion-safe:animate-hero-text-rise motion-reduce:animate-none">
               <p className="font-serif italic text-caption text-primary mb-5">
                 {t("home.heroEyebrow")}
               </p>
