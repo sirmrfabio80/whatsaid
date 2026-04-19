@@ -13,6 +13,7 @@ import { HomeMiniFAQ } from "@/components/home/HomeMiniFAQ";
 import { HeroProductMock } from "@/components/home/HeroProductMock";
 import { PricingTeaserStrip } from "@/components/home/PricingTeaserStrip";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useJsonLd } from "@/hooks/use-json-ld";
 
 export default function Index() {
   const { user } = useAuth();
@@ -26,6 +27,24 @@ export default function Index() {
     description:
       "Upload audio and get instant transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.",
     canonical: "https://whatsaid.app/",
+  });
+
+  useJsonLd("ld-organization", {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "WhatSaid",
+    url: "https://whatsaid.app/",
+    logo: "https://whatsaid.app/favicon.png",
+    description:
+      "WhatSaid converts audio into accurate transcripts, summaries, and custom AI analysis with speaker labels.",
+    sameAs: [],
+  });
+
+  useJsonLd("ld-website", {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "WhatSaid",
+    url: "https://whatsaid.app/",
   });
 
   const heroPrimaryHref = user ? "/convert" : "/signup";
