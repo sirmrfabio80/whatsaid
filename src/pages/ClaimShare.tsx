@@ -149,7 +149,7 @@ export default function ClaimShare() {
                 <FileText className="w-7 h-7 text-primary" />
               </div>
               <div>
-                <h2 className="font-heading text-xl font-bold">{t("claim.sharedWithYou")}</h2>
+                <h2 className="text-xl font-bold">{t("claim.sharedWithYou")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {t("claim.sharedByDesc", { sender: shareInfo.senderEmail })}
                 </p>
@@ -182,7 +182,7 @@ export default function ClaimShare() {
             <>
               <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
               <div>
-                <h2 className="font-heading text-xl font-bold">{t("claim.success")}</h2>
+                <h2 className="text-xl font-bold">{t("claim.success")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">{t("claim.successDesc")}</p>
               </div>
             </>
@@ -198,7 +198,7 @@ export default function ClaimShare() {
                 )}
               </div>
               <div>
-                <h2 className="font-heading text-xl font-bold">{t("claim.errorTitle")}</h2>
+                <h2 className="text-xl font-bold">{t("claim.errorTitle")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">{errorMsg}</p>
               </div>
               <Button onClick={() => navigate("/")} variant="outline" className="rounded-xl">

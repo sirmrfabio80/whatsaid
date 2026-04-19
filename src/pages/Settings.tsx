@@ -185,7 +185,7 @@ export default function Settings() {
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="flex items-baseline justify-between gap-4 flex-wrap">
-            <h1 className="font-heading text-2xl sm:text-3xl font-bold">{t("settings.title")}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t("settings.title")}</h1>
             <a href="/help#account" className="text-sm text-primary hover:underline whitespace-nowrap">
               {t("settings.helpLink")}
             </a>
@@ -193,7 +193,7 @@ export default function Settings() {
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-lg">{t("settings.account")}</h2>
+              <h2 className="font-semibold text-lg">{t("settings.account")}</h2>
               <div className="space-y-2">
                 <Label htmlFor="display-name">{t("settings.displayName")}</Label>
                 <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-lg h-11" />
@@ -231,7 +231,7 @@ export default function Settings() {
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-lg">{t("settings.preferences")}</h2>
+              <h2 className="font-semibold text-lg">{t("settings.preferences")}</h2>
               <div className="space-y-2">
                 <Label htmlFor="ui-language">{t("settings.interfaceLanguage")}</Label>
                 <p className="text-xs text-muted-foreground">{t("settings.interfaceLanguageDesc")}</p>
@@ -255,7 +255,7 @@ export default function Settings() {
           {needsPasswordSetup && (
             <Card className="rounded-xl border-primary/30 bg-card shadow-sm">
               <CardContent className="p-5 sm:p-6 space-y-4">
-                <h2 className="font-heading font-semibold text-lg">{t("settings.setPasswordCard.title")}</h2>
+                <h2 className="font-semibold text-lg">{t("settings.setPasswordCard.title")}</h2>
                 <p className="text-sm text-muted-foreground">{t("settings.setPasswordCard.desc")}</p>
                 <div className="space-y-3">
                   <div className="space-y-1.5">
@@ -277,7 +277,7 @@ export default function Settings() {
 
           <Card className="rounded-xl border-border bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-lg">{t("settings.security")}</h2>
+              <h2 className="font-semibold text-lg">{t("settings.security")}</h2>
               <Dialog open={passwordOpen} onOpenChange={(open) => { setPasswordOpen(open); if (!open) { setPasswordError(null); setPasswordSaved(false); } }}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="rounded-lg" size="sm"><Lock className="w-4 h-4 mr-1.5" />{t("settings.changePassword")}</Button>
@@ -311,7 +311,7 @@ export default function Settings() {
 
           <Card className="rounded-xl border-destructive/30 bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h2 className="font-heading font-semibold text-lg text-destructive">{t("settings.dangerZone")}</h2>
+              <h2 className="font-semibold text-lg text-destructive">{t("settings.dangerZone")}</h2>
               <p className="text-sm text-muted-foreground">{t("settings.dangerDesc")}</p>
               <AlertDialog>
                 <AlertDialogTrigger asChild>

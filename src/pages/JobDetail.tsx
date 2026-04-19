@@ -148,7 +148,7 @@ export default function JobDetail() {
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditing(false); }}
                       onBlur={saveTitle}
-                      className="font-heading text-2xl sm:text-3xl font-bold h-auto py-0.5 px-1.5 rounded-lg border-primary/30"
+                      className="text-2xl sm:text-3xl font-bold h-auto py-0.5 px-1.5 rounded-lg border-primary/30"
                       aria-label="Job title"
                       maxLength={100}
                     />
@@ -159,7 +159,7 @@ export default function JobDetail() {
                 ) : (
                   <>
                     <h1
-                      className="font-heading text-2xl sm:text-3xl font-bold truncate cursor-pointer hover:text-primary/80 transition-colors"
+                      className="text-2xl sm:text-3xl font-bold truncate cursor-pointer hover:text-primary/80 transition-colors"
                       onClick={startEditing}
                       title={t("jobDetail.clickToRename")}
                       role="button"

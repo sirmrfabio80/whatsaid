@@ -1,8 +1,21 @@
-/* Google Fonts loaded via index.html link tag for non-blocking delivery */
+/* Two web families only (loaded via index.html):
+   - Inter (variable) — UI / chrome / titles / timestamps
+   - Source Serif 4 (variable, opsz) — long-form reading (transcript, summary, Q&A)
+   Mono uses system stack only — no third loaded family. */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Reduce CLS when Source Serif 4 swaps in over Georgia fallback */
+@font-face {
+  font-family: "Source Serif 4 Fallback";
+  src: local("Georgia");
+  size-adjust: 102%;
+  ascent-override: 95%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
 
 @layer base {
   :root {
@@ -108,12 +121,21 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "ss01", "cv11", "cv05";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
+  /* Headings inherit sans by default; reading components opt into serif explicitly. */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-family: inherit;
+  }
+
+  /* Serif reading surfaces get a tighter optical-size hint via font-feature */
+  .font-serif {
+    font-feature-settings: "kern", "liga", "calt";
   }
 
   /* Global focus-visible for all interactive elements */

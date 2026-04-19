@@ -54,14 +54,14 @@ export default function HelpFAQ({ filter }: HelpFAQProps) {
   return (
     <section id="faq" className="container mx-auto px-5 sm:px-6 py-10 scroll-mt-24">
       <div className="mb-6">
-        <h2 className="font-heading text-xl sm:text-2xl font-semibold mb-1">{t("help.faq.title")}</h2>
+        <h2 className="text-xl sm:text-2xl font-semibold mb-1">{t("help.faq.title")}</h2>
         <p className="text-sm text-muted-foreground">{t("help.faq.lead")}</p>
       </div>
 
       <div className="space-y-8">
         {filteredGroups.map((group) => (
           <div key={group.id} id={`faq-${group.id}`} className="scroll-mt-24">
-            <h3 className="font-heading text-base font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            <h3 className="text-base font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
               {pickLocale(group.title, i18n.language)}
             </h3>
             <Accordion

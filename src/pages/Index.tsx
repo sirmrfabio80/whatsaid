@@ -46,7 +46,7 @@ export default function Index() {
               <Sparkles className="w-3.5 h-3.5" />
               {t("home.tagline")}
             </div>
-            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1] animate-page-enter">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1] animate-page-enter">
               {t("home.heroTitle")}{" "}
               <span className="text-primary">{t("home.heroTitleHighlight")}</span>
             </h1>
@@ -89,7 +89,7 @@ export default function Index() {
       {/* How it works */}
       <section ref={howItWorks.ref} className="container mx-auto px-4 py-16 sm:py-24">
         <div className={`text-center mb-12 transition-all duration-700 ${howItWorks.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">{t("home.howItWorksTitle")}</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3">{t("home.howItWorksTitle")}</h2>
           <p className="text-muted-foreground max-w-md mx-auto">{t("home.howItWorksDesc")}</p>
         </div>
         <div className={`grid sm:grid-cols-3 gap-8 max-w-3xl mx-auto transition-all duration-700 delay-200 ${howItWorks.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
@@ -99,7 +99,7 @@ export default function Index() {
                 <Icon className="w-6 h-6 text-primary" />
               </div>
               <div className="text-xs font-medium text-primary mb-1">{t("home.step", { number: step })}</div>
-              <h3 className="font-heading font-semibold text-lg mb-2">{title}</h3>
+              <h3 className="font-semibold text-lg mb-2">{title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
             </div>
           ))}
@@ -110,7 +110,7 @@ export default function Index() {
       <section ref={capabilities.ref} className="bg-muted/30 border-y border-border">
         <div className="container mx-auto px-4 py-16 sm:py-24">
           <div className={`text-center mb-12 transition-all duration-700 ${capabilities.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-            <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">{t("home.capabilitiesTitle")}</h2>
+            <h2 className="text-2xl sm:text-3xl font-semibold mb-3">{t("home.capabilitiesTitle")}</h2>
             <p className="text-muted-foreground max-w-md mx-auto">{t("home.capabilitiesDesc")}</p>
           </div>
           <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto transition-all duration-700 delay-200 ${capabilities.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
@@ -120,7 +120,7 @@ export default function Index() {
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                     <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="font-heading font-semibold text-base mb-2">{title}</h3>
+                  <h3 className="font-semibold text-base mb-2">{title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
                 </CardContent>
               </Card>
@@ -132,7 +132,7 @@ export default function Index() {
       {/* Pricing CTA */}
       <section ref={pricing.ref} className="container mx-auto px-4 py-16 sm:py-24">
         <div className={`text-center mb-8 transition-all duration-700 ${pricing.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-3">{t("home.pricingCtaTitle")}</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3">{t("home.pricingCtaTitle")}</h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-6">{t("home.pricingCtaDesc")}</p>
           <Button size="lg" className="h-12 px-8 text-base font-medium rounded-lg" onClick={() => navigate("/pricing")}>
             {t("nav.pricing")}

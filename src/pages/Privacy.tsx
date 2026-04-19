@@ -48,13 +48,13 @@ export default function Privacy() {
             <Link to="/"><ArrowLeft className="w-4 h-4" />{t("common.backToHome")}</Link>
           </Button>
 
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("privacy.title")}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("privacy.title")}</h1>
           <p className="text-sm text-muted-foreground mb-8">{t("privacy.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
             {sections.map((s, i) => (
               <section key={i}>
-                <h2 className="font-heading text-lg font-semibold mb-2">{t(s.title)}</h2>
+                <h2 className="text-lg font-semibold mb-2">{t(s.title)}</h2>
                 {s.type === "p" && (
                   <p className="text-sm text-muted-foreground leading-relaxed">{t(s.content!)}</p>
                 )}

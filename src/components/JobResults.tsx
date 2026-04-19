@@ -803,7 +803,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                               {isEditing ? (
                                 <div className="space-y-2 mb-2">
                                   <div className="flex items-start gap-2">
-                                    <span className="text-xs font-semibold text-primary/70 mt-2.5 shrink-0">Q</span>
+                                    <span className="text-micro uppercase text-primary/70 mt-3 shrink-0">Q</span>
                                     <div className="flex-1 flex items-center gap-1.5">
                                       <Textarea value={editingQAText} onChange={(e) => setEditingQAText(e.target.value)} className="rounded-lg text-sm min-h-[40px] resize-none flex-1" autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditQA(entry); } }} />
                                       <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0" onClick={() => handleEditQA(entry)} disabled={!editingQAText.trim()}><Check className="w-3.5 h-3.5" /></Button>
@@ -820,11 +820,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                                   </div>
                                 </div>
                               ) : (
-                                entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-xs font-semibold text-primary/70 mt-0.5 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>
+                                entry.custom_prompt && <div className="flex items-start gap-2 mb-2"><span className="text-micro uppercase text-primary/70 mt-1 shrink-0">Q</span><p className="text-sm font-medium">{entry.custom_prompt}</p></div>
                               )}
                               {!isEditing && entry.metadata?.extra_sources && entry.metadata.extra_sources.length > 0 && (
                                 <div className="pl-5 mb-2 flex flex-wrap items-center gap-1.5">
-                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+                                  <span className="text-micro uppercase text-muted-foreground/80">
                                     {t("jobResults.extraSources.usedLabel")}
                                   </span>
                                   {entry.metadata.extra_sources.map((src) => (

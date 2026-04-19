@@ -24,7 +24,7 @@ export default function HelpTroubleshooting({ filter }: HelpTroubleshootingProps
   return (
     <section id="troubleshooting" className="container mx-auto px-5 sm:px-6 py-10 scroll-mt-24">
       <div className="mb-6">
-        <h2 className="font-heading text-xl sm:text-2xl font-semibold mb-1">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-1">
           {t("help.troubleshooting.title")}
         </h2>
         <p className="text-sm text-muted-foreground">{t("help.troubleshooting.lead")}</p>

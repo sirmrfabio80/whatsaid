@@ -48,7 +48,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <img src={logoImg} alt="WhatSaid" className="w-9 h-9 rounded-xl" />
-          <span className="font-heading font-bold text-xl tracking-tight">WhatSaid</span>
+          <span className="font-bold text-xl tracking-tight">WhatSaid</span>
         </Link>
 
         {/* Desktop nav */}

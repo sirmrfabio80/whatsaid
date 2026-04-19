@@ -14,36 +14,36 @@ export default function RefundPolicy() {
             <Link to="/"><ArrowLeft className="w-4 h-4" />{t("common.backToHome")}</Link>
           </Button>
 
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("refund.title")}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("refund.title")}</h1>
           <p className="text-sm text-muted-foreground mb-8">{t("refund.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
             <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("refund.s1Title")}</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("refund.s1Title")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{t("refund.s1Body")}</p>
             </section>
             <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("refund.s2Title")}</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("refund.s2Title")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{t("refund.s2Body")}</p>
             </section>
             <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("refund.s3Title")}</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("refund.s3Title")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{t("refund.s3Body")}</p>
             </section>
             <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("refund.s4Title")}</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("refund.s4Title")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{t("refund.s4Body")}</p>
             </section>
             <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("refund.s5Title")}</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("refund.s5Title")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{t("refund.s5Body")}</p>
             </section>
             <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("refund.s6Title")}</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("refund.s6Title")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{t("refund.s6Body")}</p>
             </section>
             <section>
-              <h2 className="font-heading text-lg font-semibold mb-2">{t("refund.s7Title")}</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("refund.s7Title")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{t("refund.s7Body")}</p>
             </section>
           </div>

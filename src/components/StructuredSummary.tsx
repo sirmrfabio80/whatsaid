@@ -136,17 +136,17 @@ export function SectionBody({ body }: { body: string }) {
     }
 
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2 font-serif">
         {proseLines.length > 0 && (
-          <p className="text-sm leading-relaxed text-foreground/90">
+          <p className="text-base sm:text-[17px] leading-[1.7] text-foreground/90">
             {renderLine(proseLines.join(" "))}
           </p>
         )}
-        <ul className="space-y-1.5 list-disc list-outside pl-4 marker:text-primary/40">
+        <ul className="space-y-2 list-disc list-outside pl-4 marker:text-primary/40">
           {bullets.map((b, i) => {
             const { text, isHeading } = stripHeading(b);
             return (
-              <li key={i} className={`text-sm leading-relaxed text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+              <li key={i} className={`text-base sm:text-[17px] leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
                 {renderLine(text)}
               </li>
             );
@@ -157,11 +157,11 @@ export function SectionBody({ body }: { body: string }) {
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2 font-serif">
       {lines.map((line, i) => {
         const { text, isHeading } = stripHeading(line);
         return (
-          <p key={i} className={`text-sm leading-relaxed text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+          <p key={i} className={`text-base sm:text-[17px] leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
             {renderLine(text)}
           </p>
         );
@@ -195,11 +195,11 @@ export default function StructuredSummary({ content }: StructuredSummaryProps) {
           className="rounded-xl bg-muted/40 p-3 sm:p-4"
         >
           {section.heading && (
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-2 mb-2">
               {section.icon}
               <h3
                 id={`summary-section-${i}`}
-                className="text-sm font-semibold tracking-tight"
+                className="font-serif text-[17px] sm:text-[18px] font-semibold tracking-tight"
               >
                 {section.heading}
               </h3>
