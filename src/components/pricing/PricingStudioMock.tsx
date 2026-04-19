@@ -76,7 +76,7 @@ export function PricingStudioMock() {
         <div className="space-y-2.5 mb-4">
           {[
             { label: "5 credits", sub: "Pay once · never expire", value: "£14.99" },
-            { label: "Per credit", sub: "5 audio files · up to ~75 min each", value: "£3.00" },
+            { label: "Per credit", sub: "5 audio files · up to 120 min each", value: "£3.00" },
             { label: "Tax", sub: "Calculated at checkout", value: "—" },
           ].map((row) => (
             <div
