@@ -70,9 +70,6 @@ export function PricingStudioMock() {
           <span className="font-serif italic text-[13px] text-muted-foreground">
             5-credit pack
           </span>
-          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-            INV-2026-0418
-          </span>
         </div>
 
         {/* Line items */}
