@@ -24,7 +24,8 @@
     "pricing": "Tarifs",
     "profile": "Profil",
     "history": "Historique",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "help": "Aide"
   },
   "home": {
     "tagline": "Transcription IA + identification des intervenants",

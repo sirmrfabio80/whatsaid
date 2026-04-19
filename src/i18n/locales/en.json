@@ -24,7 +24,8 @@
     "pricing": "Pricing",
     "profile": "Profile",
     "history": "History",
-    "settings": "Settings"
+    "settings": "Settings",
+    "help": "Help"
   },
   "home": {
     "tagline": "AI transcription + speaker labels",
