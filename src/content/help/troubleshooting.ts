@@ -17,9 +17,9 @@ export const troubleshooting: TroubleshootingItem[] = [
       fr: "Mon téléversement a été refusé.",
     },
     fix: {
-      en: "Check that the file is .m4a, .mp3, or .wav, no larger than 100 MB, and no longer than 60 minutes. If your recording is longer, trim it first.",
-      it: "Verifica che il file sia .m4a, .mp3 o .wav, non superiore a 100 MB e non più lungo di 60 minuti. Se la registrazione è più lunga, accorciala prima.",
-      fr: "Vérifiez que le fichier est .m4a, .mp3 ou .wav, ne dépasse pas 100 Mo et ne dure pas plus de 60 minutes. Si l'enregistrement est plus long, raccourcissez-le d'abord.",
+      en: "Check that the file is .m4a, .mp3, or .wav, no larger than 100 MB, and no longer than 480 minutes. Files up to 120 minutes cost 1 credit; longer files use 1 extra credit per additional 120-minute block.",
+      it: "Verifica che il file sia .m4a, .mp3 o .wav, non superiore a 100 MB e non più lungo di 480 minuti. I file fino a 120 minuti costano 1 credito; i file più lunghi usano 1 credito aggiuntivo per ogni blocco di 120 minuti in più.",
+      fr: "Vérifiez que le fichier est .m4a, .mp3 ou .wav, ne dépasse pas 100 Mo et ne dure pas plus de 480 minutes. Les fichiers jusqu'à 120 minutes coûtent 1 crédit ; les fichiers plus longs utilisent 1 crédit supplémentaire par tranche additionnelle de 120 minutes.",
     },
   },
   {

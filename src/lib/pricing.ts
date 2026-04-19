@@ -1,10 +1,19 @@
-/** Calculate credits needed based on audio duration */
+/**
+ * Credit model — single source of truth.
+ *
+ * Rule: 1 credit covers up to 120 minutes of audio in a single file.
+ * Files longer than 120 minutes cost +1 credit per additional 120-minute block
+ * (e.g. 121–240 min = 2 credits, 241–360 min = 3 credits).
+ *
+ * Hard ceiling: 480 minutes per file (4 credits max), enforced via MAX_DURATION.
+ */
+export const MINUTES_PER_CREDIT = 120;
+
+/** Calculate credits needed based on audio duration. */
 export function creditsForDuration(durationSeconds: number): number {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return 1;
   const minutes = durationSeconds / 60;
-  if (minutes <= 15) return 1;
-  if (minutes <= 30) return 2;
-  if (minutes <= 45) return 3;
-  return 4;
+  return Math.max(1, Math.ceil(minutes / MINUTES_PER_CREDIT));
 }
 
 
@@ -18,8 +27,8 @@ export function formatDuration(seconds: number): string {
 /** Max file size in bytes (100MB) */
 export const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
-/** Max duration in seconds (60 min) */
-export const MAX_DURATION = 3600;
+/** Max duration in seconds (480 min = 8 h, i.e. up to 4 credits per file). */
+export const MAX_DURATION = 480 * 60;
 
 /** Accepted audio MIME types */
 export const ACCEPTED_AUDIO_TYPES = [
@@ -41,4 +50,3 @@ export function isValidAudioFile(file: File): boolean {
   const ext = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
   return ACCEPTED_EXTENSIONS.includes(ext) || ACCEPTED_AUDIO_TYPES.includes(file.type);
 }
-

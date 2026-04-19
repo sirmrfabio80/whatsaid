@@ -1,16 +1,11 @@
 import { useTranslation } from "react-i18next";
+import { Clock, Plus } from "lucide-react";
 
 /**
- * Single source of truth: brackets mirror creditsForDuration() in src/lib/pricing.ts.
- * If pricing.ts changes its brackets, update both together.
+ * Single source of truth for the rule below: src/lib/pricing.ts → creditsForDuration().
+ * 1 credit = 1 transcription up to 120 min. Longer files cost +1 credit per extra 120-min block,
+ * up to the MAX_DURATION ceiling (480 min = 4 credits).
  */
-const BRACKETS = [
-  { duration: "≤ 15 min", credits: 1 },
-  { duration: "≤ 30 min", credits: 2 },
-  { duration: "≤ 45 min", credits: 3 },
-  { duration: "≤ 60 min", credits: 4 },
-];
-
 export function CreditDurationTable() {
   const { t } = useTranslation();
 
@@ -24,24 +19,29 @@ export function CreditDurationTable() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-muted/20 p-6 sm:p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-4 sm:divide-x sm:divide-border/60 divide-y divide-border/60 sm:divide-y-0">
-            {BRACKETS.map(({ duration, credits }) => (
-              <div
-                key={duration}
-                className="text-center py-4 sm:py-2 sm:px-4 first:pt-0 sm:first:pt-2 last:pb-0 sm:last:pb-2"
-              >
-                <div className="font-serif text-h1 text-foreground tabular-nums">
-                  {duration}
-                </div>
-                <div className="text-micro uppercase tracking-wide text-muted-foreground mt-2">
-                  {t("pricing.creditTableUnit", {
-                    count: credits,
-                    defaultValue: credits === 1 ? "1 credit" : `${credits} credits`,
-                  })}
-                </div>
-              </div>
-            ))}
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-muted/20 p-6 sm:p-10">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <Clock className="w-7 h-7" aria-hidden="true" />
+            </div>
+            <div className="font-serif text-h1 text-foreground tabular-nums">
+              {t("pricing.creditTableHeadline", {
+                defaultValue: "1 credit = 1 transcription, up to 120 min",
+              })}
+            </div>
+            <p className="text-body text-muted-foreground max-w-xl">
+              {t("pricing.creditTableBody", {
+                defaultValue:
+                  "Most recordings cost a single credit. Longer files use one extra credit for each additional 120 minutes.",
+              })}
+            </p>
+
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1.5 text-micro uppercase tracking-wide text-muted-foreground">
+              <Plus className="w-3 h-3" aria-hidden="true" />
+              {t("pricing.creditTableExtra", {
+                defaultValue: "+1 credit per extra 120 min · max 480 min per file",
+              })}
+            </div>
           </div>
         </div>
       </div>

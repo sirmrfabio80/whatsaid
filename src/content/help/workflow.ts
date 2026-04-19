@@ -21,9 +21,9 @@ export const workflow: WorkflowStep[] = [
       fr: "1. Téléversez votre audio",
     },
     body: {
-      en: "On the Convert page, drop a .m4a, .mp3, or .wav file (up to 100 MB and 60 minutes). The spoken language is auto-detected — you can override it manually before submitting.",
-      it: "Nella pagina Converti, trascina un file .m4a, .mp3 o .wav (fino a 100 MB e 60 minuti). La lingua parlata viene rilevata automaticamente — puoi sovrascriverla manualmente prima di inviare.",
-      fr: "Sur la page Convertir, déposez un fichier .m4a, .mp3 ou .wav (jusqu'à 100 Mo et 60 minutes). La langue parlée est détectée automatiquement — vous pouvez la remplacer manuellement avant l'envoi.",
+      en: "On the Convert page, drop a .m4a, .mp3, or .wav file (up to 100 MB and 480 minutes). 1 credit covers up to 120 minutes; longer files use one extra credit per additional 120 minutes. The spoken language is auto-detected — you can override it manually before submitting.",
+      it: "Nella pagina Converti, trascina un file .m4a, .mp3 o .wav (fino a 100 MB e 480 minuti). 1 credito copre fino a 120 minuti; i file più lunghi usano un credito aggiuntivo ogni 120 minuti in più. La lingua parlata viene rilevata automaticamente — puoi sovrascriverla manualmente prima di inviare.",
+      fr: "Sur la page Convertir, déposez un fichier .m4a, .mp3 ou .wav (jusqu'à 100 Mo et 480 minutes). 1 crédit couvre jusqu'à 120 minutes ; les fichiers plus longs utilisent un crédit supplémentaire par 120 minutes additionnelles. La langue parlée est détectée automatiquement — vous pouvez la remplacer manuellement avant l'envoi.",
     },
     cta: {
       href: "/convert",

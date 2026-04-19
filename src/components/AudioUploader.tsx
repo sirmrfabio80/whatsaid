@@ -2,7 +2,7 @@ import { useCallback, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Upload, FileAudio, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { isValidAudioFile, MAX_FILE_SIZE, ACCEPTED_EXTENSIONS, formatDuration } from "@/lib/pricing";
+import { isValidAudioFile, MAX_FILE_SIZE, MAX_DURATION, ACCEPTED_EXTENSIONS, formatDuration } from "@/lib/pricing";
 import { extractAudioCreationDate, type AudioCreationDateResult } from "@/lib/audio-creation-date";
 import { analyzeAudioChannels, type AudioChannelAnalysis } from "@/lib/audio-channels";
 
@@ -34,7 +34,7 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
         audio.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not read audio file")); };
         audio.src = url;
       });
-      if (dur > 3600) { setError(t("audioUploader.fileTooLong")); setSelectedFile(null); setDetecting(false); return; }
+      if (dur > MAX_DURATION) { setError(t("audioUploader.fileTooLong")); setSelectedFile(null); setDetecting(false); return; }
       setDuration(dur); setDetecting(false);
       const [creationDate, channelAnalysis] = await Promise.all([
         extractAudioCreationDate(file),

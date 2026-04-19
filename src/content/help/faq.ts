@@ -30,9 +30,9 @@ export const faq: FaqGroup[] = [
         highlighted: true,
         q: { en: "How many credits does a transcription cost?", it: "Quanti crediti costa una trascrizione?", fr: "Combien de crédits coûte une transcription ?" },
         a: {
-          en: "Credits are charged in 15-minute brackets: up to 15 min = 1 credit, up to 30 min = 2, up to 45 min = 3, up to 60 min = 4.",
-          it: "I crediti vengono addebitati in fasce di 15 minuti: fino a 15 min = 1 credito, fino a 30 min = 2, fino a 45 min = 3, fino a 60 min = 4.",
-          fr: "Les crédits sont facturés par tranches de 15 minutes : jusqu'à 15 min = 1 crédit, jusqu'à 30 min = 2, jusqu'à 45 min = 3, jusqu'à 60 min = 4.",
+          en: "1 credit per transcription, for any file up to 120 minutes. Files longer than 120 minutes cost 1 extra credit per additional 120-minute block, up to a 480-minute (8-hour) maximum per file.",
+          it: "1 credito per trascrizione, per qualsiasi file fino a 120 minuti. I file più lunghi di 120 minuti costano 1 credito aggiuntivo per ogni blocco di 120 minuti in più, fino a un massimo di 480 minuti (8 ore) per file.",
+          fr: "1 crédit par transcription, pour tout fichier jusqu'à 120 minutes. Les fichiers plus longs que 120 minutes coûtent 1 crédit supplémentaire par tranche additionnelle de 120 minutes, jusqu'à un maximum de 480 minutes (8 h) par fichier.",
         },
       },
       {
@@ -40,9 +40,9 @@ export const faq: FaqGroup[] = [
         caps: ["CAP-032"],
         q: { en: "How is duration measured?", it: "Come viene misurata la durata?", fr: "Comment la durée est-elle mesurée ?" },
         a: {
-          en: "By the actual length of your audio file — the bracket is determined when you upload.",
-          it: "In base alla durata effettiva del file audio — la fascia viene determinata al momento del caricamento.",
-          fr: "Selon la durée réelle de votre fichier audio — le palier est déterminé au moment du téléversement.",
+          en: "By the actual length of your audio file — the number of credits is determined when you upload.",
+          it: "In base alla durata effettiva del file audio — il numero di crediti viene determinato al momento del caricamento.",
+          fr: "Selon la durée réelle de votre fichier audio — le nombre de crédits est déterminé au moment du téléversement.",
         },
       },
       {
@@ -124,9 +124,9 @@ export const faq: FaqGroup[] = [
         highlighted: true,
         q: { en: "What's the maximum file size and length?", it: "Qual è la dimensione e durata massima del file?", fr: "Quelles sont la taille et la durée maximales du fichier ?" },
         a: {
-          en: "Up to 100 MB per file and up to 60 minutes of audio per upload.",
-          it: "Fino a 100 MB per file e fino a 60 minuti di audio per caricamento.",
-          fr: "Jusqu'à 100 Mo par fichier et jusqu'à 60 minutes d'audio par téléversement.",
+          en: "Up to 100 MB per file and up to 480 minutes (8 hours) of audio per upload. 1 credit covers up to 120 minutes; longer files use one extra credit per additional 120 minutes.",
+          it: "Fino a 100 MB per file e fino a 480 minuti (8 ore) di audio per caricamento. 1 credito copre fino a 120 minuti; i file più lunghi usano un credito aggiuntivo ogni 120 minuti in più.",
+          fr: "Jusqu'à 100 Mo par fichier et jusqu'à 480 minutes (8 h) d'audio par téléversement. 1 crédit couvre jusqu'à 120 minutes ; les fichiers plus longs utilisent un crédit supplémentaire par 120 minutes additionnelles.",
         },
       },
     ],
