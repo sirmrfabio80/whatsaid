@@ -809,13 +809,33 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex items-center justify-end px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
-                <ListenButton
-                  ownerId="summary"
-                  getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
-                  lang={speechLang}
-                />
-              </div>
+              {/* Header row: Participants (left) + Listen (right) */}
+              {transcript && !regeneratingLang ? (
+                <div className="flex items-start justify-between gap-3 px-4 sm:px-5 pt-3 pb-3 border-b border-border/40">
+                  <div className="flex-1 min-w-0">
+                    <ParticipantsPanel
+                      segments={parseSegments(activeTranscriptContent)}
+                      speakerNames={speakerNames}
+                      durationSeconds={meta?.duration_seconds ?? null}
+                    />
+                  </div>
+                  <div className="shrink-0 pt-0.5">
+                    <ListenButton
+                      ownerId="summary"
+                      getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
+                      lang={speechLang}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-end px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
+                  <ListenButton
+                    ownerId="summary"
+                    getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
+                    lang={speechLang}
+                  />
+                </div>
+              )}
               {summaryNeedsRegen && (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 border-b border-warning/30 bg-warning/5">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -866,16 +886,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 </div>
               )}
-              {/* Participants panel */}
-              {transcript && !regeneratingLang && (
-                <div className="px-5 sm:px-6 pt-3 sm:pt-4">
-                  <ParticipantsPanel
-                    segments={parseSegments(activeTranscriptContent)}
-                    speakerNames={speakerNames}
-                    durationSeconds={meta?.duration_seconds ?? null}
-                  />
-                </div>
-              )}
+              {/* Participants moved into header row above */}
               <div className="p-5 sm:p-6">
                 <div className="mx-auto max-w-[68ch]">
                   {regeneratingLang ? <InlineSpinner layout="block" label={t("jobResults.translatingContent")} />
