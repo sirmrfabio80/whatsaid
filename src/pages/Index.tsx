@@ -104,6 +104,17 @@ export default function Index() {
       name: "WhatSaid",
       url: "https://whatsaid.app/",
     },
+    ...(aggregate
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: aggregate.ratingValue.toFixed(2),
+            reviewCount: aggregate.reviewCount,
+            bestRating: "5",
+            worstRating: "1",
+          },
+        }
+      : {}),
   });
 
   const heroPrimaryHref = user ? "/convert" : "/signup";
