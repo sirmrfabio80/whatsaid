@@ -9,9 +9,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertCircle, Check, ArrowLeft } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { lovable } from "@/integrations/lovable/index";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Login() {
   const { t } = useTranslation();
+
+  usePageMeta({
+    title: "Log in — WhatSaid",
+    description:
+      "Log in to WhatSaid to access your transcripts, summaries, and credits.",
+    canonical: "https://whatsaid.app/login",
+  });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
