@@ -157,7 +157,7 @@ export function SectionBody({ body }: { body: string }) {
   }
 
   return (
-    <div className="space-y-2 font-serif">
+    <div className="space-y-3 font-serif">
       {lines.map((line, i) => {
         const { text, isHeading } = stripHeading(line);
         return (
