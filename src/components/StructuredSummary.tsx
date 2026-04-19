@@ -138,7 +138,7 @@ export function SectionBody({ body }: { body: string }) {
     return (
       <div className="space-y-3 font-serif">
         {proseLines.length > 0 && (
-          <p className="text-base leading-[1.7] text-foreground/90">
+          <p className="text-base leading-[1.6] text-foreground/90">
             {renderLine(proseLines.join(" "))}
           </p>
         )}
@@ -146,7 +146,7 @@ export function SectionBody({ body }: { body: string }) {
           {bullets.map((b, i) => {
             const { text, isHeading } = stripHeading(b);
             return (
-              <li key={i} className={`text-base leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+              <li key={i} className={`text-base leading-[1.6] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
                 {renderLine(text)}
               </li>
             );
@@ -161,7 +161,7 @@ export function SectionBody({ body }: { body: string }) {
       {lines.map((line, i) => {
         const { text, isHeading } = stripHeading(line);
         return (
-          <p key={i} className={`text-base leading-[1.7] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
+          <p key={i} className={`text-base leading-[1.6] text-foreground/90 ${isHeading ? "font-semibold" : ""}`}>
             {renderLine(text)}
           </p>
         );
