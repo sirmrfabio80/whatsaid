@@ -36,6 +36,7 @@ import {
 import { CreditDurationTable } from "@/components/pricing/CreditDurationTable";
 import { PerCreditValue } from "@/components/pricing/PerCreditValue";
 import { PricingStudioMock } from "@/components/pricing/PricingStudioMock";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 // ---------------------------------------------------------------------------
 // Currency toggle
@@ -188,6 +189,14 @@ export default function Pricing() {
   useEffect(() => {
     initPaddle();
   }, []);
+
+  usePageMeta({
+    title: "Pricing — WhatSaid",
+    description:
+      "Simple pay-as-you-go pricing for AI audio transcription. No subscription. Buy credits from £4.99 and transcribe up to 8 hours per file.",
+    ogImage: "https://whatsaid.app/og-pricing.png",
+    canonical: "https://whatsaid.app/pricing",
+  });
 
   const heroReveal = useScrollReveal();
   const valueReveal = useScrollReveal();
