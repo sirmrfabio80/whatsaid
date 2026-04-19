@@ -138,7 +138,7 @@ export function SectionBody({ body }: { body: string }) {
     return (
       <div className="space-y-3 font-serif">
         {proseLines.length > 0 && (
-          <p className="text-base sm:text-[17px] leading-[1.7] text-foreground/90">
+          <p className="text-base leading-[1.7] text-foreground/90">
             {renderLine(proseLines.join(" "))}
           </p>
         )}
