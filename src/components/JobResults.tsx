@@ -37,6 +37,103 @@ interface JobOutput { id: string; output_type: string; content: string; custom_p
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
 
+interface ListenButtonProps {
+  ownerId: string;
+  /** Lazily compute the text to speak — only called on click. */
+  getText: () => string;
+  lang?: string;
+  className?: string;
+}
+
+function ListenButton({ ownerId, getText, lang, className }: ListenButtonProps) {
+  const { t } = useTranslation();
+  const { isSupported, state, isActiveOwner, play, pause, resume } = useSpeechSynthesis();
+  const active = isActiveOwner(ownerId);
+  const isPlaying = active && state === "playing";
+  const isPaused = active && state === "paused";
+
+  const handleClick = () => {
+    if (!isSupported) {
+      toast.info(t("jobResults.listen.unsupported"));
+      return;
+    }
+    if (isPlaying) {
+      pause();
+      return;
+    }
+    if (isPaused) {
+      resume();
+      return;
+    }
+    const text = getText();
+    if (!text) return;
+    play(ownerId, text, lang);
+  };
+
+  const handleStop = () => {
+    speechManager.stop();
+  };
+
+  // Determine disabled + label for main button (only meaningful when idle).
+  let disabled = false;
+  let mainLabel = t("jobResults.listen.play");
+  let MainIcon: typeof Play = Play;
+  let ariaLabel: string | undefined;
+
+  if (!isSupported) {
+    disabled = true;
+    ariaLabel = t("jobResults.listen.unsupported");
+  } else if (isPlaying) {
+    mainLabel = t("jobResults.listen.pause");
+    MainIcon = PauseIcon;
+  } else if (isPaused) {
+    mainLabel = t("jobResults.listen.resume");
+    MainIcon = Play;
+  } else {
+    // Idle for this owner — check whether there is text available.
+    const text = getText();
+    if (!text) {
+      disabled = true;
+      ariaLabel = t("jobResults.listen.empty");
+    }
+  }
+
+  // Stop button reserves space at all times to prevent layout jumps.
+  const stopVisible = active;
+
+  return (
+    <div className={`inline-flex items-center gap-1 ${className ?? ""}`}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={handleClick}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        title={ariaLabel}
+        className="rounded-full gap-1.5 text-xs h-9 min-w-[44px] min-h-[44px] sm:h-8 sm:min-h-0 sm:min-w-0 px-2.5"
+      >
+        <MainIcon className="w-3.5 h-3.5" aria-hidden="true" />
+        <span>{mainLabel}</span>
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={handleStop}
+        aria-label={t("jobResults.listen.ariaStop")}
+        title={t("jobResults.listen.ariaStop")}
+        aria-hidden={!stopVisible}
+        tabIndex={stopVisible ? 0 : -1}
+        className="rounded-full h-9 w-9 min-h-[44px] min-w-[44px] sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0 p-0"
+        style={{ visibility: stopVisible ? "visible" : "hidden" }}
+      >
+        <Square className="w-3 h-3" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
+
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
   const { t } = useTranslation();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
