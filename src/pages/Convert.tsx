@@ -539,7 +539,7 @@ export default function Convert() {
                       <LanguageSelector value={language} onChange={setLanguage} />
 
                       <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor="custom-prompt">
+                        <label className="text-secondary font-medium" htmlFor="custom-prompt">
                           {t("convert.customPromptLabel")} <span className="text-muted-foreground font-normal">{t("convert.customPromptOptional")}</span>
                         </label>
                         <Textarea
