@@ -809,7 +809,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex items-center justify-end px-4 sm:px-5 pt-3 pb-2 border-b border-border/40">
+              <div className="flex items-center justify-end px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
                 <ListenButton
                   ownerId="summary"
                   getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
