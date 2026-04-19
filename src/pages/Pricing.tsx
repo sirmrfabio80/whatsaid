@@ -208,7 +208,7 @@ export default function Pricing() {
     brand: { "@type": "Brand", name: "WhatSaid" },
     url: "https://whatsaid.app/pricing",
     offers: PRICING_PRODUCTS.map((p) => {
-      const localized = getPriceForProduct(p.id, prices);
+      const localized = getPriceForProduct(prices, p.id);
       return {
         "@type": "Offer",
         name: p.id,
