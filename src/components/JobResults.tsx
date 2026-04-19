@@ -886,16 +886,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                 </div>
               )}
-              {/* Participants panel */}
-              {transcript && !regeneratingLang && (
-                <div className="px-5 sm:px-6 pt-3 sm:pt-4">
-                  <ParticipantsPanel
-                    segments={parseSegments(activeTranscriptContent)}
-                    speakerNames={speakerNames}
-                    durationSeconds={meta?.duration_seconds ?? null}
-                  />
-                </div>
-              )}
+              {/* Participants moved into header row above */}
               <div className="p-5 sm:p-6">
                 <div className="mx-auto max-w-[68ch]">
                   {regeneratingLang ? <InlineSpinner layout="block" label={t("jobResults.translatingContent")} />
