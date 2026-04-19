@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X, Play, Pause as PauseIcon, Square } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X, Play, Pause as PauseIcon } from "lucide-react";
 import { useSpeechSynthesis, speechManager } from "@/hooks/use-speech-synthesis";
 import { transcriptToSpeech, summaryToSpeech, latestAnswerToSpeech } from "@/lib/speech-text";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
