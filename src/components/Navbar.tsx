@@ -1,26 +1,16 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LogOut, CreditCard, History, Menu, X, User, Settings, ChevronDown, Shield, HelpCircle } from "lucide-react";
+import { CreditCard, Menu, X } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "@/components/NotificationBell";
+import DesktopNav from "@/components/navbar/DesktopNav";
+import MobileMenu from "@/components/navbar/MobileMenu";
 
 export default function Navbar() {
   const { user, creditBalance, isAdmin, avatarUrl, displayName, signOut } = useAuth();
-  const { t } = useTranslation();
   const location = useLocation();
-  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const lastScrollY = useRef(0);
 
@@ -61,84 +51,14 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
-          <Link to="/pricing">
-            <Button variant={location.pathname === "/pricing" ? "secondary" : "ghost"} size="sm" className="rounded-lg">
-              {t("nav.pricing")}
-            </Button>
-          </Link>
-          <Link to="/convert">
-            <Button size="sm" className="rounded-lg">
-              {t("nav.convert")}
-            </Button>
-          </Link>
-
-          <div className="w-px h-6 bg-border mx-2" />
-
-          {user ? (
-            <div className="flex items-center gap-2">
-              {/* Credit badge */}
-              <div className="bg-muted border border-border px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm">
-                <CreditCard className="w-3.5 h-3.5 text-primary" />
-                <span className="font-medium">{isAdmin ? "∞" : creditBalance}</span>
-              </div>
-
-              {/* Notification bell */}
-              <NotificationBell />
-
-              {/* Avatar dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="rounded-lg gap-1.5 pl-2 pr-2">
-                    <Avatar className="w-7 h-7 rounded-lg">
-                      {avatarUrl && <AvatarImage src={avatarUrl} alt="Avatar" />}
-                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-semibold">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                  <DropdownMenuItem onClick={() => navigate("/profile")} className="rounded-lg">
-                    <User className="w-4 h-4 mr-2" />
-                    {t("nav.profile")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/history")} className="rounded-lg">
-                    <History className="w-4 h-4 mr-2" />
-                    {t("nav.history")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/settings")} className="rounded-lg">
-                    <Settings className="w-4 h-4 mr-2" />
-                    {t("nav.settings")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/help")} className="rounded-lg">
-                    <HelpCircle className="w-4 h-4 mr-2" />
-                    {t("nav.help")}
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate("/admin")} className="rounded-lg">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Admin
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="rounded-lg">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    {t("common.signOut")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <LanguageSwitcher />
-              <Link to="/login">
-                <Button size="sm" className="rounded-lg">{t("common.signIn")}</Button>
-              </Link>
-            </div>
-          )}
-        </div>
+        <DesktopNav
+          user={user}
+          creditBalance={creditBalance}
+          isAdmin={isAdmin}
+          avatarUrl={avatarUrl}
+          initials={initials}
+          signOut={signOut}
+        />
 
         {/* Mobile: credit badge + hamburger */}
         <div className="flex md:hidden items-center gap-2">
@@ -167,70 +87,12 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="relative z-50 md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-4 py-3 origin-top animate-slide-down">
-          <div className="space-y-1">
-            <Link to="/pricing" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "0ms", animationFillMode: "forwards" }}>
-              <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base">{t("nav.pricing")}</Button>
-            </Link>
-            <Link to="/convert" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "60ms", animationFillMode: "forwards" }}>
-              <Button className="w-full justify-start rounded-lg h-12 text-base">{t("nav.convert")}</Button>
-            </Link>
-          </div>
-
-          <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "120ms", animationFillMode: "forwards" }} />
-
-          {user ? (
-            <div className="space-y-1">
-              <Link to="/profile" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "150ms", animationFillMode: "forwards" }}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
-                  <User className="w-5 h-5" />{t("nav.profile")}
-                </Button>
-              </Link>
-              <Link to="/history" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "210ms", animationFillMode: "forwards" }}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
-                  <History className="w-5 h-5" />{t("nav.history")}
-                </Button>
-              </Link>
-              <Link to="/settings" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "330ms", animationFillMode: "forwards" }}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
-                  <Settings className="w-5 h-5" />{t("nav.settings")}
-                </Button>
-              </Link>
-              <Link to="/help" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "340ms", animationFillMode: "forwards" }}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
-                  <HelpCircle className="w-5 h-5" />{t("nav.help")}
-                </Button>
-              </Link>
-              {isAdmin && (
-                <Link to="/admin" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "350ms", animationFillMode: "forwards" }}>
-                  <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
-                    <Shield className="w-5 h-5" />Admin
-                  </Button>
-                </Link>
-              )}
-              <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "370ms", animationFillMode: "forwards" }} />
-              <div className="opacity-0 animate-fade-in" style={{ animationDelay: "400ms", animationFillMode: "forwards" }}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3" onClick={() => { signOut(); setMobileOpen(false); }}>
-                  <LogOut className="w-5 h-5" />{t("common.signOut")}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <Link to="/help" onClick={() => setMobileOpen(false)} className="block opacity-0 animate-fade-in" style={{ animationDelay: "150ms", animationFillMode: "forwards" }}>
-                <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3">
-                  <HelpCircle className="w-5 h-5" />{t("nav.help")}
-                </Button>
-              </Link>
-              <div className="flex items-center justify-between gap-3 pt-2 opacity-0 animate-fade-in" style={{ animationDelay: "210ms", animationFillMode: "forwards" }}>
-                <LanguageSwitcher />
-                <Link to="/login" onClick={() => setMobileOpen(false)} className="flex-1">
-                  <Button className="w-full rounded-lg h-12 text-base">{t("common.signIn")}</Button>
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
+        <MobileMenu
+          user={user}
+          isAdmin={isAdmin}
+          signOut={signOut}
+          onClose={() => setMobileOpen(false)}
+        />
       )}
     </nav>
   );
