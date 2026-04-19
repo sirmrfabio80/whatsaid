@@ -467,6 +467,17 @@ export default function Convert() {
             <Card ref={cardRef} className="rounded-xl border-border/50 bg-card shadow-sm mb-6 animate-enter">
               <CardContent className="p-8 sm:p-12">
                 <div className="flex flex-col items-center text-center space-y-6">
+                  {step !== "failed" && step !== "completed" && (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-warning/10 text-warning border border-warning/20 px-3 py-1 text-xs font-medium">
+                      <span className="relative inline-flex w-1.5 h-1.5" aria-hidden="true">
+                        <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
+                        <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
+                      </span>
+                      {t(`jobDetail.status.${step === "uploading" ? "uploading" : "processing"}`, {
+                        defaultValue: step === "uploading" ? "Uploading" : "Processing",
+                      })}
+                    </div>
+                  )}
                   <div className="w-full max-w-sm space-y-4">
                     {(["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
                       const allSteps: ProcessingStep[] = ["enhancing", "uploading", "transcribing", "summarising", "completed"];
