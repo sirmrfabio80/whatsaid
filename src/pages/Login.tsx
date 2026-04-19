@@ -142,7 +142,7 @@ export default function Login() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">{t("login.password")}</Label>
-                <button type="button" onClick={() => { setForgotMode(true); setError(null); }} className="text-xs text-primary hover:underline">
+                <button type="button" onClick={() => { setForgotMode(true); setError(null); }} className="text-caption text-primary hover:underline">
                   {t("login.forgotPassword")}
                 </button>
               </div>
