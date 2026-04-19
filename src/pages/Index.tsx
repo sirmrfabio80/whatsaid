@@ -46,6 +46,42 @@ export default function Index() {
     url: "https://whatsaid.app/",
   });
 
+  useJsonLd("ld-software-application", {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "WhatSaid",
+    url: "https://whatsaid.app/",
+    description:
+      "AI audio transcription with speaker labels, summaries, key actions, and custom Q&A. Supports .m4a, .mp3, .wav up to 8 hours per file.",
+    applicationCategory: "BusinessApplication",
+    applicationSubCategory: "Transcription",
+    operatingSystem: "Web",
+    browserRequirements: "Requires JavaScript and a modern browser",
+    image: "https://whatsaid.app/og-image.png",
+    inLanguage: ["en", "it", "fr"],
+    offers: {
+      "@type": "Offer",
+      price: "4.99",
+      priceCurrency: "GBP",
+      url: "https://whatsaid.app/pricing",
+      availability: "https://schema.org/InStock",
+      category: "OneTimePayment",
+    },
+    featureList: [
+      "Speaker diarization",
+      "AI summaries with key actions",
+      "Custom Q&A on transcripts",
+      "Automatic language detection",
+      "Pay-as-you-go credits, no subscription",
+      "Audio deleted immediately after processing",
+    ],
+    publisher: {
+      "@type": "Organization",
+      name: "WhatSaid",
+      url: "https://whatsaid.app/",
+    },
+  });
+
   const heroPrimaryHref = user ? "/convert" : "/signup";
 
   const steps = [
