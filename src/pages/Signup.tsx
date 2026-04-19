@@ -71,7 +71,7 @@ export default function Signup() {
       <Card className="w-full max-w-md rounded-xl border-border/50">
         <CardHeader className="text-center">
             <img src={logoImg} alt="WhatSaid" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-h1">
             {purchaseIntent ? t("signup.purchaseTitle") : t("signup.title")}
           </CardTitle>
           <CardDescription>
