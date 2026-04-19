@@ -125,7 +125,7 @@ export const TITLE_SYSTEM_PROMPT =
  * English so the user-facing tag taxonomy stays consistent across jobs of
  * different transcript languages.
  */
-export const TAGS_SYSTEM_PROMPT = `You are a tagging assistant. Given a transcript, return a JSON array of 3 to 6 short, reusable tags that capture the main topics, meeting type, or domain discussed.
+export const TAGS_SYSTEM_PROMPT = `You are a tagging assistant. Given a transcript, return a JSON array of 3 to 5 short, reusable tags that capture the main topics, meeting type, or domain discussed.
 
 CRITICAL LANGUAGE RULE:
 - Tags MUST be in English, even if the transcript is in another language (Italian, French, Spanish, German, etc.).
@@ -141,7 +141,7 @@ Other rules:
 - Do NOT include generic filler like "discussion", "meeting", "conversation", "audio"
 - Do NOT invent names, companies, or entities not clearly stated in the transcript
 - Do NOT include dates, timestamps, or speaker names as tags
-- Minimum 3 tags, maximum 6 tags`;
+- Minimum 3 tags, maximum 5 tags`;
 
 /**
  * User prompt that ships the (truncated) transcript to the tagger.
