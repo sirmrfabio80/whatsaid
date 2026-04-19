@@ -19,7 +19,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, Lock, Trash2, AlertCircle, Globe, Volume2, Headphones } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { setSpeechPreferences, speechManager, useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
+import {
+  setSpeechPreferences,
+  speechManager,
+  useSpeechSynthesis,
+  pickVoice,
+  subscribeVoices,
+  getCachedVoices,
+} from "@/hooks/use-speech-synthesis";
 import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
 
