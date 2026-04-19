@@ -43,6 +43,11 @@ export default function Terms() {
     ogImage: "https://whatsaid.app/og-terms.png",
   });
 
+  useJsonLd(
+    "ld-breadcrumb-terms",
+    buildBreadcrumbList([{ name: "Terms of Service", path: "/terms" }]),
+  );
+
   const sections = [
     { key: "s1", type: "p" },
     { key: "s2", type: "p" },

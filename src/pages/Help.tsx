@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Shield, Upload, CreditCard, FileLock2 } from "lucide-react";
@@ -11,9 +11,13 @@ import HelpTroubleshooting from "@/components/help/HelpTroubleshooting";
 import HelpContactCard from "@/components/help/HelpContactCard";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useJsonLd } from "@/hooks/use-json-ld";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
+import { faq } from "@/content/help/faq";
+import { pickLocale } from "@/content/help/pickLocale";
 
 export default function Help() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [filter, setFilter] = useState("");
   const debouncedFilter = useDebouncedValue(filter, 150);
 
@@ -35,6 +39,30 @@ export default function Help() {
     ogImage: "https://whatsaid.app/og-help.png",
     canonical: "https://whatsaid.app/help",
   });
+
+  const faqJsonLd = useMemo(() => {
+    const locale = i18n.language ?? "en";
+    return {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faq.flatMap((group) =>
+        group.items.map((item) => ({
+          "@type": "Question",
+          name: pickLocale(item.q, locale),
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: pickLocale(item.a, locale),
+          },
+        })),
+      ),
+    };
+  }, [i18n.language]);
+
+  useJsonLd("ld-faq", faqJsonLd);
+  useJsonLd(
+    "ld-breadcrumb-help",
+    buildBreadcrumbList([{ name: "Help", path: "/help" }]),
+  );
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
