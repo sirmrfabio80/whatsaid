@@ -33,9 +33,35 @@ export default function JobDetail() {
   const [recordedIso, setRecordedIso] = useState<string | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState<number | null>(null);
+  const [jobStatus, setJobStatus] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
+
+  // Track job status (with realtime updates) for the live "processing" pulse-ring
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("jobs").select("status").eq("id", id).maybeSingle();
+      if (!cancelled && data?.status) setJobStatus(data.status as string);
+    })();
+    const channel = supabase
+      .channel(`job-status-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${id}` },
+        (payload) => {
+          const next = (payload.new as { status?: string } | null)?.status;
+          if (next) setJobStatus(next);
+        }
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
 
   const getEffectiveIso = (m: JobMeta) => m.recorded_at ?? m.created_at;
 
@@ -186,6 +212,15 @@ export default function JobDetail() {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
+                {jobStatus && (jobStatus === "processing" || jobStatus === "pending" || jobStatus === "uploading") && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 text-warning border border-warning/20 px-2.5 py-1 text-xs font-medium">
+                    <span className="relative inline-flex w-1.5 h-1.5" aria-hidden="true">
+                      <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
+                      <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
+                    </span>
+                    {jobStatus}
+                  </span>
+                )}
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <button className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 text-muted-foreground px-2.5 py-1 text-xs font-medium hover:bg-muted/60 transition-colors cursor-pointer">
