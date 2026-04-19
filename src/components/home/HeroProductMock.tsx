@@ -138,7 +138,10 @@ export function HeroProductMock() {
       {/* Status bar */}
       <div className="flex items-center justify-between gap-2 px-5 py-2.5 border-t border-border/60 bg-muted/30">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          <span className="relative inline-flex w-1.5 h-1.5">
+            <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-accent/50" />
+            <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-accent" />
+          </span>
           <span className="text-[11px] text-foreground/70">Saved · 3 speakers · 32:14</span>
         </div>
         <span className="text-[11px] text-foreground/70 font-mono tabular-nums">
