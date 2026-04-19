@@ -527,10 +527,10 @@ export default function Convert() {
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                       <FileAudio className="w-5 h-5 text-primary shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatDuration(duration)} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
+                        <p className="text-secondary font-medium truncate">{file.name}</p>
+                        <p className="text-caption text-muted-foreground">{formatDuration(duration)} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
                       </div>
-                      <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={handleReset}>
+                      <Button variant="ghost" size="sm" className="rounded-xl text-caption" onClick={handleReset}>
                         {t("common.change")}
                       </Button>
                     </div>
