@@ -417,6 +417,15 @@
       "removeAriaLabel": "Remove {{title}}",
       "limitReached": "Up to {{max}} transcripts",
       "usedLabel": "Sources used:"
+    },
+    "listen": {
+      "play": "Listen",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "unsupported": "Listening isn't available in this browser.",
+      "empty": "Nothing to listen to yet.",
+      "ariaStop": "Stop listening"
     }
   },
   "share": {

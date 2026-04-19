@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X, Play, Pause as PauseIcon, Square } from "lucide-react";
+import { useSpeechSynthesis, speechManager } from "@/hooks/use-speech-synthesis";
+import { transcriptToSpeech, summaryToSpeech, latestAnswerToSpeech } from "@/lib/speech-text";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import ShareButton from "@/components/ShareButton";
 import { LANGUAGES } from "@/lib/languages";
@@ -34,6 +36,103 @@ interface JobOutputMetadata { extra_sources?: ExtraSourceMeta[]; [key: string]: 
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; metadata?: JobOutputMetadata | null; }
 
 interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
+
+interface ListenButtonProps {
+  ownerId: string;
+  /** Lazily compute the text to speak — only called on click. */
+  getText: () => string;
+  lang?: string;
+  className?: string;
+}
+
+function ListenButton({ ownerId, getText, lang, className }: ListenButtonProps) {
+  const { t } = useTranslation();
+  const { isSupported, state, isActiveOwner, play, pause, resume } = useSpeechSynthesis();
+  const active = isActiveOwner(ownerId);
+  const isPlaying = active && state === "playing";
+  const isPaused = active && state === "paused";
+
+  const handleClick = () => {
+    if (!isSupported) {
+      toast.info(t("jobResults.listen.unsupported"));
+      return;
+    }
+    if (isPlaying) {
+      pause();
+      return;
+    }
+    if (isPaused) {
+      resume();
+      return;
+    }
+    const text = getText();
+    if (!text) return;
+    play(ownerId, text, lang);
+  };
+
+  const handleStop = () => {
+    speechManager.stop();
+  };
+
+  // Determine disabled + label for main button (only meaningful when idle).
+  let disabled = false;
+  let mainLabel = t("jobResults.listen.play");
+  let MainIcon: typeof Play = Play;
+  let ariaLabel: string | undefined;
+
+  if (!isSupported) {
+    disabled = true;
+    ariaLabel = t("jobResults.listen.unsupported");
+  } else if (isPlaying) {
+    mainLabel = t("jobResults.listen.pause");
+    MainIcon = PauseIcon;
+  } else if (isPaused) {
+    mainLabel = t("jobResults.listen.resume");
+    MainIcon = Play;
+  } else {
+    // Idle for this owner — check whether there is text available.
+    const text = getText();
+    if (!text) {
+      disabled = true;
+      ariaLabel = t("jobResults.listen.empty");
+    }
+  }
+
+  // Stop button reserves space at all times to prevent layout jumps.
+  const stopVisible = active;
+
+  return (
+    <div className={`inline-flex items-center gap-1 ${className ?? ""}`}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={handleClick}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        title={ariaLabel}
+        className="rounded-full gap-1.5 text-xs h-9 min-w-[44px] min-h-[44px] sm:h-8 sm:min-h-0 sm:min-w-0 px-2.5"
+      >
+        <MainIcon className="w-3.5 h-3.5" aria-hidden="true" />
+        <span>{mainLabel}</span>
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={handleStop}
+        aria-label={t("jobResults.listen.ariaStop")}
+        title={t("jobResults.listen.ariaStop")}
+        aria-hidden={!stopVisible}
+        tabIndex={stopVisible ? 0 : -1}
+        className="rounded-full h-9 w-9 min-h-[44px] min-w-[44px] sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0 p-0"
+        style={{ visibility: stopVisible ? "visible" : "hidden" }}
+      >
+        <Square className="w-3 h-3" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
 
 export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
   const { t } = useTranslation();
@@ -111,6 +210,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   }, [jobId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Page-level speech cleanup: stop any active playback when the JobResults
+  // page unmounts (route change). Individual ListenButton unmounts MUST NOT
+  // do this — only the page-level owner of the playback session may.
+  useEffect(() => {
+    return () => {
+      speechManager.stop();
+    };
+  }, []);
 
   // Speaker identification: deferred to after transcript is computed (see useEffect below)
 
@@ -534,6 +642,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const activeTranscriptContent = transcript ? getContent(transcript) : "";
   const activeSummaryContent = summary ? getContent(summary) : null;
 
+  // Speech: language hint + latest visible answer for the Questions tab.
+  const speechLang = meta?.language_detected ?? outputLang ?? undefined;
+  const latestQuestionEntry = questionEntries.length > 0 ? questionEntries[questionEntries.length - 1] : null;
+  const latestAnswerContent = latestQuestionEntry
+    ? applySpeakerNames(getContent(latestQuestionEntry), speakerNames)
+    : "";
+
   const canonicalData = transcript ? buildCanonicalPayload({
     jobTitle: effectiveJobTitle, generatedTitle, originalFileName: meta?.file_name ?? null,
     createdAt: meta?.recorded_at ?? meta?.created_at ?? null, durationSeconds: meta?.duration_seconds ?? null,
@@ -543,7 +658,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   return (
     <div className="space-y-6 animate-page-enter-flat">
-      <Tabs defaultValue="summary" className="w-full">
+      <Tabs defaultValue="summary" className="w-full" onValueChange={() => speechManager.stop()}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <TabsList className="w-auto justify-start rounded-full bg-muted/40 p-1 h-auto gap-0.5">
             <TabsTrigger value="summary" className="rounded-full gap-1.5 px-3 sm:px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"><Sparkles className="w-3.5 h-3.5" />{t("jobResults.summary")}</TabsTrigger>
@@ -567,6 +682,11 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
             <CardContent className="p-0">
               {transcript && (
                 <div className="flex items-center gap-2 p-3 border-b border-border/40 hidden sm:flex">
+                  <ListenButton
+                    ownerId="transcript"
+                    getText={() => transcriptToSpeech(activeTranscriptContent, speakerNames)}
+                    lang={speechLang}
+                  />
                   <div className="flex items-center gap-2 min-w-0 flex-1"><SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} enableDrag onIdentifySpeakers={runSpeakerIdentification} identifyingInProgress={identifyingInProgress} /></div>
                   <div className="flex items-center gap-1.5 ml-auto shrink-0">
                     <Globe className="w-3.5 h-3.5 text-muted-foreground" />
@@ -580,7 +700,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
               )}
               <div className="px-4 py-3 border-b border-border/40 sm:hidden">
                 <SpeakerChips speakers={allSpeakers} speakerNames={speakerNames} speakerSegmentCounts={speakerSegmentCounts} deletableSpeakers={deletableSpeakers} onRename={handleRenameSpeaker} onReset={handleResetSpeakerNames} onAddSpeaker={handleAddSpeaker} onDeleteSpeaker={handleDeleteSpeaker} onSuggestSpeaker={handleSuggestSpeaker} suggestingForSpeaker={suggestingForSpeaker} onIdentifySpeakers={runSpeakerIdentification} identifyingInProgress={identifyingInProgress} />
-                <div className="flex items-center gap-1.5 mt-2">
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  {transcript && (
+                    <ListenButton
+                      ownerId="transcript"
+                      getText={() => transcriptToSpeech(activeTranscriptContent, speakerNames)}
+                      lang={speechLang}
+                      className="mr-auto"
+                    />
+                  )}
                   <Globe className="w-3.5 h-3.5 text-muted-foreground" />
                   <Select value={outputLang} onValueChange={handleOutputLanguageChange} disabled={regeneratingLang}>
                     <SelectTrigger id="output-lang-mobile" className="h-7 w-[140px] text-xs rounded-full border-border/60" aria-label={t("jobResults.outputLanguage")}><SelectValue /></SelectTrigger>
@@ -652,6 +780,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
+              <div className="flex items-center justify-end px-4 sm:px-5 pt-3 pb-2 border-b border-border/40">
+                <ListenButton
+                  ownerId="summary"
+                  getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
+                  lang={speechLang}
+                />
+              </div>
               {summaryNeedsRegen && (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 border-b border-warning/30 bg-warning/5">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -726,6 +861,13 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
+              <div className="flex items-center justify-end px-4 sm:px-5 pt-3 pb-2 border-b border-border/40">
+                <ListenButton
+                  ownerId="questions"
+                  getText={() => latestAnswerToSpeech(latestAnswerContent)}
+                  lang={speechLang}
+                />
+              </div>
               <div className="p-4 sm:p-5 border-b border-border/40">
                 <label htmlFor="question-input" className="text-sm font-medium mb-1.5 block">{t("jobResults.askQuestion")}</label>
                 <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>

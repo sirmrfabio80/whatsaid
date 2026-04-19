@@ -417,6 +417,15 @@
       "removeAriaLabel": "Retirer {{title}}",
       "limitReached": "Jusqu'à {{max}} transcriptions",
       "usedLabel": "Sources utilisées :"
+    },
+    "listen": {
+      "play": "Écouter",
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "stop": "Arrêter",
+      "unsupported": "L'écoute n'est pas disponible dans ce navigateur.",
+      "empty": "Rien à écouter pour le moment.",
+      "ariaStop": "Arrêter l'écoute"
     }
   },
   "share": {
