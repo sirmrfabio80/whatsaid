@@ -229,7 +229,7 @@ export default function ParticipantsPanel({ segments, speakerNames, durationSeco
 
                       {/* Share badge */}
                       <div className="shrink-0 text-right">
-                        <span className="text-lg font-semibold tabular-nums text-foreground/80">
+                        <span className="text-h3 tabular-nums text-foreground/80">
                           {stat.sharePercent}%
                         </span>
                       </div>

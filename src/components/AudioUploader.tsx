@@ -60,8 +60,8 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center"><Upload className="w-8 h-8 text-primary" /></div>
             <div>
-              <p className="font-semibold text-lg">{t("audioUploader.dropTitle")}</p>
-              <p className="text-muted-foreground text-sm mt-1">{t("audioUploader.dropDesc")}</p>
+              <p className="text-h3">{t("audioUploader.dropTitle")}</p>
+              <p className="text-muted-foreground text-secondary mt-1">{t("audioUploader.dropDesc")}</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-4">{t("audioUploader.securityNotice")}</p>

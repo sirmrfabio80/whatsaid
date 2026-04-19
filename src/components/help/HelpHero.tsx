@@ -15,7 +15,7 @@ export default function HelpHero({ query, onQueryChange }: HelpHeroProps) {
         <h1 className="text-display sm:text-[2.5rem] lg:text-[3rem] mb-3">
           {t("help.title")}
         </h1>
-        <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-6 max-w-xl mx-auto">
+        <p className="text-body sm:text-lg text-muted-foreground leading-relaxed mb-6 max-w-xl mx-auto">
           {t("help.lead")}
         </p>
         <div className="relative max-w-md mx-auto">
