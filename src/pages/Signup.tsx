@@ -57,8 +57,8 @@ export default function Signup() {
         <Card className="w-full max-w-md rounded-xl border-border/50">
           <CardContent className="p-8 text-center space-y-4">
             <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
-            <h2 className="text-xl font-bold">{t("signup.accountCreated")}</h2>
-            <p className="text-sm text-muted-foreground">{t("signup.checkEmail")}</p>
+            <h2 className="text-h1">{t("signup.accountCreated")}</h2>
+            <p className="text-secondary text-muted-foreground">{t("signup.checkEmail")}</p>
             <Button className="rounded-xl" onClick={() => navigate(redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : "/login")}>{t("signup.goToSignIn")}</Button>
           </CardContent>
         </Card>
