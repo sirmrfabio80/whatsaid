@@ -70,10 +70,6 @@ function ListenButton({ ownerId, getText, lang, className }: ListenButtonProps) 
     play(ownerId, text, lang);
   };
 
-  const handleStop = () => {
-    speechManager.stop();
-  };
-
   // Determine disabled + label for main button (only meaningful when idle).
   let disabled = false;
   let mainLabel = t("jobResults.listen.play");
@@ -98,11 +94,8 @@ function ListenButton({ ownerId, getText, lang, className }: ListenButtonProps) 
     }
   }
 
-  // Stop button reserves space at all times to prevent layout jumps.
-  const stopVisible = active;
-
   return (
-    <div className={`inline-flex items-center gap-1 ${className ?? ""}`}>
+    <div className={`inline-flex items-center ${className ?? ""}`}>
       <Button
         type="button"
         variant="ghost"
@@ -115,20 +108,6 @@ function ListenButton({ ownerId, getText, lang, className }: ListenButtonProps) 
       >
         <MainIcon className="w-3.5 h-3.5" aria-hidden="true" />
         <span>{mainLabel}</span>
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={handleStop}
-        aria-label={t("jobResults.listen.ariaStop")}
-        title={t("jobResults.listen.ariaStop")}
-        aria-hidden={!stopVisible}
-        tabIndex={stopVisible ? 0 : -1}
-        className="rounded-full h-9 w-9 min-h-[44px] min-w-[44px] sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0 p-0"
-        style={{ visibility: stopVisible ? "visible" : "hidden" }}
-      >
-        <Square className="w-3 h-3" aria-hidden="true" />
       </Button>
     </div>
   );
