@@ -70,7 +70,8 @@
     "footerPrivacy": "Informativa sulla privacy",
     "footerTerms": "Termini di servizio",
     "footerCopyright": "© {{year}} WhatSaid. Tutti i diritti riservati.",
-    "footerAudioDeleted": "Audio eliminato dopo l'elaborazione"
+    "footerAudioDeleted": "Audio eliminato dopo l'elaborazione",
+    "helpLink": "Esplora il centro assistenza"
   },
   "convert": {
     "title": "Converti il tuo audio",
@@ -220,7 +221,8 @@
       "title": "Imposta la tua password",
       "desc": "Imposta una password per poter accedere in qualsiasi momento.",
       "setPasswordBtn": "Imposta password"
-    }
+    },
+    "helpLink": "Guida account"
   },
   "setPassword": {
     "title": "Benvenuto su WhatSaid",
@@ -582,7 +584,8 @@
     "creditsAddedBanner": "{{count}} credito/i aggiunto/i al tuo account",
     "paddleNote": "I pagamenti sono elaborati in modo sicuro da Paddle, il nostro rivenditore ufficiale.",
     "consentPrefix": "Acquistando, accetti i nostri",
-    "supportLine": "Hai bisogno di aiuto?"
+    "supportLine": "Hai bisogno di aiuto?",
+    "moreFaqLink": "Altre domande su crediti e pagamenti →"
   },
   "footer": {
     "desc": "Trascrizione IA premium con identificazione degli speaker, riassunti e analisi personalizzata. Audio eliminato dopo l'elaborazione.",
@@ -595,7 +598,8 @@
     "support": "Supporto",
     "operator": "Gestito da Fabio Petito, trading as WhatSaid",
     "copyright": "© {{year}} WhatSaid. Tutti i diritti riservati.",
-    "audioDeleted": "Audio eliminato dopo l'elaborazione"
+    "audioDeleted": "Audio eliminato dopo l'elaborazione",
+    "helpAndFaq": "Guida e FAQ"
   },
   "transcriptionSettings": {
     "title": "Impostazioni di trascrizione",
@@ -674,6 +678,63 @@
       "scanNow": "Scansiona ora",
       "scanning": "Scansione…",
       "scanResult": "Scansionati {{scanned}} tag, segnalati {{flagged}} non in inglese"
+    }
+  },
+  "help": {
+    "metaTitle": "Guida — WhatSaid",
+    "title": "Guida e FAQ",
+    "lead": "Risposte rapide, come funziona WhatSaid e cosa fare se qualcosa va storto.",
+    "filterPlaceholder": "Filtra la guida…",
+    "filterAriaLabel": "Filtra la pagina di guida",
+    "quick": {
+      "upload": "Carica audio",
+      "pricing": "Prezzi e crediti",
+      "privacy": "Privacy",
+      "contact": "Contattaci"
+    },
+    "toc": {
+      "workflow": "Come funziona",
+      "features": "Guida alle funzioni",
+      "faq": "FAQ",
+      "troubleshooting": "Risoluzione problemi",
+      "privacy": "Privacy",
+      "contact": "Contatti"
+    },
+    "workflow": {
+      "title": "Come funziona WhatSaid",
+      "lead": "Dal caricamento al download in pochi semplici passi."
+    },
+    "features": {
+      "title": "Guida alle funzioni",
+      "lead": "Tutto quello che puoi fare con una trascrizione.",
+      "openLink": "Apri"
+    },
+    "faq": {
+      "title": "Domande frequenti",
+      "lead": "Tocca una domanda per vedere la risposta.",
+      "mostAsked": "Più richieste",
+      "feedbackPrompt": "È stato utile?",
+      "feedbackYes": "Sì",
+      "feedbackNo": "No",
+      "feedbackYesAria": "Segna questa risposta come utile",
+      "feedbackNoAria": "Segna questa risposta come non utile",
+      "feedbackThanks": "Grazie per il feedback."
+    },
+    "troubleshooting": {
+      "title": "Risoluzione problemi",
+      "lead": "Problemi comuni e cosa provare per primo."
+    },
+    "privacy": {
+      "title": "Privacy in breve",
+      "b1": "L'audio viene eliminato subito dopo l'elaborazione.",
+      "b2": "Trascrizioni e riassunti restano solo nel tuo account.",
+      "b3": "Non vendiamo né condividiamo i tuoi contenuti.",
+      "readMore": "Leggi l'Informativa sulla privacy completa"
+    },
+    "contact": {
+      "title": "Hai ancora bisogno di aiuto?",
+      "body": "Non trovi una risposta? Scrivici — leggiamo ogni messaggio.",
+      "accountIssue": "Problema con l'account? Apri Impostazioni"
     }
   }
 }
