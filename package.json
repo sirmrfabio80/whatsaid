@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "docs:check": "node scripts/check-capabilities-sources.mjs"
+    "docs:check": "node scripts/check-capabilities-sources.mjs",
+    "docs:check:tokens": "node scripts/check-design-tokens-drift.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
