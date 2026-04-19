@@ -211,6 +211,15 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Page-level speech cleanup: stop any active playback when the JobResults
+  // page unmounts (route change). Individual ListenButton unmounts MUST NOT
+  // do this — only the page-level owner of the playback session may.
+  useEffect(() => {
+    return () => {
+      speechManager.stop();
+    };
+  }, []);
+
   // Speaker identification: deferred to after transcript is computed (see useEffect below)
 
   // Identification action handlers
