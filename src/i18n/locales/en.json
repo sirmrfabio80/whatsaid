@@ -139,6 +139,7 @@
     "stepCompleted": "Processing complete",
     "stepFailed": "Processing failed",
     "longFileToast": "Long file — preparing audio in your browser. Keep this tab open.",
+    "canLeavePage": "You can leave this page — we'll notify you when your transcription is ready.",
     "customPromptLabel": "Custom AI prompt",
     "customPromptOptional": "(optional)",
     "customPromptPlaceholder": "e.g. Extract all action items and who is responsible for each...",
