@@ -89,6 +89,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     loadNotifications();
   }, [loadNotifications]);
 
+  // Auto-clear the favicon badge when the user returns to the tab
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onFocus = () => {
+      if (!document.hidden) clearFaviconBadge();
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
   // Realtime subscription — explicit INSERT, UPDATE, DELETE
   useEffect(() => {
     if (!user) return;

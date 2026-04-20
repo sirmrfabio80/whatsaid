@@ -8,6 +8,7 @@ import { useNotifications } from "@/contexts/NotificationsContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NotificationItem from "@/components/NotificationItem";
 import { EmptyState } from "@/components/ui/empty-state";
+import { clearFaviconBadge } from "@/lib/favicon-badge";
 
 export default function NotificationBell() {
   const { t } = useTranslation();
@@ -47,6 +48,7 @@ export default function NotificationBell() {
         className="rounded-lg relative w-8 h-8"
         onClick={() => {
           setPulsing(false);
+          clearFaviconBadge();
           if (isMobile) {
             navigate("/notifications");
             return;
