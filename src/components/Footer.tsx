@@ -2,9 +2,11 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Shield, Mail } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Footer() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   return (
     <footer className="border-t border-border">
