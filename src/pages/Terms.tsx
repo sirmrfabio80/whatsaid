@@ -33,6 +33,13 @@ function RefundLinkedText({ text }: { text: string }) {
 export default function Terms() {
   const { t } = useTranslation();
 
+  usePageMeta({
+    title: "Terms of Service — WhatSaid",
+    description:
+      "WhatSaid terms of service: account use, credit purchases, acceptable use, and your rights.",
+    canonical: "https://whatsaid.app/terms",
+  });
+
   const sections = [
     { key: "s1", type: "p" },
     { key: "s2", type: "p" },

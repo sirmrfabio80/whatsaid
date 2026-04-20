@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Download, FileText, CheckCircle2 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 type DownloadStatus = "loading" | "needsAuth" | "ready" | "downloading" | "done" | "error";
 

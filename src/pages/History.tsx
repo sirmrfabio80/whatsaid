@@ -18,6 +18,7 @@ import { useTranslatedTags } from "@/hooks/use-translated-tags";
 import HistoryFilters from "@/components/HistoryFilters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { LoadingState } from "@/components/ui/loading-state";
 import { clearTabBadge } from "@/lib/tab-title-badge";
 import { isUploadInterrupted } from "@/lib/watchdog";
