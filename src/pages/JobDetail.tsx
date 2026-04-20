@@ -103,7 +103,10 @@ export default function JobDetail() {
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
     setRecordedIso(getEffectiveIso(m));
-    if (!m.title && id) generateTitle();
+    // Only auto-generate a title when the job is actually completed.
+    // Calling generate-title for jobs still uploading / processing / failed
+    // produces a noisy retry loop because no transcript exists yet (see logs).
+    if (!m.title && id && jobStatus === "completed") generateTitle();
 
     // Lazy reverse geocoding: resolve label if we have coordinates but no cached label
     if (m.metadata_location_iso6709 && !m.location_label) {
