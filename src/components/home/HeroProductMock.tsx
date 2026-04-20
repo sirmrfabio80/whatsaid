@@ -107,9 +107,9 @@ export function HeroProductMock() {
         ))}
 
         {/* Speaker-suggestion chip floating at top-right of body */}
-        <div className="absolute right-4 top-3 hidden sm:flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 text-accent px-2.5 py-1 text-[11px] font-medium shadow-sm">
-          <Sparkles className="w-3 h-3" />
-          Suggest: rename Speaker 3 → "Priya"
+        <div className="absolute right-2 top-2 md:right-3 md:top-2 lg:right-4 lg:top-3 hidden sm:flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 text-accent px-2.5 py-1 text-[11px] font-medium shadow-sm max-w-[200px] truncate">
+          <Sparkles className="w-3 h-3 shrink-0" />
+          <span className="truncate">Suggest: rename Speaker 3 → "Priya"</span>
         </div>
 
         {/* Highlighted line with floating chip */}
