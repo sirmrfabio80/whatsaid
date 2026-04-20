@@ -27,9 +27,14 @@ export function useKeyboardInset() {
       return;
     }
 
+    let rafId: number | null = null;
     const update = () => {
-      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      root.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        root.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+      });
     };
 
     update();
@@ -38,6 +43,7 @@ export function useKeyboardInset() {
     window.addEventListener("orientationchange", update);
 
     return () => {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
       window.removeEventListener("orientationchange", update);
