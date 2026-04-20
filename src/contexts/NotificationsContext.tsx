@@ -8,6 +8,7 @@ import { sanitizeFileBaseName } from "@/lib/export-filename";
 import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { showBrowserNotification } from "@/lib/browser-notifications";
 import { playCompletionChime } from "@/lib/notification-sound";
+import { showFaviconBadge, clearFaviconBadge } from "@/lib/favicon-badge";
 
 export interface AppNotification {
   id: string;
@@ -124,6 +125,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             );
             // Subtle completion chime (respects user's mute preference)
             playCompletionChime();
+            // Favicon badge — show a small dot only when the tab is hidden,
+            // so pinned/background tabs get a clear visual cue.
+            if (document.hidden) {
+              void showFaviconBadge();
+            }
           }
         }
       )
