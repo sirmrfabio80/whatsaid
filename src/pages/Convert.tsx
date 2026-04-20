@@ -24,6 +24,7 @@ import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
+import { requestNotificationPermission } from "@/lib/browser-notifications";
 
 type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 type EnhanceSubstage = EnhanceProgressStage | null;
@@ -206,6 +207,10 @@ export default function Convert() {
 
   const handleConvert = async () => {
     if (!file || !user) return;
+
+    // Quietly request browser notification permission so we can alert the user
+    // if they navigate away or background the tab. Failures are non-blocking.
+    void requestNotificationPermission();
 
     setProcessing(true);
     setStep("enhancing");
