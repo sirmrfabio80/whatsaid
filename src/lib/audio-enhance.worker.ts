@@ -10,6 +10,7 @@
  * is transferred (zero-copy) into the worker.
  */
 
+import { Mp3Encoder } from "@breezystack/lamejs";
 import type {
   AudioEnhanceOptions,
   AudioEnhanceMeasured,
