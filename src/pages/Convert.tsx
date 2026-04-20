@@ -299,6 +299,7 @@ export default function Convert() {
               ? "mono_disabled_by_template"
               : "stereo_disabled_by_template";
         console.info(`[convert] audio enhancement skipped — ${reason} (duration=${Math.round(duration)}s, channels=${inputChannels})`);
+        setEnhanceSkippedReason(reason);
         enhancementMeta = {
           eligible: false,
           attempted: false,
