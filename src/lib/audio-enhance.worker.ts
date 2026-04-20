@@ -16,6 +16,7 @@ import type {
   AudioEnhanceMeasured,
   NormaliseMode,
 } from "./audio-enhance";
+import { handleStreamingEnhance } from "./audio-enhance-streaming";
 
 export interface EnhanceWorkerRequest {
   type: "enhance";
