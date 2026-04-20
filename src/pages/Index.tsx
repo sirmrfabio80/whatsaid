@@ -42,21 +42,21 @@ export default function Index() {
           }}
         />
 
-        <div className="container mx-auto px-4 py-12 sm:py-14 md:py-16 lg:py-24 relative">
-          <div className="grid md:grid-cols-12 gap-8 md:gap-10 lg:gap-12 items-center">
+        <div className="container mx-auto px-4 py-8 sm:py-12 md:py-10 lg:py-24 relative">
+          <div className="grid md:grid-cols-12 gap-6 md:gap-8 lg:gap-12 items-center">
             {/* Left: text */}
             <div className="md:col-span-5 text-center md:text-left motion-safe:animate-hero-text-rise motion-reduce:animate-none">
-              <p className="font-serif italic text-caption text-primary mb-5">
+              <p className="font-serif italic text-caption text-primary mb-4 md:mb-3">
                 {t("home.heroEyebrow")}
               </p>
-              <h1 className="text-display sm:text-[3.25rem] md:text-[2.75rem] lg:text-[4.25rem] leading-[1.05] mb-6">
+              <h1 className="text-[2.5rem] sm:text-[3.25rem] md:text-[2.25rem] lg:text-[3.5rem] xl:text-[4.25rem] font-semibold tracking-tight leading-[1.05] mb-4 md:mb-4">
                 {t("home.heroTitlePart1")}{" "}
                 <span className="font-serif italic text-primary">
                   {t("home.heroTitleHighlight")}
                 </span>{" "}
                 {t("home.heroTitlePart2")}
               </h1>
-              <p className="font-serif text-body lg:text-lg text-muted-foreground max-w-[52ch] mx-auto md:mx-0 md:max-w-[40ch] lg:max-w-[52ch] mb-6 leading-relaxed">
+              <p className="font-serif text-body lg:text-lg text-muted-foreground max-w-[52ch] mx-auto md:mx-0 md:max-w-[38ch] lg:max-w-[52ch] mb-5 md:mb-4 lg:mb-6 leading-relaxed">
                 {t("home.heroSubline")}
               </p>
 
