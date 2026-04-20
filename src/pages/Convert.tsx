@@ -106,7 +106,7 @@ export default function Convert() {
         const stage = job.processing_stage;
         if (stage === "enhancing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
         else if (stage === "uploading") setStep((prev) => prev === "uploading" ? prev : "uploading");
-        else if (stage === "preparing") setStep((prev) => prev === "preparing" ? prev : "preparing");
+        else if (stage === "preparing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
       } else if (job.status === "processing") {
         const { count } = await supabase
           .from("job_outputs")
@@ -208,7 +208,7 @@ export default function Convert() {
     if (!file || !user) return;
 
     setProcessing(true);
-    setStep("preparing");
+    setStep("enhancing");
     setEnhanceSubstage(null);
     setErrorMessage(null);
 
@@ -540,8 +540,8 @@ export default function Convert() {
                     </div>
                   )}
                   <div className="w-full max-w-sm space-y-4">
-                    {(["preparing", "enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
-                      const allSteps: ProcessingStep[] = ["preparing", "enhancing", "uploading", "transcribing", "summarising", "completed"];
+                    {(["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
+                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "transcribing", "summarising", "completed"];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         allSteps.indexOf(step!) > allSteps.indexOf(s)
