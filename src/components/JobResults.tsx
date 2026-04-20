@@ -905,9 +905,9 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="questions" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              <div className="flex items-start gap-4 px-4 sm:px-5 pt-3 pb-4 border-b border-border/40">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <div className="px-4 sm:px-5 pt-3 pb-4 border-b border-border/40">
+                <div className="flex items-start justify-between gap-3 mb-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <label htmlFor="question-input" className="text-sm font-medium">{t("jobResults.askQuestion")}</label>
                     {questionEntries.length > 0 && (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
@@ -916,73 +916,81 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
-                  <div className="relative">
-                    <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-base md:text-sm min-h-[80px] resize-none pr-16 pt-9" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setQuestionExpanded(true)} disabled={askingQuestion || isQuestionLimitReached} className="absolute top-1.5 right-1.5 rounded-full h-7 w-7 p-0 text-muted-foreground hover:text-foreground" aria-label={t("jobResults.expandEditor", { defaultValue: "Expand editor" })} title={t("jobResults.expandEditor", { defaultValue: "Expand editor" })}>
-                      <Maximize2 className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
-                      {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
-                    </Button>
+                  <div className="shrink-0 pt-0.5">
+                    <ListenButton
+                      ownerId="questions"
+                      getText={() => latestAnswerToSpeech(latestAnswerContent)}
+                      lang={speechLang}
+                    />
                   </div>
-                  <Dialog open={questionExpanded} onOpenChange={setQuestionExpanded}>
-                    <DialogContent className="max-w-[100vw] sm:max-w-[100vw] w-screen h-[100dvh] sm:h-[100dvh] rounded-none p-0 gap-0 flex flex-col border-0">
-                      <DialogHeader className="px-5 sm:px-8 pt-5 pb-3 border-b border-border/40">
-                        <DialogTitle>{t("jobResults.askQuestion")}</DialogTitle>
-                        <DialogDescription className="text-xs">{t("jobResults.askQuestionDesc")}</DialogDescription>
-                      </DialogHeader>
-                      <div className="flex-1 min-h-0 px-5 sm:px-8 py-4">
-                        <Textarea
-                          autoFocus
-                          placeholder={t("jobResults.askPlaceholder")}
-                          value={questionPrompt}
-                          onChange={(e) => setQuestionPrompt(e.target.value)}
-                          disabled={askingQuestion || isQuestionLimitReached}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                              e.preventDefault();
-                              handleAskQuestion();
-                              setQuestionExpanded(false);
-                            }
-                          }}
-                          className="w-full h-full resize-none rounded-xl text-base leading-relaxed"
-                        />
-                      </div>
-                      <div className="flex items-center justify-end gap-2 px-5 sm:px-8 py-3 border-t border-border/40">
-                        <Button variant="ghost" onClick={() => setQuestionExpanded(false)}>
-                          {t("common.close", { defaultValue: "Close" })}
-                        </Button>
-                        <Button
-                          onClick={() => { handleAskQuestion(); setQuestionExpanded(false); }}
-                          disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached}
-                          className="rounded-full gap-1.5"
-                        >
-                          {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <Switch
-                        checked={useExtraSources}
-                        onCheckedChange={(checked) => {
-                          setUseExtraSources(checked);
-                          if (!checked) setExtraSources([]);
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
+                <div className="relative w-full">
+                  <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="w-full rounded-xl text-base md:text-sm min-h-[80px] resize-none pr-16 pt-9" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setQuestionExpanded(true)} disabled={askingQuestion || isQuestionLimitReached} className="absolute top-1.5 right-1.5 rounded-full h-7 w-7 p-0 text-muted-foreground hover:text-foreground" aria-label={t("jobResults.expandEditor", { defaultValue: "Expand editor" })} title={t("jobResults.expandEditor", { defaultValue: "Expand editor" })}>
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
+                    {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
+                  </Button>
+                </div>
+                <Dialog open={questionExpanded} onOpenChange={setQuestionExpanded}>
+                  <DialogContent className="max-w-[100vw] sm:max-w-[100vw] w-screen h-[100dvh] sm:h-[100dvh] rounded-none p-0 gap-0 flex flex-col border-0">
+                    <DialogHeader className="px-5 sm:px-8 pt-5 pb-3 border-b border-border/40">
+                      <DialogTitle>{t("jobResults.askQuestion")}</DialogTitle>
+                      <DialogDescription className="text-xs">{t("jobResults.askQuestionDesc")}</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 min-h-0 px-5 sm:px-8 py-4">
+                      <Textarea
+                        autoFocus
+                        placeholder={t("jobResults.askPlaceholder")}
+                        value={questionPrompt}
+                        onChange={(e) => setQuestionPrompt(e.target.value)}
+                        disabled={askingQuestion || isQuestionLimitReached}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                            e.preventDefault();
+                            handleAskQuestion();
+                            setQuestionExpanded(false);
+                          }
                         }}
-                        aria-label={t("jobResults.extraSources.toggleLabel")}
+                        className="w-full h-full resize-none rounded-xl text-base leading-relaxed"
                       />
-                      <span className="text-xs text-muted-foreground">
-                        {t("jobResults.extraSources.toggleLabel")}
-                      </span>
-                    </label>
-                    {useExtraSources && (
-                      <QuestionExtraSourcesPicker
-                        currentJobId={jobId}
-                        value={extraSources}
-                        onChange={setExtraSources}
-                        max={5}
+                    </div>
+                    <div className="flex items-center justify-end gap-2 px-5 sm:px-8 py-3 border-t border-border/40">
+                      <Button variant="ghost" onClick={() => setQuestionExpanded(false)}>
+                        {t("common.close", { defaultValue: "Close" })}
+                      </Button>
+                      <Button
+                        onClick={() => { handleAskQuestion(); setQuestionExpanded(false); }}
+                        disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached}
+                        className="rounded-full gap-1.5"
+                      >
+                        {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <Switch
+                      checked={useExtraSources}
+                      onCheckedChange={(checked) => {
+                        setUseExtraSources(checked);
+                        if (!checked) setExtraSources([]);
+                      }}
+                      aria-label={t("jobResults.extraSources.toggleLabel")}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {t("jobResults.extraSources.toggleLabel")}
+                    </span>
+                  </label>
+                  {useExtraSources && (
+                    <QuestionExtraSourcesPicker
+                      currentJobId={jobId}
+                      value={extraSources}
+                      onChange={setExtraSources}
+                      max={5}
                       />
                     )}
                   </div>
