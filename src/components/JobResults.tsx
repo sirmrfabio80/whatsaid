@@ -816,21 +816,19 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded, onReady,
             <CardContent className="p-0">
               {/* Header row: Participants (left) + Listen (right) */}
               {transcript && !regeneratingLang ? (
-                <div className="flex items-start justify-between gap-3 px-4 sm:px-5 pt-3 pb-3 border-b border-border/40">
-                  <div className="flex-1 min-w-0">
-                    <ParticipantsPanel
-                      segments={parseSegments(activeTranscriptContent)}
-                      speakerNames={speakerNames}
-                      durationSeconds={meta?.duration_seconds ?? null}
-                    />
-                  </div>
-                  <div className="shrink-0 pt-0.5">
+                <div className="px-4 sm:px-5 pt-3 pb-3 border-b border-border/40 space-y-3">
+                  <div className="flex items-center justify-end">
                     <ListenButton
                       ownerId="summary"
                       getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
                       lang={speechLang}
                     />
                   </div>
+                  <ParticipantsPanel
+                    segments={parseSegments(activeTranscriptContent)}
+                    speakerNames={speakerNames}
+                    durationSeconds={meta?.duration_seconds ?? null}
+                  />
                 </div>
               ) : (
                 <div className="flex items-center justify-end px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">
