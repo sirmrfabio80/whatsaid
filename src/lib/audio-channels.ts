@@ -1,14 +1,24 @@
 /**
- * Detect the number of audio channels from file headers.
+ * Detect the number of audio channels from file headers and (when affordable)
+ * analyze decoded waveform isolation.
  *
- * Uses lightweight header parsing only — no full file decoding.
- * Returns null on failure (caller should treat as mono / unknown).
+ * For large uploads we deliberately SKIP the full-file `decodeAudioData`
+ * correlation pass and rely on header parsing only — decoding a 40-min stereo
+ * file on the main thread freezes the browser long enough that users assume
+ * the upload is stuck. The size/duration thresholds are conservative: anything
+ * under DECODE_MAX_BYTES *and* under DECODE_MAX_SECONDS still gets the full
+ * isolation analysis. Anything beyond that defaults to the safe diarization
+ * route (the same default that stereo-without-isolation-evidence already gets).
  *
  * Limitations:
  * - Mono same-mic multi-speaker audio remains best-effort for diarization.
  * - Multichannel routing helps only when channels contain actually separated audio.
  * - Stereo files with identical/mixed channels may produce duplicate output under multichannel mode.
  */
+
+/** Above either of these thresholds we skip decode-based correlation. */
+const DECODE_MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+const DECODE_MAX_SECONDS = 600; // 10 minutes
 
 /**
  * Read a small slice of a File as an ArrayBuffer.
@@ -122,7 +132,7 @@ function findBoxInView(
   return null;
 }
 
-function detectM4aChannels(buffer: ArrayBuffer): number | null {
+function detectM4aChannelsFromBuffer(buffer: ArrayBuffer): number | null {
   const view = new DataView(buffer);
   const len = buffer.byteLength;
 
@@ -160,10 +170,61 @@ function detectM4aChannels(buffer: ArrayBuffer): number | null {
   return channels;
 }
 
+/**
+ * Build a sparse buffer mirroring the original file's offsets, populated only
+ * by the head and tail slices. This preserves absolute box offsets so the
+ * recursive `findBox` walker still works even when the moov atom is at the
+ * end of a non-fast-start mp4.
+ */
+async function readM4aHeadAndTail(file: File): Promise<ArrayBuffer> {
+  const total = file.size;
+  const HEAD = 256 * 1024; // 256 KB
+  const TAIL = 1024 * 1024; // 1 MB
+  if (total <= HEAD + TAIL) {
+    return file.arrayBuffer();
+  }
+  const [head, tail] = await Promise.all([
+    readSlice(file, 0, HEAD),
+    readSlice(file, total - TAIL, total),
+  ]);
+  const out = new Uint8Array(total);
+  out.set(new Uint8Array(head), 0);
+  out.set(new Uint8Array(tail), total - TAIL);
+  return out.buffer;
+}
+
+async function detectM4aChannels(file: File): Promise<number | null> {
+  // Try head+tail first (cheap). If that fails, fall back to a single bounded
+  // read (capped at 4 MB) — never read the full 40 MB+ file just for channels.
+  try {
+    const buffer = await readM4aHeadAndTail(file);
+    const found = detectM4aChannelsFromBuffer(buffer);
+    if (found != null) return found;
+  } catch (e) {
+    console.warn("[audio-channels] M4A head+tail read failed:", e);
+  }
+  try {
+    const cappedEnd = Math.min(file.size, 4 * 1024 * 1024);
+    const fallback = await readSlice(file, 0, cappedEnd);
+    return detectM4aChannelsFromBuffer(fallback);
+  } catch (e) {
+    console.warn("[audio-channels] M4A bounded fallback read failed:", e);
+    return null;
+  }
+}
+
 type ChannelRouteHint = "multichannel" | "diarization";
 
 export interface AudioChannelAnalysis {
+  /**
+   * Best-effort channel count. Mirrors `decodedChannelCount` when decoding
+   * succeeded; otherwise mirrors `headerChannelCount`. Kept for backwards
+   * compatibility — new code should prefer the explicit fields below.
+   */
   detectedChannelCount: number | null;
+  /** Channel count derived from lightweight header parsing (no decode). */
+  headerChannelCount: number | null;
+  /** Channel count reported by the decoder. Null when decoding was skipped. */
   decodedChannelCount: number | null;
   routeHint: ChannelRouteHint;
   reason: string;
@@ -187,7 +248,7 @@ async function decodeAudioBuffer(file: File): Promise<AudioBuffer | null> {
   }
 }
 
-function analyzeDecodedChannelIsolation(audioBuffer: AudioBuffer): Omit<AudioChannelAnalysis, "detectedChannelCount" | "decodedChannelCount"> {
+function analyzeDecodedChannelIsolation(audioBuffer: AudioBuffer): Omit<AudioChannelAnalysis, "detectedChannelCount" | "decodedChannelCount" | "headerChannelCount"> {
   if (audioBuffer.numberOfChannels <= 1) {
     return {
       routeHint: "diarization",
@@ -333,8 +394,7 @@ async function detectChannelCountFromHeaders(file: File): Promise<number | null>
 
   const mp4Types = ["m4a", "mp4", "mov", "aac"];
   if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
-    const buffer = await file.arrayBuffer();
-    const result = detectM4aChannels(buffer);
+    const result = await detectM4aChannels(file);
     console.log("[audio-channels] M4A/MP4 header detected channels:", result);
     return result;
   }
@@ -343,9 +403,42 @@ async function detectChannelCountFromHeaders(file: File): Promise<number | null>
   return null;
 }
 
-export async function analyzeAudioChannels(file: File): Promise<AudioChannelAnalysis> {
+/**
+ * Analyse the file's channel layout.
+ *
+ * Pass `durationSeconds` when known — large/long files skip the expensive
+ * full-file decode and rely on header-only data, returning a safe diarization
+ * route hint. This prevents pre-insert UI freezes on long recordings.
+ */
+export async function analyzeAudioChannels(
+  file: File,
+  durationSeconds?: number,
+): Promise<AudioChannelAnalysis> {
   try {
     const headerChannelCount = await detectChannelCountFromHeaders(file);
+
+    const tooLargeToDecode = file.size > DECODE_MAX_BYTES;
+    const tooLongToDecode = typeof durationSeconds === "number" && durationSeconds > DECODE_MAX_SECONDS;
+
+    if (tooLargeToDecode || tooLongToDecode) {
+      console.log("[audio-channels] Skipping decode-based correlation:", {
+        bytes: file.size,
+        durationSeconds: durationSeconds ?? null,
+        tooLargeToDecode,
+        tooLongToDecode,
+      });
+      return {
+        detectedChannelCount: headerChannelCount,
+        headerChannelCount,
+        decodedChannelCount: null,
+        routeHint: "diarization",
+        reason: "skipped_large_file_for_correlation",
+        correlation: null,
+        activeWindowCount: null,
+        dominantWindowRatio: null,
+      };
+    }
+
     const decodedBuffer = await decodeAudioBuffer(file);
 
     if (decodedBuffer) {
@@ -360,7 +453,9 @@ export async function analyzeAudioChannels(file: File): Promise<AudioChannelAnal
         dominantWindowRatio: isolation.dominantWindowRatio,
       });
       return {
+        // Preserve header-derived value separately from the decoded one.
         detectedChannelCount: decodedChannelCount,
+        headerChannelCount,
         decodedChannelCount,
         ...isolation,
       };
@@ -368,6 +463,7 @@ export async function analyzeAudioChannels(file: File): Promise<AudioChannelAnal
 
     return {
       detectedChannelCount: headerChannelCount,
+      headerChannelCount,
       decodedChannelCount: null,
       routeHint: "diarization",
       reason: headerChannelCount && headerChannelCount > 1 ? "header_only_multichannel_unverified" : "header_mono_or_unknown",
@@ -379,6 +475,7 @@ export async function analyzeAudioChannels(file: File): Promise<AudioChannelAnal
     console.warn("[audio-channels] Analysis failed:", error);
     return {
       detectedChannelCount: null,
+      headerChannelCount: null,
       decodedChannelCount: null,
       routeHint: "diarization",
       reason: "analysis_failed",
@@ -392,15 +489,14 @@ export async function analyzeAudioChannels(file: File): Promise<AudioChannelAnal
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Detect the number of audio channels from file headers.
+ * Detect the number of audio channels from file headers only (no decode).
  *
  * - WAV: reads first 44 bytes
  * - MP3: reads first 4KB (to skip ID3v2 tag and find frame header)
- * - M4A/MP4: reads full file (reused for metadata extraction anyway)
+ * - M4A/MP4: reads first 256 KB and last 1 MB only (never the full file)
  *
  * Returns null if detection fails — caller should treat as mono (safe default).
  */
 export async function detectChannelCount(file: File): Promise<number | null> {
-  const analysis = await analyzeAudioChannels(file);
-  return analysis.detectedChannelCount;
+  return detectChannelCountFromHeaders(file);
 }

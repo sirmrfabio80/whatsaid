@@ -15,7 +15,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 
-const STALE_MINUTES = 20;
+const STALE_MINUTES = 30;
 const ORPHAN_LOOKBACK_HOURS = 24;
 export const TIMEOUT_MESSAGE = "Job timed out — marked failed by watchdog";
 

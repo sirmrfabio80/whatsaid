@@ -104,6 +104,36 @@ async function readBlobAsArrayBuffer(file: Blob): Promise<ArrayBuffer> {
 }
 
 /**
+ * Read head + (optionally) tail slices of a file and concatenate them into a
+ * single ArrayBuffer that is large enough for box-walking the moov atom in an
+ * MP4/M4A container, without ever loading the whole file. The container is
+ * built so that the tail bytes preserve their original absolute offsets — this
+ * way `findBox` walks the head, then jumps over an unread middle gap (which is
+ * filled with zeros), then resumes walking the tail data at its real position.
+ *
+ * Returns null if the file is too small to be worth the slice machinery — the
+ * caller will then fall back to a single full read (capped).
+ */
+async function readHeadAndTailBuffer(
+  file: Blob,
+  headBytes: number,
+  tailBytes: number,
+): Promise<ArrayBuffer> {
+  const total = file.size;
+  // Small files: just read everything once.
+  if (total <= headBytes + tailBytes) {
+    return readBlobAsArrayBuffer(file);
+  }
+  const head = await readBlobAsArrayBuffer(file.slice(0, headBytes));
+  const tail = await readBlobAsArrayBuffer(file.slice(total - tailBytes, total));
+  // Build a sparse buffer that mirrors the original file's offsets.
+  const out = new Uint8Array(total);
+  out.set(new Uint8Array(head), 0);
+  out.set(new Uint8Array(tail), total - tailBytes);
+  return out.buffer;
+}
+
+/**
  * Validate that a string looks like a plausible ISO 8601 date.
  */
 function isPlausibleIso(s: string): boolean {
@@ -230,6 +260,10 @@ function extractMp4CreationDate(buffer: ArrayBuffer): string | null {
 /**
  * Extract the creation/recording date from an audio file.
  * Returns the raw ISO string and source identifier — never a Date object.
+ *
+ * For MP4/M4A containers we only read the first 256 KB and (if needed) the
+ * last 1 MB of the file rather than the full file. This keeps long uploads
+ * from blocking the main thread before the job is even created.
  */
 export async function extractAudioCreationDate(file: File): Promise<AudioCreationDateResult | null> {
   try {
@@ -237,7 +271,9 @@ export async function extractAudioCreationDate(file: File): Promise<AudioCreatio
     const mp4Types = ["m4a", "mp4", "mov", "aac"];
 
     if (mp4Types.includes(ext) || file.type.includes("mp4") || file.type.includes("m4a") || file.type.includes("audio/x-m4a")) {
-      const buffer = await readBlobAsArrayBuffer(file);
+      // 256 KB head + 1 MB tail handles both fast-start (moov at front) and
+      // non-fast-start (moov at end) MP4s without ever reading the middle.
+      const buffer = await readHeadAndTailBuffer(file, 256 * 1024, 1024 * 1024);
 
       // Extract all available sources
       const appleIso = extractAppleCreationDate(buffer);
@@ -263,8 +299,6 @@ export async function extractAudioCreationDate(file: File): Promise<AudioCreatio
         return { isoString: mvhdIso, source: "mvhd_creation", allSources, locationISO6709 };
       }
 
-      // No date found but maybe location was found — return null for date
-      // Location will still be accessible via the full extraction in Convert page
       if (locationISO6709) {
         return { isoString: new Date(file.lastModified).toISOString(), source: "file_last_modified", allSources, locationISO6709 };
       }

@@ -10,6 +10,7 @@
  */
 
 import { sanitizeStorageFilename } from "./sanitize-filename";
+import { enhanceAudioInWorker } from "./audio-enhance-streaming";
 
 export type NormaliseMode = "peak" | "rms";
 

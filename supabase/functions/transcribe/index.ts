@@ -145,7 +145,7 @@ function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
   };
 }
 
-async function loadActiveConfig(supabase: ReturnType<typeof createClient>): Promise<ActiveTemplateConfig> {
+async function loadActiveConfig(supabase: SupabaseClient): Promise<ActiveTemplateConfig> {
   try {
     const { data, error } = await supabase
       .from("transcribe_settings_templates")
@@ -266,6 +266,7 @@ async function submitAndPollTranscript(
   jobId: string,
   cfg: ActiveTemplateConfig,
   baseUrl: string,
+  supabase: SupabaseClient,
 ): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
   const submitRes = await fetch(`${baseUrl}/transcript`, {
     method: "POST",
@@ -292,6 +293,11 @@ async function submitAndPollTranscript(
 
   const maxPolls = cfg.max_polls;
   const pollIntervalMs = cfg.poll_interval_ms;
+  // Heartbeat the job's updated_at every ~30 seconds of wall-clock time
+  // so the watchdog (`status='processing' AND updated_at < now() - 30 min`)
+  // does not falsely mark legitimate long-running transcriptions as stale.
+  const HEARTBEAT_INTERVAL_MS = 30_000;
+  let lastHeartbeatAt = Date.now();
 
   for (let i = 0; i < maxPolls; i++) {
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
@@ -337,6 +343,19 @@ async function submitAndPollTranscript(
       }
 
       throw new Error(`AssemblyAI error: ${rawError}`);
+    }
+
+    // Heartbeat: bump updated_at so the watchdog sees activity.
+    if (Date.now() - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
+      lastHeartbeatAt = Date.now();
+      try {
+        await supabase
+          .from("jobs")
+          .update({ updated_at: new Date().toISOString() })
+          .eq("id", jobId);
+      } catch (hbErr) {
+        console.warn(`[transcribe] heartbeat failed for ${jobId}:`, hbErr);
+      }
     }
 
     console.log(`[transcribe] Polling... status: ${pollData.status} (attempt ${i + 1})`);
@@ -572,6 +591,7 @@ Deno.serve(async (req) => {
       job_id,
       cfg,
       resolvedBaseUrl,
+      supabase,
     );
 
     const utterances = (transcript.utterances as Array<Record<string, unknown>>) ?? [];

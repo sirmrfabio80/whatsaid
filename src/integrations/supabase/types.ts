@@ -359,6 +359,7 @@ export type Database = {
           metadata_location_iso6709: string | null
           metadata_mvhd_creation: string | null
           output_language: string | null
+          processing_stage: string | null
           question_generation_count: number
           recorded_at: string | null
           recorded_at_source: string | null
@@ -376,6 +377,7 @@ export type Database = {
           transcription_config: Json | null
           updated_at: string
           user_id: string | null
+          watchdog_retry_count: number
         }
         Insert: {
           assemblyai_delete_status?: string | null
@@ -399,6 +401,7 @@ export type Database = {
           metadata_location_iso6709?: string | null
           metadata_mvhd_creation?: string | null
           output_language?: string | null
+          processing_stage?: string | null
           question_generation_count?: number
           recorded_at?: string | null
           recorded_at_source?: string | null
@@ -416,6 +419,7 @@ export type Database = {
           transcription_config?: Json | null
           updated_at?: string
           user_id?: string | null
+          watchdog_retry_count?: number
         }
         Update: {
           assemblyai_delete_status?: string | null
@@ -439,6 +443,7 @@ export type Database = {
           metadata_location_iso6709?: string | null
           metadata_mvhd_creation?: string | null
           output_language?: string | null
+          processing_stage?: string | null
           question_generation_count?: number
           recorded_at?: string | null
           recorded_at_source?: string | null
@@ -456,6 +461,7 @@ export type Database = {
           transcription_config?: Json | null
           updated_at?: string
           user_id?: string | null
+          watchdog_retry_count?: number
         }
         Relationships: []
       }
@@ -577,6 +583,33 @@ export type Database = {
           playback_speed?: number
           preferred_voice?: string
           ui_language?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
           updated_at?: string
           user_id?: string
         }
@@ -824,6 +857,13 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_review_aggregate: {
+        Args: never
+        Returns: {
+          rating_value: number
+          review_count: number
+        }[]
       }
       has_role: {
         Args: {
