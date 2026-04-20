@@ -259,7 +259,10 @@
     },
     "notifications": {
       "title": "Notifiche",
-      "desc": "Segnali acustici quando una trascrizione è pronta. Questa impostazione viene salvata su questo dispositivo.",
+      "desc": "Resta aggiornato sulle trascrizioni completate, anche quando WhatSaid è in un'altra scheda. Salvato su questo dispositivo.",
+      "browserLabel": "Mostra notifiche del browser",
+      "browserDesc": "Ricevi una notifica di sistema quando una trascrizione si completa mentre WhatSaid non è in primo piano.",
+      "browserBlocked": "Il browser sta bloccando le notifiche. Aggiorna i permessi del sito per consentirle.",
       "soundLabel": "Riproduci un suono al completamento di una trascrizione",
       "soundDesc": "Un breve segnale discreto. Disattivalo se preferisci il silenzio."
     },
