@@ -25,6 +25,8 @@ import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
 import { requestNotificationPermission, isBrowserNotificationsEnabled } from "@/lib/browser-notifications";
+import { resumableUpload } from "@/lib/storage-resumable-upload";
+import { useJobHeartbeat } from "@/hooks/use-job-heartbeat";
 
 type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 type EnhanceSubstage = EnhanceProgressStage | null;
