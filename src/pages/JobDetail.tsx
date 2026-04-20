@@ -365,29 +365,24 @@ export default function JobDetail() {
 
             {/* Block 5 — results card (tabs + content) */}
             <div className={REVEAL_CLASS} style={revealStyle(320)}>
-              <JobResults
-                jobId={id}
-                currentTitle={title}
-                onMetaLoaded={handleMetaLoaded}
-                onReady={handleResultsReady}
-              />
+              {/* placeholder: real JobResults is mounted once below to avoid
+                  double-fetch / double speech-cleanup. */}
             </div>
           </div>
 
-          {/* Mount JobResults invisibly while skeleton is showing so it can
-              fetch data and signal `onReady` — then the visible block above
-              renders it without re-mounting. */}
-          {!revealReady && (
-            <div className="hidden" aria-hidden="true">
-              <JobResults
-                jobId={id}
-                currentTitle={title}
-                onMetaLoaded={handleMetaLoaded}
-                onReady={handleResultsReady}
-                suppressInitialLoadingState
-              />
-            </div>
-          )}
+          {/* JobResults is mounted exactly once. While the skeleton shows we
+              keep it visually hidden (off-screen) so it can run its initial
+              fetch and signal `onReady`. After reveal we move it into the
+              real Block 5 slot via portal-free re-position using order. */}
+          <div className={revealReady ? `${REVEAL_CLASS}` : "sr-only"} style={revealReady ? revealStyle(320) : undefined} aria-hidden={!revealReady}>
+            <JobResults
+              jobId={id}
+              currentTitle={title}
+              onMetaLoaded={handleMetaLoaded}
+              onReady={handleResultsReady}
+              suppressInitialLoadingState
+            />
+          </div>
         </div>
       </div>
     </div>
