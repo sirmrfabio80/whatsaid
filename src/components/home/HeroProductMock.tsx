@@ -9,7 +9,7 @@ export function HeroProductMock() {
   return (
     <div
       aria-hidden="true"
-      className="relative w-full max-w-[640px] mx-auto rounded-2xl border border-border/70 bg-card shadow-2xl shadow-primary/10 overflow-hidden motion-safe:animate-hero-mock-rise motion-reduce:animate-none"
+      className="relative w-full max-w-[520px] lg:max-w-[640px] mx-auto rounded-2xl border border-border/70 bg-card shadow-2xl shadow-primary/10 overflow-hidden motion-safe:animate-hero-mock-rise motion-reduce:animate-none"
       style={{ animationDelay: "320ms" }}
     >
       {/* Window chrome */}
@@ -82,7 +82,7 @@ export function HeroProductMock() {
       </div>
 
       {/* Transcript body */}
-      <div className="relative p-5 sm:p-6 space-y-3.5">
+      <div className="relative p-4 md:p-5 lg:p-6 space-y-3.5">
         {[
           { dot: "bg-primary", name: "Sarah", time: "00:14", text: "We need to ship before Q2 — that's the bar." },
           { dot: "bg-accent", name: "Marco", time: "00:22", text: "Agreed. I'll own the rollout plan and timelines." },
@@ -107,9 +107,9 @@ export function HeroProductMock() {
         ))}
 
         {/* Speaker-suggestion chip floating at top-right of body */}
-        <div className="absolute right-4 top-3 hidden sm:flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 text-accent px-2.5 py-1 text-[11px] font-medium shadow-sm">
-          <Sparkles className="w-3 h-3" />
-          Suggest: rename Speaker 3 → "Priya"
+        <div className="absolute right-2 top-2 md:right-3 md:top-2 lg:right-4 lg:top-3 hidden sm:flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 text-accent px-2.5 py-1 text-[11px] font-medium shadow-sm max-w-[200px] truncate">
+          <Sparkles className="w-3 h-3 shrink-0" />
+          <span className="truncate">Suggest: rename Speaker 3 → "Priya"</span>
         </div>
 
         {/* Highlighted line with floating chip */}
@@ -128,7 +128,7 @@ export function HeroProductMock() {
               I'll commit to the launch date if engineering signs off by Friday.
             </p>
           </div>
-          <div className="hidden sm:flex absolute -right-2 -top-2 items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-2.5 py-1 text-[11px] font-medium shadow-md">
+          <div className="hidden sm:flex absolute -right-1 -top-1.5 md:-right-1.5 lg:-right-2 lg:-top-2 items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-2.5 py-1 text-[11px] font-medium shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground/90" />
             Ask about this
           </div>
