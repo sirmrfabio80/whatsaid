@@ -26,10 +26,19 @@ export default function Notifications() {
     }
   };
 
+  const revealStyle = (delayMs: number): React.CSSProperties => ({
+    animationDelay: `${delayMs}ms`,
+    animationFillMode: "both",
+  });
+  const REVEAL_CLASS = "motion-safe:animate-fade-in motion-reduce:animate-none";
+
   return (
     <div className="min-h-screen bg-background">
       {/* Sticky header */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border">
+      <div
+        className={`sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border ${REVEAL_CLASS}`}
+        style={revealStyle(0)}
+      >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <Button
@@ -71,9 +80,11 @@ export default function Notifications() {
 
       {/* Content */}
       {notifications.length === 0 ? (
-        <EmptyState icon={Bell} title={t("notifications.empty")} variant="plain" className="py-20" />
+        <div className={REVEAL_CLASS} style={revealStyle(80)}>
+          <EmptyState icon={Bell} title={t("notifications.empty")} variant="plain" className="py-20" />
+        </div>
       ) : (
-        <div className="p-2 space-y-1">
+        <div className={`p-2 space-y-1 ${REVEAL_CLASS}`} style={revealStyle(80)}>
           {notifications.map((n) => (
             <NotificationItem key={n.id} notification={n} onClose={() => {}} />
           ))}
