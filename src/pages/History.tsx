@@ -130,9 +130,14 @@ export default function History() {
     }
   };
 
+  const revealStyle = (delayMs: number): React.CSSProperties => ({
+    animationDelay: `${delayMs}ms`,
+    animationFillMode: "both",
+  });
+
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+      <div className="min-h-[calc(100vh-4rem)]">
         <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
           <div className="max-w-3xl mx-auto">
             <LoadingState rows={3} titleWidth="w-64" rowHeight="h-20" />
@@ -143,23 +148,33 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
+    <div className="min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto px-5 sm:px-6 py-6 sm:py-10">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-h1 sm:text-[1.875rem] mb-6">{t("history.title")}</h1>
+          <h1
+            className="text-h1 sm:text-[1.875rem] mb-6 motion-safe:animate-fade-in motion-reduce:animate-none"
+            style={revealStyle(0)}
+          >
+            {t("history.title")}
+          </h1>
 
           {/* Filters — show when there are jobs */}
           {jobs.length > 0 && (
-            <HistoryFilters
-              searchQuery={filters.searchQuery}
-              onSearchChange={filters.setSearchQuery}
-              tagSuggestions={translatedSuggestions}
-              selectedTags={translatedSelected}
-              onToggleTag={filters.toggleTag}
-              onClearAll={filters.clearAll}
-              hasActiveFilters={filters.hasActiveFilters}
-              hasAnyTags={filters.userTags.length > 0}
-            />
+            <div
+              className="motion-safe:animate-fade-in motion-reduce:animate-none"
+              style={revealStyle(80)}
+            >
+              <HistoryFilters
+                searchQuery={filters.searchQuery}
+                onSearchChange={filters.setSearchQuery}
+                tagSuggestions={translatedSuggestions}
+                selectedTags={translatedSelected}
+                onToggleTag={filters.toggleTag}
+                onClearAll={filters.clearAll}
+                hasActiveFilters={filters.hasActiveFilters}
+                hasAnyTags={filters.userTags.length > 0}
+              />
+            </div>
           )}
 
           {loadError ? (
