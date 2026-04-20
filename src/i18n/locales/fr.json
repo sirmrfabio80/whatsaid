@@ -139,6 +139,7 @@
     "stepCompleted": "Traitement terminé",
     "stepFailed": "Traitement échoué",
     "longFileToast": "Fichier long — préparation de l'audio dans votre navigateur. Gardez cet onglet ouvert.",
+    "uploadPausedRetrying": "Téléversement en pause — nouvelle tentative…",
     "canLeavePage": "Vous pouvez quitter cette page — nous vous avertirons lorsque votre transcription sera prête.",
     "customPromptLabel": "Prompt IA personnalisé",
     "customPromptOptional": "(facultatif)",
