@@ -214,19 +214,70 @@ export default function Convert() {
     if (!file || !user) return;
 
     setProcessing(true);
-    // Start at "enhancing" — the first real stage. We'll switch to "uploading"
-    // later if the file is ineligible for enhancement, so the visible step
-    // order always flows top-down (enhancing → uploading → …) instead of
-    // briefly showing "uploading" before jumping back up to "enhancing".
-    setStep("enhancing");
+    setStep("preparing");
+    setEnhanceSubstage(null);
     setErrorMessage(null);
 
     // Scroll to top of page with smooth animation
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, left: 0, behavior: prefersReducedMotion ? "instant" : "smooth" });
 
+    // Show a soft "long file" toast after 90s if we're still in the local pipeline.
+    if (longFileToastRef.current) clearTimeout(longFileToastRef.current);
+    longFileToastRef.current = setTimeout(() => {
+      toast.info(t("convert.longFileToast"));
+    }, 90_000);
+
+    const newJobId = crypto.randomUUID();
+
+    // Derive channel count from the analysis already produced by AudioUploader.
+    // No redundant decode probe here — that was the main thread freeze for
+    // long files. If both header and decoded values are missing, default to
+    // stereo (the safer default for diarization-routed content).
+    const decodedCh = channelAnalysis?.decodedChannelCount ?? null;
+    const headerCh = channelAnalysis?.headerChannelCount ?? channelAnalysis?.detectedChannelCount ?? null;
+    const resolvedCh = decodedCh ?? headerCh;
+    if (resolvedCh == null) {
+      console.warn("[convert] No channel count from analysis, defaulting to stereo");
+    }
+    const inputChannels: 1 | 2 = resolvedCh === 1 ? 1 : 2;
+
+    const fileLastModifiedIso = new Date(file.lastModified).toISOString();
+    const recordedAt = fileCreationDate ? fileCreationDate.isoString : fileLastModifiedIso;
+    const recordedAtSource = fileCreationDate ? fileCreationDate.source : "file_last_modified";
+
     try {
-      let uploadFile = file;
+      // ── 1. Insert the jobs row IMMEDIATELY so the row exists from second one. ──
+      // We use status="uploading" + processing_stage="preparing" so the existing
+      // poller (which we widened) can reflect early phases. Watchdog only acts
+      // on status="processing", so this row is safe from premature stale-kill.
+      const { error: insertError } = await supabase
+        .from("jobs")
+        .insert({
+          id: newJobId,
+          user_id: user.id,
+          file_name: file.name,
+          file_size_bytes: file.size,
+          duration_seconds: Math.round(duration),
+          language_selected: language,
+          credits_charged: credits,
+          status: "uploading" as const,
+          processing_stage: "preparing",
+          recorded_at: recordedAt,
+          recorded_at_source: recordedAtSource,
+          metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
+          metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
+          metadata_file_lastmodified: fileLastModifiedIso,
+          metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
+          audio_channels: resolvedCh ?? null,
+        } as any);
+
+      if (insertError) {
+        throw new Error(insertError.message || "Could not create job");
+      }
+
+      // Start polling immediately so the UI is honest from the very first second.
+      setJobId(newJobId);
 
       // Load the active template to get audio-enhancement policy + knobs.
       let activeCfg: TranscribeTemplateConfig = DEFAULT_TEMPLATE_CONFIG;
@@ -243,19 +294,6 @@ export default function Convert() {
         console.warn("Could not load active template, using defaults:", tplErr);
       }
 
-      // Detect channel count first.
-      let inputChannels: 1 | 2 = 2;
-      try {
-        const probeBuf = await file.slice(0).arrayBuffer();
-        const probeCtx = new AudioContext();
-        const decoded = await probeCtx.decodeAudioData(probeBuf);
-        inputChannels = decoded.numberOfChannels === 1 ? 1 : 2;
-        await probeCtx.close();
-      } catch (probeError) {
-        console.warn("Channel probe failed, assuming stereo:", probeError);
-      }
-
-      // Decide eligibility from the active template.
       const featureEnabled = activeCfg.audio_enhancement_enabled;
       const channelAllowed = inputChannels === 1
         ? activeCfg.audio_enhancement_apply_to_mono
@@ -285,7 +323,9 @@ export default function Convert() {
       };
 
       let enhancementMeta: EnhancementMeta;
+      let uploadFile = file;
 
+      // ── 2. Enhance (worker for long M4A/MP4, in-memory otherwise). ──
       if (!eligible) {
         const reason = !featureEnabled
           ? "feature_disabled_by_template"
@@ -305,8 +345,13 @@ export default function Convert() {
         };
       } else {
         setStep("enhancing");
+        await supabase.from("jobs").update({ processing_stage: "enhancing" }).eq("id", newJobId);
         try {
-          const result = await enhanceAudioForTranscription(file, undefined, settingsSnapshot);
+          const result = await enhanceAudioForTranscriptionAuto(
+            file,
+            (stage) => setEnhanceSubstage(stage),
+            settingsSnapshot,
+          );
           uploadFile = result.file;
           enhancementMeta = {
             eligible: true,
@@ -332,13 +377,13 @@ export default function Convert() {
             measured: null,
           };
         }
+        setEnhanceSubstage(null);
       }
 
+      // ── 3. Upload to storage. ──
       setStep("uploading");
-      const newJobId = crypto.randomUUID();
-      // Defensive sanitization: covers branches that bypass enhancement (e.g. .wav)
-      // and any future code path producing an upload file. Supabase Storage rejects
-      // keys with non-ASCII chars (curly quotes, accents, emoji, etc.).
+      await supabase.from("jobs").update({ processing_stage: "uploading" }).eq("id", newJobId);
+
       const safeUploadName = sanitizeStorageFilename(uploadFile.name);
       const filePath = `${user.id}/${newJobId}/${safeUploadName}`;
 
@@ -350,22 +395,13 @@ export default function Convert() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      const fileLastModifiedIso = new Date(file.lastModified).toISOString();
-      const recordedAt = fileCreationDate
-        ? fileCreationDate.isoString
-        : fileLastModifiedIso;
-      const recordedAtSource = fileCreationDate
-        ? fileCreationDate.source
-        : "file_last_modified";
-
-      // Build transcription_config from UI settings (picker is hidden — only
-      // channel analysis metadata is attached; backend defaults handle strategy).
       const txConfig: Record<string, unknown> = {
         audio_enhancement: enhancementMeta,
       };
       if (channelAnalysis) {
         txConfig.channel_analysis = {
           detected_channel_count: channelAnalysis.detectedChannelCount,
+          header_channel_count: channelAnalysis.headerChannelCount,
           decoded_channel_count: channelAnalysis.decodedChannelCount,
           route_hint: channelAnalysis.routeHint,
           reason: channelAnalysis.reason,
@@ -374,35 +410,28 @@ export default function Convert() {
           dominant_window_ratio: channelAnalysis.dominantWindowRatio,
         };
       }
-      const hasConfig = Object.keys(txConfig).length > 0;
 
-      const { error: jobError } = await supabase
+      // ── 4. Hand off to backend: flip to processing + queue process-job. ──
+      const { error: updateError } = await supabase
         .from("jobs")
-        .insert({
-          id: newJobId,
-          user_id: user.id,
-          file_name: file.name,
-          file_size_bytes: file.size,
-          duration_seconds: Math.round(duration),
-          language_selected: language,
-          credits_charged: credits,
-          status: "uploading" as const,
+        .update({
+          status: "processing" as const,
+          processing_stage: "queued",
           temp_file_path: filePath,
-          recorded_at: recordedAt,
-          recorded_at_source: recordedAtSource,
-          metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
-          metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
-          metadata_file_lastmodified: fileLastModifiedIso,
-          metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
-          audio_channels: channelAnalysis?.detectedChannelCount ?? null,
-          transcription_config: hasConfig ? txConfig : null,
-        } as any);
+          transcription_config: txConfig,
+        } as any)
+        .eq("id", newJobId);
 
-      if (jobError) {
-        throw new Error(jobError.message || "Could not create job");
+      if (updateError) {
+        throw new Error(updateError.message || "Could not finalize job");
       }
 
-      setJobId(newJobId);
+      // Clear the long-file toast — local pipeline is done, backend takes over.
+      if (longFileToastRef.current) {
+        clearTimeout(longFileToastRef.current);
+        longFileToastRef.current = null;
+      }
+
       setStep("transcribing");
 
       const { error: fnError } = await supabase.functions.invoke("process-job", {
@@ -413,6 +442,28 @@ export default function Convert() {
         console.error("process-job invoke error:", fnError);
       }
     } catch (error) {
+      console.error("Convert error:", error);
+      if (longFileToastRef.current) {
+        clearTimeout(longFileToastRef.current);
+        longFileToastRef.current = null;
+      }
+      // Mark the row failed so watchdog/Admin/poller all stay consistent.
+      try {
+        await supabase
+          .from("jobs")
+          .update({
+            status: "failed" as const,
+            error_message: error instanceof Error ? error.message : "An unknown error occurred.",
+          } as any)
+          .eq("id", newJobId);
+      } catch (markErr) {
+        console.warn("Could not mark job failed:", markErr);
+      }
+      setStep("failed");
+      setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
+      setProcessing(false);
+    }
+  };
       console.error("Convert error:", error);
       setStep("failed");
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
