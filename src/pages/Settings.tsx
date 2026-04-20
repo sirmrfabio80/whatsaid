@@ -26,6 +26,12 @@ import {
   playCompletionChime,
 } from "@/lib/notification-sound";
 import {
+  isBrowserNotificationsEnabled,
+  setBrowserNotificationsEnabled,
+  requestNotificationPermission,
+  getNotificationPermission,
+} from "@/lib/browser-notifications";
+import {
   setSpeechPreferences,
   speechManager,
   useSpeechSynthesis,
@@ -73,6 +79,8 @@ export default function Settings() {
   const [preferredVoice, setPreferredVoice] = useState<AllowedVoice>("female");
   const [playbackSpeed, setPlaybackSpeed] = useState<AllowedSpeed>(1.0);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isNotificationSoundEnabled());
+  const [browserNotifEnabled, setBrowserNotifEnabledState] = useState<boolean>(() => isBrowserNotificationsEnabled());
+  const [browserNotifPermission, setBrowserNotifPermission] = useState(() => getNotificationPermission());
   const { isSupported: speechSupported } = useSpeechSynthesis();
   // Bump on voiceschanged so the matched-voice indicator updates once the browser populates voices.
   const [voicesTick, setVoicesTick] = useState(0);
