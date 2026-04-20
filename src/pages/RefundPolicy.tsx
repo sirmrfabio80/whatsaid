@@ -2,9 +2,17 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function RefundPolicy() {
   const { t } = useTranslation();
+
+  usePageMeta({
+    title: "Refund Policy — WhatSaid",
+    description:
+      "WhatSaid refund rules for credit-pack purchases and one-off transcriptions.",
+    canonical: "https://whatsaid.app/refund-policy",
+  });
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
