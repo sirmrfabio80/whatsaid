@@ -21,10 +21,10 @@ import type {
   EncodedChunkHandler,
   StreamingDemuxer,
 } from "./types";
-
-// Loaded lazily so mp4box (~150 KB) only enters the bundle when the worker
-// actually demuxes an MP4.
-type Mp4BoxModule = typeof import("mp4box");
+// Static import: workers are bundled as IIFE and don't support code-splitting,
+// so we can't use dynamic import() here. mp4box (~150 KB) lives in the worker
+// chunk regardless.
+import * as mp4boxMod from "mp4box";
 
 interface DescriptorLike {
   tag: number;
