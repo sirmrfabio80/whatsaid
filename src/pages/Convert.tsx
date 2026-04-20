@@ -542,6 +542,32 @@ export default function Convert() {
                           <span className={`text-body-sm font-medium ${isCurrent ? "text-foreground" : ""}`}>
                             {STEP_LABELS[s]}
                           </span>
+                          {s === "enhancing" && isPast && enhanceSkippedReason && (
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="ml-auto inline-flex items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                    aria-label={t("convert.enhanceSkippedTooltip", "Audio enhancement skipped")}
+                                  >
+                                    <SkipForward className="w-3.5 h-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="max-w-xs">
+                                  <p className="text-body-xs">
+                                    {enhanceSkippedReason === "duration_above_client_enhance_cap"
+                                      ? t("convert.enhanceSkippedDuration", "Enhancement skipped: file exceeds safe processing length. Original audio uploaded.")
+                                      : enhanceSkippedReason === "feature_disabled_by_template"
+                                        ? t("convert.enhanceSkippedDisabled", "Enhancement disabled for this file type. Original audio uploaded.")
+                                        : enhanceSkippedReason === "mono_disabled_by_template" || enhanceSkippedReason === "stereo_disabled_by_template"
+                                          ? t("convert.enhanceSkippedChannel", "Enhancement disabled for this channel configuration. Original audio uploaded.")
+                                          : t("convert.enhanceSkippedGeneric", "Audio enhancement was skipped. Original audio uploaded.")}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                       );
                     })}
