@@ -13,6 +13,25 @@ import { HomeMiniFAQ } from "@/components/home/HomeMiniFAQ";
 import { HeroProductMock } from "@/components/home/HeroProductMock";
 import { PricingTeaserStrip } from "@/components/home/PricingTeaserStrip";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { JsonLd } from "@/components/seo/JsonLd";
+
+const SOFTWARE_APP_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "WhatSaid",
+  url: "https://whatsaid.app/",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "Upload audio files and get transcripts with speaker labels, summaries, key actions, and custom AI answers. Supports .m4a, .mp3, .wav.",
+  offers: {
+    "@type": "Offer",
+    price: "4.99",
+    priceCurrency: "GBP",
+    availability: "https://schema.org/InStock",
+    url: "https://whatsaid.app/pricing",
+  },
+};
 
 export default function Index() {
   const { user } = useAuth();
@@ -38,6 +57,7 @@ export default function Index() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
+      <JsonLd data={SOFTWARE_APP_SCHEMA} />
       {/* 1 — Hero (split layout) */}
       <section className="relative overflow-hidden">
         {/* Layered ambient field */}
