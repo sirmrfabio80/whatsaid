@@ -18,9 +18,16 @@ import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard
+  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard,
+  SkipForward,
 } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
@@ -62,6 +69,7 @@ export default function Convert() {
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [enhanceSkippedReason, setEnhanceSkippedReason] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [consentChecked, setConsentChecked] = useState(false);
@@ -291,6 +299,7 @@ export default function Convert() {
               ? "mono_disabled_by_template"
               : "stereo_disabled_by_template";
         console.info(`[convert] audio enhancement skipped — ${reason} (duration=${Math.round(duration)}s, channels=${inputChannels})`);
+        setEnhanceSkippedReason(reason);
         enhancementMeta = {
           eligible: false,
           attempted: false,
@@ -437,6 +446,7 @@ export default function Convert() {
     setStep(null);
     setErrorMessage(null);
     setJobId(null);
+    setEnhanceSkippedReason(null);
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
@@ -532,6 +542,32 @@ export default function Convert() {
                           <span className={`text-body-sm font-medium ${isCurrent ? "text-foreground" : ""}`}>
                             {STEP_LABELS[s]}
                           </span>
+                          {s === "enhancing" && isPast && enhanceSkippedReason && (
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="ml-auto inline-flex items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                    aria-label={t("convert.enhanceSkippedTooltip", "Audio enhancement skipped")}
+                                  >
+                                    <SkipForward className="w-3.5 h-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="max-w-xs">
+                                  <p className="text-body-xs">
+                                    {enhanceSkippedReason === "duration_above_client_enhance_cap"
+                                      ? t("convert.enhanceSkippedDuration", "Enhancement skipped: file exceeds safe processing length. Original audio uploaded.")
+                                      : enhanceSkippedReason === "feature_disabled_by_template"
+                                        ? t("convert.enhanceSkippedDisabled", "Enhancement disabled for this file type. Original audio uploaded.")
+                                        : enhanceSkippedReason === "mono_disabled_by_template" || enhanceSkippedReason === "stereo_disabled_by_template"
+                                          ? t("convert.enhanceSkippedChannel", "Enhancement disabled for this channel configuration. Original audio uploaded.")
+                                          : t("convert.enhanceSkippedGeneric", "Audio enhancement was skipped. Original audio uploaded.")}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                       );
                     })}
