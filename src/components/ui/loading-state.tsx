@@ -22,7 +22,12 @@ export function LoadingState({
   className,
 }: LoadingStateProps) {
   return (
-    <div className={cn("space-y-3", className)} role="status" aria-busy="true" aria-live="polite">
+    <div
+      className={cn("space-y-3 motion-safe:skeleton-shimmer", className)}
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+    >
       {titleWidth ? (
         <div className={cn("h-8 bg-muted rounded-lg animate-pulse mb-8", titleWidth)} />
       ) : null}
