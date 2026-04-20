@@ -11,6 +11,27 @@ import HelpTroubleshooting from "@/components/help/HelpTroubleshooting";
 import HelpContactCard from "@/components/help/HelpContactCard";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { faq } from "@/content/help/faq";
+
+function stripHtml(input: string): string {
+  return input.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
+
+const FAQ_PAGE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.flatMap((group) =>
+    group.items.map((item) => ({
+      "@type": "Question",
+      name: item.q.en,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: stripHtml(item.a.en),
+      },
+    })),
+  ),
+};
 
 export default function Help() {
   const { t } = useTranslation();
@@ -38,6 +59,7 @@ export default function Help() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
+      <JsonLd data={FAQ_PAGE_SCHEMA} />
       <HelpHero query={filter} onQueryChange={setFilter} />
 
       {/* Quick links chips */}

@@ -10,9 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertCircle, Check, ArrowLeft } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { lovable } from "@/integrations/lovable/index";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Login() {
   const { t } = useTranslation();
+  usePageMeta({
+    title: "Sign in — WhatSaid",
+    canonical: "https://whatsaid.app/login",
+    noindex: true,
+  });
   const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

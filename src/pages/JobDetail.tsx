@@ -18,6 +18,7 @@ import { parseISO6709, formatCoordinates, mapsUrl, reverseGeocode } from "@/lib/
 import JobDetailTags from "@/components/JobDetailTags";
 import { parseSegments } from "@/lib/transcript";
 import { clearTabBadge } from "@/lib/tab-title-badge";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -36,6 +37,7 @@ const REVEAL_CLASS = "motion-safe:animate-fade-in motion-reduce:animate-none";
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
+  usePageMeta({ title: "Transcript — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [meta, setMeta] = useState<JobMeta | null>(null);

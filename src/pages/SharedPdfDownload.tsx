@@ -6,12 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Download, FileText, CheckCircle2 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 type DownloadStatus = "loading" | "needsAuth" | "ready" | "downloading" | "done" | "error";
 
 export default function SharedPdfDownload() {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
+  usePageMeta({ title: "Shared PDF — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const pdfPath = searchParams.get("path") || "";
   const { user, session, loading: authLoading } = useAuth();
   const navigate = useNavigate();

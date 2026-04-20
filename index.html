@@ -7,11 +7,9 @@
     <meta name="description" content="Upload audio files and get instant transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.">
     <meta name="author" content="WhatSaid" />
 
-    
-    
     <meta property="og:type" content="website" />
-
     <meta name="twitter:card" content="summary_large_image" />
+
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
@@ -19,7 +17,6 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="manifest" href="/site.webmanifest">
     <meta name="theme-color" content="#6054ba">
-    <link rel="canonical" href="https://whatsaid.app" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,15 +35,46 @@
         });
       })();
     </script>
-    <meta property="og:title" content="WhatSaid — AI Audio Transcription with Speaker Labels">
-  <meta name="twitter:title" content="WhatSaid — AI Audio Transcription with Speaker Labels">
-  <meta property="og:description" content="Upload audio files and get instant transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.">
-  <meta name="twitter:description" content="Upload audio files and get instant transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.">
-  <meta property="og:image" content="https://whatsaid.app/og-image.png">
-  <meta name="twitter:image" content="https://whatsaid.app/og-image.png">
+
+    <!-- Site-wide structured data: Organization + WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://whatsaid.app/#organization",
+          "name": "WhatSaid",
+          "url": "https://whatsaid.app",
+          "logo": "https://whatsaid.app/favicon.png"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://whatsaid.app/#website",
+          "name": "WhatSaid",
+          "url": "https://whatsaid.app",
+          "publisher": { "@id": "https://whatsaid.app/#organization" },
+          "inLanguage": "en"
+        }
+      ]
+    }
+    </script>
 </head>
 
   <body>
+    <noscript>
+      <div style="max-width:720px;margin:2rem auto;padding:1rem 1.25rem;font-family:system-ui,-apple-system,sans-serif;line-height:1.5;color:#0f172a;">
+        <h1 style="font-size:1.5rem;margin:0 0 .5rem;">WhatSaid — AI audio transcription with speaker labels</h1>
+        <p>Upload .m4a, .mp3, or .wav recordings and get instant transcripts, structured summaries, key actions, and custom AI answers. No subscription — pay-as-you-go credits.</p>
+        <p>WhatSaid is a JavaScript application. Please enable JavaScript to use the app, or visit one of these pages:</p>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/convert">Transcribe audio</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/help">Help &amp; FAQ</a></li>
+        </ul>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script defer src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
     <script type="module" src="/src/main.tsx"></script>

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, XCircle, FileText, AlertTriangle } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 type ClaimStatus = "loading" | "ready" | "claiming" | "claimed" | "error" | "needsAuth";
 
@@ -20,6 +21,7 @@ interface ShareInfo {
 export default function ClaimShare() {
   const { token } = useParams<{ token: string }>();
   const { user, session, loading: authLoading } = useAuth();
+  usePageMeta({ title: "Claim shared transcript — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<ClaimStatus>("loading");

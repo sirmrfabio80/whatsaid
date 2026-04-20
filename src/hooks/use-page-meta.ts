@@ -5,6 +5,13 @@ interface PageMeta {
   description?: string;
   ogImage?: string; // absolute URL
   canonical?: string; // absolute URL
+  /**
+   * Convenience flag — when true, sets `<meta name="robots" content="noindex,follow">`.
+   * Use the `robots` prop to override the directive (e.g. "noindex,nofollow").
+   */
+  noindex?: boolean;
+  /** Explicit robots directive. Overrides `noindex` when both are provided. */
+  robots?: string;
 }
 
 const SITE_URL = "https://whatsaid.app";
@@ -48,6 +55,11 @@ function setCanonical(href: string) {
   el.setAttribute("href", href);
 }
 
+function removeMetaByName(name: string) {
+  const el = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  if (el) el.remove();
+}
+
 /**
  * Updates the document title, meta description, OG/Twitter tags and canonical
  * link for the current page. Restores the site defaults on unmount so SPA
@@ -59,6 +71,8 @@ export function usePageMeta(meta: PageMeta) {
     const description = meta.description ?? DEFAULTS.description;
     const ogImage = meta.ogImage ?? DEFAULTS.ogImage;
     const canonical = meta.canonical ?? DEFAULTS.canonical;
+    const robotsDirective =
+      meta.robots ?? (meta.noindex ? "noindex,follow" : null);
 
     document.title = title;
     setMetaByName("description", description);
@@ -70,6 +84,13 @@ export function usePageMeta(meta: PageMeta) {
     setMetaByName("twitter:image", ogImage);
     setMetaByProp("og:url", canonical);
     setCanonical(canonical);
+
+    if (robotsDirective) {
+      setMetaByName("robots", robotsDirective);
+    } else {
+      // Ensure no stale noindex from a previous route lingers.
+      removeMetaByName("robots");
+    }
 
     return () => {
       // Restore site-wide defaults on unmount
@@ -83,6 +104,7 @@ export function usePageMeta(meta: PageMeta) {
       setMetaByName("twitter:image", DEFAULTS.ogImage);
       setMetaByProp("og:url", DEFAULTS.canonical);
       setCanonical(DEFAULTS.canonical);
+      removeMetaByName("robots");
     };
-  }, [meta.title, meta.description, meta.ogImage, meta.canonical]);
+  }, [meta.title, meta.description, meta.ogImage, meta.canonical, meta.noindex, meta.robots]);
 }

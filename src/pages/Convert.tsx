@@ -27,11 +27,18 @@ import type { AudioChannelAnalysis } from "@/lib/audio-channels";
 import { requestNotificationPermission, isBrowserNotificationsEnabled } from "@/lib/browser-notifications";
 import { resumableUpload } from "@/lib/storage-resumable-upload";
 import { useJobHeartbeat } from "@/hooks/use-job-heartbeat";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 type EnhanceSubstage = EnhanceProgressStage | null;
 
 export default function Convert() {
+  usePageMeta({
+    title: "Transcribe Audio — WhatSaid",
+    description:
+      "Drop a .m4a, .mp3 or .wav file and get a transcript with speaker labels, a structured summary, and custom AI answers. Pay-as-you-go credits.",
+    canonical: "https://whatsaid.app/convert",
+  });
   const { user, isAdmin, refreshCredits } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();

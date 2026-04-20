@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Mic, AlertCircle, Check } from "lucide-react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function ResetPassword() {
   const { t } = useTranslation();
+  usePageMeta({ title: "Reset password — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);

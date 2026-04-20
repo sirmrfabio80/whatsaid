@@ -18,6 +18,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, Lock, Trash2, AlertCircle, Globe, Volume2, Headphones, Bell } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -58,6 +59,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function Settings() {
   const { user, loading, signOut, needsPasswordSetup } = useAuth();
   const { t, i18n } = useTranslation();
+  usePageMeta({ title: "Settings — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
