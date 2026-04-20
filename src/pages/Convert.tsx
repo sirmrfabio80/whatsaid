@@ -226,10 +226,12 @@ export default function Convert() {
         console.warn("Could not load active template, using defaults:", tplErr);
       }
 
-      // Detect channel count first.
+      // Detect channel count first. We only need numberOfChannels, so probe a
+      // small head slice — decoding the full file here would OOM long uploads.
       let inputChannels: 1 | 2 = 2;
       try {
-        const probeBuf = await file.slice(0).arrayBuffer();
+        const PROBE_BYTES = 2 * 1024 * 1024; // 2 MB head is enough for the codec headers
+        const probeBuf = await file.slice(0, Math.min(PROBE_BYTES, file.size)).arrayBuffer();
         const probeCtx = new AudioContext();
         const decoded = await probeCtx.decodeAudioData(probeBuf);
         inputChannels = decoded.numberOfChannels === 1 ? 1 : 2;
