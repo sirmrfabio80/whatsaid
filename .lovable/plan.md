@@ -1,64 +1,50 @@
 
 
-# Plan — Resumable uploads + heartbeat
+# Fix homepage responsiveness for iPad / tablet viewports (768–1024px)
 
-Keep the existing client-side enhancement pipeline exactly as-is. Just make the **upload** step resumable and have the client send a "still alive" signal every 60s, so the watchdog (already shipped) only fails truly-dead uploads instead of slow but live ones.
+## Problem
 
-## What changes
+At 834×1194 (iPad Pro 11"), the layout falls between the `md` (768px) and `lg` (1024px) breakpoints. This causes:
 
-1. **Switch the storage upload to TUS resumable**
-   - Replace the single `supabase.storage.from("temp-audio").upload(...)` call in `src/pages/Convert.tsx` with the `tus-js-client` library pointed at the Supabase Storage TUS endpoint (`/storage/v1/upload/resumable`), authenticated with the user's session token.
-   - 6 MB chunks, automatic retry on transient network errors (3 retries with exponential backoff: 0 / 3s / 5s / 10s / 20s).
-   - On each successful chunk, update local upload progress AND bump `jobs.updated_at` (heartbeat — see #2).
-   - A failed chunk after retries surfaces a clean "Upload paused — retrying…" toast instead of failing the whole job.
-   - The TUS upload `Upload-Metadata` carries `bucketName=temp-audio`, `objectName=<userId>/<jobId>/<safeName>`, `contentType=<file mime>`.
+1. **Hero stacks vertically** with centered text + full-width mock below — wastes vertical space and pushes content far from the header.
+2. **Floating chips** ("Suggest: rename Speaker 3 → Priya" and "Ask about this") use `absolute` positioning with fixed offsets (`right-4`, `-right-2`) — they overflow or clip at narrower widths.
+3. **Product mock** is capped at `max-w-[640px]` which is fine, but in stacked mode the hero section is excessively tall, creating the unbalanced spacing.
 
-2. **60-second heartbeat while client work is in progress**
-   - New helper `useJobHeartbeat(jobId, stage)` in `src/hooks/use-job-heartbeat.ts`.
-   - While `processing === true` and `step` is one of `preparing | enhancing | uploading`, it runs `setInterval` every 60s and writes:
-     ```ts
-     supabase.from("jobs").update({
-       processing_stage: stage,                   // current local step
-       updated_at: new Date().toISOString(),      // explicit bump
-     }).eq("id", jobId);
-     ```
-   - Stops on unmount, on success, or on error.
-   - `updated_at` is the column the watchdog already checks (`lt("updated_at", uploadingCutoff)`), so a live tab will never look stale.
+## Solution
 
-3. **Resume across page reloads**
-   - TUS upload URL is persisted in `localStorage` keyed by `tus::<jobId>`. On page load, if the user returns to `/convert` and the same file is re-selected, we call `tus.Upload.findPreviousUploads()` and resume from the last completed chunk instead of restarting.
-   - If the file isn't re-selected (e.g. user closed the tab), the watchdog still wins after 15 min — same behaviour as today.
+Introduce a **tablet-specific layout** by lowering the hero grid breakpoint from `lg` to `md` and scaling the mock + chips for the 768–1024px range.
 
-4. **Watchdog tweak — widen safety margin**
-   - Bump `UPLOAD_STALE_MINUTES` from `15` → `20` in `supabase/functions/watchdog-stale-jobs/index.ts`. Heartbeat is every 60s, so 20 min is ~20 missed heartbeats before we declare a session dead. Prevents false positives on very slow connections that still produce occasional chunks.
+### 1. Hero grid: switch split layout from `lg` → `md` (`src/pages/Index.tsx`)
 
-5. **Admin observability**
-   - Extend `transcription_config.upload` JSON written by `Convert.tsx` with `{ resumable: true, chunk_size_mb: 6, retries: <count>, resumed_from_previous: boolean }` so `JobAuditCard` can show whether an upload paused/resumed and how many retries it took. Pure JSON, no schema migration.
+- Change `grid lg:grid-cols-12` → `grid md:grid-cols-12`
+- Change text column `lg:col-span-5` → `md:col-span-5`
+- Change mock column `lg:col-span-7` → `md:col-span-7`
+- Change text alignment `lg:text-left` → `md:text-left`, `lg:justify-start` → `md:justify-start`, `lg:mx-0` → `md:mx-0`
+- Reduce hero vertical padding: `py-16 sm:py-20 lg:py-24` → `py-12 sm:py-14 md:py-16 lg:py-24` to tighten the header-to-content gap on tablets
+- Scale the h1 more gradually: add `md:text-[2.75rem]` between `sm` and `lg` so the headline fits the narrower left column
 
-## Files touched
+### 2. Product mock: scale down for tablet (`src/components/home/HeroProductMock.tsx`)
 
-```text
-package.json                              add "tus-js-client" dep
-src/hooks/use-job-heartbeat.ts            NEW — 60s heartbeat hook
-src/lib/storage-resumable-upload.ts       NEW — thin TUS wrapper
-src/pages/Convert.tsx                     swap upload call, mount heartbeat,
-                                          extend transcription_config.upload meta
-supabase/functions/watchdog-stale-jobs/   UPLOAD_STALE_MINUTES 15 → 20
-src/components/admin/JobAuditCard.tsx     surface upload meta (retries, resumed)
+- Reduce `max-w-[640px]` → `max-w-[520px] lg:max-w-[640px]` so the mock fits comfortably in a 7-column span at 834px
+- Scale internal padding and font sizes at `md`: transcript body `p-5 sm:p-6` → `p-4 md:p-5 lg:p-6`
+- **Floating "Suggest" chip**: change `absolute right-4 top-3` → `absolute right-2 top-2 md:right-3 md:top-2 lg:right-4 lg:top-3` and add `max-w-[200px] truncate` to prevent overflow; show from `sm` (already does)
+- **Floating "Ask about this" chip**: change `absolute -right-2 -top-2` → `absolute -right-1 -top-1.5 md:-right-1.5 lg:-right-2 lg:-top-2` so it doesn't clip the card border on tablet
+
+### 3. Trust chips + CTAs alignment (`src/pages/Index.tsx`)
+
+- Update trust chips: `justify-center lg:justify-start` → `justify-center md:justify-start`
+- Update CTA row: `justify-center lg:justify-start` → `justify-center md:justify-start`, `lg:items-stretch` → `md:items-stretch`
+
+### 4. Hero subline max-width
+
+- Change `max-w-[52ch] mx-auto lg:mx-0` → `max-w-[52ch] mx-auto md:mx-0 md:max-w-[40ch] lg:max-w-[52ch]` to prevent the paragraph from overflowing the narrower 5-column text area on tablet
+
+## Files changed
+
+```
+src/pages/Index.tsx                    breakpoint + spacing adjustments
+src/components/home/HeroProductMock.tsx   mock sizing + chip positioning
 ```
 
-No DB migration needed — `transcription_config` is `jsonb`.
-
-## What this fixes
-
-- Slow but live uploads (mobile, weak Wi-Fi, large M4A) no longer race the watchdog: every 60s the row is bumped, so it can never look stale while the tab is open.
-- A flaky network drop mid-upload retries automatically (TUS) instead of failing the whole job and losing the credit.
-- A user who reloads the page mid-upload can resume from the last chunk if they re-select the same file.
-- Tab-closed / device-suspended uploads still get caught by the watchdog after 20 min — same recovery UX shipped last turn.
-
-## What this does *not* do
-
-- Does not move audio enhancement to the server (kept client-side as requested).
-- Does not change the `enhancing` step itself — only the `uploading` step is made resumable. A tab closed mid-enhance still relies on the watchdog.
-- Does not change pricing, credit deduction, or the AssemblyAI request.
+No new dependencies, no DB changes, no i18n changes.
 
