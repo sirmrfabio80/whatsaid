@@ -152,6 +152,10 @@ export default {
           "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "shimmer-slide": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(400%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -163,6 +167,7 @@ export default {
         "progress-fill-92": "progress-fill-92 1.4s cubic-bezier(0.22, 1, 0.36, 1) both",
         "hero-mock-rise": "hero-mock-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
         "hero-text-rise": "hero-text-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
+        shimmer: "shimmer-slide 1.6s ease-in-out infinite",
       },
     },
   },
