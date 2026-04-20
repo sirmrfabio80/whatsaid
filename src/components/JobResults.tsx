@@ -994,19 +994,12 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       />
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground text-right mt-1.5">
-                    {isQuestionLimitReached
-                      ? t("jobResults.noQuestionsLeft")
-                      : t("jobResults.questionsLeft", { count: questionsRemaining })}
-                  </p>
                 </div>
-                <div className="shrink-0 pt-0.5">
-                  <ListenButton
-                    ownerId="questions"
-                    getText={() => latestAnswerToSpeech(latestAnswerContent)}
-                    lang={speechLang}
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground text-right mt-1.5">
+                  {isQuestionLimitReached
+                    ? t("jobResults.noQuestionsLeft")
+                    : t("jobResults.questionsLeft", { count: questionsRemaining })}
+                </p>
               </div>
 
               <div role="log" aria-live="polite" aria-label="Saved questions and answers">
