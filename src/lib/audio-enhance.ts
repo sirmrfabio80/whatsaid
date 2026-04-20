@@ -118,9 +118,11 @@ function floatToInt16(sample: number): number {
 }
 
 /**
- * Encode an AudioBuffer to an MP3 Blob using lamejs.
- * Bitrate is fixed at MP3_BITRATE_KBPS (320 kbps) — well above the 256 kbps floor
- * we want to keep, and effectively transparent for speech.
+ * Encode an AudioBuffer to an MP3 Blob using lamejs (main-thread fallback).
+ *
+ * Streams the encoder over small windows so we never allocate a full-length
+ * Int16Array. Memory profile matches the worker implementation:
+ * O(ENCODE_CHUNK) scratch + accumulated MP3 output (~2.4 MB/min stereo).
  */
 async function encodeMp3(buffer: AudioBuffer): Promise<Blob> {
   // Dynamic import keeps lamejs out of the initial bundle.
@@ -131,30 +133,45 @@ async function encodeMp3(buffer: AudioBuffer): Promise<Blob> {
   const sampleRate = buffer.sampleRate;
   const encoder = new Mp3Encoder(numChannels, sampleRate, MP3_BITRATE_KBPS);
 
-  const left = new Int16Array(buffer.length);
-  const right = numChannels === 2 ? new Int16Array(buffer.length) : null;
-
+  const length = buffer.length;
   const lCh = buffer.getChannelData(0);
   const rCh = numChannels === 2 ? buffer.getChannelData(1) : null;
-  for (let i = 0; i < buffer.length; i++) {
-    left[i] = floatToInt16(lCh[i]);
-    if (right && rCh) right[i] = floatToInt16(rCh[i]);
-  }
 
-  const BLOCK = 1152; // MP3 frame size
+  const FRAME = 1152;
+  const FRAMES_PER_CHUNK = 4;
+  const ENCODE_CHUNK = FRAME * FRAMES_PER_CHUNK; // 4608 samples
+
+  const leftScratch = new Int16Array(ENCODE_CHUNK);
+  const rightScratch = rCh ? new Int16Array(ENCODE_CHUNK) : null;
+
   const chunks: Uint8Array[] = [];
-  for (let i = 0; i < buffer.length; i += BLOCK) {
-    const lChunk = left.subarray(i, i + BLOCK);
-    const rChunk = right ? right.subarray(i, i + BLOCK) : null;
-    const mp3buf = rChunk
-      ? encoder.encodeBuffer(lChunk, rChunk)
-      : encoder.encodeBuffer(lChunk);
-    if (mp3buf.length > 0) chunks.push(mp3buf);
+
+  for (let off = 0; off < length; off += ENCODE_CHUNK) {
+    const end = Math.min(off + ENCODE_CHUNK, length);
+    const n = end - off;
+
+    for (let i = 0; i < n; i++) {
+      leftScratch[i] = floatToInt16(lCh[off + i]);
+    }
+    const lView = leftScratch.subarray(0, n);
+    let rView: Int16Array | null = null;
+    if (rightScratch && rCh) {
+      for (let i = 0; i < n; i++) {
+        rightScratch[i] = floatToInt16(rCh[off + i]);
+      }
+      rView = rightScratch.subarray(0, n);
+    }
+
+    const mp3buf = rView
+      ? encoder.encodeBuffer(lView, rView)
+      : encoder.encodeBuffer(lView);
+    // lamejs reuses an internal output buffer between calls — copy out
+    // before the next call invalidates the view.
+    if (mp3buf.length > 0) chunks.push(new Uint8Array(mp3buf));
   }
   const tail = encoder.flush();
-  if (tail.length > 0) chunks.push(tail);
+  if (tail.length > 0) chunks.push(new Uint8Array(tail));
 
-  // Cast to BlobPart[] — lamejs returns Uint8Array<ArrayBufferLike> which TS narrows oddly.
   return new Blob(chunks as unknown as BlobPart[], { type: "audio/mpeg" });
 }
 
