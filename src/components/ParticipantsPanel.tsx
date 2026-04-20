@@ -191,8 +191,8 @@ export default function ParticipantsPanel({ segments, speakerNames, durationSeco
           <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/60 transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`} />
         </CollapsibleTrigger>
 
-        <CollapsibleContent className="data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
-          <div className="mt-2 rounded-xl border border-border/30 bg-muted/15 overflow-hidden">
+        <CollapsibleContent className="w-full data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+          <div className="mt-2 w-full rounded-xl border border-border/30 bg-muted/15 overflow-hidden">
             {stats.length === 0 ? (
               <div className="px-4 py-6 text-center">
                 <p className="text-xs text-muted-foreground">{t("participants.noData")}</p>
