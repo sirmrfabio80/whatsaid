@@ -20,6 +20,7 @@ interface ShareInfo {
 export default function ClaimShare() {
   const { token } = useParams<{ token: string }>();
   const { user, session, loading: authLoading } = useAuth();
+  usePageMeta({ title: "Claim shared transcript — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<ClaimStatus>("loading");

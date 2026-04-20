@@ -7,10 +7,12 @@ import { useNotifications } from "@/contexts/NotificationsContext";
 import NotificationItem from "@/components/NotificationItem";
 import { EmptyState } from "@/components/ui/empty-state";
 import { clearTabBadge } from "@/lib/tab-title-badge";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Notifications() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  usePageMeta({ title: "Notifications — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const { notifications, unreadCount, markAllRead, clearAllNotifications } = useNotifications();
 
   // Clear the tab title badge — the user is looking at the alerts directly

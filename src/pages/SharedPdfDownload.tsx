@@ -12,6 +12,7 @@ type DownloadStatus = "loading" | "needsAuth" | "ready" | "downloading" | "done"
 export default function SharedPdfDownload() {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
+  usePageMeta({ title: "Shared PDF — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const pdfPath = searchParams.get("path") || "";
   const { user, session, loading: authLoading } = useAuth();
   const navigate = useNavigate();

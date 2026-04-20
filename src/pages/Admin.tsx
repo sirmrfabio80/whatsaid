@@ -5,8 +5,10 @@ import LogsTab from "@/components/admin/LogsTab";
 import WatchdogTab from "@/components/admin/WatchdogTab";
 import FaqFeedbackTab from "@/components/admin/FaqFeedbackTab";
 import OthersTab from "@/components/admin/OthersTab";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Admin() {
+  usePageMeta({ title: "Admin — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   return (
     <AdminGuard>
       <main className="container mx-auto px-4 py-10 max-w-6xl">

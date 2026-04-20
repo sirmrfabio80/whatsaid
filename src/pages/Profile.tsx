@@ -9,8 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, Clock, FileText, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import AvatarUpload from "@/components/AvatarUpload";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Profile() {
+  usePageMeta({ title: "Profile — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const { user, loading, creditBalance, avatarUrl, refreshAvatar } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();

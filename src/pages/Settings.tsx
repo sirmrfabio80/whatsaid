@@ -58,6 +58,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function Settings() {
   const { user, loading, signOut, needsPasswordSetup } = useAuth();
   const { t, i18n } = useTranslation();
+  usePageMeta({ title: "Settings — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 

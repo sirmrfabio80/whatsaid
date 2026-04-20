@@ -40,6 +40,7 @@ interface Job {
 export default function History() {
   const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
+  usePageMeta({ title: "History — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);

@@ -9,9 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { Checkbox } from "@/components/ui/checkbox";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Signup() {
   const { t } = useTranslation();
+  usePageMeta({
+    title: "Create account — WhatSaid",
+    canonical: "https://whatsaid.app/signup",
+    noindex: true,
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");

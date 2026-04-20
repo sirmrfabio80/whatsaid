@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check, AlertCircle, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function SetPassword() {
   const { user, loading } = useAuth();
   const { t } = useTranslation();
+  usePageMeta({ title: "Set password — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

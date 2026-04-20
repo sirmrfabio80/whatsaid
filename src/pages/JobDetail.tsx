@@ -36,6 +36,7 @@ const REVEAL_CLASS = "motion-safe:animate-fade-in motion-reduce:animate-none";
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
+  usePageMeta({ title: "Transcript — WhatSaid", noindex: true, robots: "noindex,nofollow" });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [meta, setMeta] = useState<JobMeta | null>(null);
