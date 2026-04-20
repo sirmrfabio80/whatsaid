@@ -197,7 +197,7 @@ export default function JobDetail() {
               so the staggered reveal below runs in one coordinated sweep
               without prior content jumping or popping in. */}
           {!revealReady && (
-            <div aria-hidden="true" className="animate-pulse">
+            <div aria-hidden="true" className="animate-pulse motion-safe:skeleton-shimmer">
               <div className="flex items-center justify-between mb-8">
                 <Skeleton className="h-9 w-32 rounded-md" />
                 <Skeleton className="h-9 w-40 rounded-full" />

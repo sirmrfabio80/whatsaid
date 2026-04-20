@@ -202,6 +202,38 @@
 .animate-stagger > *:nth-child(4) { animation-delay: 240ms; }
 .animate-stagger > *:nth-child(5) { animation-delay: 320ms; }
 
+/* Skeleton shimmer — subtle gradient sweep for a premium loading feel.
+   Apply to a wrapper containing Skeleton blocks. */
+@keyframes skeleton-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 30%,
+    hsl(var(--foreground) / 0.06) 50%,
+    transparent 70%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after { animation: none; display: none; }
+}
+
 @layer utilities {
   /* Liquid Glass — Navbar only */
   .glass-navbar {
