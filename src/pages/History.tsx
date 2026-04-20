@@ -236,15 +236,26 @@ export default function History() {
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
                               <div className="flex items-center gap-2 shrink-0">
-                                <Badge variant="outline" className={`${statusColor(job.status)} text-[11px] inline-flex items-center gap-1.5`}>
-                                  {(job.status === "processing" || job.status === "pending" || job.status === "uploading") && (
-                                    <span className="relative inline-flex w-1.5 h-1.5" aria-hidden="true">
-                                      <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
-                                      <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
-                                    </span>
-                                  )}
-                                  {job.status}
-                                </Badge>
+                                {job.status === "failed" && isUploadInterrupted(job.error_message) ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-warning/10 text-warning border-warning/20 text-[11px] inline-flex items-center gap-1.5"
+                                    title={job.error_message ?? undefined}
+                                  >
+                                    <RotateCw className="w-3 h-3" aria-hidden="true" />
+                                    {t("history.uploadInterrupted")}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className={`${statusColor(job.status)} text-[11px] inline-flex items-center gap-1.5`}>
+                                    {(job.status === "processing" || job.status === "pending" || job.status === "uploading") && (
+                                      <span className="relative inline-flex w-1.5 h-1.5" aria-hidden="true">
+                                        <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
+                                        <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
+                                      </span>
+                                    )}
+                                    {job.status}
+                                  </Badge>
+                                )}
                                 <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
                               </div>
                             </div>
