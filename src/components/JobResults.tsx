@@ -994,7 +994,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                       />
                     )}
                   </div>
-                </div>
                 <p className="text-xs text-muted-foreground text-right mt-1.5">
                   {isQuestionLimitReached
                     ? t("jobResults.noQuestionsLeft")
