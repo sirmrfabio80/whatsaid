@@ -49,14 +49,14 @@ export default function Index() {
               <p className="font-serif italic text-caption text-primary mb-5">
                 {t("home.heroEyebrow")}
               </p>
-              <h1 className="text-display sm:text-[3.25rem] lg:text-[4.25rem] leading-[1.05] mb-6">
+              <h1 className="text-display sm:text-[3.25rem] md:text-[2.75rem] lg:text-[4.25rem] leading-[1.05] mb-6">
                 {t("home.heroTitlePart1")}{" "}
                 <span className="font-serif italic text-primary">
                   {t("home.heroTitleHighlight")}
                 </span>{" "}
                 {t("home.heroTitlePart2")}
               </h1>
-              <p className="font-serif text-body lg:text-lg text-muted-foreground max-w-[52ch] mx-auto lg:mx-0 mb-6 leading-relaxed">
+              <p className="font-serif text-body lg:text-lg text-muted-foreground max-w-[52ch] mx-auto md:mx-0 md:max-w-[40ch] lg:max-w-[52ch] mb-6 leading-relaxed">
                 {t("home.heroSubline")}
               </p>
 
