@@ -36,7 +36,7 @@ interface ExtraSourceMeta { id: string; title: string; }
 interface JobOutputMetadata { extra_sources?: ExtraSourceMeta[]; [key: string]: unknown; }
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; metadata?: JobOutputMetadata | null; }
 
-interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
+interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; onReady?: () => void; suppressInitialLoadingState?: boolean; }
 
 interface ListenButtonProps {
   ownerId: string;
@@ -114,7 +114,7 @@ function ListenButton({ ownerId, getText, lang, className }: ListenButtonProps) 
   );
 }
 
-export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
+export default function JobResults({ jobId, currentTitle, onMetaLoaded, onReady, suppressInitialLoadingState }: JobResultsProps) {
   const { t } = useTranslation();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
   const [meta, setMeta] = useState<JobMeta | null>(null);
@@ -188,6 +188,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       onMetaLoaded?.(m as JobMeta);
     }
     setLoading(false);
+    onReady?.();
   }, [jobId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -607,7 +608,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.id]);
 
-  if (loading) return <LoadingState rows={1} titleWidth="w-full" rowHeight="h-64" className="py-8" />;
+  if (loading) return suppressInitialLoadingState ? null : <LoadingState rows={1} titleWidth="w-full" rowHeight="h-64" className="py-8" />;
   if (!transcript && !summary) return <EmptyState icon={FileText} title={t("jobResults.noOutputs")} variant="plain" />;
 
   const getQuestionEntries = () => outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
@@ -640,7 +641,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   }) : null;
 
   return (
-    <div className="space-y-6 animate-page-enter-flat">
+    <div className="space-y-6">
       <Tabs defaultValue="summary" className="w-full" onValueChange={() => speechManager.stop()}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <TabsList className="w-auto justify-start rounded-full bg-muted/40 p-1 h-auto gap-0.5">
