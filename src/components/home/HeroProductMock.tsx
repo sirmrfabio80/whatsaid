@@ -128,7 +128,7 @@ export function HeroProductMock() {
               I'll commit to the launch date if engineering signs off by Friday.
             </p>
           </div>
-          <div className="hidden sm:flex absolute -right-2 -top-2 items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-2.5 py-1 text-[11px] font-medium shadow-md">
+          <div className="hidden sm:flex absolute -right-1 -top-1.5 md:-right-1.5 lg:-right-2 lg:-top-2 items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-2.5 py-1 text-[11px] font-medium shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground/90" />
             Ask about this
           </div>
