@@ -217,12 +217,11 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
     const inputRmsDbfs = linearToDbfs(inputRms);
     const inputPeakDbfs = linearToDbfs(inputPeak);
 
-    // Noise gate — encode untouched and return.
+    // Noise gate — encode untouched and stream out.
     if (inputRms < NOISE_FLOOR) {
-      const mp3 = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
-      const response: EnhanceWorkerSuccess = {
-        type: "success",
-        mp3,
+      const totalBytes = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
+      const done: EnhanceWorkerDone = {
+        type: "done",
         measured: {
           input_rms_dbfs: inputRmsDbfs,
           input_peak_dbfs: inputPeakDbfs,
@@ -235,8 +234,9 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
         normalisationApplied: false,
         softClipped: false,
         reason: "noise_gated",
+        totalBytes,
       };
-      (self as unknown as Worker).postMessage(response, [mp3]);
+      (self as unknown as Worker).postMessage(done);
       return;
     }
 
@@ -289,13 +289,12 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
     const outputPeak = computePeak(channels);
     const outputPeakDbfs = linearToDbfs(outputPeak);
 
-    const mp3 = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
+    const totalBytes = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
 
     const sampleModified = softClipped || normalisationApplied;
 
-    const response: EnhanceWorkerSuccess = {
-      type: "success",
-      mp3,
+    const done: EnhanceWorkerDone = {
+      type: "done",
       measured: {
         input_rms_dbfs: inputRmsDbfs,
         input_peak_dbfs: inputPeakDbfs,
@@ -308,8 +307,9 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
       normalisationApplied,
       softClipped,
       reason: sampleModified ? "applied" : "below_normalise_threshold",
+      totalBytes,
     };
-    (self as unknown as Worker).postMessage(response, [mp3]);
+    (self as unknown as Worker).postMessage(done);
   } catch (err) {
     const response: EnhanceWorkerError = {
       type: "error",
