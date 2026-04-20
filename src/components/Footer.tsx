@@ -2,9 +2,11 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Shield, Mail } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Footer() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   return (
     <footer className="border-t border-border">
@@ -27,7 +29,7 @@ export default function Footer() {
             <ul className="space-y-2 text-body-sm text-muted-foreground">
               <li><Link to="/convert" className="hover:text-foreground transition-colors">{t("footer.convertAudio")}</Link></li>
               <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link></li>
-              <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>
+              {!user && <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>}
             </ul>
           </div>
 
