@@ -145,7 +145,7 @@ function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
   };
 }
 
-async function loadActiveConfig(supabase: ReturnType<typeof createClient>): Promise<ActiveTemplateConfig> {
+async function loadActiveConfig(supabase: SupabaseClient): Promise<ActiveTemplateConfig> {
   try {
     const { data, error } = await supabase
       .from("transcribe_settings_templates")
