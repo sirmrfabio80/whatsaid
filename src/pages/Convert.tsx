@@ -74,6 +74,14 @@ export default function Convert() {
   const credits = creditsForDuration(duration);
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
+  // Heartbeat: while we're doing local prep/enhance/upload work, bump
+  // jobs.updated_at every 60s so the watchdog can't flag a live tab as stale.
+  const heartbeatStage: "preparing" | "enhancing" | "uploading" | null =
+    processing && (step === "enhancing" || step === "uploading")
+      ? (step === "uploading" ? "uploading" : "enhancing")
+      : null;
+  useJobHeartbeat(jobId, heartbeatStage);
+
   const STEP_LABELS: Record<ProcessingStep, string> = {
     preparing: t("convert.stepEnhancing"),
     enhancing: t("convert.stepEnhancing"),
