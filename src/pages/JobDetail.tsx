@@ -17,6 +17,7 @@ import { formatRecordedDate, formatRecordedTime, toLocalDate, replaceDate, repla
 import { parseISO6709, formatCoordinates, mapsUrl, reverseGeocode } from "@/lib/location";
 import JobDetailTags from "@/components/JobDetailTags";
 import { parseSegments } from "@/lib/transcript";
+import { clearTabBadge } from "@/lib/tab-title-badge";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,12 @@ export default function JobDetail() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate("/login"); }, [user, authLoading, navigate]);
+
+  // Reset the tab title badge when the user opens a job detail page —
+  // they've clearly seen the completion notification.
+  useEffect(() => {
+    clearTabBadge();
+  }, [id]);
 
   // Track job status (with realtime updates) for the live "processing" pulse-ring
   useEffect(() => {
