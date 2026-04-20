@@ -69,6 +69,7 @@ export default function Convert() {
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [enhanceSkippedReason, setEnhanceSkippedReason] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [consentChecked, setConsentChecked] = useState(false);
