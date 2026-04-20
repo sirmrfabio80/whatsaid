@@ -608,7 +608,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded, onReady,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript?.id]);
 
-  if (loading) return <LoadingState rows={1} titleWidth="w-full" rowHeight="h-64" className="py-8" />;
+  if (loading) return suppressInitialLoadingState ? null : <LoadingState rows={1} titleWidth="w-full" rowHeight="h-64" className="py-8" />;
   if (!transcript && !summary) return <EmptyState icon={FileText} title={t("jobResults.noOutputs")} variant="plain" />;
 
   const getQuestionEntries = () => outputs.filter((o) => o.output_type === "custom" || o.output_type === "question");
