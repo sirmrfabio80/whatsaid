@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
-import { supabase } from "@/integrations/supabase/client";
 
 import {
   ArrowRight, Shield, Globe, Trash2, Users, Languages, Upload, Cpu, Download,
@@ -14,12 +12,6 @@ import { HomeBeyondGrid } from "@/components/home/HomeBeyondGrid";
 import { HomeMiniFAQ } from "@/components/home/HomeMiniFAQ";
 import { HeroProductMock } from "@/components/home/HeroProductMock";
 import { PricingTeaserStrip } from "@/components/home/PricingTeaserStrip";
-import { usePageMeta } from "@/hooks/use-page-meta";
-import { useJsonLd } from "@/hooks/use-json-ld";
-
-// Google requires aggregateRating to be backed by real reviews. Only inject
-// when we have a meaningful sample size — otherwise omit the property.
-const MIN_REVIEWS_FOR_AGGREGATE = 5;
 
 export default function Index() {
   const { user } = useAuth();
@@ -27,95 +19,6 @@ export default function Index() {
   const navigate = useNavigate();
   const howItWorks = useScrollReveal();
   const privacy = useScrollReveal();
-  const [aggregate, setAggregate] = useState<{ ratingValue: number; reviewCount: number } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase.rpc("get_review_aggregate");
-      if (cancelled || error || !data || !Array.isArray(data) || data.length === 0) return;
-      const row = data[0] as { rating_value: number | string; review_count: number | string };
-      const ratingValue = Number(row.rating_value);
-      const reviewCount = Number(row.review_count);
-      if (Number.isFinite(ratingValue) && Number.isFinite(reviewCount) && reviewCount >= MIN_REVIEWS_FOR_AGGREGATE) {
-        setAggregate({ ratingValue, reviewCount });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  usePageMeta({
-    title: "WhatSaid — AI Audio Transcription with Speaker Labels",
-    description:
-      "Upload audio and get instant transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.",
-    canonical: "https://whatsaid.app/",
-  });
-
-  useJsonLd("ld-organization", {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "WhatSaid",
-    url: "https://whatsaid.app/",
-    logo: "https://whatsaid.app/favicon.png",
-    description:
-      "WhatSaid converts audio into accurate transcripts, summaries, and custom AI analysis with speaker labels.",
-  });
-
-  useJsonLd("ld-website", {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "WhatSaid",
-    url: "https://whatsaid.app/",
-  });
-
-  useJsonLd("ld-software-application", {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "WhatSaid",
-    url: "https://whatsaid.app/",
-    description:
-      "AI audio transcription with speaker labels, summaries, key actions, and custom Q&A. Supports .m4a, .mp3, .wav up to 8 hours per file.",
-    applicationCategory: "BusinessApplication",
-    applicationSubCategory: "Transcription",
-    operatingSystem: "Web",
-    browserRequirements: "Requires JavaScript and a modern browser",
-    image: "https://whatsaid.app/og-image.png",
-    inLanguage: ["en", "it", "fr"],
-    offers: {
-      "@type": "Offer",
-      price: "4.99",
-      priceCurrency: "GBP",
-      url: "https://whatsaid.app/pricing",
-      availability: "https://schema.org/InStock",
-      category: "OneTimePayment",
-    },
-    featureList: [
-      "Speaker diarization",
-      "AI summaries with key actions",
-      "Custom Q&A on transcripts",
-      "Automatic language detection",
-      "Pay-as-you-go credits, no subscription",
-      "Audio deleted immediately after processing",
-    ],
-    publisher: {
-      "@type": "Organization",
-      name: "WhatSaid",
-      url: "https://whatsaid.app/",
-    },
-    ...(aggregate
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: aggregate.ratingValue.toFixed(2),
-            reviewCount: aggregate.reviewCount,
-            bestRating: "5",
-            worstRating: "1",
-          },
-        }
-      : {}),
-  });
 
   const heroPrimaryHref = user ? "/convert" : "/signup";
 

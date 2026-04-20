@@ -8,8 +8,6 @@ interface ParticipantsPanelProps {
   segments: Segment[];
   speakerNames: Record<string, string>;
   durationSeconds: number | null;
-  /** Optional element rendered to the right of the speaker chips on the first row (e.g. Listen button). */
-  rightSlot?: React.ReactNode;
 }
 
 interface SpeakerStats {
@@ -141,7 +139,7 @@ function computeStats(
   }));
 }
 
-export default function ParticipantsPanel({ segments, speakerNames, durationSeconds, rightSlot }: ParticipantsPanelProps) {
+export default function ParticipantsPanel({ segments, speakerNames, durationSeconds }: ParticipantsPanelProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(true);
 
@@ -161,33 +159,26 @@ export default function ParticipantsPanel({ segments, speakerNames, durationSeco
 
   return (
     <div className="space-y-3">
-      {/* Read-only speaker chips with optional right-aligned slot (e.g. Listen) */}
-      <div className="flex items-start gap-3">
-        <div
-          className="flex-1 min-w-0 flex items-center gap-2 flex-wrap"
-          role="group"
-          aria-label={t("participants.title")}
-        >
-          <span className="text-xs text-muted-foreground font-medium mr-1">
-            {t("participants.title")}
-          </span>
-          {speakers.map((speaker, i) => {
-            const name = speakerNames[speaker] || speaker;
-            return (
+      {/* Read-only speaker chips */}
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={t("participants.title")}>
+        <span className="text-xs text-muted-foreground font-medium mr-1">
+          {t("participants.title")}
+        </span>
+        {speakers.map((speaker, i) => {
+          const name = speakerNames[speaker] || speaker;
+          return (
+            <span
+              key={speaker}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/30 px-3 py-1.5 text-xs font-medium"
+            >
               <span
-                key={speaker}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/30 px-3 py-1.5 text-xs font-medium"
-              >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: getSpeakerColor(i) }}
-                />
-                <span>{name}</span>
-              </span>
-            );
-          })}
-        </div>
-        {rightSlot && <div className="shrink-0">{rightSlot}</div>}
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: getSpeakerColor(i) }}
+              />
+              <span>{name}</span>
+            </span>
+          );
+        })}
       </div>
 
       {/* Expandable participation overview */}

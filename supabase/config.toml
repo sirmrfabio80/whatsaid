@@ -7,5 +7,3 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = true
   [functions.eval-transcribe]
     verify_jwt = false
-  [functions.og-job]
-    verify_jwt = false

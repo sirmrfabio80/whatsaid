@@ -27,12 +27,6 @@
     "settings": "Impostazioni",
     "help": "Guida"
   },
-  "theme": {
-    "label": "Tema",
-    "light": "Chiaro",
-    "dark": "Scuro",
-    "system": "Sistema"
-  },
   "home": {
     "tagline": "Trascrizione AI + etichette relatori",
     "heroEyebrow": "Trascrizione AI premium",
@@ -358,13 +352,6 @@
       "processing": "In elaborazione",
       "completed": "Completato",
       "failed": "Fallito"
-    },
-    "stage": {
-      "queued": "In coda",
-      "transcribing": "Trascrizione audio",
-      "summarising": "Generazione riassunto",
-      "tagging": "Aggiunta tag",
-      "done": "Finalizzazione"
     },
     "tags": {
       "addPlaceholder": "Aggiungi tag…",

@@ -178,8 +178,6 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
           const vMap: Record<string, string> = {};
           for (const v of variantRows) vMap[v.job_output_id] = v.content;
           setVariants(vMap);
-        } else {
-          setVariants({});
         }
       } else {
         setVariants({});
@@ -188,29 +186,9 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
       onMetaLoaded?.(m as JobMeta);
     }
     setLoading(false);
-  }, [jobId, onMetaLoaded]);
+  }, [jobId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`job-results-${jobId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "job_outputs", filter: `job_id=eq.${jobId}` },
-        () => { void fetchData(); }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${jobId}` },
-        () => { void fetchData(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [jobId, fetchData]);
 
   // Page-level speech cleanup: stop any active playback when the JobResults
   // page unmounts (route change). Individual ListenButton unmounts MUST NOT
@@ -833,21 +811,23 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              {/* Header row: Participants chips + Listen, with full-width overview below */}
+              {/* Header row: Participants (left) + Listen (right) */}
               {transcript && !regeneratingLang ? (
-                <div className="px-4 sm:px-5 pt-3 pb-3 border-b border-border/40">
-                  <ParticipantsPanel
-                    segments={parseSegments(activeTranscriptContent)}
-                    speakerNames={speakerNames}
-                    durationSeconds={meta?.duration_seconds ?? null}
-                    rightSlot={
-                      <ListenButton
-                        ownerId="summary"
-                        getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
-                        lang={speechLang}
-                      />
-                    }
-                  />
+                <div className="flex items-start justify-between gap-3 px-4 sm:px-5 pt-3 pb-3 border-b border-border/40">
+                  <div className="flex-1 min-w-0">
+                    <ParticipantsPanel
+                      segments={parseSegments(activeTranscriptContent)}
+                      speakerNames={speakerNames}
+                      durationSeconds={meta?.duration_seconds ?? null}
+                    />
+                  </div>
+                  <div className="shrink-0 pt-0.5">
+                    <ListenButton
+                      ownerId="summary"
+                      getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
+                      lang={speechLang}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-end px-4 sm:px-5 pt-2 pb-1.5 border-b border-border/40">

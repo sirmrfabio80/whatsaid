@@ -37,8 +37,6 @@ import { CreditDurationTable } from "@/components/pricing/CreditDurationTable";
 import { PerCreditValue } from "@/components/pricing/PerCreditValue";
 import { PricingStudioMock } from "@/components/pricing/PricingStudioMock";
 import { usePageMeta } from "@/hooks/use-page-meta";
-import { useJsonLd } from "@/hooks/use-json-ld";
-import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 // ---------------------------------------------------------------------------
 // Currency toggle
@@ -199,33 +197,6 @@ export default function Pricing() {
     ogImage: "https://whatsaid.app/og-pricing.png",
     canonical: "https://whatsaid.app/pricing",
   });
-
-  useJsonLd("ld-product-credits", {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: "WhatSaid Credits",
-    description:
-      "Pay-as-you-go credits for AI audio transcription with speaker labels, summaries, and Q&A. 1 credit covers a file up to 120 minutes.",
-    brand: { "@type": "Brand", name: "WhatSaid" },
-    url: "https://whatsaid.app/pricing",
-    offers: PRICING_PRODUCTS.map((p) => {
-      const localized = getPriceForProduct(prices, p.id);
-      return {
-        "@type": "Offer",
-        name: p.id,
-        price: (localized?.amount ?? p.basePriceGBP).toFixed(2),
-        priceCurrency: localized?.currency ?? "GBP",
-        availability: "https://schema.org/InStock",
-        url: "https://whatsaid.app/pricing",
-        category: "OneTimePayment",
-      };
-    }),
-  });
-
-  useJsonLd(
-    "ld-breadcrumb-pricing",
-    buildBreadcrumbList([{ name: "Pricing", path: "/pricing" }]),
-  );
 
   const heroReveal = useScrollReveal();
   const valueReveal = useScrollReveal();

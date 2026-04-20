@@ -2,26 +2,9 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePageMeta } from "@/hooks/use-page-meta";
-import { useJsonLd } from "@/hooks/use-json-ld";
-import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 export default function RefundPolicy() {
   const { t } = useTranslation();
-
-  usePageMeta({
-    title: "Refund Policy — WhatSaid",
-    description:
-      "WhatSaid refund policy for credit purchases. Learn when refunds are available and how to request one.",
-    canonical: "https://whatsaid.app/refund-policy",
-    ogImage: "https://whatsaid.app/og-refund.png",
-  });
-
-  useJsonLd(
-    "ld-breadcrumb-refund",
-    buildBreadcrumbList([{ name: "Refund Policy", path: "/refund-policy" }]),
-  );
-
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">

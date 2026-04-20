@@ -27,12 +27,6 @@
     "settings": "Settings",
     "help": "Help"
   },
-  "theme": {
-    "label": "Theme",
-    "light": "Light",
-    "dark": "Dark",
-    "system": "System"
-  },
   "home": {
     "tagline": "AI transcription + speaker labels",
     "heroEyebrow": "Premium AI transcription",
@@ -162,11 +156,6 @@
     "noCreditsTitle": "Insufficient credits",
     "noCreditsDesc": "This file requires {{required}} credit(s) but you have {{balance}}. Purchase credits to continue.",
     "buyCredits": "Buy credits",
-    "enhanceSkippedTooltip": "Audio enhancement skipped",
-    "enhanceSkippedDuration": "Enhancement skipped: file exceeds safe processing length. Original audio uploaded.",
-    "enhanceSkippedDisabled": "Enhancement disabled for this file type. Original audio uploaded.",
-    "enhanceSkippedChannel": "Enhancement disabled for this channel configuration. Original audio uploaded.",
-    "enhanceSkippedGeneric": "Audio enhancement was skipped. Original audio uploaded.",
     "autoOptimisedBadge": "Optimised for phone call recording",
     "autoOptimisedHint": "Mono audio detected — recovery mode and audio enhancement applied automatically.",
     "advancedOptions": "Advanced transcription options",
@@ -363,13 +352,6 @@
       "processing": "Processing",
       "completed": "Completed",
       "failed": "Failed"
-    },
-    "stage": {
-      "queued": "Queued",
-      "transcribing": "Transcribing audio",
-      "summarising": "Generating summary",
-      "tagging": "Adding tags",
-      "done": "Finishing up"
     },
     "tags": {
       "addPlaceholder": "Add tag…",

@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, History, User, Settings, ChevronDown, Shield, HelpCircle } from "lucide-react";
-import ThemeMenuSection from "@/components/navbar/ThemeMenuSection";
 
 interface UserMenuProps {
   avatarUrl: string | null;
@@ -59,8 +58,6 @@ export default function UserMenu({ avatarUrl, initials, isAdmin, signOut }: User
             Admin
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
-        <ThemeMenuSection />
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="rounded-lg">
           <LogOut className="w-4 h-4 mr-2" />

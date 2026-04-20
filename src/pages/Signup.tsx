@@ -9,19 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { Checkbox } from "@/components/ui/checkbox";
-import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Signup() {
   const { t } = useTranslation();
-
-  usePageMeta({
-    title: "Sign up — WhatSaid",
-    description:
-      "Create a WhatSaid account to transcribe audio with speaker labels, summaries, and AI Q&A. No subscription — pay-as-you-go credits.",
-    canonical: "https://whatsaid.app/signup",
-    ogImage: "https://whatsaid.app/og-signup.png",
-  });
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");

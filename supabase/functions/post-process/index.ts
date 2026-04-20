@@ -22,19 +22,24 @@ function extractShortSummary(summaryContent: string): string {
   return plain.slice(0, 200);
 }
 
-// Core post-processing pipeline. Two AI calls (summary + optional custom
-// output) plus auto-tagging — can exceed the 150s edge function idle
-// timeout, so this MUST run in EdgeRuntime.waitUntil.
-async function runPostProcessPipeline(
-  job_id: string,
-  custom_prompt: string | null,
-): Promise<void> {
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabase = createServiceClient();
 
+    const { job_id, custom_prompt } = await req.json();
+    if (!job_id) {
+      return new Response(JSON.stringify({ error: "job_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // 1. Read the transcript
     const { data: transcriptRow, error: txError } = await supabase
@@ -62,12 +67,6 @@ async function runPostProcessPipeline(
 
     // Build language instruction — ALWAYS specify output language
     const langLabel = detectedLang || "en";
-
-    // Mark stage: summarising
-    await supabase
-      .from("jobs")
-      .update({ processing_stage: "summarising" } as never)
-      .eq("id", job_id);
 
     // 2. Generate summary with structured sections
     const summaryContent = await callAiGateway({
@@ -110,12 +109,7 @@ async function runPostProcessPipeline(
     // 6. Mark job as completed and record summary language + short summary
     await supabase
       .from("jobs")
-      .update({
-        status: "completed",
-        summary_language: langLabel,
-        short_summary: shortSummary,
-        processing_stage: "tagging",
-      } as never)
+      .update({ status: "completed", summary_language: langLabel, short_summary: shortSummary })
       .eq("id", job_id);
 
     // 6b. Fetch job to get user_id and title for notification
@@ -152,51 +146,32 @@ async function runPostProcessPipeline(
       console.error(`[post-process] Tagging error for job ${job_id}:`, tagError);
     }
 
-    // Final stage marker — pipeline fully done
-    await supabase
-      .from("jobs")
-      .update({ processing_stage: "done" } as never)
-      .eq("id", job_id);
-
     console.log(`[post-process] Job ${job_id} completed`);
+
+    return new Response(
+      JSON.stringify({ success: true, job_id }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
-    console.error(`[post-process] Pipeline error for job ${job_id}:`, error);
+    console.error(`[post-process] Error:`, error);
+
+    // Try to mark job as failed and insert failure notification
     try {
-      await markJobFailed(createServiceClient(), job_id, error, { notify: true });
+      const body = await req.clone().json().catch(() => ({}));
+      await markJobFailed(createServiceClient(), body.job_id, error, { notify: true });
     } catch {
       // ignore cleanup errors
     }
+
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  const body = await req.json().catch(() => ({} as Record<string, unknown>));
-  const job_id = typeof body?.job_id === "string" ? body.job_id : "";
-  const custom_prompt = typeof body?.custom_prompt === "string" ? body.custom_prompt : null;
-
-  if (!job_id) {
-    return new Response(JSON.stringify({ error: "job_id is required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // Long-running AI work — must run in background to avoid the 150s
-  // edge function idle timeout for callers.
-  // @ts-ignore — EdgeRuntime is provided by the Supabase edge runtime
-  if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
-    // @ts-ignore
-    EdgeRuntime.waitUntil(runPostProcessPipeline(job_id, custom_prompt));
-  } else {
-    runPostProcessPipeline(job_id, custom_prompt);
-  }
-
-  return new Response(
-    JSON.stringify({ success: true, job_id, status: "processing" }),
-    { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-  );
 });

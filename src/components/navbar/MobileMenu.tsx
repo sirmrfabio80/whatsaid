@@ -1,10 +1,8 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { LogOut, History, User as UserIcon, Settings, Shield, HelpCircle, Sun, Moon, Monitor } from "lucide-react";
+import { LogOut, History, User as UserIcon, Settings, Shield, HelpCircle } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useTheme, type ThemeMode } from "@/hooks/use-theme";
-import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 
 interface MobileMenuProps {
@@ -16,13 +14,6 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ user, isAdmin, signOut, onClose }: MobileMenuProps) {
   const { t } = useTranslation();
-  const { theme, setTheme } = useTheme();
-
-  const themeOptions: { value: ThemeMode; icon: typeof Sun; label: string }[] = [
-    { value: "light", icon: Sun, label: t("theme.light", "Light") },
-    { value: "dark", icon: Moon, label: t("theme.dark", "Dark") },
-    { value: "system", icon: Monitor, label: t("theme.system", "System") },
-  ];
 
   return (
     <div className="relative z-50 md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-4 py-3 origin-top animate-slide-down">
@@ -67,25 +58,6 @@ export default function MobileMenu({ user, isAdmin, signOut, onClose }: MobileMe
             </Link>
           )}
           <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "370ms", animationFillMode: "forwards" }} />
-          <div className="px-1 opacity-0 animate-fade-in" style={{ animationDelay: "385ms", animationFillMode: "forwards" }}>
-            <div className="text-caption text-muted-foreground mb-1.5 px-1">{t("theme.label", "Theme")}</div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {themeOptions.map(({ value, icon: Icon, label }) => (
-                <Button
-                  key={value}
-                  variant={theme === value ? "default" : "ghost"}
-                  size="sm"
-                  className={cn("rounded-lg h-10 flex-col gap-0.5 text-[11px]", theme === value && "ring-2 ring-primary/30")}
-                  onClick={() => setTheme(value)}
-                  aria-pressed={theme === value}
-                >
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="h-px bg-border my-3 opacity-0 animate-fade-in" style={{ animationDelay: "395ms", animationFillMode: "forwards" }} />
           <div className="opacity-0 animate-fade-in" style={{ animationDelay: "400ms", animationFillMode: "forwards" }}>
             <Button variant="ghost" className="w-full justify-start rounded-lg h-12 text-base gap-3" onClick={() => { signOut(); onClose(); }}>
               <LogOut className="w-5 h-5" />{t("common.signOut")}

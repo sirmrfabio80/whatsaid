@@ -345,11 +345,11 @@ async function submitAndPollTranscript(
   throw new Error(`Transcription timed out after ${Math.round((maxPolls * pollIntervalMs) / 60000)} minutes`);
 }
 
-// Core transcription pipeline. Long-running (can take >150s for big files
-// when polling AssemblyAI). Must be invoked via EdgeRuntime.waitUntil so
-// the HTTP caller doesn't hit the edge function idle timeout.
-async function runTranscriptionPipeline(req: Request): Promise<void> {
-  let jobIdForFailure: string | null = null;
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     const ASSEMBLYAI_API_KEY = Deno.env.get("ASSEMBLYAI_API_KEY");
     if (!ASSEMBLYAI_API_KEY) {
@@ -380,9 +380,11 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
     const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
 
     if (!job_id) {
-      throw new Error("job_id is required");
+      return new Response(JSON.stringify({ error: "job_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    jobIdForFailure = job_id;
 
     const { data: job, error: jobError } = await supabase
       .from("jobs")
@@ -408,12 +410,6 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
 
     const fileExt = (job.file_name ?? "").split(".").pop()?.toLowerCase() ?? "unknown";
     console.log(`[transcribe] Starting transcription for job ${job_id}, file: ${job.file_name}`);
-
-    // Mark job as actively transcribing so the UI can show real progress.
-    await supabase
-      .from("jobs")
-      .update({ processing_stage: "transcribing" } as never)
-      .eq("id", job_id);
 
     const tuningConfig = (job.transcription_config as Record<string, unknown>) ?? {};
 
@@ -706,10 +702,9 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
         duration_seconds: audioDuration,
         speech_model: actualSpeechModel,
         status: "processing",
-        processing_stage: "summarising",
         assemblyai_transcript_id: transcriptId,
         assemblyai_delete_status: "pending",
-      } as never)
+      })
       .eq("id", job_id);
 
     if (updateJobErr) {
@@ -779,79 +774,39 @@ async function runTranscriptionPipeline(req: Request): Promise<void> {
       .update({ audio_deleted_at: new Date().toISOString() })
       .eq("id", job_id);
 
-    console.log(JSON.stringify({
-      event: "transcribe_pipeline_done",
-      job_id,
-      language_detected: detectedLanguage,
-      duration_seconds: audioDuration,
-      speaker_count: route === "multichannel"
-        ? ((transcript.audio_channels as number) ?? (uniqueSpeakers > 0 ? uniqueSpeakers : null))
-        : uniqueSpeakers > 0 ? uniqueSpeakers : null,
-    }));
-
-    // Chain post-processing. post-process wraps its own long-running work
-    // in EdgeRuntime.waitUntil and responds 202 quickly, so this fetch
-    // returns fast even when the AI pipeline takes minutes.
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL");
-      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-      if (supabaseUrl && serviceKey) {
-        const ppRes = await fetch(`${supabaseUrl}/functions/v1/post-process`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${serviceKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ job_id, custom_prompt: requestBody?.custom_prompt ?? null }),
-        });
-        console.log(`[transcribe] post-process invoked for ${job_id}, status=${ppRes.status}`);
-      } else {
-        console.error(`[transcribe] Missing SUPABASE_URL or SERVICE_ROLE_KEY — cannot chain post-process`);
+    return new Response(
+      JSON.stringify({
+        success: true,
+        job_id,
+        language_detected: detectedLanguage,
+        duration_seconds: audioDuration,
+        speaker_count: route === "multichannel"
+          ? ((transcript.audio_channels as number) ?? (uniqueSpeakers > 0 ? uniqueSpeakers : null))
+          : uniqueSpeakers > 0 ? uniqueSpeakers : null,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
-    } catch (chainErr) {
-      console.error(`[transcribe] Failed to invoke post-process for ${job_id}:`, chainErr);
-      await markJobFailed(createServiceClient(), job_id, chainErr);
-    }
+    );
   } catch (error) {
-    console.error(`[transcribe] Pipeline error:`, error);
+    console.error(`[transcribe] Error:`, error);
+
     try {
-      await markJobFailed(createServiceClient(), jobIdForFailure, error);
+      const { job_id } = await req.clone().json().catch(() => ({ job_id: null }));
+      await markJobFailed(createServiceClient(), job_id, error);
     } catch {
       // ignore cleanup errors
     }
-  }
-}
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
-
-  // Validate up front so callers get an immediate 400 on bad input.
-  // The actual pipeline reads the body again from the original request.
-  const requestBody = await req.clone().json().catch(() => ({} as Record<string, unknown>));
-  const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
-  if (!job_id) {
-    return new Response(JSON.stringify({ error: "job_id is required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // Long-running work (AssemblyAI submit + poll, often >150s) must run in
-  // the background or the HTTP caller hits the 150s edge function idle
-  // timeout. The transcribe pipeline self-chains to post-process when done.
-  // @ts-ignore — EdgeRuntime is provided by the Supabase edge runtime
-  if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
-    // @ts-ignore
-    EdgeRuntime.waitUntil(runTranscriptionPipeline(req));
-  } else {
-    // Local Deno fallback (tests). Fire-and-forget.
-    runTranscriptionPipeline(req);
-  }
-
-  return new Response(
-    JSON.stringify({ success: true, job_id, status: "processing" }),
-    { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-  );
 });

@@ -27,12 +27,6 @@
     "settings": "Paramètres",
     "help": "Aide"
   },
-  "theme": {
-    "label": "Thème",
-    "light": "Clair",
-    "dark": "Sombre",
-    "system": "Système"
-  },
   "home": {
     "tagline": "Transcription IA + identification des intervenants",
     "heroEyebrow": "Transcription IA premium",
@@ -358,13 +352,6 @@
       "processing": "En cours",
       "completed": "Terminé",
       "failed": "Échec"
-    },
-    "stage": {
-      "queued": "En file d'attente",
-      "transcribing": "Transcription de l'audio",
-      "summarising": "Génération du résumé",
-      "tagging": "Ajout des tags",
-      "done": "Finalisation"
     },
     "tags": {
       "addPlaceholder": "Ajouter un tag…",

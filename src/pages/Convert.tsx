@@ -18,16 +18,9 @@ import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard,
-  SkipForward,
+  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard
 } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
@@ -69,7 +62,6 @@ export default function Convert() {
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [enhanceSkippedReason, setEnhanceSkippedReason] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [consentChecked, setConsentChecked] = useState(false);
@@ -234,12 +226,10 @@ export default function Convert() {
         console.warn("Could not load active template, using defaults:", tplErr);
       }
 
-      // Detect channel count first. We only need numberOfChannels, so probe a
-      // small head slice — decoding the full file here would OOM long uploads.
+      // Detect channel count first.
       let inputChannels: 1 | 2 = 2;
       try {
-        const PROBE_BYTES = 2 * 1024 * 1024; // 2 MB head is enough for the codec headers
-        const probeBuf = await file.slice(0, Math.min(PROBE_BYTES, file.size)).arrayBuffer();
+        const probeBuf = await file.slice(0).arrayBuffer();
         const probeCtx = new AudioContext();
         const decoded = await probeCtx.decodeAudioData(probeBuf);
         inputChannels = decoded.numberOfChannels === 1 ? 1 : 2;
@@ -253,18 +243,7 @@ export default function Convert() {
       const channelAllowed = inputChannels === 1
         ? activeCfg.audio_enhancement_apply_to_mono
         : activeCfg.audio_enhancement_apply_to_stereo;
-      // Duration cap: enhancement still decodes the file into a Float32 PCM
-      // AudioBuffer (~channels × 48000 × seconds × 4 bytes). MP3 encoding now
-      // streams in small chunks inside a Web Worker, so the encoder is no
-      // longer the memory bottleneck — only the decoded buffer is. Doubling
-      // the previous limits leaves comfortable headroom on mobile devices.
-      const ENHANCE_MAX_DURATION_STEREO_S = 3000; // 50 min (~1.1 GB Float32)
-      const ENHANCE_MAX_DURATION_MONO_S = 6000;   // 100 min (~1.1 GB Float32)
-      const durationCap = inputChannels === 1
-        ? ENHANCE_MAX_DURATION_MONO_S
-        : ENHANCE_MAX_DURATION_STEREO_S;
-      const withinDurationCap = duration <= durationCap;
-      const eligible = featureEnabled && channelAllowed && withinDurationCap;
+      const eligible = featureEnabled && channelAllowed;
 
       const settingsSnapshot = {
         normalise: activeCfg.audio_normalise,
@@ -293,13 +272,10 @@ export default function Convert() {
       if (!eligible) {
         const reason = !featureEnabled
           ? "feature_disabled_by_template"
-          : !withinDurationCap
-            ? "duration_above_client_enhance_cap"
-            : inputChannels === 1
-              ? "mono_disabled_by_template"
-              : "stereo_disabled_by_template";
-        console.info(`[convert] audio enhancement skipped — ${reason} (duration=${Math.round(duration)}s, channels=${inputChannels})`);
-        setEnhanceSkippedReason(reason);
+          : inputChannels === 1
+            ? "mono_disabled_by_template"
+            : "stereo_disabled_by_template";
+        console.info(`[convert] audio enhancement skipped — ${reason}`);
         enhancementMeta = {
           eligible: false,
           attempted: false,
@@ -313,15 +289,7 @@ export default function Convert() {
       } else {
         setStep("enhancing");
         try {
-          // Wall-clock timeout: even within the duration cap, low-memory devices
-          // can stall during decode/encode. If enhancement takes too long, fall
-          // back to uploading the original so the user is never stuck here.
-          const ENHANCE_TIMEOUT_MS = Math.max(60_000, Math.round(duration * 1000 * 1.5));
-          const enhancePromise = enhanceAudioForTranscription(file, undefined, settingsSnapshot);
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error("enhance_timeout")), ENHANCE_TIMEOUT_MS);
-          });
-          const result = await Promise.race([enhancePromise, timeoutPromise]);
+          const result = await enhanceAudioForTranscription(file, undefined, settingsSnapshot);
           uploadFile = result.file;
           enhancementMeta = {
             eligible: true,
@@ -340,7 +308,7 @@ export default function Convert() {
             eligible: true,
             attempted: true,
             applied: false,
-            reason: enhanceError instanceof Error && enhanceError.message === "enhance_timeout" ? "timeout" : "failed",
+            reason: "failed",
             input_channels: inputChannels,
             duration_ms: 0,
             settings_snapshot: settingsSnapshot,
@@ -446,7 +414,6 @@ export default function Convert() {
     setStep(null);
     setErrorMessage(null);
     setJobId(null);
-    setEnhanceSkippedReason(null);
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
@@ -542,32 +509,6 @@ export default function Convert() {
                           <span className={`text-body-sm font-medium ${isCurrent ? "text-foreground" : ""}`}>
                             {STEP_LABELS[s]}
                           </span>
-                          {s === "enhancing" && isPast && enhanceSkippedReason && (
-                            <TooltipProvider delayDuration={100}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="ml-auto inline-flex items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                                    aria-label={t("convert.enhanceSkippedTooltip", "Audio enhancement skipped")}
-                                  >
-                                    <SkipForward className="w-3.5 h-3.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="right" className="max-w-xs">
-                                  <p className="text-body-xs">
-                                    {enhanceSkippedReason === "duration_above_client_enhance_cap"
-                                      ? t("convert.enhanceSkippedDuration", "Enhancement skipped: file exceeds safe processing length. Original audio uploaded.")
-                                      : enhanceSkippedReason === "feature_disabled_by_template"
-                                        ? t("convert.enhanceSkippedDisabled", "Enhancement disabled for this file type. Original audio uploaded.")
-                                        : enhanceSkippedReason === "mono_disabled_by_template" || enhanceSkippedReason === "stereo_disabled_by_template"
-                                          ? t("convert.enhanceSkippedChannel", "Enhancement disabled for this channel configuration. Original audio uploaded.")
-                                          : t("convert.enhanceSkippedGeneric", "Audio enhancement was skipped. Original audio uploaded.")}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
                         </div>
                       );
                     })}
