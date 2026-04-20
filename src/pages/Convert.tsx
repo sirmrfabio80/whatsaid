@@ -33,6 +33,12 @@ type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" |
 type EnhanceSubstage = EnhanceProgressStage | null;
 
 export default function Convert() {
+  usePageMeta({
+    title: "Transcribe Audio — WhatSaid",
+    description:
+      "Drop a .m4a, .mp3 or .wav file and get a transcript with speaker labels, a structured summary, and custom AI answers. Pay-as-you-go credits.",
+    canonical: "https://whatsaid.app/convert",
+  });
   const { user, isAdmin, refreshCredits } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
