@@ -169,9 +169,6 @@ export default function Login() {
             {googleLoading ? t("login.signingIn") : t("login.continueWithGoogle")}
           </Button>
 
-          <p className="text-center text-body-sm text-muted-foreground mt-4">
-            {t("login.privateBeta")}
-          </p>
         </CardContent>
       </Card>
     </div>
