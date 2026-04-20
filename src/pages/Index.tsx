@@ -43,7 +43,7 @@ export default function Index() {
         />
 
         <div className="container mx-auto px-4 py-8 sm:py-12 md:py-10 lg:py-24 relative">
-          <div className="grid md:grid-cols-12 gap-6 md:gap-8 lg:gap-12 items-center">
+          <div className="grid md:grid-cols-12 gap-6 md:gap-12 lg:gap-12 items-center">
             {/* Left: text */}
             <div className="md:col-span-5 text-center md:text-left motion-safe:animate-hero-text-rise motion-reduce:animate-none">
               <p className="font-serif italic text-caption text-primary mb-4 md:mb-3">
