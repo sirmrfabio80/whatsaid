@@ -103,7 +103,10 @@ export default function JobDetail() {
     const displayTitle = m.title || m.file_name?.replace(/\.[^.]+$/, "") || "";
     setTitle(displayTitle);
     setRecordedIso(getEffectiveIso(m));
-    if (!m.title && id) generateTitle();
+    // Only auto-generate a title when the job is actually completed.
+    // Calling generate-title for jobs still uploading / processing / failed
+    // produces a noisy retry loop because no transcript exists yet (see logs).
+    if (!m.title && id && jobStatus === "completed") generateTitle();
 
     // Lazy reverse geocoding: resolve label if we have coordinates but no cached label
     if (m.metadata_location_iso6709 && !m.location_label) {
@@ -144,6 +147,16 @@ export default function JobDetail() {
 
   const generateTitle = async () => {
     if (!id) return;
+    // Hard guard: never call generate-title unless the job is completed
+    // AND a transcript output exists. Otherwise the function 500s in a loop.
+    if (jobStatus !== "completed") return;
+    const { data: transcript } = await supabase
+      .from("job_outputs")
+      .select("id")
+      .eq("job_id", id)
+      .eq("output_type", "transcript")
+      .maybeSingle();
+    if (!transcript) return;
     setGeneratingTitle(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-title", { body: { job_id: id } });
