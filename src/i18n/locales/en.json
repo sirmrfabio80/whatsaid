@@ -259,7 +259,10 @@
     },
     "notifications": {
       "title": "Notifications",
-      "desc": "Audio cues for completed transcriptions. This setting is saved on this device.",
+      "desc": "Stay aware of completed transcriptions, even when WhatSaid is in another tab. Saved on this device.",
+      "browserLabel": "Show browser notifications",
+      "browserDesc": "Get a system notification when a transcription completes while WhatSaid isn't focused.",
+      "browserBlocked": "Your browser is blocking notifications. Update site permissions to allow them.",
       "soundLabel": "Play a sound when a transcription completes",
       "soundDesc": "A short, subtle chime. Turn it off if you prefer silence."
     },

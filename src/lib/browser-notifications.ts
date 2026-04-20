@@ -13,6 +13,27 @@
  */
 
 const ASK_FLAG_KEY = "ws.notif.asked";
+const ENABLED_KEY = "ws.notif.browser";
+
+/**
+ * Per-device user preference: should browser push notifications fire at all?
+ * Default ON (matches the prior behaviour). User can mute from Settings.
+ */
+export function isBrowserNotificationsEnabled(): boolean {
+  try {
+    return localStorage.getItem(ENABLED_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function setBrowserNotificationsEnabled(enabled: boolean) {
+  try {
+    localStorage.setItem(ENABLED_KEY, enabled ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
 
 export type NotificationPermissionState = "granted" | "denied" | "default" | "unsupported";
 
@@ -82,6 +103,8 @@ interface ShowOptions {
  */
 export function showBrowserNotification(title: string, options: ShowOptions = {}): Notification | null {
   if (!isNotificationSupported() || Notification.permission !== "granted") return null;
+  // Respect the per-device user preference (Settings → Notifications)
+  if (!isBrowserNotificationsEnabled()) return null;
 
   const onlyWhenHidden = options.onlyWhenHidden ?? true;
   if (onlyWhenHidden) {

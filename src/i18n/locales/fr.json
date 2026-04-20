@@ -259,7 +259,10 @@
     },
     "notifications": {
       "title": "Notifications",
-      "desc": "Indications sonores lorsqu'une transcription est terminée. Ce réglage est enregistré sur cet appareil.",
+      "desc": "Restez informé des transcriptions terminées, même quand WhatSaid est dans un autre onglet. Enregistré sur cet appareil.",
+      "browserLabel": "Afficher les notifications du navigateur",
+      "browserDesc": "Recevez une notification système lorsqu'une transcription se termine alors que WhatSaid n'est pas au premier plan.",
+      "browserBlocked": "Votre navigateur bloque les notifications. Modifiez les autorisations du site pour les activer.",
       "soundLabel": "Jouer un son à la fin d'une transcription",
       "soundDesc": "Un court signal sonore discret. Désactivez-le si vous préférez le silence."
     },
