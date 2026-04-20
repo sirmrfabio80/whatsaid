@@ -24,13 +24,30 @@ export interface EnhanceWorkerRequest {
   options: AudioEnhanceOptions;
 }
 
-export interface EnhanceWorkerSuccess {
-  type: "success";
-  mp3: ArrayBuffer;
+/**
+ * Streaming protocol (worker → main):
+ *   { type: "chunk", bytes: Uint8Array, byteOffset: number }   // sent repeatedly
+ *   { type: "done", measured, normalisationApplied, softClipped, reason, totalBytes }
+ *   { type: "error", message }
+ *
+ * Each `chunk` transfers its underlying ArrayBuffer (zero-copy), so the
+ * worker's heap doesn't grow with the encoded MP3 size — the main thread
+ * holds the bytes from the moment they're produced.
+ */
+export interface EnhanceWorkerChunk {
+  type: "chunk";
+  bytes: Uint8Array;
+  /** Byte offset of this chunk within the full MP3 stream. */
+  byteOffset: number;
+}
+
+export interface EnhanceWorkerDone {
+  type: "done";
   measured: AudioEnhanceMeasured;
   normalisationApplied: boolean;
   softClipped: boolean;
   reason: "applied" | "noise_gated" | "below_normalise_threshold";
+  totalBytes: number;
 }
 
 export interface EnhanceWorkerError {
@@ -38,7 +55,7 @@ export interface EnhanceWorkerError {
   message: string;
 }
 
-export type EnhanceWorkerResponse = EnhanceWorkerSuccess | EnhanceWorkerError;
+export type EnhanceWorkerResponse = EnhanceWorkerChunk | EnhanceWorkerDone | EnhanceWorkerError;
 
 function linearToDbfs(linear: number): number {
   if (linear <= 0) return -Infinity;
