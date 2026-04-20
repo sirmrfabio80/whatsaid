@@ -18,9 +18,16 @@ import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard
+  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard,
+  SkipForward,
 } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
