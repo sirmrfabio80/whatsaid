@@ -345,7 +345,10 @@
     "noResults": "Nessuna trascrizione corrispondente",
     "noResultsDesc": "Prova a modificare la ricerca o a rimuovere alcuni filtri.",
     "loadError": "Impossibile caricare le trascrizioni",
-    "loadErrorDesc": "Si è verificato un errore durante il caricamento dello storico. Riprova."
+    "loadErrorDesc": "Si è verificato un errore durante il caricamento dello storico. Riprova.",
+    "uploadInterrupted": "Caricamento interrotto — riprova",
+    "uploadInterruptedDesc": "Il caricamento non è stato completato. Nessun credito è stato addebitato.",
+    "tryAgain": "Riprova"
   },
   "jobDetail": {
     "backToHistory": "Torna alla cronologia",

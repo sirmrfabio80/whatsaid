@@ -345,7 +345,10 @@
     "noResults": "Aucune transcription correspondante",
     "noResultsDesc": "Essayez d'ajuster votre recherche ou de supprimer certains filtres.",
     "loadError": "Impossible de charger vos transcriptions",
-    "loadErrorDesc": "Une erreur s'est produite lors du chargement de votre historique. Veuillez réessayer."
+    "loadErrorDesc": "Une erreur s'est produite lors du chargement de votre historique. Veuillez réessayer.",
+    "uploadInterrupted": "Envoi interrompu — réessayer",
+    "uploadInterruptedDesc": "Votre envoi ne s'est pas terminé. Aucun crédit n'a été débité.",
+    "tryAgain": "Réessayer"
   },
   "jobDetail": {
     "backToHistory": "Retour à l'historique",
