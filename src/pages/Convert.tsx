@@ -464,12 +464,6 @@ export default function Convert() {
       setProcessing(false);
     }
   };
-      console.error("Convert error:", error);
-      setStep("failed");
-      setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
-      setProcessing(false);
-    }
-  };
 
   const handleReset = () => {
     setFile(null);
@@ -480,9 +474,14 @@ export default function Convert() {
     setCustomPrompt("");
     setProcessing(false);
     setStep(null);
+    setEnhanceSubstage(null);
     setErrorMessage(null);
     setJobId(null);
     if (pollRef.current) clearInterval(pollRef.current);
+    if (longFileToastRef.current) {
+      clearTimeout(longFileToastRef.current);
+      longFileToastRef.current = null;
+    }
   };
 
   return (
