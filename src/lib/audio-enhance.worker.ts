@@ -25,6 +25,20 @@ export interface EnhanceWorkerRequest {
 }
 
 /**
+ * Streaming variant: the worker reads + demuxes + decodes the file itself
+ * via WebCodecs, so the main thread never holds the decoded PCM. Two passes:
+ *   Pass 1 — compute input RMS/peak.
+ *   Pass 2 — apply gain, soft-clip, MP3-encode, stream chunks back.
+ */
+export interface EnhanceStreamingRequest {
+  type: "enhance_streaming";
+  file: File;
+  options: AudioEnhanceOptions;
+}
+
+export type AnyEnhanceRequest = EnhanceWorkerRequest | EnhanceStreamingRequest;
+
+/**
  * Streaming protocol (worker → main):
  *   { type: "chunk", bytes: Uint8Array, byteOffset: number }   // sent repeatedly
  *   { type: "done", measured, normalisationApplied, softClipped, reason, totalBytes }
