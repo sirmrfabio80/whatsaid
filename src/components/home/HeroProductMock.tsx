@@ -82,7 +82,7 @@ export function HeroProductMock() {
       </div>
 
       {/* Transcript body */}
-      <div className="relative p-5 sm:p-6 space-y-3.5">
+      <div className="relative p-4 md:p-5 lg:p-6 space-y-3.5">
         {[
           { dot: "bg-primary", name: "Sarah", time: "00:14", text: "We need to ship before Q2 — that's the bar." },
           { dot: "bg-accent", name: "Marco", time: "00:22", text: "Agreed. I'll own the rollout plan and timelines." },
