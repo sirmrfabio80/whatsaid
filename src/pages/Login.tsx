@@ -13,6 +13,7 @@ import { lovable } from "@/integrations/lovable/index";
 
 export default function Login() {
   const { t } = useTranslation();
+  const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,12 @@ export default function Login() {
   const productParam = searchParams.get("product");
   const redirectParam = searchParams.get("redirect");
   const redirectAfterAuth = redirectParam || (purchaseIntent ? "/pricing" : "/");
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(redirectAfterAuth, { replace: true });
+    }
+  }, [authLoading, user, navigate, redirectAfterAuth]);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
