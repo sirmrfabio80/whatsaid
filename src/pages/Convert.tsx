@@ -302,7 +302,15 @@ export default function Convert() {
       } else {
         setStep("enhancing");
         try {
-          const result = await enhanceAudioForTranscription(file, undefined, settingsSnapshot);
+          // Wall-clock timeout: even within the duration cap, low-memory devices
+          // can stall during decode/encode. If enhancement takes too long, fall
+          // back to uploading the original so the user is never stuck here.
+          const ENHANCE_TIMEOUT_MS = Math.max(60_000, Math.round(duration * 1000 * 1.5));
+          const enhancePromise = enhanceAudioForTranscription(file, undefined, settingsSnapshot);
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error("enhance_timeout")), ENHANCE_TIMEOUT_MS);
+          });
+          const result = await Promise.race([enhancePromise, timeoutPromise]);
           uploadFile = result.file;
           enhancementMeta = {
             eligible: true,
@@ -321,7 +329,7 @@ export default function Convert() {
             eligible: true,
             attempted: true,
             applied: false,
-            reason: "failed",
+            reason: enhanceError instanceof Error && enhanceError.message === "enhance_timeout" ? "timeout" : "failed",
             input_channels: inputChannels,
             duration_ms: 0,
             settings_snapshot: settingsSnapshot,
