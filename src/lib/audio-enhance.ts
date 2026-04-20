@@ -159,8 +159,178 @@ async function encodeMp3(buffer: AudioBuffer): Promise<Blob> {
 }
 
 /**
+ * Run the heavy enhancement pipeline (measure → gain → soft-clip → mp3)
+ * inside a Web Worker so the main thread stays responsive on long files.
+ *
+ * Returns null if the worker could not be constructed (e.g. very old browser),
+ * letting the caller fall back to the synchronous main-thread path.
+ */
+function runEnhanceInWorker(
+  channels: Float32Array[],
+  sampleRate: number,
+  options: AudioEnhanceOptions,
+): Promise<{
+  mp3: ArrayBuffer;
+  measured: AudioEnhanceMeasured;
+  normalisationApplied: boolean;
+  softClipped: boolean;
+  reason: "applied" | "noise_gated" | "below_normalise_threshold";
+}> | null {
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL("./audio-enhance.worker.ts", import.meta.url), {
+      type: "module",
+    });
+  } catch (err) {
+    console.warn("Audio enhance worker unavailable, falling back to main thread:", err);
+    return null;
+  }
+
+  return new Promise((resolve, reject) => {
+    worker.onmessage = (event: MessageEvent) => {
+      const msg = event.data;
+      worker.terminate();
+      if (msg?.type === "success") {
+        resolve({
+          mp3: msg.mp3,
+          measured: msg.measured,
+          normalisationApplied: msg.normalisationApplied,
+          softClipped: msg.softClipped,
+          reason: msg.reason,
+        });
+      } else {
+        reject(new Error(msg?.message || "enhance worker failed"));
+      }
+    };
+    worker.onerror = (event) => {
+      worker.terminate();
+      reject(new Error(event.message || "enhance worker errored"));
+    };
+
+    // Transfer the channel buffers (zero-copy) into the worker.
+    const transferables = channels.map((c) => c.buffer);
+    worker.postMessage(
+      { type: "enhance", channels, sampleRate, options },
+      transferables,
+    );
+  });
+}
+
+/**
+ * Main-thread fallback for the heavy pipeline. Used when the worker can't be
+ * constructed. Mirrors the worker logic exactly.
+ */
+function runEnhanceOnMainThread(
+  audioBuffer: AudioBuffer,
+  options: AudioEnhanceOptions,
+): Promise<{
+  mp3Blob: Blob;
+  measured: AudioEnhanceMeasured;
+  normalisationApplied: boolean;
+  softClipped: boolean;
+  reason: "applied" | "noise_gated" | "below_normalise_threshold";
+}> {
+  return (async () => {
+    const opts = options;
+    const NOISE_FLOOR = dbfsToLinear(opts.noise_floor_dbfs);
+    const inputRms = computeRMS(audioBuffer);
+    const inputPeak = computePeak(audioBuffer);
+    const inputRmsDbfs = linearToDbfs(inputRms);
+    const inputPeakDbfs = linearToDbfs(inputPeak);
+    const inputChannels: 1 | 2 = audioBuffer.numberOfChannels === 1 ? 1 : 2;
+
+    if (inputRms < NOISE_FLOOR) {
+      const mp3Blob = await encodeMp3(audioBuffer);
+      return {
+        mp3Blob,
+        measured: {
+          input_rms_dbfs: inputRmsDbfs,
+          input_peak_dbfs: inputPeakDbfs,
+          applied_gain_db: 0,
+          output_rms_dbfs: inputRmsDbfs,
+          output_peak_dbfs: inputPeakDbfs,
+          soft_clip_samples_pct: 0,
+          normalise_mode: opts.normalise_mode,
+        },
+        normalisationApplied: false,
+        softClipped: false,
+        reason: "noise_gated" as const,
+      };
+    }
+
+    const maxGainDb = inputChannels === 1 ? opts.max_gain_db_mono : opts.max_gain_db_stereo;
+    const MAX_NORM_GAIN = dbfsToLinear(maxGainDb);
+    let gain = 1.0;
+    let normalisationApplied = false;
+    if (opts.normalise) {
+      let desiredGain = 1.0;
+      if (opts.normalise_mode === "rms" && inputRms > 0) {
+        desiredGain = dbfsToLinear(opts.target_rms_dbfs) / inputRms;
+      } else if (opts.normalise_mode === "peak" && inputPeak > 0) {
+        desiredGain = dbfsToLinear(opts.target_peak_dbfs) / inputPeak;
+      }
+      gain = Math.max(1.0, Math.min(desiredGain, MAX_NORM_GAIN));
+      normalisationApplied = gain > 1.0;
+      if (normalisationApplied) {
+        for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+          const data = audioBuffer.getChannelData(ch);
+          for (let i = 0; i < data.length; i++) data[i] *= gain;
+        }
+      }
+    }
+    const appliedGainDb = linearToDbfs(gain);
+    const postGainRms = computeRMS(audioBuffer);
+    const outputRmsDbfs = linearToDbfs(postGainRms);
+
+    const CLIP_THRESHOLD = Math.max(0.5, Math.min(1.0, opts.soft_clip_threshold));
+    let softClipSampleCount = 0;
+    let totalSampleCount = 0;
+    for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+      const data = audioBuffer.getChannelData(ch);
+      totalSampleCount += data.length;
+      for (let i = 0; i < data.length; i++) {
+        if (Math.abs(data[i]) > CLIP_THRESHOLD) {
+          data[i] = CLIP_THRESHOLD * Math.tanh(data[i] / CLIP_THRESHOLD);
+          softClipSampleCount++;
+        }
+      }
+    }
+    const softClipSamplesPct = totalSampleCount > 0
+      ? (softClipSampleCount / totalSampleCount) * 100
+      : 0;
+    const softClipped = softClipSampleCount > 0;
+    const outputPeak = computePeak(audioBuffer);
+    const outputPeakDbfs = linearToDbfs(outputPeak);
+
+    const mp3Blob = await encodeMp3(audioBuffer);
+    const sampleModified = softClipped || normalisationApplied;
+
+    return {
+      mp3Blob,
+      measured: {
+        input_rms_dbfs: inputRmsDbfs,
+        input_peak_dbfs: inputPeakDbfs,
+        applied_gain_db: appliedGainDb,
+        output_rms_dbfs: outputRmsDbfs,
+        output_peak_dbfs: outputPeakDbfs,
+        soft_clip_samples_pct: softClipSamplesPct,
+        normalise_mode: opts.normalise_mode,
+      },
+      normalisationApplied,
+      softClipped,
+      reason: sampleModified ? "applied" as const : "below_normalise_threshold" as const,
+    };
+  })();
+}
+
+/**
  * Normalise + soft-clip an audio file for transcription.
- * Returns a new WAV File and structured metadata.
+ * Returns a new MP3 File and structured metadata.
+ *
+ * Decoding happens on the main thread (decodeAudioData isn't reliably
+ * available in workers). Everything else — measurement, gain pass,
+ * soft-clip, and MP3 encoding — runs in a Web Worker so long files
+ * don't freeze the UI.
  */
 export async function enhanceAudioForTranscription(
   file: File,
@@ -173,128 +343,73 @@ export async function enhanceAudioForTranscription(
   onProgress?.("decoding");
 
   const arrayBuffer = await file.arrayBuffer();
-
   const tempCtx = new AudioContext();
   const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
   await tempCtx.close();
 
-  // Sanitize so the produced File's name is always safe for Supabase Storage keys
-  // (curly quotes, accents, emoji, etc. otherwise trigger "Invalid key" errors).
   const safeBase = sanitizeStorageFilename(file.name.replace(/\.[^.]+$/, "")).replace(/\.mp3$/i, "");
   const enhancedFileName = `${safeBase}_normalised.mp3`;
   const inputChannels: 1 | 2 = audioBuffer.numberOfChannels === 1 ? 1 : 2;
 
-  // --- Measure input ---
-  const NOISE_FLOOR = dbfsToLinear(opts.noise_floor_dbfs);
-  const inputRms = computeRMS(audioBuffer);
-  const inputPeak = computePeak(audioBuffer);
-  const inputRmsDbfs = linearToDbfs(inputRms);
-  const inputPeakDbfs = linearToDbfs(inputPeak);
-
-  // --- Noise gate ---
-  if (inputRms < NOISE_FLOOR) {
-    onProgress?.("encoding");
-    const mp3Blob = await encodeMp3(audioBuffer);
-    return {
-      file: new File([mp3Blob], enhancedFileName, { type: "audio/mpeg" }),
-      metadata: {
-        applied: false,
-        reason: "noise_gated",
-        input_channels: inputChannels,
-        duration_ms: Math.round(performance.now() - t0),
-        measured: {
-          input_rms_dbfs: inputRmsDbfs,
-          input_peak_dbfs: inputPeakDbfs,
-          applied_gain_db: 0,
-          output_rms_dbfs: inputRmsDbfs,
-          output_peak_dbfs: inputPeakDbfs,
-          soft_clip_samples_pct: 0,
-          normalise_mode: opts.normalise_mode,
-        },
-      },
-    };
-  }
-
   onProgress?.("processing");
 
-  // --- Stage 1: Normalisation gain (peak OR rms target) ---
-  const maxGainDb = inputChannels === 1 ? opts.max_gain_db_mono : opts.max_gain_db_stereo;
-  const MAX_NORM_GAIN = dbfsToLinear(maxGainDb);
-
-  let gain = 1.0;
-  let normalisationApplied = false;
-
-  if (opts.normalise) {
-    let desiredGain = 1.0;
-    if (opts.normalise_mode === "rms" && inputRms > 0) {
-      const targetRmsLinear = dbfsToLinear(opts.target_rms_dbfs);
-      desiredGain = targetRmsLinear / inputRms;
-    } else if (opts.normalise_mode === "peak" && inputPeak > 0) {
-      const targetPeakLinear = dbfsToLinear(opts.target_peak_dbfs);
-      desiredGain = targetPeakLinear / inputPeak;
-    }
-    gain = Math.max(1.0, Math.min(desiredGain, MAX_NORM_GAIN));
-    normalisationApplied = gain > 1.0;
-
-    if (normalisationApplied) {
-      for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-        const data = audioBuffer.getChannelData(ch);
-        for (let i = 0; i < data.length; i++) {
-          data[i] *= gain;
-        }
-      }
-    }
-  }
-  const appliedGainDb = linearToDbfs(gain);
-
-  // Measure RMS after gain (pre-clip).
-  const postGainRms = computeRMS(audioBuffer);
-  const outputRmsDbfs = linearToDbfs(postGainRms);
-
-  // --- Stage 2: Soft-clip limiter (safety, runs AFTER gain) ---
-  const CLIP_THRESHOLD = Math.max(0.5, Math.min(1.0, opts.soft_clip_threshold));
-  let softClipSampleCount = 0;
-  let totalSampleCount = 0;
+  // Try the worker path first. If it can't be constructed (very old browser
+  // or strict CSP), fall back to the synchronous main-thread implementation
+  // so we never silently drop the feature.
+  const channelData: Float32Array[] = [];
   for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-    const data = audioBuffer.getChannelData(ch);
-    totalSampleCount += data.length;
-    for (let i = 0; i < data.length; i++) {
-      if (Math.abs(data[i]) > CLIP_THRESHOLD) {
-        data[i] = CLIP_THRESHOLD * Math.tanh(data[i] / CLIP_THRESHOLD);
-        softClipSampleCount++;
-      }
-    }
+    // Copy out so we own the buffers — transferring the AudioBuffer's
+    // internal channel data isn't supported and would lose the AudioBuffer.
+    channelData.push(new Float32Array(audioBuffer.getChannelData(ch)));
   }
-  const softClipSamplesPct = totalSampleCount > 0
-    ? (softClipSampleCount / totalSampleCount) * 100
-    : 0;
-  const softClipped = softClipSampleCount > 0;
 
-  // Final peak after clipping.
-  const outputPeak = computePeak(audioBuffer);
-  const outputPeakDbfs = linearToDbfs(outputPeak);
+  let mp3Blob: Blob;
+  let measured: AudioEnhanceMeasured;
+  let normalisationApplied: boolean;
+  let softClipped: boolean;
+  let reason: "applied" | "noise_gated" | "below_normalise_threshold";
 
-  onProgress?.("encoding");
-  const mp3Blob = await encodeMp3(audioBuffer);
+  const workerPromise = runEnhanceInWorker(channelData, audioBuffer.sampleRate, opts);
+
+  if (workerPromise) {
+    onProgress?.("encoding");
+    try {
+      const r = await workerPromise;
+      mp3Blob = new Blob([r.mp3], { type: "audio/mpeg" });
+      measured = r.measured;
+      normalisationApplied = r.normalisationApplied;
+      softClipped = r.softClipped;
+      reason = r.reason;
+    } catch (workerErr) {
+      console.warn("Audio enhance worker failed, retrying on main thread:", workerErr);
+      const r = await runEnhanceOnMainThread(audioBuffer, opts);
+      mp3Blob = r.mp3Blob;
+      measured = r.measured;
+      normalisationApplied = r.normalisationApplied;
+      softClipped = r.softClipped;
+      reason = r.reason;
+    }
+  } else {
+    const r = await runEnhanceOnMainThread(audioBuffer, opts);
+    mp3Blob = r.mp3Blob;
+    measured = r.measured;
+    normalisationApplied = r.normalisationApplied;
+    softClipped = r.softClipped;
+    reason = r.reason;
+  }
 
   const sampleModified = softClipped || normalisationApplied;
+  const isNoiseGated = reason === "noise_gated";
 
   return {
     file: new File([mp3Blob], enhancedFileName, { type: "audio/mpeg" }),
     metadata: {
-      applied: sampleModified,
-      reason: sampleModified ? "applied" : "below_normalise_threshold",
+      applied: !isNoiseGated && sampleModified,
+      reason,
       input_channels: inputChannels,
       duration_ms: Math.round(performance.now() - t0),
-      measured: {
-        input_rms_dbfs: inputRmsDbfs,
-        input_peak_dbfs: inputPeakDbfs,
-        applied_gain_db: appliedGainDb,
-        output_rms_dbfs: outputRmsDbfs,
-        output_peak_dbfs: outputPeakDbfs,
-        soft_clip_samples_pct: softClipSamplesPct,
-        normalise_mode: opts.normalise_mode,
-      },
+      measured,
     },
   };
 }
+
