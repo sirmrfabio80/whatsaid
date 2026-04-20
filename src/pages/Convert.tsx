@@ -226,10 +226,12 @@ export default function Convert() {
         console.warn("Could not load active template, using defaults:", tplErr);
       }
 
-      // Detect channel count first.
+      // Detect channel count first. We only need numberOfChannels, so probe a
+      // small head slice — decoding the full file here would OOM long uploads.
       let inputChannels: 1 | 2 = 2;
       try {
-        const probeBuf = await file.slice(0).arrayBuffer();
+        const PROBE_BYTES = 2 * 1024 * 1024; // 2 MB head is enough for the codec headers
+        const probeBuf = await file.slice(0, Math.min(PROBE_BYTES, file.size)).arrayBuffer();
         const probeCtx = new AudioContext();
         const decoded = await probeCtx.decodeAudioData(probeBuf);
         inputChannels = decoded.numberOfChannels === 1 ? 1 : 2;
@@ -243,7 +245,18 @@ export default function Convert() {
       const channelAllowed = inputChannels === 1
         ? activeCfg.audio_enhancement_apply_to_mono
         : activeCfg.audio_enhancement_apply_to_stereo;
-      const eligible = featureEnabled && channelAllowed;
+      // Hard duration cap: client-side enhancement decodes the entire file into
+      // a Float32 PCM buffer (~channels × 48000 × seconds × 4 bytes) and then
+      // single-thread MP3-encodes it. Above these limits the tab OOMs / hangs
+      // on most devices, leaving the user stuck on "enhancing audio". When we
+      // exceed the cap we skip enhancement and upload the original instead.
+      const ENHANCE_MAX_DURATION_STEREO_S = 1500; // 25 min
+      const ENHANCE_MAX_DURATION_MONO_S = 3000;   // 50 min
+      const durationCap = inputChannels === 1
+        ? ENHANCE_MAX_DURATION_MONO_S
+        : ENHANCE_MAX_DURATION_STEREO_S;
+      const withinDurationCap = duration <= durationCap;
+      const eligible = featureEnabled && channelAllowed && withinDurationCap;
 
       const settingsSnapshot = {
         normalise: activeCfg.audio_normalise,
@@ -272,10 +285,12 @@ export default function Convert() {
       if (!eligible) {
         const reason = !featureEnabled
           ? "feature_disabled_by_template"
-          : inputChannels === 1
-            ? "mono_disabled_by_template"
-            : "stereo_disabled_by_template";
-        console.info(`[convert] audio enhancement skipped — ${reason}`);
+          : !withinDurationCap
+            ? "duration_above_client_enhance_cap"
+            : inputChannels === 1
+              ? "mono_disabled_by_template"
+              : "stereo_disabled_by_template";
+        console.info(`[convert] audio enhancement skipped — ${reason} (duration=${Math.round(duration)}s, channels=${inputChannels})`);
         enhancementMeta = {
           eligible: false,
           attempted: false,
@@ -289,7 +304,15 @@ export default function Convert() {
       } else {
         setStep("enhancing");
         try {
-          const result = await enhanceAudioForTranscription(file, undefined, settingsSnapshot);
+          // Wall-clock timeout: even within the duration cap, low-memory devices
+          // can stall during decode/encode. If enhancement takes too long, fall
+          // back to uploading the original so the user is never stuck here.
+          const ENHANCE_TIMEOUT_MS = Math.max(60_000, Math.round(duration * 1000 * 1.5));
+          const enhancePromise = enhanceAudioForTranscription(file, undefined, settingsSnapshot);
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error("enhance_timeout")), ENHANCE_TIMEOUT_MS);
+          });
+          const result = await Promise.race([enhancePromise, timeoutPromise]);
           uploadFile = result.file;
           enhancementMeta = {
             eligible: true,
@@ -308,7 +331,7 @@ export default function Convert() {
             eligible: true,
             attempted: true,
             applied: false,
-            reason: "failed",
+            reason: enhanceError instanceof Error && enhanceError.message === "enhance_timeout" ? "timeout" : "failed",
             input_channels: inputChannels,
             duration_ms: 0,
             settings_snapshot: settingsSnapshot,
