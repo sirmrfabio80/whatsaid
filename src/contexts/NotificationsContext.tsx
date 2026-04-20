@@ -122,6 +122,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                 url,
               },
             );
+            // Subtle completion chime (respects user's mute preference)
+            playCompletionChime();
           }
         }
       )
