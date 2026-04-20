@@ -19,6 +19,7 @@ import HistoryFilters from "@/components/HistoryFilters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
+import { clearTabBadge } from "@/lib/tab-title-badge";
 
 interface Job {
   id: string;
@@ -56,6 +57,11 @@ export default function History() {
     for (const t of translatedUserTags) map.set(t.id, t.displayName);
     return map;
   }, [translatedUserTags]);
+
+  // Clear the tab title badge — opening History acknowledges any pending completions
+  useEffect(() => {
+    clearTabBadge();
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
