@@ -354,6 +354,36 @@ export default function Settings() {
               </p>
               <div className="flex items-center justify-between gap-4 pt-1">
                 <div className="space-y-0.5">
+                  <Label htmlFor="notif-browser" className="text-body-sm font-medium cursor-pointer">
+                    {t("settings.notifications.browserLabel")}
+                  </Label>
+                  <p className="text-caption text-muted-foreground">
+                    {t("settings.notifications.browserDesc")}
+                  </p>
+                  {browserNotifEnabled && browserNotifPermission === "denied" && (
+                    <p className="text-caption text-destructive flex items-center gap-1.5 pt-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {t("settings.notifications.browserBlocked")}
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  id="notif-browser"
+                  checked={browserNotifEnabled}
+                  onCheckedChange={async (checked) => {
+                    setBrowserNotifEnabledState(checked);
+                    setBrowserNotificationsEnabled(checked);
+                    if (checked) {
+                      const result = await requestNotificationPermission();
+                      setBrowserNotifPermission(result);
+                    }
+                  }}
+                  aria-label={t("settings.notifications.browserLabel")}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-4 pt-1 border-t border-border/60">
+                <div className="space-y-0.5 pt-3">
                   <Label htmlFor="notif-sound" className="text-body-sm font-medium cursor-pointer">
                     {t("settings.notifications.soundLabel")}
                   </Label>
