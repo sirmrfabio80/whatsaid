@@ -8,6 +8,7 @@ import { sanitizeFileBaseName } from "@/lib/export-filename";
 import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { showBrowserNotification } from "@/lib/browser-notifications";
 import { playCompletionChime } from "@/lib/notification-sound";
+import { showFaviconBadge, clearFaviconBadge } from "@/lib/favicon-badge";
 
 export interface AppNotification {
   id: string;
@@ -88,6 +89,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     loadNotifications();
   }, [loadNotifications]);
 
+  // Auto-clear the favicon badge when the user returns to the tab
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onFocus = () => {
+      if (!document.hidden) clearFaviconBadge();
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
   // Realtime subscription — explicit INSERT, UPDATE, DELETE
   useEffect(() => {
     if (!user) return;
@@ -124,6 +139,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             );
             // Subtle completion chime (respects user's mute preference)
             playCompletionChime();
+            // Favicon badge — show a small dot only when the tab is hidden,
+            // so pinned/background tabs get a clear visual cue.
+            if (document.hidden) {
+              void showFaviconBadge();
+            }
           }
         }
       )
