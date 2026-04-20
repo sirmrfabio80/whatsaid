@@ -56,6 +56,7 @@ export default function Index() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
+      <JsonLd data={SOFTWARE_APP_SCHEMA} />
       {/* 1 — Hero (split layout) */}
       <section className="relative overflow-hidden">
         {/* Layered ambient field */}
