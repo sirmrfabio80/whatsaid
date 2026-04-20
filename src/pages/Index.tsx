@@ -75,10 +75,10 @@ export default function Index() {
               </div>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row md:flex-col lg:flex-row items-center md:items-stretch justify-center md:justify-start gap-3">
+              <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-3 md:max-w-[19.5rem] lg:max-w-none">
                 <Button
                   size="lg"
-                  className="h-12 px-7 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow w-full sm:w-auto"
+                  className="h-12 px-7 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow w-full"
                   onClick={() => navigate(heroPrimaryHref)}
                 >
                   {t("home.ctaPrimary")}
@@ -87,7 +87,7 @@ export default function Index() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 px-7 text-base font-medium rounded-lg w-full sm:w-auto"
+                  className="h-12 px-7 text-base font-medium rounded-lg w-full"
                   onClick={() => navigate("/pricing")}
                 >
                   {t("home.ctaPricingDetailed")}
