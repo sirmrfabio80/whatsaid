@@ -72,14 +72,8 @@ export default function Convert() {
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
-    preparing: t("convert.stepPreparing"),
-    enhancing: enhanceSubstage === "decoding"
-      ? t("convert.stepEnhancingDecoding")
-      : enhanceSubstage === "processing"
-        ? t("convert.stepEnhancingProcessing")
-        : enhanceSubstage === "encoding"
-          ? t("convert.stepEnhancingEncoding")
-          : t("convert.stepEnhancing"),
+    preparing: t("convert.stepEnhancing"),
+    enhancing: t("convert.stepEnhancing"),
     uploading: t("convert.stepUploading"),
     transcribing: t("convert.stepTranscribing"),
     summarising: t("convert.stepSummarising"),
