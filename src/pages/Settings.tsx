@@ -16,9 +16,15 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, Lock, Trash2, AlertCircle, Globe, Volume2, Headphones } from "lucide-react";
+import { Save, Lock, Trash2, AlertCircle, Globe, Volume2, Headphones, Bell } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import {
+  isNotificationSoundEnabled,
+  setNotificationSoundEnabled,
+  playCompletionChime,
+} from "@/lib/notification-sound";
 import {
   setSpeechPreferences,
   speechManager,
@@ -66,6 +72,7 @@ export default function Settings() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [preferredVoice, setPreferredVoice] = useState<AllowedVoice>("female");
   const [playbackSpeed, setPlaybackSpeed] = useState<AllowedSpeed>(1.0);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isNotificationSoundEnabled());
   const { isSupported: speechSupported } = useSpeechSynthesis();
   // Bump on voiceschanged so the matched-voice indicator updates once the browser populates voices.
   const [voicesTick, setVoicesTick] = useState(0);
@@ -324,6 +331,38 @@ export default function Settings() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-border bg-card shadow-sm">
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+                <h2 className="text-h2">{t("settings.notifications.title")}</h2>
+              </div>
+              <p className="text-caption text-muted-foreground">
+                {t("settings.notifications.desc")}
+              </p>
+              <div className="flex items-center justify-between gap-4 pt-1">
+                <div className="space-y-0.5">
+                  <Label htmlFor="notif-sound" className="text-body-sm font-medium cursor-pointer">
+                    {t("settings.notifications.soundLabel")}
+                  </Label>
+                  <p className="text-caption text-muted-foreground">
+                    {t("settings.notifications.soundDesc")}
+                  </p>
+                </div>
+                <Switch
+                  id="notif-sound"
+                  checked={soundEnabled}
+                  onCheckedChange={(checked) => {
+                    setSoundEnabled(checked);
+                    setNotificationSoundEnabled(checked);
+                    if (checked) playCompletionChime(true);
+                  }}
+                  aria-label={t("settings.notifications.soundLabel")}
+                />
               </div>
             </CardContent>
           </Card>

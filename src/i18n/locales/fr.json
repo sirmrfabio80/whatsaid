@@ -257,6 +257,12 @@
       "matchedVoiceLoading": "Détection des voix disponibles…",
       "learnMore": "En savoir plus"
     },
+    "notifications": {
+      "title": "Notifications",
+      "desc": "Indications sonores lorsqu'une transcription est terminée. Ce réglage est enregistré sur cet appareil.",
+      "soundLabel": "Jouer un son à la fin d'une transcription",
+      "soundDesc": "Un court signal sonore discret. Désactivez-le si vous préférez le silence."
+    },
     "security": "Sécurité",
     "changePassword": "Changer le mot de passe",
     "changePasswordTitle": "Changer le mot de passe",

@@ -7,6 +7,7 @@ import type { CanonicalExportData } from "@/lib/export-types";
 import { sanitizeFileBaseName } from "@/lib/export-filename";
 import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { showBrowserNotification } from "@/lib/browser-notifications";
+import { playCompletionChime } from "@/lib/notification-sound";
 
 export interface AppNotification {
   id: string;
@@ -121,6 +122,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                 url,
               },
             );
+            // Subtle completion chime (respects user's mute preference)
+            playCompletionChime();
           }
         }
       )

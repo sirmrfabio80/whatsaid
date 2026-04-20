@@ -257,6 +257,12 @@
       "matchedVoiceLoading": "Detecting available voices…",
       "learnMore": "Learn more"
     },
+    "notifications": {
+      "title": "Notifications",
+      "desc": "Audio cues for completed transcriptions. This setting is saved on this device.",
+      "soundLabel": "Play a sound when a transcription completes",
+      "soundDesc": "A short, subtle chime. Turn it off if you prefer silence."
+    },
     "security": "Security",
     "changePassword": "Change password",
     "changePasswordTitle": "Change password",
