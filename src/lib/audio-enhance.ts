@@ -163,9 +163,60 @@ async function encodeMp3(buffer: AudioBuffer): Promise<Blob> {
  * Normalise + soft-clip an audio file for transcription.
  * Returns a new WAV File and structured metadata.
  */
+export type EnhanceProgressStage = "decoding" | "processing" | "encoding";
+
+/**
+ * Auto-router for audio enhancement.
+ *
+ * - Long supported uploads (M4A/MP4 > 10 MB) go through the streaming worker
+ *   path so the lamejs encode and per-sample loops don't freeze the browser.
+ * - Smaller files and unsupported-by-worker formats use the legacy in-memory
+ *   implementation below.
+ * - On worker timeout/error, falls back to the legacy path; if that also
+ *   fails, callers should treat the result as `reason: "failed"` and upload
+ *   the original file unchanged.
+ */
+export async function enhanceAudioForTranscriptionAuto(
+  file: File,
+  onProgress?: (stage: EnhanceProgressStage) => void,
+  options?: Partial<AudioEnhanceOptions>,
+): Promise<AudioEnhanceResult> {
+  const opts: AudioEnhanceOptions = { ...DEFAULT_AUDIO_ENHANCE_OPTIONS, ...(options ?? {}) };
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  const isM4aLike = ext === "m4a" || ext === "mp4" || ext === "mov" || ext === "aac" ||
+    file.type.includes("mp4") || file.type.includes("m4a");
+  const SIZE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
+  const useWorker = isM4aLike && file.size > SIZE_THRESHOLD;
+
+  if (useWorker) {
+    try {
+      return await enhanceAudioInWorker(file, onProgress, opts);
+    } catch (workerErr) {
+      console.warn("[audio-enhance] Worker path failed, falling back to in-memory:", workerErr);
+    }
+  }
+
+  try {
+    return await enhanceAudioForTranscription(file, onProgress, opts);
+  } catch (legacyErr) {
+    console.warn("[audio-enhance] In-memory path failed, returning original file:", legacyErr);
+    const safeBase = sanitizeStorageFilename(file.name.replace(/\.[^.]+$/, ""));
+    return {
+      file: new File([file], safeBase + (ext ? `.${ext}` : ""), { type: file.type || "application/octet-stream" }),
+      metadata: {
+        applied: false,
+        reason: "failed",
+        input_channels: 2,
+        duration_ms: 0,
+        measured: null,
+      },
+    };
+  }
+}
+
 export async function enhanceAudioForTranscription(
   file: File,
-  onProgress?: (stage: "decoding" | "processing" | "encoding") => void,
+  onProgress?: (stage: EnhanceProgressStage) => void,
   options?: Partial<AudioEnhanceOptions>,
 ): Promise<AudioEnhanceResult> {
   const opts: AudioEnhanceOptions = { ...DEFAULT_AUDIO_ENHANCE_OPTIONS, ...(options ?? {}) };
