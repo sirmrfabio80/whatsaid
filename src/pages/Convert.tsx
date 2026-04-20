@@ -100,13 +100,20 @@ export default function Convert() {
     const poll = async () => {
       const { data: job } = await supabase
         .from("jobs")
-        .select("status, error_message")
+        .select("status, error_message, processing_stage")
         .eq("id", jobId)
         .maybeSingle();
 
       if (!job) return;
 
-      if (job.status === "processing") {
+      if (job.status === "uploading") {
+        // Reflect the local processing_stage onto the visible step so the user
+        // sees real progress while we run the in-browser pipeline.
+        const stage = job.processing_stage;
+        if (stage === "enhancing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
+        else if (stage === "uploading") setStep((prev) => prev === "uploading" ? prev : "uploading");
+        else if (stage === "preparing") setStep((prev) => prev === "preparing" ? prev : "preparing");
+      } else if (job.status === "processing") {
         const { count } = await supabase
           .from("job_outputs")
           .select("id", { count: "exact", head: true })
