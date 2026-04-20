@@ -147,6 +147,16 @@ export default function JobDetail() {
 
   const generateTitle = async () => {
     if (!id) return;
+    // Hard guard: never call generate-title unless the job is completed
+    // AND a transcript output exists. Otherwise the function 500s in a loop.
+    if (jobStatus !== "completed") return;
+    const { data: transcript } = await supabase
+      .from("job_outputs")
+      .select("id")
+      .eq("job_id", id)
+      .eq("output_type", "transcript")
+      .maybeSingle();
+    if (!transcript) return;
     setGeneratingTitle(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-title", { body: { job_id: id } });
