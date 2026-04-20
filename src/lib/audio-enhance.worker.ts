@@ -173,7 +173,7 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
 
     // Noise gate — encode untouched and return.
     if (inputRms < NOISE_FLOOR) {
-      const mp3 = await encodeMp3(channels, sampleRate, MP3_BITRATE_KBPS);
+      const mp3 = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
       const response: EnhanceWorkerSuccess = {
         type: "success",
         mp3,
@@ -243,7 +243,7 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
     const outputPeak = computePeak(channels);
     const outputPeakDbfs = linearToDbfs(outputPeak);
 
-    const mp3 = await encodeMp3(channels, sampleRate, MP3_BITRATE_KBPS);
+    const mp3 = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
 
     const sampleModified = softClipped || normalisationApplied;
 
