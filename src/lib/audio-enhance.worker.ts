@@ -77,14 +77,11 @@ function computePeak(channels: Float32Array[]): number {
   return maxSample;
 }
 
-async function encodeMp3(
+function encodeMp3(
   channels: Float32Array[],
   sampleRate: number,
   bitrateKbps: number,
-): Promise<ArrayBuffer> {
-  const lamejs = await import("@breezystack/lamejs");
-  const Mp3Encoder = lamejs.Mp3Encoder;
-
+): ArrayBuffer {
   const numChannels = channels.length === 1 ? 1 : 2;
   const encoder = new Mp3Encoder(numChannels, sampleRate, bitrateKbps);
   const length = channels[0].length;
