@@ -13,9 +13,11 @@ export default function NotificationBell() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { notifications, unreadCount, markAllRead, clearAllNotifications } = useNotifications();
+  const { notifications, unreadCount, markAllRead, clearAllNotifications, pulseTrigger } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [pulsing, setPulsing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const initialPulseRef = useRef(pulseTrigger);
 
   // Close on outside click
   useEffect(() => {
@@ -29,6 +31,14 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // Trigger pulse animation when a transcription completes (skip the initial mount value)
+  useEffect(() => {
+    if (pulseTrigger === initialPulseRef.current) return;
+    setPulsing(true);
+    const timer = window.setTimeout(() => setPulsing(false), 2400);
+    return () => window.clearTimeout(timer);
+  }, [pulseTrigger]);
+
   return (
     <div ref={ref} className="relative">
       <Button
@@ -36,6 +46,7 @@ export default function NotificationBell() {
         size="icon"
         className="rounded-lg relative w-8 h-8"
         onClick={() => {
+          setPulsing(false);
           if (isMobile) {
             navigate("/notifications");
             return;
@@ -44,9 +55,21 @@ export default function NotificationBell() {
         }}
         aria-label={t("notifications.title")}
       >
-        <Bell className="w-4 h-4" />
+        {pulsing && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-lg bg-primary/40 animate-pulse-ring motion-reduce:hidden"
+          />
+        )}
+        <Bell
+          className={`w-4 h-4 ${pulsing ? "text-primary motion-safe:animate-[pulse_0.9s_ease-in-out_2]" : ""}`}
+        />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-micro font-bold leading-none">
+          <span
+            className={`absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-micro font-bold leading-none ${
+              pulsing ? "motion-safe:animate-[pulse_0.9s_ease-in-out_2]" : ""
+            }`}
+          >
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
