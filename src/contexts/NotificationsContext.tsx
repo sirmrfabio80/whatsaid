@@ -26,6 +26,7 @@ interface NotificationsContextType {
   notifications: AppNotification[];
   unreadCount: number;
   loading: boolean;
+  pulseTrigger: number;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
@@ -39,6 +40,7 @@ const NotificationsContext = createContext<NotificationsContextType>({
   notifications: [],
   unreadCount: 0,
   loading: true,
+  pulseTrigger: 0,
   markRead: async () => {},
   markAllRead: async () => {},
   deleteNotification: async () => {},
@@ -55,6 +57,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pulseTrigger, setPulseTrigger] = useState(0);
   const activePdfExports = useRef<Set<string>>(new Set());
   // Ref to hold latest notifications for rollback without stale closures
   const notificationsRef = useRef<AppNotification[]>([]);
@@ -100,6 +103,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             if (prev.some((n) => n.id === newNotif.id)) return prev;
             return [newNotif, ...prev].slice(0, 50);
           });
+          // Pulse the bell when a transcription completes (job done, success status)
+          if (
+            newNotif.type === "job_completed" ||
+            (newNotif.resource_type === "job" && newNotif.status === "success")
+          ) {
+            setPulseTrigger((p) => p + 1);
+          }
         }
       )
       .on(
@@ -410,7 +420,7 @@ justify-content:center;height:100vh;margin:0;background:#0F172A;color:#e2e8f0;}
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, unreadCount, loading, markRead, markAllRead, deleteNotification, clearAllNotifications, startPdfExport, downloadExport, openExport }}
+      value={{ notifications, unreadCount, loading, pulseTrigger, markRead, markAllRead, deleteNotification, clearAllNotifications, startPdfExport, downloadExport, openExport }}
     >
       {children}
     </NotificationsContext.Provider>
