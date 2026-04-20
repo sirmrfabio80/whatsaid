@@ -188,6 +188,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded, onReady,
       onMetaLoaded?.(m as JobMeta);
     }
     setLoading(false);
+    onReady?.();
   }, [jobId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
