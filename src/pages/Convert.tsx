@@ -550,7 +550,7 @@ export default function Convert() {
                       return (
                         <div
                           key={s}
-                          className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                          className={`flex flex-col gap-2 p-3 rounded-xl transition-all ${
                             isCurrent
                               ? "bg-primary/10 text-foreground"
                               : isPast
@@ -558,18 +558,28 @@ export default function Convert() {
                                 : "text-muted-foreground/40"
                           }`}
                         >
-                          {isCurrent && step !== "failed" ? (
-                            <InlineSpinner size="md" tone="primary" />
-                          ) : isPast ? (
-                            <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-                          ) : step === "failed" && isCurrent ? (
-                            <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
-                          ) : (
-                            <div className="w-5 h-5 rounded-full border-2 border-current shrink-0" />
+                          <div className="flex items-center gap-3">
+                            {isCurrent && step !== "failed" ? (
+                              <InlineSpinner size="md" tone="primary" />
+                            ) : isPast ? (
+                              <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                            ) : step === "failed" && isCurrent ? (
+                              <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border-2 border-current shrink-0" />
+                            )}
+                            <span className={`text-body-sm font-medium ${isCurrent ? "text-foreground" : ""}`}>
+                              {STEP_LABELS[s]}
+                            </span>
+                          </div>
+                          {s === "enhancing" && isCurrent && step !== "failed" && (
+                            <div
+                              aria-hidden="true"
+                              className="h-0.5 w-full overflow-hidden rounded-full bg-primary/10 motion-reduce:bg-primary/30"
+                            >
+                              <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent animate-shimmer motion-reduce:animate-none motion-reduce:w-full motion-reduce:bg-primary/40 motion-reduce:bg-none" />
+                            </div>
                           )}
-                          <span className={`text-body-sm font-medium ${isCurrent ? "text-foreground" : ""}`}>
-                            {STEP_LABELS[s]}
-                          </span>
                         </div>
                       );
                     })}
