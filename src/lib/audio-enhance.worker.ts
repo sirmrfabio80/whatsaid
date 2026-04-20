@@ -106,35 +106,68 @@ function computePeak(channels: Float32Array[]): number {
  * Compared to the previous implementation, this removes the O(samples)
  * Int16Array allocation that doubled peak RAM during encode.
  */
+/**
+ * Stream-encode Float32 channel data to MP3 and post each ~64 KB segment back
+ * to the main thread as it's produced. Returns the total byte count so the
+ * caller can include it in the final `done` message.
+ *
+ * Memory profile (worker side):
+ *   - Two reusable Int16 scratch buffers (~9 KB each).
+ *   - A small pending list (≤ FLUSH_BYTES of MP3 data) before each postMessage.
+ *   - No O(samples) intermediate allocation, no full-output buffer.
+ *
+ * The transferable on each postMessage releases the encoded bytes to the main
+ * thread immediately, so worker heap stays flat regardless of file length.
+ */
 function encodeMp3Streaming(
   channels: Float32Array[],
   sampleRate: number,
   bitrateKbps: number,
-): ArrayBuffer {
+): number {
   const numChannels = channels.length === 1 ? 1 : 2;
   const encoder = new Mp3Encoder(numChannels, sampleRate, bitrateKbps);
   const length = channels[0].length;
   const lCh = channels[0];
   const rCh = numChannels === 2 ? channels[1] : null;
 
-  // Encode in MP3-frame multiples. 1152 samples = one MPEG Layer III frame.
-  // Larger windows reduce per-call overhead; ~46 ms per chunk @ 48 kHz keeps
-  // the worker responsive to incoming messages between iterations if needed.
   const FRAME = 1152;
   const FRAMES_PER_CHUNK = 4;
-  const ENCODE_CHUNK = FRAME * FRAMES_PER_CHUNK; // 4608 samples
+  const ENCODE_CHUNK = FRAME * FRAMES_PER_CHUNK; // 4608 samples per encode call
 
-  // Reusable scratch buffers — allocate once, reuse every chunk.
   const leftScratch = new Int16Array(ENCODE_CHUNK);
   const rightScratch = rCh ? new Int16Array(ENCODE_CHUNK) : null;
 
-  const chunks: Uint8Array[] = [];
+  // Group raw lamejs outputs into ~64 KB postMessage payloads to keep the
+  // chunk count manageable (one postMessage per ~256 ms of stereo @ 320 kbps).
+  const FLUSH_BYTES = 64 * 1024;
+  let pending: Uint8Array[] = [];
+  let pendingBytes = 0;
+  let totalBytes = 0;
+
+  const flushPending = () => {
+    if (pendingBytes === 0) return;
+    const merged = new Uint8Array(pendingBytes);
+    let off = 0;
+    for (const c of pending) {
+      merged.set(c, off);
+      off += c.length;
+    }
+    const startOffset = totalBytes;
+    totalBytes += merged.length;
+    const chunkMsg: EnhanceWorkerChunk = {
+      type: "chunk",
+      bytes: merged,
+      byteOffset: startOffset,
+    };
+    (self as unknown as Worker).postMessage(chunkMsg, [merged.buffer]);
+    pending = [];
+    pendingBytes = 0;
+  };
 
   for (let off = 0; off < length; off += ENCODE_CHUNK) {
     const end = Math.min(off + ENCODE_CHUNK, length);
     const n = end - off;
 
-    // Fused float→int16 conversion + slice into the scratch buffer.
     for (let i = 0; i < n; i++) {
       leftScratch[i] = floatToInt16(lCh[off + i]);
     }
@@ -151,25 +184,21 @@ function encodeMp3Streaming(
       ? encoder.encodeBuffer(lView, rView)
       : encoder.encodeBuffer(lView);
     if (mp3buf.length > 0) {
-      // Copy out — lamejs reuses an internal buffer between encodeBuffer calls,
-      // so the returned view becomes invalid after the next call.
-      chunks.push(new Uint8Array(mp3buf));
+      // Copy out — lamejs reuses its internal buffer between calls.
+      pending.push(new Uint8Array(mp3buf));
+      pendingBytes += mp3buf.length;
+      if (pendingBytes >= FLUSH_BYTES) flushPending();
     }
   }
 
   const tail = encoder.flush();
-  if (tail.length > 0) chunks.push(new Uint8Array(tail));
-
-  // Concatenate into a single transferable ArrayBuffer.
-  let total = 0;
-  for (const c of chunks) total += c.length;
-  const out = new Uint8Array(total);
-  let writeOff = 0;
-  for (const c of chunks) {
-    out.set(c, writeOff);
-    writeOff += c.length;
+  if (tail.length > 0) {
+    pending.push(new Uint8Array(tail));
+    pendingBytes += tail.length;
   }
-  return out.buffer;
+  flushPending();
+
+  return totalBytes;
 }
 
 const MP3_BITRATE_KBPS = 320;
