@@ -114,7 +114,7 @@ function ListenButton({ ownerId, getText, lang, className }: ListenButtonProps) 
   );
 }
 
-export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobResultsProps) {
+export default function JobResults({ jobId, currentTitle, onMetaLoaded, onReady, suppressInitialLoadingState }: JobResultsProps) {
   const { t } = useTranslation();
   const [outputs, setOutputs] = useState<JobOutput[]>([]);
   const [meta, setMeta] = useState<JobMeta | null>(null);
