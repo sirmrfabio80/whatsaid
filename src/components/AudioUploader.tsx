@@ -38,7 +38,7 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
       setDuration(dur); setDetecting(false);
       const [creationDate, channelAnalysis] = await Promise.all([
         extractAudioCreationDate(file),
-        analyzeAudioChannels(file),
+        analyzeAudioChannels(file, dur),
       ]);
       onFileSelected(file, dur, creationDate, channelAnalysis);
     } catch { setError(t("audioUploader.couldNotRead")); setSelectedFile(null); setDetecting(false); }
