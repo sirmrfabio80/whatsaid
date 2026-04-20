@@ -25,6 +25,8 @@ import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
 import { requestNotificationPermission, isBrowserNotificationsEnabled } from "@/lib/browser-notifications";
+import { resumableUpload } from "@/lib/storage-resumable-upload";
+import { useJobHeartbeat } from "@/hooks/use-job-heartbeat";
 
 type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 type EnhanceSubstage = EnhanceProgressStage | null;
@@ -71,6 +73,14 @@ export default function Convert() {
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
+
+  // Heartbeat: while we're doing local prep/enhance/upload work, bump
+  // jobs.updated_at every 60s so the watchdog can't flag a live tab as stale.
+  const heartbeatStage: "preparing" | "enhancing" | "uploading" | null =
+    processing && (step === "enhancing" || step === "uploading")
+      ? (step === "uploading" ? "uploading" : "enhancing")
+      : null;
+  useJobHeartbeat(jobId, heartbeatStage);
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
     preparing: t("convert.stepEnhancing"),
@@ -382,23 +392,53 @@ export default function Convert() {
         setEnhanceSubstage(null);
       }
 
-      // ── 3. Upload to storage. ──
+      // ── 3. Upload to storage (resumable / chunked / heartbeat-aware). ──
       setStep("uploading");
       await supabase.from("jobs").update({ processing_stage: "uploading" }).eq("id", newJobId);
 
       const safeUploadName = sanitizeStorageFilename(uploadFile.name);
       const filePath = `${user.id}/${newJobId}/${safeUploadName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("temp-audio")
-        .upload(filePath, uploadFile, { upsert: false });
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
+      let uploadMeta: {
+        resumable: boolean;
+        chunk_size_mb: number;
+        retries: number;
+        resumed_from_previous: boolean;
+      };
+      try {
+        const result = await resumableUpload({
+          bucketName: "temp-audio",
+          objectName: filePath,
+          file: uploadFile,
+          jobId: newJobId,
+          onChunkComplete: () => {
+            // Each successful chunk also bumps updated_at — extra safety on
+            // top of the 60s heartbeat for very large files.
+            void supabase
+              .from("jobs")
+              .update({ updated_at: new Date().toISOString() })
+              .eq("id", newJobId);
+          },
+          onRetry: (attempt) => {
+            if (attempt === 1) {
+              toast.info(t("convert.uploadPausedRetrying", "Upload paused — retrying…"));
+            }
+          },
+        });
+        uploadMeta = {
+          resumable: true,
+          chunk_size_mb: result.chunkSizeMb,
+          retries: result.retries,
+          resumed_from_previous: result.resumedFromPrevious,
+        };
+      } catch (uploadError) {
+        const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
+        throw new Error(`Upload failed: ${msg}`);
       }
 
       const txConfig: Record<string, unknown> = {
         audio_enhancement: enhancementMeta,
+        upload: uploadMeta,
       };
       if (channelAnalysis) {
         txConfig.channel_analysis = {

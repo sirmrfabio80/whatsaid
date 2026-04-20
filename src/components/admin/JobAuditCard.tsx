@@ -132,8 +132,47 @@ export default function JobAuditCard({ job }: { job: JobRow }) {
 
         {/* Audio enhancement audit */}
         <AudioEnhancementAudit cfg={cfg} />
+
+        {/* Upload audit */}
+        <UploadAudit cfg={cfg} />
       </CardContent>
     </Card>
+  );
+}
+
+function UploadAudit({ cfg }: { cfg: Record<string, unknown> }) {
+  const upload = cfg.upload as Record<string, unknown> | undefined;
+  if (!upload || typeof upload !== "object") {
+    return (
+      <div className="rounded-lg border bg-muted/30 p-3">
+        <h4 className="text-h3">Upload</h4>
+        <p className="text-xs text-muted-foreground mt-1">
+          No upload metadata recorded (legacy single-shot upload).
+        </p>
+      </div>
+    );
+  }
+  const resumable = !!upload.resumable;
+  const chunkMb = typeof upload.chunk_size_mb === "number" ? (upload.chunk_size_mb as number) : null;
+  const retries = typeof upload.retries === "number" ? (upload.retries as number) : 0;
+  const resumed = !!upload.resumed_from_previous;
+
+  const tone = retries === 0 && !resumed
+    ? "border-primary/40 bg-primary/5"
+    : retries >= 3
+      ? "border-amber-500/40 bg-amber-500/5"
+      : "border-border bg-muted/30";
+
+  return (
+    <div className={cn("rounded-lg border p-3 space-y-2", tone)}>
+      <h4 className="text-h3">Upload</h4>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <LangPill label="protocol" value={resumable ? "TUS resumable" : "single-shot"} />
+        {chunkMb != null && <LangPill label="chunk size" value={`${chunkMb} MB`} />}
+        <LangPill label="retries" value={String(retries)} />
+        <LangPill label="resumed" value={resumed ? "yes" : "no"} />
+      </div>
+    </div>
   );
 }
 

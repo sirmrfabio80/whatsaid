@@ -20,7 +20,10 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 
 const STALE_MINUTES = 30;
-const UPLOAD_STALE_MINUTES = 15;
+// Client emits a heartbeat every 60s while preparing/enhancing/uploading
+// (see useJobHeartbeat). 20 min ≈ 20 missed heartbeats — enough margin to
+// avoid false positives on very slow connections that still produce chunks.
+const UPLOAD_STALE_MINUTES = 20;
 const ORPHAN_LOOKBACK_HOURS = 24;
 export const TIMEOUT_MESSAGE = "Job timed out — marked failed by watchdog";
 export const UPLOAD_INTERRUPTED_MESSAGE =
