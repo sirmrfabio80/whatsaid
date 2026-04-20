@@ -158,7 +158,7 @@ export default function ParticipantsPanel({ segments, speakerNames, durationSeco
   const hasTimeline = stats.some((s) => s.timelineSegments.length > 0);
 
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3">
       {/* Read-only speaker chips */}
       <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={t("participants.title")}>
         <span className="text-xs text-muted-foreground font-medium mr-1">
@@ -182,7 +182,7 @@ export default function ParticipantsPanel({ segments, speakerNames, durationSeco
       </div>
 
       {/* Expandable participation overview */}
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Collapsible className="w-full" open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger className="flex items-center gap-2 w-full group cursor-pointer rounded-lg px-1 py-1 -mx-1 hover:bg-muted/30 transition-colors">
           <Users className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-xs font-medium text-muted-foreground">
