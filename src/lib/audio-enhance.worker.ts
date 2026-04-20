@@ -217,113 +217,129 @@ function encodeMp3Streaming(
 
 const MP3_BITRATE_KBPS = 320;
 
-self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest>) => {
-  const msg = event.data;
-  if (!msg || msg.type !== "enhance") return;
+/**
+ * Original in-memory pipeline: caller already decoded the entire file on the
+ * main thread and transferred Float32 channels to us. Used for short files
+ * and as the fallback when streaming demux/decode isn't available.
+ */
+async function handleInMemoryEnhance(msg: EnhanceWorkerRequest): Promise<void> {
+  const { channels, sampleRate, options: opts } = msg;
+  const inputChannels: 1 | 2 = channels.length === 1 ? 1 : 2;
 
-  try {
-    const { channels, sampleRate, options: opts } = msg;
-    const inputChannels: 1 | 2 = channels.length === 1 ? 1 : 2;
+  const NOISE_FLOOR = dbfsToLinear(opts.noise_floor_dbfs);
+  const inputRms = computeRMS(channels);
+  const inputPeak = computePeak(channels);
+  const inputRmsDbfs = linearToDbfs(inputRms);
+  const inputPeakDbfs = linearToDbfs(inputPeak);
 
-    const NOISE_FLOOR = dbfsToLinear(opts.noise_floor_dbfs);
-    const inputRms = computeRMS(channels);
-    const inputPeak = computePeak(channels);
-    const inputRmsDbfs = linearToDbfs(inputRms);
-    const inputPeakDbfs = linearToDbfs(inputPeak);
-
-    // Noise gate — encode untouched and stream out.
-    if (inputRms < NOISE_FLOOR) {
-      const totalBytes = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
-      const done: EnhanceWorkerDone = {
-        type: "done",
-        measured: {
-          input_rms_dbfs: inputRmsDbfs,
-          input_peak_dbfs: inputPeakDbfs,
-          applied_gain_db: 0,
-          output_rms_dbfs: inputRmsDbfs,
-          output_peak_dbfs: inputPeakDbfs,
-          soft_clip_samples_pct: 0,
-          normalise_mode: opts.normalise_mode as NormaliseMode,
-        },
-        normalisationApplied: false,
-        softClipped: false,
-        reason: "noise_gated",
-        totalBytes,
-      };
-      (self as unknown as Worker).postMessage(done);
-      return;
-    }
-
-    // Normalisation gain
-    const maxGainDb = inputChannels === 1 ? opts.max_gain_db_mono : opts.max_gain_db_stereo;
-    const MAX_NORM_GAIN = dbfsToLinear(maxGainDb);
-
-    let gain = 1.0;
-    let normalisationApplied = false;
-
-    if (opts.normalise) {
-      let desiredGain = 1.0;
-      if (opts.normalise_mode === "rms" && inputRms > 0) {
-        desiredGain = dbfsToLinear(opts.target_rms_dbfs) / inputRms;
-      } else if (opts.normalise_mode === "peak" && inputPeak > 0) {
-        desiredGain = dbfsToLinear(opts.target_peak_dbfs) / inputPeak;
-      }
-      gain = Math.max(1.0, Math.min(desiredGain, MAX_NORM_GAIN));
-      normalisationApplied = gain > 1.0;
-
-      if (normalisationApplied) {
-        for (const data of channels) {
-          for (let i = 0; i < data.length; i++) data[i] *= gain;
-        }
-      }
-    }
-    const appliedGainDb = linearToDbfs(gain);
-
-    const postGainRms = computeRMS(channels);
-    const outputRmsDbfs = linearToDbfs(postGainRms);
-
-    // Soft-clip limiter
-    const CLIP_THRESHOLD = Math.max(0.5, Math.min(1.0, opts.soft_clip_threshold));
-    let softClipSampleCount = 0;
-    let totalSampleCount = 0;
-    for (const data of channels) {
-      totalSampleCount += data.length;
-      for (let i = 0; i < data.length; i++) {
-        if (Math.abs(data[i]) > CLIP_THRESHOLD) {
-          data[i] = CLIP_THRESHOLD * Math.tanh(data[i] / CLIP_THRESHOLD);
-          softClipSampleCount++;
-        }
-      }
-    }
-    const softClipSamplesPct = totalSampleCount > 0
-      ? (softClipSampleCount / totalSampleCount) * 100
-      : 0;
-    const softClipped = softClipSampleCount > 0;
-
-    const outputPeak = computePeak(channels);
-    const outputPeakDbfs = linearToDbfs(outputPeak);
-
+  // Noise gate — encode untouched and stream out.
+  if (inputRms < NOISE_FLOOR) {
     const totalBytes = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
-
-    const sampleModified = softClipped || normalisationApplied;
-
     const done: EnhanceWorkerDone = {
       type: "done",
       measured: {
         input_rms_dbfs: inputRmsDbfs,
         input_peak_dbfs: inputPeakDbfs,
-        applied_gain_db: appliedGainDb,
-        output_rms_dbfs: outputRmsDbfs,
-        output_peak_dbfs: outputPeakDbfs,
-        soft_clip_samples_pct: softClipSamplesPct,
+        applied_gain_db: 0,
+        output_rms_dbfs: inputRmsDbfs,
+        output_peak_dbfs: inputPeakDbfs,
+        soft_clip_samples_pct: 0,
         normalise_mode: opts.normalise_mode as NormaliseMode,
       },
-      normalisationApplied,
-      softClipped,
-      reason: sampleModified ? "applied" : "below_normalise_threshold",
+      normalisationApplied: false,
+      softClipped: false,
+      reason: "noise_gated",
       totalBytes,
     };
     (self as unknown as Worker).postMessage(done);
+    return;
+  }
+
+  // Normalisation gain
+  const maxGainDb = inputChannels === 1 ? opts.max_gain_db_mono : opts.max_gain_db_stereo;
+  const MAX_NORM_GAIN = dbfsToLinear(maxGainDb);
+
+  let gain = 1.0;
+  let normalisationApplied = false;
+
+  if (opts.normalise) {
+    let desiredGain = 1.0;
+    if (opts.normalise_mode === "rms" && inputRms > 0) {
+      desiredGain = dbfsToLinear(opts.target_rms_dbfs) / inputRms;
+    } else if (opts.normalise_mode === "peak" && inputPeak > 0) {
+      desiredGain = dbfsToLinear(opts.target_peak_dbfs) / inputPeak;
+    }
+    gain = Math.max(1.0, Math.min(desiredGain, MAX_NORM_GAIN));
+    normalisationApplied = gain > 1.0;
+
+    if (normalisationApplied) {
+      for (const data of channels) {
+        for (let i = 0; i < data.length; i++) data[i] *= gain;
+      }
+    }
+  }
+  const appliedGainDb = linearToDbfs(gain);
+
+  const postGainRms = computeRMS(channels);
+  const outputRmsDbfs = linearToDbfs(postGainRms);
+
+  // Soft-clip limiter
+  const CLIP_THRESHOLD = Math.max(0.5, Math.min(1.0, opts.soft_clip_threshold));
+  let softClipSampleCount = 0;
+  let totalSampleCount = 0;
+  for (const data of channels) {
+    totalSampleCount += data.length;
+    for (let i = 0; i < data.length; i++) {
+      if (Math.abs(data[i]) > CLIP_THRESHOLD) {
+        data[i] = CLIP_THRESHOLD * Math.tanh(data[i] / CLIP_THRESHOLD);
+        softClipSampleCount++;
+      }
+    }
+  }
+  const softClipSamplesPct = totalSampleCount > 0
+    ? (softClipSampleCount / totalSampleCount) * 100
+    : 0;
+  const softClipped = softClipSampleCount > 0;
+
+  const outputPeak = computePeak(channels);
+  const outputPeakDbfs = linearToDbfs(outputPeak);
+
+  const totalBytes = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
+
+  const sampleModified = softClipped || normalisationApplied;
+
+  const done: EnhanceWorkerDone = {
+    type: "done",
+    measured: {
+      input_rms_dbfs: inputRmsDbfs,
+      input_peak_dbfs: inputPeakDbfs,
+      applied_gain_db: appliedGainDb,
+      output_rms_dbfs: outputRmsDbfs,
+      output_peak_dbfs: outputPeakDbfs,
+      soft_clip_samples_pct: softClipSamplesPct,
+      normalise_mode: opts.normalise_mode as NormaliseMode,
+    },
+    normalisationApplied,
+    softClipped,
+    reason: sampleModified ? "applied" : "below_normalise_threshold",
+    totalBytes,
+  };
+  (self as unknown as Worker).postMessage(done);
+}
+
+self.addEventListener("message", async (event: MessageEvent<AnyEnhanceRequest>) => {
+  const msg = event.data;
+  if (!msg) return;
+
+  try {
+    if (msg.type === "enhance") {
+      await handleInMemoryEnhance(msg);
+    } else if (msg.type === "enhance_streaming") {
+      // Lazy-import the streaming pipeline. Keeps mp4box + WebCodecs glue out
+      // of the worker entry chunk for sessions that never need it.
+      const { handleStreamingEnhance } = await import("./audio-enhance-streaming");
+      await handleStreamingEnhance(msg, MP3_BITRATE_KBPS, encodeStreamingPostMessage);
+    }
   } catch (err) {
     const response: EnhanceWorkerError = {
       type: "error",
@@ -332,3 +348,17 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
     (self as unknown as Worker).postMessage(response);
   }
 });
+
+/**
+ * Helper exposed to the streaming module: post a `chunk` message back to the
+ * main thread, transferring the underlying ArrayBuffer (zero-copy).
+ */
+function encodeStreamingPostMessage(bytes: Uint8Array, byteOffset: number) {
+  const chunkMsg: EnhanceWorkerChunk = { type: "chunk", bytes, byteOffset };
+  (self as unknown as Worker).postMessage(chunkMsg, [bytes.buffer]);
+}
+
+/** Re-exported for the streaming module to send the final `done` message. */
+export function postStreamingDone(done: EnhanceWorkerDone) {
+  (self as unknown as Worker).postMessage(done);
+}
