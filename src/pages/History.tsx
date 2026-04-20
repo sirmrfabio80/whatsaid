@@ -268,6 +268,18 @@ export default function History() {
                             {job.short_summary && (
                               <p className="text-caption text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
                             )}
+                            {job.status === "failed" && isUploadInterrupted(job.error_message) && (
+                              <div className="mt-2 flex items-center gap-2 text-caption text-muted-foreground">
+                                <span>{t("history.uploadInterruptedDesc")}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); navigate("/convert"); }}
+                                  className="text-primary hover:underline font-medium"
+                                >
+                                  {t("history.tryAgain")}
+                                </button>
+                              </div>
+                            )}
                             {/* Tag chips */}
                             {jobTags.length > 0 && (
                               <div className="flex items-center gap-1 mt-2 flex-wrap">
