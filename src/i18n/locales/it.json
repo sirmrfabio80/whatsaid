@@ -755,7 +755,9 @@
     "actionFailed": "Azione fallita — riprova",
     "exportAlreadyRunning": "Questa esportazione è già in corso",
     "retry": "Riprova",
-    "pdfReadyCheckNotifications": "PDF pronto — controlla le notifiche per visualizzarlo"
+    "pdfReadyCheckNotifications": "PDF pronto — controlla le notifiche per visualizzarlo",
+    "browserPushTitle": "Trascrizione pronta",
+    "browserPushBody": "La tua trascrizione è pronta da consultare."
   },
   "speakerIdentification": {
     "bannerTitle_one": "L'AI ha identificato {{count}} relatore",

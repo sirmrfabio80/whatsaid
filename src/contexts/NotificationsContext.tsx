@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import type { CanonicalExportData } from "@/lib/export-types";
 import { sanitizeFileBaseName } from "@/lib/export-filename";
 import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
+import { showBrowserNotification } from "@/lib/browser-notifications";
 
 export interface AppNotification {
   id: string;
@@ -106,6 +107,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           // Pulse the bell when a transcription completes
           if (newNotif.type === "transcript_ready") {
             setPulseTrigger((p) => p + 1);
+
+            // Fire a system notification only if the tab isn't currently visible.
+            // Permission is requested separately on the Convert page.
+            const url = newNotif.resource_id
+              ? `${window.location.origin}/job/${newNotif.resource_id}`
+              : window.location.origin;
+            showBrowserNotification(
+              t("notifications.browserPushTitle", { defaultValue: "Transcription ready" }),
+              {
+                body: newNotif.title || t("notifications.browserPushBody", { defaultValue: "Your transcript is ready to view." }),
+                tag: `transcript-${newNotif.resource_id ?? newNotif.id}`,
+                url,
+              },
+            );
           }
         }
       )
