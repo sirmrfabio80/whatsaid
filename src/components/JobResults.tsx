@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X, Play, Pause as PauseIcon, MessageSquare } from "lucide-react";
+import { Copy, Check, FileText, Sparkles, HelpCircle, Send, AlertTriangle, Globe, RefreshCw, Pencil, Trash2, X, Play, Pause as PauseIcon, MessageSquare, Maximize2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useSpeechSynthesis, speechManager } from "@/hooks/use-speech-synthesis";
 import { transcriptToSpeech, summaryToSpeech, latestAnswerToSpeech } from "@/lib/speech-text";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
@@ -123,6 +124,7 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
   const [outputLang, setOutputLang] = useState<string>("");
   const [regeneratingLang, setRegeneratingLang] = useState(false);
   const [questionPrompt, setQuestionPrompt] = useState("");
+  const [questionExpanded, setQuestionExpanded] = useState(false);
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [excludedQAIds, setExcludedQAIds] = useState<Set<string>>(new Set());
   const [transcriptEdited, setTranscriptEdited] = useState(false);
@@ -916,11 +918,51 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded }: JobRes
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">{t("jobResults.askQuestionDesc")}</p>
                   <div className="relative">
-                    <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-base md:text-sm min-h-[80px] resize-none pr-16" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
+                    <Textarea id="question-input" placeholder={t("jobResults.askPlaceholder")} value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} className="rounded-xl text-base md:text-sm min-h-[80px] resize-none pr-16 pt-9" disabled={askingQuestion || isQuestionLimitReached} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAskQuestion(); } }} />
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setQuestionExpanded(true)} disabled={askingQuestion || isQuestionLimitReached} className="absolute top-1.5 right-1.5 rounded-full h-7 w-7 p-0 text-muted-foreground hover:text-foreground" aria-label={t("jobResults.expandEditor", { defaultValue: "Expand editor" })} title={t("jobResults.expandEditor", { defaultValue: "Expand editor" })}>
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </Button>
                     <Button onClick={handleAskQuestion} disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached} size="sm" className="absolute bottom-2.5 right-2.5 rounded-full gap-1.5 px-3 h-8">
                       {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
                     </Button>
                   </div>
+                  <Dialog open={questionExpanded} onOpenChange={setQuestionExpanded}>
+                    <DialogContent className="max-w-[100vw] sm:max-w-[100vw] w-screen h-[100dvh] sm:h-[100dvh] rounded-none p-0 gap-0 flex flex-col border-0">
+                      <DialogHeader className="px-5 sm:px-8 pt-5 pb-3 border-b border-border/40">
+                        <DialogTitle>{t("jobResults.askQuestion")}</DialogTitle>
+                        <DialogDescription className="text-xs">{t("jobResults.askQuestionDesc")}</DialogDescription>
+                      </DialogHeader>
+                      <div className="flex-1 min-h-0 px-5 sm:px-8 py-4">
+                        <Textarea
+                          autoFocus
+                          placeholder={t("jobResults.askPlaceholder")}
+                          value={questionPrompt}
+                          onChange={(e) => setQuestionPrompt(e.target.value)}
+                          disabled={askingQuestion || isQuestionLimitReached}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                              e.preventDefault();
+                              handleAskQuestion();
+                              setQuestionExpanded(false);
+                            }
+                          }}
+                          className="w-full h-full resize-none rounded-xl text-base leading-relaxed"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-2 px-5 sm:px-8 py-3 border-t border-border/40">
+                        <Button variant="ghost" onClick={() => setQuestionExpanded(false)}>
+                          {t("common.close", { defaultValue: "Close" })}
+                        </Button>
+                        <Button
+                          onClick={() => { handleAskQuestion(); setQuestionExpanded(false); }}
+                          disabled={askingQuestion || !questionPrompt.trim() || isQuestionLimitReached}
+                          className="rounded-full gap-1.5"
+                        >
+                          {askingQuestion ? <InlineSpinner size="sm" /> : <><Send className="w-3.5 h-3.5" />{t("common.ask")}</>}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <Switch
