@@ -336,9 +336,7 @@ self.addEventListener("message", async (event: MessageEvent<AnyEnhanceRequest>) 
     if (msg.type === "enhance") {
       await handleInMemoryEnhance(msg);
     } else if (msg.type === "enhance_streaming") {
-      // Lazy-import the streaming pipeline. Keeps mp4box + WebCodecs glue out
-      // of the worker entry chunk for sessions that never need it.
-      const { handleStreamingEnhance } = await import("./audio-enhance-streaming");
+      // Static import: workers are bundled as IIFE and can't code-split via dynamic import.
       await handleStreamingEnhance(msg, MP3_BITRATE_KBPS, encodeStreamingPostMessage);
     }
   } catch (err) {
