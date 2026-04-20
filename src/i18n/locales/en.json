@@ -787,7 +787,9 @@
     "actionFailed": "Action failed — please try again",
     "exportAlreadyRunning": "This export is already in progress",
     "retry": "Retry",
-    "pdfReadyCheckNotifications": "PDF ready — check notifications to view"
+    "pdfReadyCheckNotifications": "PDF ready — check notifications to view",
+    "browserPushTitle": "Transcription ready",
+    "browserPushBody": "Your transcript is ready to view."
   },
   "speakerIdentification": {
     "bannerTitle_one": "AI identified {{count}} speaker",
