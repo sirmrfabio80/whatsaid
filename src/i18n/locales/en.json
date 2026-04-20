@@ -345,7 +345,10 @@
     "noResults": "No matching transcriptions",
     "noResultsDesc": "Try adjusting your search or removing some filters.",
     "loadError": "Could not load your transcriptions",
-    "loadErrorDesc": "Something went wrong while fetching your history. Please try again."
+    "loadErrorDesc": "Something went wrong while fetching your history. Please try again.",
+    "uploadInterrupted": "Upload interrupted — retry",
+    "uploadInterruptedDesc": "Your upload didn't finish. No credits were charged.",
+    "tryAgain": "Try again"
   },
   "jobDetail": {
     "backToHistory": "Back to history",

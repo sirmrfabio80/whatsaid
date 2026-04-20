@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2, SearchX } from "lucide-react";
+import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2, SearchX, RotateCw } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { clearTabBadge } from "@/lib/tab-title-badge";
+import { isUploadInterrupted } from "@/lib/watchdog";
 
 interface Job {
   id: string;
@@ -33,6 +34,7 @@ interface Job {
   created_at: string;
   speech_model: string | null;
   short_summary: string | null;
+  error_message: string | null;
 }
 
 export default function History() {
@@ -72,7 +74,7 @@ export default function History() {
       setLoadError(false);
       const { data, error } = await supabase
         .from("jobs")
-        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary")
+        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary, error_message")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
@@ -234,15 +236,26 @@ export default function History() {
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <p className="font-medium truncate">{job.title || job.file_name.replace(/\.[^.]+$/, "")}</p>
                               <div className="flex items-center gap-2 shrink-0">
-                                <Badge variant="outline" className={`${statusColor(job.status)} text-[11px] inline-flex items-center gap-1.5`}>
-                                  {(job.status === "processing" || job.status === "pending" || job.status === "uploading") && (
-                                    <span className="relative inline-flex w-1.5 h-1.5" aria-hidden="true">
-                                      <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
-                                      <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
-                                    </span>
-                                  )}
-                                  {job.status}
-                                </Badge>
+                                {job.status === "failed" && isUploadInterrupted(job.error_message) ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-warning/10 text-warning border-warning/20 text-[11px] inline-flex items-center gap-1.5"
+                                    title={job.error_message ?? undefined}
+                                  >
+                                    <RotateCw className="w-3 h-3" aria-hidden="true" />
+                                    {t("history.uploadInterrupted")}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className={`${statusColor(job.status)} text-[11px] inline-flex items-center gap-1.5`}>
+                                    {(job.status === "processing" || job.status === "pending" || job.status === "uploading") && (
+                                      <span className="relative inline-flex w-1.5 h-1.5" aria-hidden="true">
+                                        <span className="motion-safe:animate-pulse-ring-slow motion-reduce:hidden absolute inset-0 rounded-full bg-warning/50" />
+                                        <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-warning" />
+                                      </span>
+                                    )}
+                                    {job.status}
+                                  </Badge>
+                                )}
                                 <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
                               </div>
                             </div>
@@ -254,6 +267,18 @@ export default function History() {
                             </div>
                             {job.short_summary && (
                               <p className="text-caption text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
+                            )}
+                            {job.status === "failed" && isUploadInterrupted(job.error_message) && (
+                              <div className="mt-2 flex items-center gap-2 text-caption text-muted-foreground">
+                                <span>{t("history.uploadInterruptedDesc")}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); navigate("/convert"); }}
+                                  className="text-primary hover:underline font-medium"
+                                >
+                                  {t("history.tryAgain")}
+                                </button>
+                              </div>
                             )}
                             {/* Tag chips */}
                             {jobTags.length > 0 && (
