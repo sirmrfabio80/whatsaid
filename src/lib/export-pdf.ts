@@ -628,6 +628,10 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
           [{ text: "Q: ", bold: true }, { text: qa.prompt, bold: true }],
           F.qa,
           C.heading,
+          ML,
+          CW,
+          LH,
+          true,
         );
         pen.gap(1);
       }
