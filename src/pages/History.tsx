@@ -177,21 +177,6 @@ export default function History() {
             </div>
           )}
 
-          {loadError ? (
-            <ErrorState
-              title={t("history.loadError")}
-              description={t("history.loadErrorDesc")}
-              action={
-                <Button variant="outline" className="rounded-xl" onClick={() => window.location.reload()}>
-                  {t("common.tryAgain")}
-                </Button>
-              }
-            />
-          ) : jobs.length === 0 ? (
-            <EmptyState
-              icon={Inbox}
-              title={t("history.empty")}
-              description={t("history.emptyDesc")}
           <div
             className="motion-safe:animate-fade-in motion-reduce:animate-none"
             style={revealStyle(160)}
