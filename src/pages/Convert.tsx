@@ -243,7 +243,18 @@ export default function Convert() {
       const channelAllowed = inputChannels === 1
         ? activeCfg.audio_enhancement_apply_to_mono
         : activeCfg.audio_enhancement_apply_to_stereo;
-      const eligible = featureEnabled && channelAllowed;
+      // Hard duration cap: client-side enhancement decodes the entire file into
+      // a Float32 PCM buffer (~channels × 48000 × seconds × 4 bytes) and then
+      // single-thread MP3-encodes it. Above these limits the tab OOMs / hangs
+      // on most devices, leaving the user stuck on "enhancing audio". When we
+      // exceed the cap we skip enhancement and upload the original instead.
+      const ENHANCE_MAX_DURATION_STEREO_S = 1500; // 25 min
+      const ENHANCE_MAX_DURATION_MONO_S = 3000;   // 50 min
+      const durationCap = inputChannels === 1
+        ? ENHANCE_MAX_DURATION_MONO_S
+        : ENHANCE_MAX_DURATION_STEREO_S;
+      const withinDurationCap = duration <= durationCap;
+      const eligible = featureEnabled && channelAllowed && withinDurationCap;
 
       const settingsSnapshot = {
         normalise: activeCfg.audio_normalise,
@@ -272,10 +283,12 @@ export default function Convert() {
       if (!eligible) {
         const reason = !featureEnabled
           ? "feature_disabled_by_template"
-          : inputChannels === 1
-            ? "mono_disabled_by_template"
-            : "stereo_disabled_by_template";
-        console.info(`[convert] audio enhancement skipped — ${reason}`);
+          : !withinDurationCap
+            ? "duration_above_client_enhance_cap"
+            : inputChannels === 1
+              ? "mono_disabled_by_template"
+              : "stereo_disabled_by_template";
+        console.info(`[convert] audio enhancement skipped — ${reason} (duration=${Math.round(duration)}s, channels=${inputChannels})`);
         enhancementMeta = {
           eligible: false,
           attempted: false,
