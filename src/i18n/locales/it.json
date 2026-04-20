@@ -257,6 +257,12 @@
       "matchedVoiceLoading": "Rilevamento delle voci disponibili…",
       "learnMore": "Scopri di più"
     },
+    "notifications": {
+      "title": "Notifiche",
+      "desc": "Segnali acustici quando una trascrizione è pronta. Questa impostazione viene salvata su questo dispositivo.",
+      "soundLabel": "Riproduci un suono al completamento di una trascrizione",
+      "soundDesc": "Un breve segnale discreto. Disattivalo se preferisci il silenzio."
+    },
     "security": "Sicurezza",
     "changePassword": "Cambia password",
     "changePasswordTitle": "Cambia password",
