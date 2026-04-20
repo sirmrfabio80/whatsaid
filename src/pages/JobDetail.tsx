@@ -363,26 +363,35 @@ export default function JobDetail() {
               </div>
             )}
 
-            {/* Block 5 — results card (tabs + content) */}
-            <div className={REVEAL_CLASS} style={revealStyle(320)}>
-              {/* placeholder: real JobResults is mounted once below to avoid
-                  double-fetch / double speech-cleanup. */}
-            </div>
+            {/* Block 5 — results card (tabs + content). Mounted only after
+                revealReady so it animates in cleanly. The hidden pre-fetch
+                mount below drives onReady. */}
+            {revealReady && (
+              <div className={REVEAL_CLASS} style={revealStyle(320)}>
+                <JobResults
+                  jobId={id}
+                  currentTitle={title}
+                  onMetaLoaded={handleMetaLoaded}
+                  onReady={handleResultsReady}
+                />
+              </div>
+            )}
           </div>
 
-          {/* JobResults is mounted exactly once. While the skeleton shows we
-              keep it visually hidden (off-screen) so it can run its initial
-              fetch and signal `onReady`. After reveal we move it into the
-              real Block 5 slot via portal-free re-position using order. */}
-          <div className={revealReady ? `${REVEAL_CLASS}` : "sr-only"} style={revealReady ? revealStyle(320) : undefined} aria-hidden={!revealReady}>
-            <JobResults
-              jobId={id}
-              currentTitle={title}
-              onMetaLoaded={handleMetaLoaded}
-              onReady={handleResultsReady}
-              suppressInitialLoadingState
-            />
-          </div>
+          {/* Hidden pre-fetch mount: drives onMetaLoaded + onReady so the
+              parent knows when to trigger the coordinated reveal. Unmounts
+              once revealReady; the visible JobResults above takes over. */}
+          {!revealReady && (
+            <div className="sr-only" aria-hidden="true">
+              <JobResults
+                jobId={id}
+                currentTitle={title}
+                onMetaLoaded={handleMetaLoaded}
+                onReady={handleResultsReady}
+                suppressInitialLoadingState
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
