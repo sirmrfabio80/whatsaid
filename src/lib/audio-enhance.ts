@@ -429,7 +429,7 @@ export async function enhanceAudioForTranscription(
     onProgress?.("encoding");
     try {
       const r = await workerPromise;
-      mp3Blob = new Blob([r.mp3], { type: "audio/mpeg" });
+      mp3Blob = r.mp3Blob;
       measured = r.measured;
       normalisationApplied = r.normalisationApplied;
       softClipped = r.softClipped;
