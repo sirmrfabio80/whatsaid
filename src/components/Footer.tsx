@@ -29,7 +29,7 @@ export default function Footer() {
             <ul className="space-y-2 text-body-sm text-muted-foreground">
               <li><Link to="/convert" className="hover:text-foreground transition-colors">{t("footer.convertAudio")}</Link></li>
               <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link></li>
-              <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>
+              {!user && <li><Link to="/login" className="hover:text-foreground transition-colors">{t("common.signIn")}</Link></li>}
             </ul>
           </div>
 
