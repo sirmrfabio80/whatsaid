@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsForDuration, formatDuration } from "@/lib/pricing";
-import { enhanceAudioForTranscription, type AudioEnhanceMetadata } from "@/lib/audio-enhance";
+import { enhanceAudioForTranscriptionAuto, type AudioEnhanceMetadata, type EnhanceProgressStage } from "@/lib/audio-enhance";
 import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,7 +25,8 @@ import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
 
-type ProcessingStep = "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
+type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
+type EnhanceSubstage = EnhanceProgressStage | null;
 
 export default function Convert() {
   const { user, isAdmin, refreshCredits } = useAuth();
@@ -60,16 +61,25 @@ export default function Convert() {
   const [processingPurchase, setProcessingPurchase] = useState(false);
   const [creditsAdded, setCreditsAdded] = useState<number | null>(null);
   const [step, setStep] = useState<ProcessingStep | null>(null);
+  const [enhanceSubstage, setEnhanceSubstage] = useState<EnhanceSubstage>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [consentChecked, setConsentChecked] = useState(false);
   const credits = creditsForDuration(duration);
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
-    enhancing: t("convert.stepEnhancing"),
+    preparing: t("convert.stepPreparing"),
+    enhancing: enhanceSubstage === "decoding"
+      ? t("convert.stepEnhancingDecoding")
+      : enhanceSubstage === "processing"
+        ? t("convert.stepEnhancingProcessing")
+        : enhanceSubstage === "encoding"
+          ? t("convert.stepEnhancingEncoding")
+          : t("convert.stepEnhancing"),
     uploading: t("convert.stepUploading"),
     transcribing: t("convert.stepTranscribing"),
     summarising: t("convert.stepSummarising"),
