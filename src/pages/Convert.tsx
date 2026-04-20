@@ -253,13 +253,13 @@ export default function Convert() {
       const channelAllowed = inputChannels === 1
         ? activeCfg.audio_enhancement_apply_to_mono
         : activeCfg.audio_enhancement_apply_to_stereo;
-      // Hard duration cap: client-side enhancement decodes the entire file into
-      // a Float32 PCM buffer (~channels × 48000 × seconds × 4 bytes) and then
-      // single-thread MP3-encodes it. Above these limits the tab OOMs / hangs
-      // on most devices, leaving the user stuck on "enhancing audio". When we
-      // exceed the cap we skip enhancement and upload the original instead.
-      const ENHANCE_MAX_DURATION_STEREO_S = 1500; // 25 min
-      const ENHANCE_MAX_DURATION_MONO_S = 3000;   // 50 min
+      // Duration cap: enhancement still decodes the file into a Float32 PCM
+      // AudioBuffer (~channels × 48000 × seconds × 4 bytes). MP3 encoding now
+      // streams in small chunks inside a Web Worker, so the encoder is no
+      // longer the memory bottleneck — only the decoded buffer is. Doubling
+      // the previous limits leaves comfortable headroom on mobile devices.
+      const ENHANCE_MAX_DURATION_STEREO_S = 3000; // 50 min (~1.1 GB Float32)
+      const ENHANCE_MAX_DURATION_MONO_S = 6000;   // 100 min (~1.1 GB Float32)
       const durationCap = inputChannels === 1
         ? ENHANCE_MAX_DURATION_MONO_S
         : ENHANCE_MAX_DURATION_STEREO_S;
