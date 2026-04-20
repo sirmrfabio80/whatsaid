@@ -36,7 +36,7 @@ interface ExtraSourceMeta { id: string; title: string; }
 interface JobOutputMetadata { extra_sources?: ExtraSourceMeta[]; [key: string]: unknown; }
 interface JobOutput { id: string; output_type: string; content: string; custom_prompt: string | null; metadata?: JobOutputMetadata | null; }
 
-interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; }
+interface JobResultsProps { jobId: string; currentTitle?: string | null; onMetaLoaded?: (meta: JobMeta) => void; onReady?: () => void; suppressInitialLoadingState?: boolean; }
 
 interface ListenButtonProps {
   ownerId: string;
