@@ -187,7 +187,7 @@ function runEnhanceInWorker(
   sampleRate: number,
   options: AudioEnhanceOptions,
 ): Promise<{
-  mp3: ArrayBuffer;
+  mp3Blob: Blob;
   measured: AudioEnhanceMeasured;
   normalisationApplied: boolean;
   softClipped: boolean;
@@ -204,23 +204,60 @@ function runEnhanceInWorker(
   }
 
   return new Promise((resolve, reject) => {
+    // Collect MP3 chunks as the worker streams them. Each chunk's underlying
+    // ArrayBuffer was transferred (zero-copy) from the worker, so this list
+    // is the only live reference to the encoded bytes — worker heap stays flat.
+    const chunks: Uint8Array[] = [];
+    let receivedBytes = 0;
+    let settled = false;
+
+    const cleanup = () => {
+      worker.onmessage = null;
+      worker.onerror = null;
+      worker.terminate();
+    };
+
     worker.onmessage = (event: MessageEvent) => {
       const msg = event.data;
-      worker.terminate();
-      if (msg?.type === "success") {
+      if (!msg) return;
+      if (msg.type === "chunk") {
+        chunks.push(msg.bytes as Uint8Array);
+        receivedBytes += (msg.bytes as Uint8Array).byteLength;
+        return;
+      }
+      if (msg.type === "done") {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (msg.totalBytes != null && receivedBytes !== msg.totalBytes) {
+          console.warn(
+            `[audio-enhance] streamed byte count mismatch: received ${receivedBytes}, expected ${msg.totalBytes}`,
+          );
+        }
+        // Assemble streamed chunks into the final Blob. We do this on the main
+        // thread (vs. inside the worker) so the worker never holds the full
+        // encoded MP3 in memory.
+        const mp3Blob = new Blob(chunks as unknown as BlobPart[], { type: "audio/mpeg" });
         resolve({
-          mp3: msg.mp3,
+          mp3Blob,
           measured: msg.measured,
           normalisationApplied: msg.normalisationApplied,
           softClipped: msg.softClipped,
           reason: msg.reason,
         });
-      } else {
-        reject(new Error(msg?.message || "enhance worker failed"));
+        return;
+      }
+      if (msg.type === "error") {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error(msg.message || "enhance worker failed"));
       }
     };
     worker.onerror = (event) => {
-      worker.terminate();
+      if (settled) return;
+      settled = true;
+      cleanup();
       reject(new Error(event.message || "enhance worker errored"));
     };
 
