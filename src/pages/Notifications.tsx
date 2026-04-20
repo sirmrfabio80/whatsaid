@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -5,11 +6,17 @@ import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import NotificationItem from "@/components/NotificationItem";
 import { EmptyState } from "@/components/ui/empty-state";
+import { clearTabBadge } from "@/lib/tab-title-badge";
 
 export default function Notifications() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAllRead, clearAllNotifications } = useNotifications();
+
+  // Clear the tab title badge — the user is looking at the alerts directly
+  useEffect(() => {
+    clearTabBadge();
+  }, []);
 
   const goBack = () => {
     if (window.history.length > 1) {
