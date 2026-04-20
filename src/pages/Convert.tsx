@@ -575,6 +575,15 @@ export default function Convert() {
                     })}
                   </div>
 
+                  {step !== "failed" && step !== "completed" && (
+                    <div className="flex items-start gap-2.5 p-4 rounded-xl bg-primary/5 border border-primary/20 text-body-sm max-w-md">
+                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                      <p className="text-foreground/90">
+                        {t("convert.canLeavePage")}
+                      </p>
+                    </div>
+                  )}
+
                   {step === "failed" && errorMessage && (
                     <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-body-sm max-w-sm">
                       <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />

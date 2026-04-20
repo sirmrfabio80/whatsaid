@@ -139,6 +139,7 @@
     "stepCompleted": "Elaborazione completata",
     "stepFailed": "Elaborazione fallita",
     "longFileToast": "File lungo — preparazione dell'audio nel browser. Mantieni questa scheda aperta.",
+    "canLeavePage": "Puoi lasciare questa pagina — ti avviseremo quando la trascrizione sarà pronta.",
     "customPromptLabel": "Prompt AI personalizzato",
     "customPromptOptional": "(facoltativo)",
     "customPromptPlaceholder": "es. Estrai tutte le azioni e chi ne è responsabile...",
