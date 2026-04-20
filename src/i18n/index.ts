@@ -3,8 +3,6 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 import en from "./locales/en.json";
-import it from "./locales/it.json";
-import fr from "./locales/fr.json";
 
 i18n
   .use(LanguageDetector)
@@ -12,8 +10,6 @@ i18n
   .init({
     resources: {
       en: { translation: en },
-      it: { translation: it },
-      fr: { translation: fr },
     },
     fallbackLng: "en",
     interpolation: {
@@ -25,5 +21,25 @@ i18n
       lookupLocalStorage: "i18nextLng",
     },
   });
+
+// Lazy-load non-English locales only when needed.
+const loadLocale = async (lng: string) => {
+  if (lng.startsWith("it") && !i18n.hasResourceBundle("it", "translation")) {
+    const mod = await import("./locales/it.json");
+    i18n.addResourceBundle("it", "translation", mod.default, true, true);
+    if (i18n.language.startsWith("it")) await i18n.changeLanguage(i18n.language);
+  } else if (lng.startsWith("fr") && !i18n.hasResourceBundle("fr", "translation")) {
+    const mod = await import("./locales/fr.json");
+    i18n.addResourceBundle("fr", "translation", mod.default, true, true);
+    if (i18n.language.startsWith("fr")) await i18n.changeLanguage(i18n.language);
+  }
+};
+
+// Initial load for the detected language.
+void loadLocale(i18n.language || "en");
+// Load on subsequent language changes.
+i18n.on("languageChanged", (lng) => {
+  void loadLocale(lng);
+});
 
 export default i18n;

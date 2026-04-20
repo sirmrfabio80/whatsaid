@@ -141,8 +141,8 @@ export default {
           "100%": { transform: "translateX(-50%)" },
         },
         "progress-fill-92": {
-          "0%": { width: "0%" },
-          "100%": { width: "92%" },
+          "0%": { transform: "scaleX(0)" },
+          "100%": { transform: "scaleX(0.92)" },
         },
         "hero-mock-rise": {
           "0%": { opacity: "0", transform: "translateY(16px)" },

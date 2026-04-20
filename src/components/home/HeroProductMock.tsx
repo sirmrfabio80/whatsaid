@@ -29,20 +29,25 @@ export function HeroProductMock() {
 
       {/* Subtle waveform + progress sliver */}
       <div className="px-4 pt-3 pb-2 border-b border-border/60 bg-card">
-        <div className="relative h-6 mb-1.5 overflow-hidden" aria-hidden="true">
-          <div className="flex items-end gap-[2px] h-full w-[200%] motion-safe:animate-waveform-scroll motion-reduce:animate-none">
+        <div
+          className="relative h-6 mb-1.5 overflow-hidden"
+          style={{ contain: "layout paint" }}
+          aria-hidden="true"
+        >
+          <div
+            className="flex items-end gap-[2px] h-full w-[200%] motion-safe:animate-waveform-scroll motion-reduce:animate-none"
+            style={{ willChange: "transform" }}
+          >
             {(() => {
               const bars = [
                 0.35, 0.55, 0.42, 0.7, 0.5, 0.62, 0.85, 0.6, 0.48, 0.75, 0.58, 0.42,
                 0.65, 0.9, 0.7, 0.55, 0.48, 0.72, 0.55, 0.38, 0.6, 0.78, 0.5, 0.62,
-                0.45, 0.7, 0.55, 0.82, 0.6, 0.48, 0.42, 0.55, 0.68, 0.5, 0.4, 0.58,
-                0.72, 0.5, 0.62, 0.45, 0.55, 0.7, 0.42, 0.6, 0.5, 0.35, 0.48, 0.55,
               ];
               // Duplicate the sequence so translateX(-50%) creates a seamless loop
               return [...bars, ...bars].map((h, i) => (
                 <span
                   key={i}
-                  className={`flex-1 rounded-sm ${i % bars.length < 44 ? "bg-primary/60" : "bg-border"}`}
+                  className={`w-1 rounded-sm ${i % bars.length < 20 ? "bg-primary/60" : "bg-border"}`}
                   style={{ height: `${Math.max(8, h * 100)}%` }}
                 />
               ));
@@ -56,7 +61,10 @@ export function HeroProductMock() {
           <span className="text-[10px] font-mono text-primary tabular-nums">92%</span>
         </div>
         <div className="mt-1 h-0.5 w-full rounded-full bg-muted overflow-hidden">
-          <div className="h-full w-[92%] bg-primary motion-safe:animate-progress-fill-92 motion-reduce:animate-none" />
+          <div
+            className="h-full w-full bg-primary origin-left motion-safe:animate-progress-fill-92 motion-reduce:animate-none"
+            style={{ transform: "scaleX(0.92)", willChange: "transform" }}
+          />
         </div>
       </div>
 
