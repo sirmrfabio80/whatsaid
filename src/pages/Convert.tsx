@@ -446,6 +446,7 @@ export default function Convert() {
     setStep(null);
     setErrorMessage(null);
     setJobId(null);
+    setEnhanceSkippedReason(null);
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
