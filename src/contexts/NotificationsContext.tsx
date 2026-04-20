@@ -103,11 +103,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             if (prev.some((n) => n.id === newNotif.id)) return prev;
             return [newNotif, ...prev].slice(0, 50);
           });
-          // Pulse the bell when a transcription completes (job done, success status)
-          if (
-            newNotif.type === "job_completed" ||
-            (newNotif.resource_type === "job" && newNotif.status === "success")
-          ) {
+          // Pulse the bell when a transcription completes
+          if (newNotif.type === "transcript_ready") {
             setPulseTrigger((p) => p + 1);
           }
         }
