@@ -6,6 +6,10 @@
  * refunds their credits, deletes any orphaned temp-audio file, and emits a
  * `job_failed` notification.
  *
+ * Also sweeps jobs stuck in `uploading` for more than UPLOAD_STALE_MINUTES
+ * (browser-side enhance/upload interrupted — tab closed, mobile suspend, or
+ * worker crash) so they don't appear forever as in-progress in History.
+ *
  * Also performs a secondary sweep over already-failed jobs whose temp-audio
  * file was never cleaned up (audio_deleted_at IS NULL) to garbage-collect
  * orphan storage objects from earlier crashes.
@@ -16,8 +20,11 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 
 const STALE_MINUTES = 30;
+const UPLOAD_STALE_MINUTES = 15;
 const ORPHAN_LOOKBACK_HOURS = 24;
 export const TIMEOUT_MESSAGE = "Job timed out — marked failed by watchdog";
+export const UPLOAD_INTERRUPTED_MESSAGE =
+  "Upload interrupted — marked failed by watchdog";
 
 async function deleteTempAudio(
   supabase: ReturnType<typeof createServiceClient>,
