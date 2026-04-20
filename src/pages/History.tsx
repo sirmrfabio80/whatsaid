@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2, SearchX } from "lucide-react";
+import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2, SearchX, RotateCw } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { clearTabBadge } from "@/lib/tab-title-badge";
+import { isUploadInterrupted } from "@/lib/watchdog";
 
 interface Job {
   id: string;
@@ -33,6 +34,7 @@ interface Job {
   created_at: string;
   speech_model: string | null;
   short_summary: string | null;
+  error_message: string | null;
 }
 
 export default function History() {
