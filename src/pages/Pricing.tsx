@@ -37,6 +37,63 @@ import { CreditDurationTable } from "@/components/pricing/CreditDurationTable";
 import { PerCreditValue } from "@/components/pricing/PerCreditValue";
 import { PricingStudioMock } from "@/components/pricing/PricingStudioMock";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { JsonLd } from "@/components/seo/JsonLd";
+
+// JSON-LD: one Product per credit pack with an InStock GBP Offer.
+// Prices kept in sync with PRICING_PRODUCTS GBP base prices.
+const PRICING_SCHEMA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "WhatSaid — 1 credit pack",
+    description:
+      "1 transcription credit. Each credit transcribes one audio file up to 2 hours; longer files use 1 extra credit per additional 2-hour block (max 8 hours per file).",
+    brand: { "@type": "Brand", name: "WhatSaid" },
+    url: "https://whatsaid.app/pricing",
+    offers: {
+      "@type": "Offer",
+      price: "4.99",
+      priceCurrency: "GBP",
+      availability: "https://schema.org/InStock",
+      url: "https://whatsaid.app/pricing",
+      seller: { "@type": "Organization", name: "WhatSaid" },
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "WhatSaid — 5 credits pack",
+    description:
+      "5 transcription credits. Each credit transcribes one audio file up to 2 hours; longer files use 1 extra credit per additional 2-hour block (max 8 hours per file).",
+    brand: { "@type": "Brand", name: "WhatSaid" },
+    url: "https://whatsaid.app/pricing",
+    offers: {
+      "@type": "Offer",
+      price: "14.99",
+      priceCurrency: "GBP",
+      availability: "https://schema.org/InStock",
+      url: "https://whatsaid.app/pricing",
+      seller: { "@type": "Organization", name: "WhatSaid" },
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "WhatSaid — 20 credits pack",
+    description:
+      "20 transcription credits. Each credit transcribes one audio file up to 2 hours; longer files use 1 extra credit per additional 2-hour block (max 8 hours per file).",
+    brand: { "@type": "Brand", name: "WhatSaid" },
+    url: "https://whatsaid.app/pricing",
+    offers: {
+      "@type": "Offer",
+      price: "39.99",
+      priceCurrency: "GBP",
+      availability: "https://schema.org/InStock",
+      url: "https://whatsaid.app/pricing",
+      seller: { "@type": "Organization", name: "WhatSaid" },
+    },
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Currency toggle
@@ -286,6 +343,9 @@ export default function Pricing() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat relative">
+      {PRICING_SCHEMA.map((schema, i) => (
+        <JsonLd key={i} data={schema} />
+      ))}
       {/* Processing purchase overlay */}
       {processingPurchase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
