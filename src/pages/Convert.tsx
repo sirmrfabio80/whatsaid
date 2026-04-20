@@ -72,14 +72,8 @@ export default function Convert() {
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
   const STEP_LABELS: Record<ProcessingStep, string> = {
-    preparing: t("convert.stepPreparing"),
-    enhancing: enhanceSubstage === "decoding"
-      ? t("convert.stepEnhancingDecoding")
-      : enhanceSubstage === "processing"
-        ? t("convert.stepEnhancingProcessing")
-        : enhanceSubstage === "encoding"
-          ? t("convert.stepEnhancingEncoding")
-          : t("convert.stepEnhancing"),
+    preparing: t("convert.stepEnhancing"),
+    enhancing: t("convert.stepEnhancing"),
     uploading: t("convert.stepUploading"),
     transcribing: t("convert.stepTranscribing"),
     summarising: t("convert.stepSummarising"),
@@ -112,7 +106,7 @@ export default function Convert() {
         const stage = job.processing_stage;
         if (stage === "enhancing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
         else if (stage === "uploading") setStep((prev) => prev === "uploading" ? prev : "uploading");
-        else if (stage === "preparing") setStep((prev) => prev === "preparing" ? prev : "preparing");
+        else if (stage === "preparing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
       } else if (job.status === "processing") {
         const { count } = await supabase
           .from("job_outputs")
@@ -214,7 +208,7 @@ export default function Convert() {
     if (!file || !user) return;
 
     setProcessing(true);
-    setStep("preparing");
+    setStep("enhancing");
     setEnhanceSubstage(null);
     setErrorMessage(null);
 
@@ -546,8 +540,8 @@ export default function Convert() {
                     </div>
                   )}
                   <div className="w-full max-w-sm space-y-4">
-                    {(["preparing", "enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
-                      const allSteps: ProcessingStep[] = ["preparing", "enhancing", "uploading", "transcribing", "summarising", "completed"];
+                    {(["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
+                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "transcribing", "summarising", "completed"];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         allSteps.indexOf(step!) > allSteps.indexOf(s)

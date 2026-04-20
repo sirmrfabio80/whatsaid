@@ -132,11 +132,7 @@
   "convert": {
     "title": "Convertir votre audio",
     "subtitle": "Téléchargez un fichier pour obtenir une transcription, un résumé et une analyse IA personnalisée.",
-    "stepPreparing": "Préparation de l'audio...",
     "stepEnhancing": "Amélioration de l'audio...",
-    "stepEnhancingDecoding": "Décodage de l'audio...",
-    "stepEnhancingProcessing": "Traitement des échantillons...",
-    "stepEnhancingEncoding": "Encodage MP3...",
     "stepUploading": "Téléchargement de l'audio...",
     "stepTranscribing": "Transcription avec identification des intervenants...",
     "stepSummarising": "Génération du résumé et de l'analyse...",
