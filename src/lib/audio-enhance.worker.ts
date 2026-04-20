@@ -77,7 +77,19 @@ function computePeak(channels: Float32Array[]): number {
   return maxSample;
 }
 
-function encodeMp3(
+/**
+ * Stream-encode Float32 channel data to MP3 without ever materialising a
+ * full-length Int16 PCM buffer.
+ *
+ * Memory profile:
+ *   - One ENCODE_CHUNK-sized Int16Array per channel (~9 KB each at 1152 frames × 4 batches).
+ *   - Encoded MP3 chunks accumulated as a list of Uint8Array (output is small,
+ *     ~2.4 MB/min stereo @ 320 kbps, vs ~21 MB/min for the Float32 PCM).
+ *
+ * Compared to the previous implementation, this removes the O(samples)
+ * Int16Array allocation that doubled peak RAM during encode.
+ */
+function encodeMp3Streaming(
   channels: Float32Array[],
   sampleRate: number,
   bitrateKbps: number,
@@ -85,38 +97,60 @@ function encodeMp3(
   const numChannels = channels.length === 1 ? 1 : 2;
   const encoder = new Mp3Encoder(numChannels, sampleRate, bitrateKbps);
   const length = channels[0].length;
-
-  const left = new Int16Array(length);
-  const right = numChannels === 2 ? new Int16Array(length) : null;
   const lCh = channels[0];
   const rCh = numChannels === 2 ? channels[1] : null;
 
-  for (let i = 0; i < length; i++) {
-    left[i] = floatToInt16(lCh[i]);
-    if (right && rCh) right[i] = floatToInt16(rCh[i]);
-  }
+  // Encode in MP3-frame multiples. 1152 samples = one MPEG Layer III frame.
+  // Larger windows reduce per-call overhead; ~46 ms per chunk @ 48 kHz keeps
+  // the worker responsive to incoming messages between iterations if needed.
+  const FRAME = 1152;
+  const FRAMES_PER_CHUNK = 4;
+  const ENCODE_CHUNK = FRAME * FRAMES_PER_CHUNK; // 4608 samples
 
-  const BLOCK = 1152;
+  // Reusable scratch buffers — allocate once, reuse every chunk.
+  const leftScratch = new Int16Array(ENCODE_CHUNK);
+  const rightScratch = rCh ? new Int16Array(ENCODE_CHUNK) : null;
+
   const chunks: Uint8Array[] = [];
-  for (let i = 0; i < length; i += BLOCK) {
-    const lChunk = left.subarray(i, i + BLOCK);
-    const rChunk = right ? right.subarray(i, i + BLOCK) : null;
-    const mp3buf = rChunk
-      ? encoder.encodeBuffer(lChunk, rChunk)
-      : encoder.encodeBuffer(lChunk);
-    if (mp3buf.length > 0) chunks.push(mp3buf);
-  }
-  const tail = encoder.flush();
-  if (tail.length > 0) chunks.push(tail);
 
-  // Concatenate into a single ArrayBuffer so we can transfer it back zero-copy.
+  for (let off = 0; off < length; off += ENCODE_CHUNK) {
+    const end = Math.min(off + ENCODE_CHUNK, length);
+    const n = end - off;
+
+    // Fused float→int16 conversion + slice into the scratch buffer.
+    for (let i = 0; i < n; i++) {
+      leftScratch[i] = floatToInt16(lCh[off + i]);
+    }
+    const lView = leftScratch.subarray(0, n);
+    let rView: Int16Array | null = null;
+    if (rightScratch && rCh) {
+      for (let i = 0; i < n; i++) {
+        rightScratch[i] = floatToInt16(rCh[off + i]);
+      }
+      rView = rightScratch.subarray(0, n);
+    }
+
+    const mp3buf = rView
+      ? encoder.encodeBuffer(lView, rView)
+      : encoder.encodeBuffer(lView);
+    if (mp3buf.length > 0) {
+      // Copy out — lamejs reuses an internal buffer between encodeBuffer calls,
+      // so the returned view becomes invalid after the next call.
+      chunks.push(new Uint8Array(mp3buf));
+    }
+  }
+
+  const tail = encoder.flush();
+  if (tail.length > 0) chunks.push(new Uint8Array(tail));
+
+  // Concatenate into a single transferable ArrayBuffer.
   let total = 0;
   for (const c of chunks) total += c.length;
   const out = new Uint8Array(total);
-  let off = 0;
+  let writeOff = 0;
   for (const c of chunks) {
-    out.set(c, off);
-    off += c.length;
+    out.set(c, writeOff);
+    writeOff += c.length;
   }
   return out.buffer;
 }
@@ -139,7 +173,7 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
 
     // Noise gate — encode untouched and return.
     if (inputRms < NOISE_FLOOR) {
-      const mp3 = await encodeMp3(channels, sampleRate, MP3_BITRATE_KBPS);
+      const mp3 = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
       const response: EnhanceWorkerSuccess = {
         type: "success",
         mp3,
@@ -209,7 +243,7 @@ self.addEventListener("message", async (event: MessageEvent<EnhanceWorkerRequest
     const outputPeak = computePeak(channels);
     const outputPeakDbfs = linearToDbfs(outputPeak);
 
-    const mp3 = await encodeMp3(channels, sampleRate, MP3_BITRATE_KBPS);
+    const mp3 = encodeMp3Streaming(channels, sampleRate, MP3_BITRATE_KBPS);
 
     const sampleModified = softClipped || normalisationApplied;
 
