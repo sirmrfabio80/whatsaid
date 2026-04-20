@@ -61,7 +61,7 @@ export default function Index() {
               </p>
 
               {/* Trust chips — light, no border */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 mb-7 text-caption text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 mb-6 md:mb-5 lg:mb-7 text-caption text-muted-foreground">
                 {[
                   { icon: Users, label: t("home.trustChipSpeakers") },
                   { icon: Languages, label: t("home.trustChipLanguage") },
