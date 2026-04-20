@@ -84,7 +84,6 @@ export class Mp4Demuxer implements StreamingDemuxer {
     onChunk: EncodedChunkHandler,
     onPressure?: () => Promise<void>,
   ): Promise<void> {
-    const mp4boxMod = (await import("mp4box")) as Mp4BoxModule;
     const mp4 = mp4boxMod.createFile();
 
     let pendingChunks: EncodedAudioChunk[] = [];
