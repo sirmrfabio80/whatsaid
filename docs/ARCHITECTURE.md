@@ -475,7 +475,327 @@ drift was unintentional.
 
 ---
 
-_Last updated when listening preferences (voice + speed) and the
-matched-voice indicator landed. Refresh this document whenever you
-touch the data model, design tokens, edge function surface, or
-high-level flows._
+## 10. Cost model and per-transcript cost drivers
+
+### 10.1 Scope and method
+
+This section enumerates every per-transcript cost driver based on the
+edge functions and client modules currently in this repo. "Cost" =
+any external billable call, storage write, bandwidth egress, or
+scheduled background work that scales **per transcript** or **per user
+action**. Fixed infra (Postgres baseline, hosting baseline, browser
+compute, `SpeechSynthesis` TTS which runs locally) is excluded.
+
+All claims below are grounded in code paths in `process-job`,
+`transcribe`, `post-process`, `regenerate`, `_shared/auto-tag.ts`,
+`generate-title`, `generate-tags`, `identify-speakers`,
+`suggest-speakers`, `share-transcript`, `share-transcript-record`,
+`download-shared-pdf`, `process-email-queue`, `watchdog-stale-jobs`,
+`cleanup-assemblyai`, `src/pages/Convert.tsx`,
+`src/components/JobResults.tsx`, `src/components/ShareButton.tsx`,
+`src/lib/export-pdf.ts`, and `src/lib/audio-enhance*`.
+
+### 10.2 Cost categories
+
+| Category | What scales it | Provider |
+|---|---|---|
+| Speech-to-text | seconds of audio | AssemblyAI |
+| LLM (post-process / Q&A / tags / title / translate / speaker review) | tokens × calls | Lovable AI Gateway |
+| Object storage | audio temp blob, share-PDF blob, exports blob, avatars | Lovable Cloud Storage |
+| Bandwidth | upload of audio, signed-URL stream to AssemblyAI, PDF download streaming | Lovable Cloud egress |
+| Background scheduling | pg_cron + edge invocations (`watchdog-stale-jobs`, `cleanup-assemblyai`, `process-email-queue`) | Lovable Cloud edge |
+| Email delivery | enqueued message → outbound send | Lovable Email |
+
+### 10.3 Cost drivers in execution order
+
+For each driver: **Where · Trigger · Frequency · Sync/async · Provider
+· Avoidable / cacheable / dedupable**.
+
+#### A. Pre-upload — browser audio enhancement
+- **Where:** `src/lib/audio-enhance*` (Web Worker), invoked by
+  `Convert.tsx` via `enhanceAudioForTranscriptionAuto`.
+- **Trigger:** every upload that opts into auto-enhance.
+- **Frequency:** once per transcript.
+- **Sync/async:** sync in browser, no server call.
+- **Provider:** none (client CPU only).
+- **Cost impact:** changes uploaded file size → affects upload
+  bandwidth. *Needs verification* whether AAI billable seconds change
+  with bitrate (AAI is duration-based in our usage, so likely no STT
+  cost change).
+- **Avoidable?** Yes via UI toggle. Not cacheable.
+
+#### B. Upload — resumable upload to `temp-audio`
+- **Where:** `src/lib/storage-resumable-upload.ts` from `Convert.tsx`.
+- **Trigger:** user submits a file.
+- **Frequency:** once per transcript.
+- **Sync/async:** sync from the user's perspective.
+- **Provider:** Lovable Cloud Storage (write + ingress).
+- **Lifecycle:** removed at the end of `transcribe` on success, or by
+  `watchdog-stale-jobs` on failure → short-lived blob.
+- **Avoidable?** No (mandatory ingress). Not cacheable.
+
+#### C. Credit deduction — `process-job`
+- **Where:** `supabase/functions/process-job/index.ts` calls
+  `deduct_credits` RPC, then triggers `transcribe` and `post-process`
+  via `EdgeRuntime.waitUntil`.
+- **Trigger:** after upload completes.
+- **Frequency:** once per transcript.
+- **Sync/async:** kicks off async background work.
+- **Provider:** none beyond DB.
+- **Cost impact:** zero external cost; gates downstream cost.
+
+#### D. Transcription — AssemblyAI
+- **Where:** `supabase/functions/transcribe/index.ts`.
+- **Trigger:** `process-job` background dispatch.
+- **Frequency per transcript:**
+  - **1** `POST /transcript` (submit).
+  - **N** `GET /transcript/:id` polls — every `poll_interval_ms`
+    (default 5 s) up to `max_polls` = 120 (≈10 min ceiling).
+  - **1** `DELETE /transcript/:id` after successful retrieval.
+  - Heartbeat `UPDATE jobs … updated_at` every ~30 s (DB only).
+  - **1** storage `remove("temp-audio")` on success.
+- **Sync/async:** background edge function with internal polling.
+- **Provider:** AssemblyAI (paid per audio second + per API request).
+- **Cost-relevant request flags** (from
+  `transcribe_settings_templates.config`): `speech_models` (default
+  `universal-3-pro`), `speaker_labels`, `multichannel`,
+  `language_detection` + `language_confidence_threshold`,
+  `speech_threshold`, `disfluencies`, `keyterms_prompt`, `prompt`,
+  `speaker_options`. *Needs verification* which flags are paid
+  add-ons under our current plan/region (EU vs US base URL).
+- **Avoidable?** No (this is the product). Not cacheable.
+
+#### E. Post-processing — `post-process` (Lovable AI, automatic)
+
+Runs once per first-time transcript:
+
+- **1 call — Summary**, model `google/gemini-2.5-flash`. Always.
+- **1 call — Custom prompt output**, model
+  `google/gemini-3-flash-preview`. **Only if** `custom_prompt` was
+  supplied at upload.
+- Then `autoTag(...)` (best-effort, errors swallowed):
+  - **1 call — Tag generation**, model
+    `google/gemini-2.5-flash-lite`. Skipped if transcript < 100 chars
+    or no `user_id`.
+  - **1 call — Tag-language classification (batched)**, same model.
+    Skipped if no candidate tags.
+- Inserts a `notifications` row (DB only).
+
+Total here: **2–4** Lovable AI calls.
+
+#### F. Lazy title generation — `generate-title` (Lovable AI)
+- **Where:** invoked from `JobDetail` only when `!m.title &&
+  jobStatus === "completed"`.
+- **Frequency:** once per transcript in normal flow (idempotent — the
+  function no-ops if a title already exists).
+- **Calls:** **1**, model `google/gemini-2.5-flash-lite`.
+- **Race risk:** two tabs opening the job concurrently could each
+  fire the call before the DB write lands → see 10.8.
+
+#### G. Background storage / provider cleanup
+- In-line `DELETE` to AssemblyAI + storage remove inside `transcribe`
+  on the happy path.
+- `cleanup-assemblyai` cron retries failed AAI deletions only — no
+  per-job cost in healthy path.
+- `cleanup-stale-jobs` cron also runs (schedule *needs verification*
+  against `pg_cron`).
+
+#### H. Post-conversion user actions (repeatable, 0 credits, all hit Lovable AI)
+- **Edit transcript → "Regenerate summary"** — `regenerate` with
+  `output_type: 'summary_from_edit'`. **1 AI call**
+  (`gemini-2.5-flash`). **Hard cap: 3** per transcript
+  (`summary_regen_count >= 3` → 403).
+- **Re-run summary in another language** — `regenerate` with
+  `output_type: 'summary'`. **1 AI call** (`gemini-2.5-flash`). No
+  explicit cap; `regeneration_count` is incremented but never gated.
+- **Ask a question** — `regenerate` with `output_type: 'custom'`.
+  **1 AI call** (`gemini-3-flash-preview`). **Hard cap: 10** per
+  transcript (atomic
+  `UPDATE … WHERE question_generation_count < 10`). Counter is
+  incremented **before** the AI call and rolled back only on throw.
+  **Editing a question and re-running it counts as a new execution**
+  and consumes one more slot from the 10-cap.
+- **Translate all outputs** — `regenerate` with `translate_all`.
+  **1 AI call per output that is missing or stale**
+  (`source_hash` mismatch), model `gemini-2.5-flash`. Translatable
+  types: `transcript | summary | custom | question`. Variants are
+  cached on `job_output_variants` keyed by
+  `(job_output_id, language, source_hash)` and reused while the
+  transcript hash is unchanged.
+- **Identify speakers** — `identify-speakers`. Result cached on
+  `job_outputs.metadata`; re-served if present. First run does
+  deterministic extraction + selective AI escalation → **0 or 1 AI
+  call** (`gemini-2.5-flash`).
+- **Suggest speaker name** — `suggest-speakers` (called from
+  `JobResults`). **1 AI call per click**
+  (`gemini-2.5-flash-lite`). No cap.
+- **Generate tags manually** — `generate-tags`. Re-invokes `autoTag`
+  → same 2-call pattern as in post-process. No cap (*verify*).
+
+#### I. Sharing & email
+- **PDF generation is fully client-side** (`src/lib/export-pdf.ts →
+  generatePdfBlob` using `jspdf`). No server CPU cost.
+- **Share with PDF** — `ShareButton.uploadPdfForShare` uploads the
+  client-built PDF blob to the `shared-pdfs` bucket, then calls
+  `share-transcript`, which:
+  - inserts a `transcript_shares` row,
+  - renders HTML + plaintext server-side from existing DB outputs
+    (no AI, no PDF re-rendering),
+  - enqueues 1 message in the `transactional_emails` pgmq queue →
+    1 outbound send via `process-email-queue` → Lovable Email.
+- **Share without PDF** — `share-transcript-record`: same flow minus
+  the PDF upload and the storage object.
+- **`download-shared-pdf`** — streams the stored blob to the
+  recipient. Egress bandwidth only; no AI, no PDF rebuild.
+
+#### J. Watchdog & retries
+- `watchdog-stale-jobs` — for stale `processing` / `uploading` jobs:
+  marks failed, refunds via `add_credits` (DB), removes orphan
+  temp-audio (storage delete). No provider cost beyond a possible
+  orphan storage object lingering until the sweep.
+
+### 10.4 Per transcript: how many AI calls can happen
+
+- **Best case (theoretical)** — title pre-supplied via API path, no
+  custom prompt, all auto-tag work succeeds:
+  **3 Lovable AI calls** = summary + auto-tag generate + auto-tag
+  language classify.
+- **Normal case** — account user, no custom prompt at upload, default
+  product UI:
+  **4 Lovable AI calls** = the 3 above + lazy title on first
+  `JobDetail` view.
+- **Normal case + custom prompt at upload:** **5 Lovable AI calls**.
+- **Max case ceiling across the transcript's lifetime** (capped
+  surfaces only):
+  - First creation: 4–5.
+  - Up to **3** `summary_from_edit` regenerations.
+  - Up to **10** custom-question generations (counter persists across
+    edited reruns — *needs product confirmation that edits-of-existing
+    questions should count toward the same cap*).
+  - Uncapped repeatables on top: language re-summary, `translate_all`
+    (cache-bounded), `suggest-speakers`, `identify-speakers` (cached
+    after first run), manual `generate-tags`.
+  - Hard floor for the explicitly capped surface area:
+    **17–18 AI calls**, plus uncapped repeatables.
+
+### 10.5 Lovable AI usage — explicit summary
+
+- **Summary generation:** yes — `gemini-2.5-flash`. Once at creation,
+  plus on `summary_from_edit` (≤3) and on language re-summary
+  (uncapped).
+- **Title generation:** yes — `gemini-2.5-flash-lite`. Once when
+  first viewing a completed job that has no title.
+- **Tag generation:** yes — `gemini-2.5-flash-lite` for tag
+  extraction + 1 batched language-classification call (same model).
+- **Q&A / custom analysis:** yes — `gemini-3-flash-preview`. Capped
+  at **10 per transcript**.
+- **Edited & rerun questions:** yes — each click is a new AI call and
+  consumes one slot from the 10-cap.
+- **Transcript edits do NOT auto-trigger Lovable AI.** They only flip
+  `summary_needs_regen=true`; the AI call happens only when the user
+  explicitly clicks "Regenerate summary".
+- **Translation:** yes — `gemini-2.5-flash`, cached per
+  `(output, language, source_hash)`. Edits invalidate only stale
+  variants.
+- **Speaker review (`identify-speakers`):** conditional — only
+  escalates to `gemini-2.5-flash` if deterministic extraction yields
+  ambiguous candidates; results are cached.
+- **Speaker suggestions (`suggest-speakers`):** yes —
+  `gemini-2.5-flash-lite`, per click, uncapped.
+
+### 10.6 AssemblyAI usage — explicit summary
+
+- One transcription job per upload: **1** `POST` + **N** polls + **1**
+  `DELETE`, all inside `transcribe`.
+- Cost-relevant payload flags: `speech_models` (default
+  `universal-3-pro`), `speaker_labels`, `multichannel`,
+  `language_detection` + `language_confidence_threshold`,
+  `disfluencies`, `keyterms_prompt`, `prompt`, `speaker_options`.
+  *Needs verification* of which are paid add-ons under the current
+  plan.
+- Audio is deleted from AssemblyAI after successful retrieval; orphans
+  are retried by `cleanup-assemblyai`.
+
+### 10.7 Export & PDF cost summary
+
+| Format | Where generated | Server cost |
+|---|---|---|
+| TXT | `src/lib/export-txt.ts`, browser | None |
+| JSON | `src/lib/export-json.ts`, browser | None |
+| DOCX | `src/lib/export.ts` via `docx`, browser | None |
+| PDF (download by owner) | `src/lib/export-pdf.ts` via `jspdf`, browser | None |
+| PDF (share by email) | Same client-side `generatePdfBlob`, then **uploaded** to `shared-pdfs` | Storage write + storage retention until manual cleanup (no automated TTL on the bucket — *needs verification*) + later egress on download |
+| PDF (recipient download) | `download-shared-pdf` streams stored blob | Egress only (no PDF rebuild, no AI) |
+
+**No edge function rebuilds a PDF.** All PDF rendering is
+client-side; the server only stores and streams the blob for the
+share flow.
+
+### 10.8 Optimisation opportunities
+
+- **Title generation race.** Lazy invoke from `JobDetail` can
+  double-fire if two tabs open the job concurrently — `generate-title`
+  has no idempotency guard beyond a post-update check. Consider
+  moving title generation into `post-process` to dedupe and remove
+  the lazy-load round-trip.
+- **Tag language classifier always runs.** `autoTag` LLM-classifies
+  *every* candidate tag rather than only ASCII-suspicious ones; the
+  prior `looksEnglish` heuristic is still in the file but unused.
+  Re-enabling it for clearly-English tags would skip 1 LLM call per
+  transcript when all tags are English.
+- **`summary_from_edit` regenerates from scratch.** No diffing — the
+  full transcript is re-sent for each of the 3 allowed runs.
+- **`translate_all` cache invalidation is whole-output.** Editing the
+  transcript changes the `source_hash` and re-translates *all*
+  outputs in the target language, even ones that haven't been
+  regenerated yet.
+- **Question counter rollback.** A Q&A AI call that throws after
+  partial work still costs upstream tokens; current rollback only
+  resets the DB counter. Streaming + abort would reduce waste.
+- **PDF storage retention.** `shared-pdfs` blobs survive past the
+  share's 2-day expiry — a cron sweep (analogous to
+  `watchdog-stale-jobs`) for shares older than `expires_at` would
+  reclaim storage.
+- **Auto-tag + classifier are sequential.** Two round-trips to the
+  gateway. A single tool-calling prompt could return tags +
+  per-tag language in one call.
+- **`suggest-speakers` is uncapped per click.** A debounce / cooldown
+  or per-job daily limit would prevent runaway costs from a
+  misbehaving UI.
+- **AssemblyAI poll interval is 5 s.** For very long files, raising
+  the interval would cut request count without affecting latency
+  materially.
+
+### 10.9 Observability gaps and items needing verification
+
+Flagged "needs verification":
+
+- AssemblyAI per-feature pricing — which payload flags are paid
+  add-ons under our current plan/region (EU vs US base URL).
+- Lovable AI per-model billing units (token-based vs request-based)
+  and whether `gemini-2.5-flash-lite` vs `gemini-3-flash-preview`
+  differ materially per call.
+- Whether the Q&A 10-cap was *intended* to count edits/reruns of an
+  existing question or only net-new questions.
+- Retention policy + TTL for `shared-pdfs` and `exports` buckets — no
+  scheduled cleanup function found for either.
+- Schedule + frequency of `cleanup-stale-jobs` and
+  `watchdog-stale-jobs` cron jobs (assumed every 5 min from
+  comments, not verified against `pg_cron`).
+- Whether `audio_enhancement` ever changes AssemblyAI billable
+  seconds (it changes file size, but AAI is duration-based).
+- Whether `process-email-queue` tick rate matches the documented
+  default for the configured queue.
+
+There is currently **no per-job aggregated cost log** — provider
+costs are only recoverable from the AssemblyAI and Lovable AI
+dashboards and cannot be joined to `jobs.id`. A future
+`job_cost_events` append-only table fed by each edge function would
+close this gap.
+
+---
+
+_Last updated when the cost model and per-transcript cost drivers
+section landed. Refresh this document whenever you touch the data
+model, design tokens, edge function surface, high-level flows, or
+the cost drivers enumerated in section 10._
