@@ -58,6 +58,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <NotificationsProvider>
+          <RoutePrefetcher />
           <Navbar />
           <Suspense fallback={null}>
           <Routes>
