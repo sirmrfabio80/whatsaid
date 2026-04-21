@@ -440,8 +440,6 @@ async function _uploadPdfForShareInner(
 ): Promise<string | null> {
   const FORMAT: ShareFormat = "pdf";
   try {
-    const hash = await hashExportData(data);
-
     // 1. Session cache (same tab)
     const sessionHit = readSessionCache(jobId, FORMAT);
     if (sessionHit && sessionHit.hash === hash) {
