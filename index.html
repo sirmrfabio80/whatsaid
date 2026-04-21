@@ -49,7 +49,9 @@
       })();
     </script>
 
-    <!-- Site-wide structured data: Organization + WebSite -->
+    <!-- Site-wide structured data: Organization + WebSite.
+         Page-specific schemas (SoftwareApplication, FAQPage, Product) are injected
+         per-route by the <JsonLd /> React component. Keep this graph stable. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -58,16 +60,36 @@
           "@type": "Organization",
           "@id": "https://whatsaid.app/#organization",
           "name": "WhatSaid",
+          "alternateName": "WhatSaid Audio Transcription",
           "url": "https://whatsaid.app/",
-          "logo": "https://whatsaid.app/favicon.png"
+          "logo": {
+            "@type": "ImageObject",
+            "@id": "https://whatsaid.app/#logo",
+            "url": "https://whatsaid.app/favicon-512.png",
+            "width": 512,
+            "height": 512,
+            "caption": "WhatSaid"
+          },
+          "image": { "@id": "https://whatsaid.app/#logo" },
+          "description": "WhatSaid converts audio recordings into transcripts, summaries, key actions, and custom AI answers — with speaker labels and automatic language detection."
         },
         {
           "@type": "WebSite",
           "@id": "https://whatsaid.app/#website",
           "name": "WhatSaid",
+          "alternateName": "WhatSaid — AI Audio Transcription",
           "url": "https://whatsaid.app/",
+          "description": "Upload audio and get instant transcripts with speaker labels, structured summaries, and custom AI analysis. Supports .m4a, .mp3, .wav.",
+          "inLanguage": "en",
           "publisher": { "@id": "https://whatsaid.app/#organization" },
-          "inLanguage": "en"
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://whatsaid.app/help?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
         }
       ]
     }
