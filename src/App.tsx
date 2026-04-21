@@ -1,6 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +9,7 @@ import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { KeyboardInsetTracker } from "@/hooks/use-keyboard-inset";
+import { prefetchLikelyRoutes } from "@/lib/route-prefetch";
 
 // Eagerly load the landing page for fast FCP/LCP
 import Index from "./pages/Index";
@@ -36,6 +37,19 @@ const Help = lazy(() => import("./pages/Help"));
 
 const queryClient = new QueryClient();
 
+/**
+ * Watches the current pathname and warms the JS chunks for routes likely
+ * to be visited next. Idle-scheduled and skipped on Save-Data / 2g.
+ * Renders nothing.
+ */
+const RoutePrefetcher = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    prefetchLikelyRoutes(pathname);
+  }, [pathname]);
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -44,6 +58,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <NotificationsProvider>
+          <RoutePrefetcher />
           <Navbar />
           <Suspense fallback={null}>
           <Routes>
