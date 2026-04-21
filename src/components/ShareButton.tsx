@@ -22,8 +22,108 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ACCEPT_HINT_STORAGE_KEY = "share-email-autocomplete-hint-dismissed";
 const ARROW_HINT_STORAGE_KEY = "share-email-autocomplete-arrow-hint-dismissed";
 
-async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Promise<string | null> {
+/**
+ * Hash the canonical export payload so we can detect when the user has
+ * edited transcript/summary/etc and a previously-uploaded PDF is no longer
+ * representative. Stable JSON stringify is sufficient — keys come from a
+ * fixed-shape object built by the export pipeline.
+ */
+async function hashExportData(data: CanonicalExportData): Promise<string> {
+  const json = JSON.stringify(data);
+  const bytes = new TextEncoder().encode(json);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+}
+
+const PDF_CACHE_PREFIX = "share-pdf-cache:";
+type PdfCacheEntry = { hash: string; path: string };
+
+function readPdfCache(jobId: string): PdfCacheEntry | null {
+  if (typeof window === "undefined") return null;
   try {
+    const raw = window.sessionStorage.getItem(PDF_CACHE_PREFIX + jobId);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.hash === "string" &&
+      typeof parsed.path === "string"
+    ) {
+      return parsed;
+    }
+  } catch {
+    /* noop */
+  }
+  return null;
+}
+
+function writePdfCache(jobId: string, entry: PdfCacheEntry): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      PDF_CACHE_PREFIX + jobId,
+      JSON.stringify(entry),
+    );
+  } catch {
+    /* noop */
+  }
+}
+
+function clearPdfCache(jobId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(PDF_CACHE_PREFIX + jobId);
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Verify a previously-uploaded PDF still exists in storage. Avoids reusing
+ * a cached path that the cleanup job has already swept (shares older than
+ * `expires_at` purge their PDFs).
+ */
+async function pdfStillExists(path: string): Promise<boolean> {
+  try {
+    const slash = path.lastIndexOf("/");
+    if (slash < 0) return false;
+    const dir = path.slice(0, slash);
+    const name = path.slice(slash + 1);
+    const { data, error } = await supabase.storage
+      .from("shared-pdfs")
+      .list(dir, { limit: 1000, search: name });
+    if (error || !data) return false;
+    return data.some((f) => f.name === name);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generate + upload a PDF for sharing, deduplicating across repeated share
+ * attempts in the same tab. If the same job + identical export payload was
+ * already uploaded, the existing storage path is reused — no second PDF is
+ * generated and no second blob is uploaded. Edits to the transcript/summary
+ * change the hash and force a fresh PDF.
+ */
+async function uploadPdfForShare(
+  jobId: string,
+  data: CanonicalExportData,
+): Promise<string | null> {
+  try {
+    const hash = await hashExportData(data);
+    const cached = readPdfCache(jobId);
+    if (cached && cached.hash === hash) {
+      if (await pdfStillExists(cached.path)) {
+        return cached.path;
+      }
+      // Stale (cleanup swept it or share expired) — fall through and re-upload.
+      clearPdfCache(jobId);
+    }
+
     const blob = await generatePdfBlob(data);
     const path = `${jobId}/${crypto.randomUUID()}.pdf`;
     const { error } = await supabase.storage
@@ -33,6 +133,7 @@ async function uploadPdfForShare(jobId: string, data: CanonicalExportData): Prom
       console.error("PDF upload failed:", error);
       return null;
     }
+    writePdfCache(jobId, { hash, path });
     return path;
   } catch (err) {
     console.error("PDF generation failed:", err);
