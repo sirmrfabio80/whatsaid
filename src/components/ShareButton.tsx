@@ -228,6 +228,42 @@ async function deleteDbCacheEntry(
 }
 
 /**
+ * Record a share-artifact reuse / upload event so users (and admins) can
+ * later answer "why did this share generate a new PDF instead of reusing
+ * the previous one?". Best-effort, never blocks the share flow. Skipped
+ * for unauthenticated users (no `user_id` to attribute the row to).
+ */
+type ShareLogEntry = {
+  jobId: string;
+  format: ShareFormat;
+  hash: string;
+  action: "reused" | "uploaded";
+  source: "session" | "db" | "fresh" | "stale-session" | "stale-db";
+  storagePath: string | null;
+  reason?: string;
+};
+
+async function logShareEvent(entry: ShareLogEntry): Promise<void> {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    if (!userId) return;
+    await supabase.from("share_artifact_log").insert({
+      user_id: userId,
+      job_id: entry.jobId,
+      format: entry.format,
+      content_hash: entry.hash,
+      action: entry.action,
+      source: entry.source,
+      storage_path: entry.storagePath,
+      reason: entry.reason ?? null,
+    });
+  } catch {
+    /* best effort — never block share */
+  }
+}
+
+/**
  * Generate + upload a PDF for sharing, deduplicating across repeated share
  * attempts. Lookup order:
  *   1. In-tab session cache (fastest, no network)
