@@ -96,24 +96,46 @@ function clearSessionCache(jobId: string, format: ShareFormat): void {
 }
 
 /**
+ * Per-tab existence cache for share artifact paths. The result is only
+ * useful for ~tens of seconds — long enough to absorb burst retries
+ * (double-click, retry-after-network-blip), short enough to still notice
+ * objects swept by the cleanup job. Tunable via `EXISTENCE_TTL_MS`.
+ */
+const EXISTENCE_TTL_MS = 30_000;
+const existenceCache = new Map<string, { exists: boolean; checkedAt: number }>();
+
+/**
  * Verify a previously-uploaded share artifact still exists in storage.
- * Avoids reusing a cached path that the cleanup job has already swept
- * (shares older than `expires_at` purge their files).
+ *
+ * Uses `createSignedUrl(path, 1)` instead of `.list()`:
+ *   - Old approach paged up to 1000 sibling object records to find one
+ *     name (O(N) over the directory, plus full metadata transfer).
+ *   - Signed-URL minting is an O(1) row check: success ⇒ object present;
+ *     PGRST/storage 404 ⇒ object missing or already swept.
+ *
+ * Stale paths (already removed by `cleanup-expired-shares`) still fail
+ * loudly because the storage row no longer exists.
  */
 async function shareArtifactStillExists(path: string): Promise<boolean> {
+  if (!path || path.indexOf("/") < 0) return false;
+
+  const cached = existenceCache.get(path);
+  if (cached && Date.now() - cached.checkedAt < EXISTENCE_TTL_MS) {
+    return cached.exists;
+  }
+
+  let exists = false;
   try {
-    const slash = path.lastIndexOf("/");
-    if (slash < 0) return false;
-    const dir = path.slice(0, slash);
-    const name = path.slice(slash + 1);
     const { data, error } = await supabase.storage
       .from("shared-pdfs")
-      .list(dir, { limit: 1000, search: name });
-    if (error || !data) return false;
-    return data.some((f) => f.name === name);
+      .createSignedUrl(path, 1);
+    exists = !error && !!data?.signedUrl;
   } catch {
-    return false;
+    exists = false;
   }
+
+  existenceCache.set(path, { exists, checkedAt: Date.now() });
+  return exists;
 }
 
 /**
