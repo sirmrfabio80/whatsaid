@@ -487,6 +487,64 @@ class Pen {
   transcriptLine(text: string) {
     this.plain(text, F.transcript, C.body, false, false, ML + 5, CW - 5, LH, true);
   }
+
+  /**
+   * Render a horizontal row of "speaker chips" — a coloured dot followed by
+   * the speaker name — flowing onto multiple lines if needed. Mirrors the
+   * "Speakers:" pill row shown on the in-app transcript page so the PDF
+   * header carries the same at-a-glance information.
+   */
+  speakerRow(speakers: string[], colors: Map<string, string>) {
+    if (!speakers.length) return;
+
+    const labelFont = F.meta;
+    const chipFont = F.meta;
+    const lineH = ptMm(chipFont) * LH;
+    const rowGapY = 1.5;
+    const dotR = 1.3;
+    const dotGap = 1.8;
+    const chipGap = 5;
+
+    this.pageBreak(lineH);
+
+    // Leading "Speakers:" label in the same muted meta colour as the row above.
+    this.setF(true, false, labelFont, false);
+    this.setC(C.meta);
+    const label = "Speakers:";
+    const labelW = this.pdf.getTextWidth(label);
+    let x = ML;
+    let bl = this.baseline(labelFont);
+    this.pdf.text(label, x, bl);
+    x += labelW + 3;
+
+    // Names render in regular weight and the heading colour so the row reads
+    // as content (not chrome), but stays visually grouped with the metadata.
+    this.setF(false, false, chipFont, false);
+
+    for (const spk of speakers) {
+      const color = colors.get(spk.toLowerCase()) ?? C.accent;
+      const nameW = this.pdf.getTextWidth(spk);
+      const chipW = dotR * 2 + dotGap + nameW;
+
+      // Wrap to a new row when the chip would overflow the content width.
+      if (x + chipW > ML + CW) {
+        this.y += lineH + rowGapY;
+        this.pageBreak(lineH);
+        x = ML + labelW + 3;
+        bl = this.baseline(chipFont);
+      }
+
+      const dotY = this.y + ptMm(chipFont) * 0.55;
+      this.pdf.setFillColor(...hexRgb(color));
+      this.pdf.circle(x + dotR, dotY, dotR, "F");
+
+      this.setC(C.heading);
+      this.pdf.text(spk, x + dotR * 2 + dotGap, bl);
+      x += chipW + chipGap;
+    }
+
+    this.y += lineH;
+  }
 }
 
 /* ------------------------------------------------------------------ */
