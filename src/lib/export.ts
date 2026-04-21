@@ -200,7 +200,12 @@ function buildSections(data: CanonicalExportData): Paragraph[] {
   return children;
 }
 
-export async function exportDocx(data: CanonicalExportData): Promise<void> {
+/**
+ * Build a DOCX blob from canonical export data without triggering a
+ * download. Exposed so callers can dedup repeated builds (see
+ * `export-cache.ts`) before deciding whether to regenerate.
+ */
+export async function buildDocxBlob(data: CanonicalExportData): Promise<Blob> {
   const doc = new Document({
     numbering: {
       config: [
@@ -238,8 +243,12 @@ export async function exportDocx(data: CanonicalExportData): Promise<void> {
     ],
   });
 
-  const buffer = await Packer.toBlob(doc);
-  downloadBlob(buffer, `${data.title}.docx`);
+  return Packer.toBlob(doc);
+}
+
+export async function exportDocx(data: CanonicalExportData): Promise<void> {
+  const blob = await buildDocxBlob(data);
+  downloadBlob(blob, `${data.title}.docx`);
 }
 
 /* ------------------------------------------------------------------ */
