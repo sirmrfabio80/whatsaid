@@ -174,6 +174,10 @@ Deno.serve(async (req) => {
   };
 
   const supabase = createServiceClient();
+  const config = await loadConfig(supabase);
+  console.log(
+    `[${JOB_NAME}] config: ttl=${config.share_pdf_cache_ttl_days}d batch=${config.cleanup_batch_size}`,
+  );
 
   // Insert a "running" log row up-front so timeouts / crashes are visible.
   // Skipped in dry-run mode so previews don't pollute the audit log.
