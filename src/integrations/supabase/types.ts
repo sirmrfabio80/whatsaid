@@ -59,6 +59,54 @@ export type Database = {
         }
         Relationships: []
       }
+      cleanup_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          errors: Json
+          exports_deleted: number
+          finished_at: string | null
+          id: string
+          job_name: string
+          metadata: Json | null
+          missing_prefixes: number
+          shared_pdfs_deleted: number
+          shared_pdfs_orphans_deleted: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          errors?: Json
+          exports_deleted?: number
+          finished_at?: string | null
+          id?: string
+          job_name: string
+          metadata?: Json | null
+          missing_prefixes?: number
+          shared_pdfs_deleted?: number
+          shared_pdfs_orphans_deleted?: number
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          errors?: Json
+          exports_deleted?: number
+          finished_at?: string | null
+          id?: string
+          job_name?: string
+          metadata?: Json | null
+          missing_prefixes?: number
+          shared_pdfs_deleted?: number
+          shared_pdfs_orphans_deleted?: number
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       credit_balances: {
         Row: {
           balance: number
