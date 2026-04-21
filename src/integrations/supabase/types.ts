@@ -667,6 +667,7 @@ export type Database = {
         Row: {
           content_hash: string
           created_at: string
+          format: string
           id: string
           job_id: string
           last_used_at: string
@@ -676,6 +677,7 @@ export type Database = {
         Insert: {
           content_hash: string
           created_at?: string
+          format?: string
           id?: string
           job_id: string
           last_used_at?: string
@@ -685,6 +687,7 @@ export type Database = {
         Update: {
           content_hash?: string
           created_at?: string
+          format?: string
           id?: string
           job_id?: string
           last_used_at?: string
