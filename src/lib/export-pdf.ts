@@ -695,6 +695,8 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
         const promptH = ptMm(F.qa) * LH;
         const answerH = qa.answer ? measureMarkdownHead(pen, qa.answer, 2) : 0;
         pen.pageBreakHard(promptH + 1 + answerH);
+        // Q&A on the in-app page renders in the default sans body font, not
+        // serif — match that here so the PDF feels like the same document.
         pen.rich(
           [{ text: "Q: ", bold: true }, { text: qa.prompt, bold: true }],
           F.qa,
@@ -702,11 +704,11 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
           ML,
           CW,
           LH,
-          true,
+          false,
         );
         pen.gap(1);
       }
-      renderMarkdown(pen, qa.answer);
+      renderMarkdown(pen, qa.answer, false);
       pen.gap(3);
     }
   }
