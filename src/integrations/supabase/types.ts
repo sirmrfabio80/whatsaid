@@ -663,6 +663,45 @@ export type Database = {
         }
         Relationships: []
       }
+      share_artifact_log: {
+        Row: {
+          action: string
+          content_hash: string
+          created_at: string
+          format: string
+          id: string
+          job_id: string
+          reason: string | null
+          source: string
+          storage_path: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          content_hash: string
+          created_at?: string
+          format: string
+          id?: string
+          job_id: string
+          reason?: string | null
+          source: string
+          storage_path?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          content_hash?: string
+          created_at?: string
+          format?: string
+          id?: string
+          job_id?: string
+          reason?: string | null
+          source?: string
+          storage_path?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       share_pdf_cache: {
         Row: {
           content_hash: string
