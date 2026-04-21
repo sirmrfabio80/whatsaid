@@ -844,6 +844,15 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     gapAfterMm: 3,
   });
 
+  // Speakers row (mirrors the chip strip on the in-app transcript page)
+  if (data.speakers && data.speakers.length) {
+    blocks.push({
+      html: `Speakers: ${data.speakers.join(" · ")}`,
+      forceNewPage: false,
+      gapAfterMm: 3,
+    });
+  }
+
   // Summary
   if (data.summary) {
     blocks.push({
