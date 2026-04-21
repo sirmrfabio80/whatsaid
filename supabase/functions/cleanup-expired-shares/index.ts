@@ -38,16 +38,26 @@ import { createServiceClient } from "../_shared/supabase.ts";
 const JOB_NAME = "cleanup-expired-shares";
 const EXPORT_TTL_DAYS = 7;
 const ORPHAN_GRACE_HOURS = 24; // ignore very fresh orphans (still being uploaded)
+
 /**
- * Stale `share_pdf_cache` rows whose `last_used_at` is older than this are
- * pruned each run to prevent unbounded DB growth. The shared-pdfs storage
- * sweep above runs first, so by the time we get here many of these rows
- * already point at deleted blobs — we just remove the index entry too.
+ * Defaults for tunables that live in `public.cleanup_config`. Used as a
+ * fallback when the row is missing/unreadable — keeps the cleanup job
+ * working even before the table is provisioned.
  *
- * 30 days is a generous reuse window: re-shares within a month still hit
- * the cache, while abandoned entries don't accumulate forever.
+ *  - `share_pdf_cache_ttl_days`: how long a `share_pdf_cache` row may sit
+ *    untouched (`last_used_at`) before it gets pruned. Generous default
+ *    (30 days) so re-shares within a month still hit the cache.
+ *  - `cleanup_batch_size`: cap on rows fetched per sweep (expired shares,
+ *    old exports, stale cache entries). Bounds the per-run work so the
+ *    function fits inside the edge runtime time/memory budget.
  */
-const SHARE_CACHE_TTL_DAYS = 30;
+const DEFAULT_SHARE_CACHE_TTL_DAYS = 30;
+const DEFAULT_CLEANUP_BATCH_SIZE = 1000;
+
+interface CleanupConfig {
+  share_pdf_cache_ttl_days: number;
+  cleanup_batch_size: number;
+}
 
 interface CleanupSummary {
   shared_pdfs_deleted: number;
@@ -99,6 +109,46 @@ async function parseDryRun(req: Request): Promise<boolean> {
   return false;
 }
 
+/**
+ * Load tunables from `cleanup_config` (singleton row, id=1). Falls back to
+ * defaults on missing row, RLS denial, parse error, or out-of-range
+ * values so a misconfigured table can never break the cleanup job.
+ */
+async function loadConfig(
+  supabase: ReturnType<typeof createServiceClient>,
+): Promise<CleanupConfig> {
+  try {
+    const { data, error } = await supabase
+      .from("cleanup_config")
+      .select("share_pdf_cache_ttl_days, cleanup_batch_size")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error || !data) {
+      return {
+        share_pdf_cache_ttl_days: DEFAULT_SHARE_CACHE_TTL_DAYS,
+        cleanup_batch_size: DEFAULT_CLEANUP_BATCH_SIZE,
+      };
+    }
+    const ttl = Number(data.share_pdf_cache_ttl_days);
+    const batch = Number(data.cleanup_batch_size);
+    return {
+      share_pdf_cache_ttl_days:
+        Number.isFinite(ttl) && ttl >= 1 && ttl <= 365
+          ? ttl
+          : DEFAULT_SHARE_CACHE_TTL_DAYS,
+      cleanup_batch_size:
+        Number.isFinite(batch) && batch >= 50 && batch <= 10_000
+          ? batch
+          : DEFAULT_CLEANUP_BATCH_SIZE,
+    };
+  } catch {
+    return {
+      share_pdf_cache_ttl_days: DEFAULT_SHARE_CACHE_TTL_DAYS,
+      cleanup_batch_size: DEFAULT_CLEANUP_BATCH_SIZE,
+    };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -124,6 +174,10 @@ Deno.serve(async (req) => {
   };
 
   const supabase = createServiceClient();
+  const config = await loadConfig(supabase);
+  console.log(
+    `[${JOB_NAME}] config: ttl=${config.share_pdf_cache_ttl_days}d batch=${config.cleanup_batch_size}`,
+  );
 
   // Insert a "running" log row up-front so timeouts / crashes are visible.
   // Skipped in dry-run mode so previews don't pollute the audit log.
@@ -183,7 +237,7 @@ Deno.serve(async (req) => {
       .from("transcript_shares")
       .select("id, job_id")
       .lt("expires_at", nowIso)
-      .limit(500);
+      .limit(config.cleanup_batch_size);
 
     if (sharesErr) {
       summary.errors.push(`fetch expired shares: ${sharesErr.message}`);
@@ -334,7 +388,7 @@ Deno.serve(async (req) => {
       .eq("status", "completed")
       .not("resource_url", "is", null)
       .lt("completed_at", exportCutoff)
-      .limit(500);
+      .limit(config.cleanup_batch_size);
 
     if (exportsErr) {
       summary.errors.push(`fetch old exports: ${exportsErr.message}`);
@@ -375,7 +429,8 @@ Deno.serve(async (req) => {
     }
 
     // -------------------------------------------------------------------
-    // 3. share_pdf_cache: prune index rows untouched for SHARE_CACHE_TTL_DAYS.
+    // 3. share_pdf_cache: prune index rows untouched for the configured
+    //    TTL (see `cleanup_config.share_pdf_cache_ttl_days`).
     //
     // The actual blobs they reference are usually already gone (the
     // shared-pdfs sweep above runs first). This step bounds the cache
@@ -384,14 +439,14 @@ Deno.serve(async (req) => {
     // without TTL each user accumulates one row per historical hash.
     // -------------------------------------------------------------------
     const cacheCutoff = new Date(
-      Date.now() - SHARE_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000,
+      Date.now() - config.share_pdf_cache_ttl_days * 24 * 60 * 60 * 1000,
     ).toISOString();
 
     const { data: staleCacheRows, error: cacheFetchErr } = await supabase
       .from("share_pdf_cache")
       .select("id")
       .lt("last_used_at", cacheCutoff)
-      .limit(1000);
+      .limit(config.cleanup_batch_size);
 
     if (cacheFetchErr) {
       summary.errors.push(`fetch stale share_pdf_cache: ${cacheFetchErr.message}`);
@@ -426,6 +481,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         ok: true,
         dry_run: dryRun,
+        config,
         ...summary,
         ...(dryRun ? { would_delete: dryReport } : {}),
       }),
