@@ -463,7 +463,7 @@ src/
 
 ### 7.6 Drift guards
 
-Three Node scripts (no extra deps) act as guard rails between the
+Four Node scripts (no extra deps) act as guard rails between the
 source of truth (code, capability registry) and the docs that describe
 them. Run them all locally with **`npm run docs:check:all`**; CI uses
 the same entrypoint.
@@ -473,6 +473,7 @@ the same entrypoint.
 | `scripts/check-capabilities-sources.mjs` | `docs:check` | Stale `**Source files:**` paths in `docs/product/capabilities.md` (file renamed/deleted but doc not updated). |
 | `scripts/check-help-faq-coverage.mjs` | `docs:check:faq` | Public capability with non-empty `FAQ seeds` that has no matching entry in `src/content/help/faq.ts` (`caps:[]`), or an FAQ entry referencing a non-existent capability ID. |
 | `scripts/check-design-tokens-drift.mjs` | `docs:check:tokens` | Color tokens (`:root` / `.dark` HSL triplets in `src/index.css`), preferred font families, and the type scale (`tailwind.config.ts → fontSize` — name + size + lineHeight + non-default fontWeight) drifting from §4.1 / §4.2 of this document. |
+| `scripts/check-architecture-doc-drift.mjs` | `docs:check:arch` | A `public.*` table in `src/integrations/supabase/types.ts` or an edge function folder under `supabase/functions/` that isn't backticked anywhere in this document (§5 / §6 left out of date after a schema or function-surface change). Allow-lists in the script let intentionally-undocumented surfaces opt out with a justification. |
 
 When a guard fails, the fix is almost always **update the doc** (the
 code is the source of truth). Only revert the source change if the
