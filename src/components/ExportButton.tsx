@@ -8,13 +8,31 @@ import { toast } from "sonner";
 import type { CanonicalExportData } from "@/lib/export-types";
 import { buildTxt } from "@/lib/export-txt";
 import { buildJson } from "@/lib/export-json";
-import { exportDocx } from "@/lib/export";
+import { buildDocxBlob } from "@/lib/export";
 import { useNotifications } from "@/contexts/NotificationsContext";
-import { downloadString } from "@/lib/download";
+import {
+  hashExportData,
+  readCache,
+  writeCache,
+  downloadBlob,
+  type CacheableFormat,
+} from "@/lib/export-cache";
 
-type ExportFormat = "txt" | "json" | "doc" | "pdf";
+type ExportFormat = CacheableFormat | "pdf";
 
 interface ExportButtonProps { data: CanonicalExportData | null; disabled?: boolean; sourceJobId?: string; }
+
+const MIME: Record<CacheableFormat, string> = {
+  txt: "text/plain;charset=utf-8",
+  json: "application/json",
+  doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
+const EXT: Record<CacheableFormat, string> = {
+  txt: "txt",
+  json: "json",
+  doc: "docx",
+};
 
 export default function ExportButton({ data, disabled, sourceJobId }: ExportButtonProps) {
   const { t } = useTranslation();
@@ -25,7 +43,8 @@ export default function ExportButton({ data, disabled, sourceJobId }: ExportButt
   const handleExport = async (format: ExportFormat) => {
     if (!data) return;
 
-    // PDF is handled as an async job via NotificationsContext
+    // PDF is handled as an async job via NotificationsContext (already
+    // deduplicated through `share_pdf_cache` on the share path).
     if (format === "pdf") {
       startPdfExport(data, sourceJobId);
       return;
@@ -33,10 +52,32 @@ export default function ExportButton({ data, disabled, sourceJobId }: ExportButt
 
     setExporting(format);
     try {
-      switch (format) {
-        case "txt": downloadString(buildTxt(data), `${data.title}.txt`, "text/plain;charset=utf-8"); break;
-        case "json": downloadString(buildJson(data), `${data.title}.json`, "application/json"); break;
-        case "doc": await exportDocx(data); break;
+      // Dedup: hash payload, reuse the previously-built Blob for the same
+      // (jobId, format, hash) so repeated downloads don't re-run the
+      // (potentially expensive) DOCX builder or re-serialise large
+      // transcripts. Cache key is per-tab and bounded (see export-cache.ts).
+      const cacheKeyJobId = sourceJobId ?? "anon";
+      const hash = await hashExportData(data);
+      const filename = `${data.title}.${EXT[format]}`;
+
+      const hit = readCache(cacheKeyJobId, format, hash);
+      if (hit) {
+        downloadBlob(hit.blob, hit.filename);
+      } else {
+        let blob: Blob;
+        switch (format) {
+          case "txt":
+            blob = new Blob([buildTxt(data)], { type: MIME.txt });
+            break;
+          case "json":
+            blob = new Blob([buildJson(data)], { type: MIME.json });
+            break;
+          case "doc":
+            blob = await buildDocxBlob(data);
+            break;
+        }
+        writeCache(cacheKeyJobId, format, hash, blob, filename);
+        downloadBlob(blob, filename);
       }
       toast.success(t("exportBtn.exportComplete"));
     } catch { toast.error(t("exportBtn.exportFailed")); } finally { setExporting(null); }
