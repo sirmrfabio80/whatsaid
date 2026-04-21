@@ -486,13 +486,26 @@ network/storage I/O when users repeatedly download or share the same
 artifact.
 
 **`src/lib/export-cache.ts` — in-memory LRU for TXT / JSON / DOC.**
-Bounded `Map` (≤ 12 entries) keyed by `(jobId, format, contentHash)`,
-where `contentHash` is a SHA-256 of the canonical export payload
-(truncated to 32 hex chars). Re-downloading the same format for an
-unchanged transcript reuses the same `Blob` instead of re-running
-`Packer.toBlob` / re-serialising; editing the transcript or summary
-changes the hash and forces a fresh build. **PDF is intentionally
-excluded** — it has its own server-side cache via `share_pdf_cache`.
+
+| Property | Value |
+| --- | --- |
+| Scope | Per-tab, per-page-load (plain module-level `Map`; not persisted to `sessionStorage` or `localStorage`). |
+| Supported formats | `CacheableFormat = "txt" \| "json" \| "doc"`. **PDF is intentionally excluded** — it has its own cross-tab/cross-device cache via `share_pdf_cache` (see below). |
+| Key | `` `${jobId}:${format}:${contentHash}` `` where `contentHash = SHA-256(JSON.stringify(canonicalExportData)).slice(0, 32)` (32 hex chars). |
+| Value | `{ blob: Blob, filename: string, insertedAt: number }`. |
+| Capacity | `MAX_ENTRIES = 12`. On overflow, the oldest insertion-order key is evicted (`Map.keys().next().value`). |
+| Eviction policy | **LRU by access** — `readCache` deletes + re-`set`s the hit so it becomes the most-recently-used entry; `writeCache` evicts from the front until size ≤ 12. |
+| TTL | **None.** Entries live until evicted by capacity, the tab is closed, or a hard reload occurs. There is no time-based expiry — the `insertedAt` field is informational only. |
+| Invalidation | Implicit via `contentHash`: editing transcript / summary / speakers / tags / etc. changes the canonical payload, changes the hash, and falls through to a fresh build. No explicit `invalidate(jobId)` API exists. |
+| Consumers | `src/components/ExportButton.tsx` (read-then-write around `generateExport(...)`); `src/lib/export.ts` is cache-aware but does not own lookups. |
+| Side effects | None beyond `URL.createObjectURL` / `revokeObjectURL` performed by `downloadBlob` at trigger time. Cache stores raw `Blob`s, not object URLs. |
+
+Re-downloading the same format for an unchanged transcript therefore
+reuses the same `Blob` instead of re-running `Packer.toBlob` (DOCX) or
+re-serialising (TXT/JSON). Switching format (e.g. DOC → TXT) misses
+because the format is part of the key.
+
+
 
 **`src/components/ShareButton.tsx → uploadPdfForShare()` — five-tier
 lookup before any fresh PDF render or upload:**
