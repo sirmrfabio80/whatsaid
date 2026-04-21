@@ -601,6 +601,36 @@ orphan dirs), and the `share_pdf_cache` row is pruned once
 Deleting the parent `jobs` row cascades the cache row immediately via
 `share_pdf_cache_job_id_fkey ON DELETE CASCADE`.
 
+### 7.8 Performance posture
+
+A few load-time decisions are deliberate and should not be "optimised"
+without re-reading this section, because the obvious fixes regress UX
+or other metrics:
+
+- **CSS is not deferred / async-loaded.** Vite emits a single
+  `index-*.css` bundle (~19 KB) containing Tailwind base, design
+  tokens (HSL vars in `:root`), and component classes used by the
+  Navbar and hero — i.e. the above-the-fold paint surface. Lighthouse
+  flags it as render-blocking (~84 ms), but every viable mitigation
+  (`media="print"` + `onload` swap, `vite-plugin-critical` inlining,
+  per-route CSS splitting) causes a **flash of unstyled content** on
+  the hero/navbar or bloats every HTML response. The 84 ms blocking
+  cost is paid intentionally to keep first paint visually correct.
+  Do **not** wire up CSS deferral plugins.
+- **Route chunks are prefetched, not preloaded.** `src/lib/route-prefetch.ts`
+  warms likely next-route JS chunks at idle time, gated on
+  `navigator.connection.saveData` and `effectiveType ∈ {2g, slow-2g}`.
+  The dynamic `import()` paths must stay textually identical to the
+  `lazy(() => import("./pages/X"))` calls in `App.tsx` so Rollup
+  de-duplicates them to the same chunk — otherwise prefetch creates
+  a second copy and saves nothing.
+- **Real wins live elsewhere.** When chasing perf scores on this app,
+  the high-leverage targets are (a) trimming/subsetting the Inter
+  italic woff2 (~381 KB, dominant LCP critical-chain node), (b)
+  resizing the navbar logo (served 511×512, displayed 36×36), and
+  (c) long `Cache-Control: immutable` on `/assets/*` at the CDN —
+  none of which are app-code changes the build can make on its own.
+
 ---
 
 ## 8. Conventions
