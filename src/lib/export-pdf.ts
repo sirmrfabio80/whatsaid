@@ -665,7 +665,8 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
     const firstTwoH = 2 * ptMm(F.transcript) * LH;
     pen.sectionHeading("Transcript", firstTwoH);
 
-    const speakerColorMap = new Map<string, string>();
+    // `speakerColorMap` is already initialised above (header chip row) so the
+    // colour for each speaker stays identical between the chips and the dots.
 
     for (const line of data.transcript.split("\n")) {
       if (!line.trim()) {
