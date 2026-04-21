@@ -288,7 +288,57 @@ async function logShareEvent(entry: ShareLogEntry): Promise<void> {
  *     themselves — the DB upsert + storage `upsert: false` keep things
  *     correct even if both eventually proceed).
  */
-const inFlightUploads = new Map<string, Promise<string | null>>();
+type InFlightEntry = {
+  promise: Promise<string | null>;
+  /**
+   * Number of callers currently awaiting this in-flight upload. The entry
+   * is only removed from `inFlightUploads` once every caller has settled,
+   * so a late subscriber can't observe a half-cleared map and kick off a
+   * duplicate upload while the original promise is still pending.
+   */
+  refCount: number;
+  /** Marks the entry as settled so cleanup happens exactly once. */
+  settled: boolean;
+};
+
+const inFlightUploads = new Map<string, InFlightEntry>();
+
+/**
+ * Acquire a reference to an in-flight upload promise for `key`.
+ *
+ * If an entry already exists, increments its ref count and returns the
+ * shared promise — multiple components requesting the same share at the
+ * same time all observe the same result. If no entry exists, creates one
+ * via `factory` with `refCount = 1`. Each caller is responsible for
+ * `releaseInFlight(key)` after the promise settles, regardless of outcome.
+ */
+function acquireInFlight(
+  key: string,
+  factory: () => Promise<string | null>,
+): Promise<string | null> {
+  const existing = inFlightUploads.get(key);
+  if (existing && !existing.settled) {
+    existing.refCount += 1;
+    return existing.promise;
+  }
+  const entry: InFlightEntry = {
+    promise: factory(),
+    refCount: 1,
+    settled: false,
+  };
+  inFlightUploads.set(key, entry);
+  return entry.promise;
+}
+
+function releaseInFlight(key: string): void {
+  const entry = inFlightUploads.get(key);
+  if (!entry) return;
+  entry.refCount -= 1;
+  if (entry.refCount <= 0) {
+    entry.settled = true;
+    inFlightUploads.delete(key);
+  }
+}
 
 const LEASE_WAIT_MS = 250; // how long we wait at the start of an upload to detect a peer leader
 const LEADER_TIMEOUT_MS = 30_000; // upper bound on how long we wait for a peer's result
