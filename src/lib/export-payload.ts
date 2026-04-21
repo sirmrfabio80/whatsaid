@@ -3,6 +3,7 @@ import { getLanguageLabel } from "@/lib/languages";
 import { applySpeakerNames } from "@/lib/speaker-names";
 import { resolveExportBaseName } from "@/lib/export-filename";
 import { formatRecordedDate } from "@/lib/recorded-date";
+import { getUniqueSpeakersFromContent } from "@/lib/transcript";
 import type { CanonicalExportData, QAEntry } from "@/lib/export-types";
 
 export interface CanonicalPayloadInput {
@@ -47,6 +48,10 @@ export function buildCanonicalPayload(input: CanonicalPayloadInput): CanonicalEx
     ? applySpeakerNames(input.transcript, input.speakerNames)
     : null;
 
+  // Derive the list of speakers AFTER renames, in first-appearance order, so
+  // the PDF/header reflects what the user actually sees on the record page.
+  const speakers = transcript ? getUniqueSpeakersFromContent(transcript) : [];
+
   const included = input.questionEntries.filter(
     (q) => !input.excludedQAIds.has(q.id),
   );
@@ -58,5 +63,14 @@ export function buildCanonicalPayload(input: CanonicalPayloadInput): CanonicalEx
         }))
       : null;
 
-  return { title, createdAt, duration, language, summary, questions, transcript };
+  return {
+    title,
+    createdAt,
+    duration,
+    language,
+    speakers: speakers.length > 0 ? speakers : undefined,
+    summary,
+    questions,
+    transcript,
+  };
 }
