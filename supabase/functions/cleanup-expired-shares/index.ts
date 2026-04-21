@@ -38,11 +38,22 @@ import { createServiceClient } from "../_shared/supabase.ts";
 const JOB_NAME = "cleanup-expired-shares";
 const EXPORT_TTL_DAYS = 7;
 const ORPHAN_GRACE_HOURS = 24; // ignore very fresh orphans (still being uploaded)
+/**
+ * Stale `share_pdf_cache` rows whose `last_used_at` is older than this are
+ * pruned each run to prevent unbounded DB growth. The shared-pdfs storage
+ * sweep above runs first, so by the time we get here many of these rows
+ * already point at deleted blobs — we just remove the index entry too.
+ *
+ * 30 days is a generous reuse window: re-shares within a month still hit
+ * the cache, while abandoned entries don't accumulate forever.
+ */
+const SHARE_CACHE_TTL_DAYS = 30;
 
 interface CleanupSummary {
   shared_pdfs_deleted: number;
   shared_pdfs_orphans_deleted: number;
   exports_deleted: number;
+  share_pdf_cache_deleted: number;
   missing_prefixes: number;
   errors: string[];
 }
@@ -51,6 +62,7 @@ interface DryRunReport {
   shared_pdfs: string[];
   shared_pdfs_orphans: string[];
   exports: string[];
+  share_pdf_cache_rows: string[]; // cache row IDs that would be deleted
   expired_share_rows: string[]; // share IDs that would be deleted
   exports_rows_nulled: string[]; // async_job IDs whose resource_url would be cleared
 }
@@ -98,6 +110,7 @@ Deno.serve(async (req) => {
     shared_pdfs_deleted: 0,
     shared_pdfs_orphans_deleted: 0,
     exports_deleted: 0,
+    share_pdf_cache_deleted: 0,
     missing_prefixes: 0,
     errors: [],
   };
@@ -105,6 +118,7 @@ Deno.serve(async (req) => {
     shared_pdfs: [],
     shared_pdfs_orphans: [],
     exports: [],
+    share_pdf_cache_rows: [],
     expired_share_rows: [],
     exports_rows_nulled: [],
   };
@@ -149,6 +163,7 @@ Deno.serve(async (req) => {
           shared_pdfs_deleted: summary.shared_pdfs_deleted,
           shared_pdfs_orphans_deleted: summary.shared_pdfs_orphans_deleted,
           exports_deleted: summary.exports_deleted,
+          share_pdf_cache_deleted: summary.share_pdf_cache_deleted,
           missing_prefixes: summary.missing_prefixes,
           errors,
         })
@@ -355,6 +370,48 @@ Deno.serve(async (req) => {
           .in("id", ids);
         if (nullErr) {
           summary.errors.push(`null exports.resource_url: ${nullErr.message}`);
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // 3. share_pdf_cache: prune index rows untouched for SHARE_CACHE_TTL_DAYS.
+    //
+    // The actual blobs they reference are usually already gone (the
+    // shared-pdfs sweep above runs first). This step bounds the cache
+    // table itself so it doesn't grow forever — repeated edits to the
+    // same job constantly produce new (job_id, content_hash) rows, and
+    // without TTL each user accumulates one row per historical hash.
+    // -------------------------------------------------------------------
+    const cacheCutoff = new Date(
+      Date.now() - SHARE_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const { data: staleCacheRows, error: cacheFetchErr } = await supabase
+      .from("share_pdf_cache")
+      .select("id")
+      .lt("last_used_at", cacheCutoff)
+      .limit(1000);
+
+    if (cacheFetchErr) {
+      summary.errors.push(`fetch stale share_pdf_cache: ${cacheFetchErr.message}`);
+    } else if (staleCacheRows && staleCacheRows.length > 0) {
+      console.log(
+        `[${JOB_NAME}] Found ${staleCacheRows.length} stale share_pdf_cache row(s)${dryRun ? " (dry-run)" : ""}`,
+      );
+      const ids = staleCacheRows.map((r) => r.id);
+      if (dryRun) {
+        dryReport.share_pdf_cache_rows.push(...ids);
+        summary.share_pdf_cache_deleted += ids.length;
+      } else {
+        const { error: cacheDelErr } = await supabase
+          .from("share_pdf_cache")
+          .delete()
+          .in("id", ids);
+        if (cacheDelErr) {
+          summary.errors.push(`delete share_pdf_cache rows: ${cacheDelErr.message}`);
+        } else {
+          summary.share_pdf_cache_deleted += ids.length;
         }
       }
     }

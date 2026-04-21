@@ -70,6 +70,7 @@ export type Database = {
           job_name: string
           metadata: Json | null
           missing_prefixes: number
+          share_pdf_cache_deleted: number
           shared_pdfs_deleted: number
           shared_pdfs_orphans_deleted: number
           started_at: string
@@ -85,6 +86,7 @@ export type Database = {
           job_name: string
           metadata?: Json | null
           missing_prefixes?: number
+          share_pdf_cache_deleted?: number
           shared_pdfs_deleted?: number
           shared_pdfs_orphans_deleted?: number
           started_at?: string
@@ -100,6 +102,7 @@ export type Database = {
           job_name?: string
           metadata?: Json | null
           missing_prefixes?: number
+          share_pdf_cache_deleted?: number
           shared_pdfs_deleted?: number
           shared_pdfs_orphans_deleted?: number
           started_at?: string
