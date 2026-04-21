@@ -391,7 +391,8 @@ async function submitAndPollTranscript(
     console.log(`[transcribe] Polling... status: ${pollData.status} (attempt ${i + 1})`);
   }
 
-  throw new Error(`Transcription timed out after ${Math.round((maxPolls * pollIntervalMs) / 60000)} minutes`);
+  const elapsedMin = Math.round((Date.now() - startedAt) / 60000);
+  throw new Error(`Transcription timed out after ${elapsedMin} minutes`);
 }
 
 Deno.serve(async (req) => {
