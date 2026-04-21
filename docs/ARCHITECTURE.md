@@ -294,6 +294,32 @@ some files exceed 120 min and consume multiple credits each).
   expires_at = now() + 2 days, claimed, claimed_by, claimed_job_id)`.
   Created by `share-transcript-record`, claimed via `claim-transcript-share`,
   one-shot PDF served by `download-shared-pdf`.
+- **`share_pdf_cache`** — per-`(job_id, content_hash, format)` index of
+  previously-uploaded share artifacts. Lets a re-share of the same
+  job/content reuse the existing storage blob across tabs **and** across
+  devices instead of re-rendering and re-uploading. Columns:
+  `(user_id, job_id, content_hash, format, storage_path, last_used_at)`,
+  `UNIQUE (job_id, content_hash, format)`. Integrity guards:
+    - `share_pdf_cache_job_id_fkey` — `FOREIGN KEY (job_id) REFERENCES
+      jobs(id) ON DELETE CASCADE`, so deleting a job cleans the cache rows.
+    - `CHECK (content_hash ~ '^[0-9a-f]{8,128}$')` — rejects non-hex hashes.
+    - `BEFORE INSERT OR UPDATE` trigger
+      `validate_share_pdf_cache_path()` enforces that `storage_path`
+      starts with `<job_id>/` and ends with `.<format>`, so a row can
+      never point at someone else's directory or the wrong file type.
+  RLS: owner-scoped CRUD by `auth.uid() = user_id`.
+- **`share_artifact_log`** — append-only audit trail of every share
+  attempt. Columns: `(user_id, job_id, format, content_hash, action,
+  source, storage_path, reason)`, where `action ∈ {reused, uploaded}`
+  and `source ∈ {session, db, fresh, stale-session, stale-db}`. Used to
+  measure cache hit-rate and diagnose stale-entry events. RLS: owner
+  `SELECT` / `INSERT`, admin `SELECT`.
+- **`cleanup_config`** — singleton (`id = 1`) holding tunables for the
+  cleanup pipeline: `share_pdf_cache_ttl_days` (default 30, range
+  1–365) and `cleanup_batch_size` (default 1000, range 50–10 000).
+  Read by `cleanup-expired-shares`; admin-only RLS. Out-of-range or
+  missing values fall back to the defaults so a misconfigured row can
+  never break the cron.
 
 ### 5.5 Async, notifications, email
 
@@ -302,9 +328,23 @@ some files exceed 120 min and consume multiple credits each).
   exports / sharing.
 - **`notifications`** — user-scoped feed (`type, status, title,
   description, async_job_id, resource_*, read`).
+- **`cleanup_logs`** — one row per `cleanup-expired-shares` invocation.
+  Tracks four delete categories
+  (`shared_pdfs_deleted`, `shared_pdfs_orphans_deleted`,
+  `exports_deleted`, `share_pdf_cache_deleted`), plus
+  `missing_prefixes`, `errors`, `duration_ms`, and run `status`
+  (`running | completed | failed`). The row is inserted at start so
+  timed-out runs are still visible.
 - **`email_send_log`**, **`email_send_state`**,
   **`email_unsubscribe_tokens`**, **`suppressed_emails`** — internal
   email pipeline backing `auth-email-hook` and `process-email-queue`.
+
+### 5.6.1 Triggers
+
+- `validate_share_pdf_cache_path` (BEFORE INSERT OR UPDATE on
+  `share_pdf_cache`) — see §5.4. This is the only path-integrity
+  trigger in the schema; other tables rely on `CHECK` constraints and
+  RLS predicates.
 
 ### 5.6 Help & admin
 
@@ -339,9 +379,9 @@ automatically; default `verify_jwt` policy lives in `supabase/config.toml`.
 | Function | Purpose |
 |---|---|
 | `transcribe` | Submit audio to AssemblyAI; persist job config |
-| `process-job` | Poll AssemblyAI, write transcript, trigger post-processing, delete audio |
-| `post-process` | Generate summary + tags + title via Lovable AI |
-| `regenerate` | Re-run summary or Q&A on existing transcript |
+| `process-job` | Deduct credits, dispatch `transcribe` + `post-process`, delete audio |
+| `post-process` | Generate summary (+ optional custom-prompt output) + auto-tags via Lovable AI; emits a `notifications` row |
+| `regenerate` | Re-run summary, custom prompt, or `translate_all` on existing transcript |
 | `generate-tags`, `generate-title` | Targeted single-output regen |
 | `suggest-speakers`, `identify-speakers` | Speaker-naming heuristics + LLM |
 | `translate-tags`, `scan-non-english-tags`, `fix-flagged-tags` | Tag i18n maintenance |
@@ -352,6 +392,7 @@ automatically; default `verify_jwt` policy lives in `supabase/config.toml`.
 | `delete-account` | Cascading account + storage cleanup |
 | `auth-email-hook`, `process-email-queue` | Outbound transactional + auth email pipeline |
 | `cleanup-assemblyai`, `cleanup-stale-jobs`, `watchdog-stale-jobs` | Scheduled cleanup |
+| `cleanup-expired-shares` | Three-phase storage sweep: (1) `shared-pdfs` blobs past `transcript_shares.expires_at` + 24 h-grace orphan dirs, (2) `exports` blobs for `pdf_export` async jobs older than 7 days (also nulls `resource_url`), (3) `share_pdf_cache` rows past `cleanup_config.share_pdf_cache_ttl_days`. Supports `?dry_run=1`; batch size + cache TTL come from `cleanup_config`; per-run audit row in `cleanup_logs`. |
 | `admin-get-job-details` | Admin-only deep job inspection |
 
 `_shared/` holds CORS, Supabase client, prompts, sanitizers, AI Gateway
@@ -436,6 +477,48 @@ the same entrypoint.
 When a guard fails, the fix is almost always **update the doc** (the
 code is the source of truth). Only revert the source change if the
 drift was unintentional.
+
+### 7.7 Client-side dedup & concurrency
+
+Two independent client layers prevent redundant work and redundant
+network/storage I/O when users repeatedly download or share the same
+artifact.
+
+**`src/lib/export-cache.ts` — in-memory LRU for TXT / JSON / DOC.**
+Bounded `Map` (≤ 12 entries) keyed by `(jobId, format, contentHash)`,
+where `contentHash` is a SHA-256 of the canonical export payload
+(truncated to 32 hex chars). Re-downloading the same format for an
+unchanged transcript reuses the same `Blob` instead of re-running
+`Packer.toBlob` / re-serialising; editing the transcript or summary
+changes the hash and forces a fresh build. **PDF is intentionally
+excluded** — it has its own server-side cache via `share_pdf_cache`.
+
+**`src/components/ShareButton.tsx → uploadPdfForShare()` — five-tier
+lookup before any fresh PDF render or upload:**
+
+1. **In-tab `inFlightUploads` Map** — coalesces concurrent calls in
+   the same tab onto a single promise (key: `jobId:contentHash:format`).
+2. **`BroadcastChannel('whatsaid-share-upload')` lease** — when a tab
+   announces `start`, peers reaching the same key within `LEASE_WAIT_MS`
+   (250 ms) wait for the leader's `done` (timeout 30 s) before falling
+   through. Prevents two tabs from racing past the cache lookup
+   simultaneously.
+3. **`sessionStorage` entry** — per-tab cache of paths previously
+   confirmed to exist, validated cheaply via
+   `createSignedUrl(path, 1)` (O(1)) instead of paginating
+   `storage.list()`. Stale entries are cleared and logged with
+   `source = 'stale-session'`.
+4. **`share_pdf_cache` DB row** — cross-device cache. The same
+   `createSignedUrl` existence check applies; misses log
+   `source = 'stale-db'` and cause the row to be deleted before a
+   fresh upload.
+5. **Fresh render + upload** — only reached when all four caches miss.
+   On success, persists a new `share_pdf_cache` row and logs
+   `action = 'uploaded'`, `source = 'fresh'`.
+
+Reused artifacts are logged with `action = 'reused'` and the source
+that served them. The audit log makes hit-rate and stale-entry rates
+queryable per user / per job.
 
 ---
 
@@ -744,8 +827,9 @@ Total here: **2–4** Lovable AI calls.
 | JSON | `src/lib/export-json.ts`, browser | None |
 | DOCX | `src/lib/export.ts` via `docx`, browser | None |
 | PDF (download by owner) | `src/lib/export-pdf.ts` via `jspdf`, browser | None |
-| PDF (share by email) | Same client-side `generatePdfBlob`, then **uploaded** to `shared-pdfs` | Storage write + storage retention until manual cleanup (no automated TTL on the bucket — *needs verification*) + later egress on download |
+| PDF (share by email) | Same client-side `generatePdfBlob`, then **uploaded** to `shared-pdfs` (deduped — see §7.7) | Storage write only on a true cache miss (in-tab Map → `BroadcastChannel` lease → sessionStorage → `share_pdf_cache` row → fresh upload). Retention bounded by `cleanup-expired-shares` (`transcript_shares.expires_at`, default 2 days) plus `share_pdf_cache` TTL from `cleanup_config.share_pdf_cache_ttl_days` (default 30 days). |
 | PDF (recipient download) | `download-shared-pdf` streams stored blob | Egress only (no PDF rebuild, no AI) |
+| TXT / JSON / DOC (owner download) | Browser, deduped via `src/lib/export-cache.ts` LRU keyed on `(jobId, format, contentHash)` | None |
 
 **No edge function rebuilds a PDF.** All PDF rendering is
 client-side; the server only stores and streams the blob for the
@@ -773,8 +857,14 @@ share flow.
   resets the DB counter. Streaming + abort would reduce waste.
 - ~~**PDF storage retention.**~~ **Resolved** —
   `cleanup-expired-shares` cron deletes `shared-pdfs` blobs past
-  `transcript_shares.expires_at` and `exports` blobs older than
-  7 days.
+  `transcript_shares.expires_at`, `exports` blobs older than
+  7 days, and stale `share_pdf_cache` rows past
+  `cleanup_config.share_pdf_cache_ttl_days`.
+- ~~**PDF share dedup.**~~ **Resolved** — `ShareButton` uses a
+  five-tier lookup (in-tab Map → `BroadcastChannel` lease →
+  sessionStorage → `share_pdf_cache` DB row → fresh upload) and the
+  `share_pdf_cache` `UNIQUE (job_id, content_hash, format)` constraint
+  enforces a single canonical blob per content-hash. See §7.7.
 - **Auto-tag + classifier are sequential.** Two round-trips to the
   gateway. A single tool-calling prompt could return tags +
   per-tag language in one call.
@@ -805,16 +895,25 @@ Flagged "needs verification":
   seconds (it changes file size, but AAI is duration-based).
 - Whether `process-email-queue` tick rate matches the documented
   default for the configured queue.
+- `BroadcastChannel` availability on the long tail of older mobile
+  Safari (< 15.4). On unsupported browsers `ShareButton` silently
+  falls back to the remaining four tiers (in-tab Map →
+  sessionStorage → `share_pdf_cache` row → fresh upload), so
+  correctness is preserved but cross-tab dedup degrades to per-tab.
 
 There is currently **no per-job aggregated cost log** — provider
 costs are only recoverable from the AssemblyAI and Lovable AI
 dashboards and cannot be joined to `jobs.id`. A future
 `job_cost_events` append-only table fed by each edge function would
-close this gap.
+close this gap. The new `share_artifact_log` covers the share
+flow specifically (cache hit-rate, stale-entry rate) but does not
+generalise to AI / STT spend.
 
 ---
 
-_Last updated when the cost model and per-transcript cost drivers
-section landed. Refresh this document whenever you touch the data
-model, design tokens, edge function surface, high-level flows, or
-the cost drivers enumerated in section 10._
+_Last updated alongside the share-dedup pipeline (`share_pdf_cache`,
+`share_artifact_log`, `cleanup_config`, `validate_share_pdf_cache_path`
+trigger, multi-tier `ShareButton` lookup, and `export-cache.ts` LRU).
+Refresh this document whenever you touch the data model, design
+tokens, edge function surface, high-level flows, or the cost drivers
+enumerated in section 10._
