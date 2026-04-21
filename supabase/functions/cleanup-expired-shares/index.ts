@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
     shared_pdfs_deleted: 0,
     shared_pdfs_orphans_deleted: 0,
     exports_deleted: 0,
+    share_pdf_cache_deleted: 0,
     missing_prefixes: 0,
     errors: [],
   };
@@ -117,6 +118,7 @@ Deno.serve(async (req) => {
     shared_pdfs: [],
     shared_pdfs_orphans: [],
     exports: [],
+    share_pdf_cache_rows: [],
     expired_share_rows: [],
     exports_rows_nulled: [],
   };
