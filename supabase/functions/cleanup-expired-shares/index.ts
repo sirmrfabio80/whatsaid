@@ -109,6 +109,46 @@ async function parseDryRun(req: Request): Promise<boolean> {
   return false;
 }
 
+/**
+ * Load tunables from `cleanup_config` (singleton row, id=1). Falls back to
+ * defaults on missing row, RLS denial, parse error, or out-of-range
+ * values so a misconfigured table can never break the cleanup job.
+ */
+async function loadConfig(
+  supabase: ReturnType<typeof createServiceClient>,
+): Promise<CleanupConfig> {
+  try {
+    const { data, error } = await supabase
+      .from("cleanup_config")
+      .select("share_pdf_cache_ttl_days, cleanup_batch_size")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error || !data) {
+      return {
+        share_pdf_cache_ttl_days: DEFAULT_SHARE_CACHE_TTL_DAYS,
+        cleanup_batch_size: DEFAULT_CLEANUP_BATCH_SIZE,
+      };
+    }
+    const ttl = Number(data.share_pdf_cache_ttl_days);
+    const batch = Number(data.cleanup_batch_size);
+    return {
+      share_pdf_cache_ttl_days:
+        Number.isFinite(ttl) && ttl >= 1 && ttl <= 365
+          ? ttl
+          : DEFAULT_SHARE_CACHE_TTL_DAYS,
+      cleanup_batch_size:
+        Number.isFinite(batch) && batch >= 50 && batch <= 10_000
+          ? batch
+          : DEFAULT_CLEANUP_BATCH_SIZE,
+    };
+  } catch {
+    return {
+      share_pdf_cache_ttl_days: DEFAULT_SHARE_CACHE_TTL_DAYS,
+      cleanup_batch_size: DEFAULT_CLEANUP_BATCH_SIZE,
+    };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
