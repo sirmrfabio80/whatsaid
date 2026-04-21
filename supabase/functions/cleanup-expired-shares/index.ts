@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
       .eq("status", "completed")
       .not("resource_url", "is", null)
       .lt("completed_at", exportCutoff)
-      .limit(500);
+      .limit(config.cleanup_batch_size);
 
     if (exportsErr) {
       summary.errors.push(`fetch old exports: ${exportsErr.message}`);
