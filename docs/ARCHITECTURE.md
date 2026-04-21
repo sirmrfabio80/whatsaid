@@ -520,6 +520,73 @@ Reused artifacts are logged with `action = 'reused'` and the source
 that served them. The audit log makes hit-rate and stale-entry rates
 queryable per user / per job.
 
+**Sequence — `uploadPdfForShare(jobId, exportData)`:**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Caller (ShareButton)
+    participant M as inFlightUploads Map
+    participant B as BroadcastChannel<br/>(whatsaid-share-upload)
+    participant S as sessionStorage
+    participant D as share_pdf_cache (DB)
+    participant ST as Storage (shared-pdfs)
+    participant L as share_artifact_log
+
+    C->>C: hash = SHA-256(exportData)[:32]
+    C->>M: get(jobId:hash:pdf)
+    alt in-flight hit
+        M-->>C: existing Promise → await & return path
+    else miss
+        C->>B: postMessage{start, key}
+        B-->>C: peer "done" within 250 ms?
+        alt peer leader finishes (≤ 30 s)
+            C->>L: log reused (source=session|db)
+            C-->>C: return leader's path
+        else no leader / timeout
+            C->>S: read sessionKey(jobId, pdf)
+            alt session entry matches hash
+                C->>ST: createSignedUrl(path, 1)
+                alt exists
+                    C->>L: log reused (source=session)
+                    C-->>C: return path
+                else missing
+                    C->>S: delete stale entry
+                    C->>L: log uploaded (source=stale-session)
+                end
+            end
+            C->>D: select where job_id+hash+format
+            alt DB row matches
+                C->>ST: createSignedUrl(path, 1)
+                alt exists
+                    C->>D: update last_used_at
+                    C->>L: log reused (source=db)
+                    C-->>C: return path
+                else missing
+                    C->>D: delete stale row
+                    C->>L: log uploaded (source=stale-db)
+                end
+            end
+            C->>C: generatePdfBlob(exportData)
+            C->>ST: upload(jobId/<hash>.pdf)
+            C->>D: insert {job_id, hash, format, path}
+            C->>S: write sessionKey
+            C->>B: postMessage{done, key, path}
+            C->>L: log uploaded (source=fresh)
+            C->>M: delete(jobId:hash:pdf)
+            C-->>C: return path
+        end
+    end
+```
+
+Cleanup of the resulting blob and DB row is handled out-of-band by
+`cleanup-expired-shares` (see §6): the `shared-pdfs` blob is removed
+once `transcript_shares.expires_at` passes (plus 24 h grace for
+orphan dirs), and the `share_pdf_cache` row is pruned once
+`now() - last_used_at > cleanup_config.share_pdf_cache_ttl_days`.
+Deleting the parent `jobs` row cascades the cache row immediately via
+`share_pdf_cache_job_id_fkey ON DELETE CASCADE`.
+
 ---
 
 ## 8. Conventions
