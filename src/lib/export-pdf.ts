@@ -487,6 +487,64 @@ class Pen {
   transcriptLine(text: string) {
     this.plain(text, F.transcript, C.body, false, false, ML + 5, CW - 5, LH, true);
   }
+
+  /**
+   * Render a horizontal row of "speaker chips" — a coloured dot followed by
+   * the speaker name — flowing onto multiple lines if needed. Mirrors the
+   * "Speakers:" pill row shown on the in-app transcript page so the PDF
+   * header carries the same at-a-glance information.
+   */
+  speakerRow(speakers: string[], colors: Map<string, string>) {
+    if (!speakers.length) return;
+
+    const labelFont = F.meta;
+    const chipFont = F.meta;
+    const lineH = ptMm(chipFont) * LH;
+    const rowGapY = 1.5;
+    const dotR = 1.3;
+    const dotGap = 1.8;
+    const chipGap = 5;
+
+    this.pageBreak(lineH);
+
+    // Leading "Speakers:" label in the same muted meta colour as the row above.
+    this.setF(true, false, labelFont, false);
+    this.setC(C.meta);
+    const label = "Speakers:";
+    const labelW = this.pdf.getTextWidth(label);
+    let x = ML;
+    let bl = this.baseline(labelFont);
+    this.pdf.text(label, x, bl);
+    x += labelW + 3;
+
+    // Names render in regular weight and the heading colour so the row reads
+    // as content (not chrome), but stays visually grouped with the metadata.
+    this.setF(false, false, chipFont, false);
+
+    for (const spk of speakers) {
+      const color = colors.get(spk.toLowerCase()) ?? C.accent;
+      const nameW = this.pdf.getTextWidth(spk);
+      const chipW = dotR * 2 + dotGap + nameW;
+
+      // Wrap to a new row when the chip would overflow the content width.
+      if (x + chipW > ML + CW) {
+        this.y += lineH + rowGapY;
+        this.pageBreak(lineH);
+        x = ML + labelW + 3;
+        bl = this.baseline(chipFont);
+      }
+
+      const dotY = this.y + ptMm(chipFont) * 0.55;
+      this.pdf.setFillColor(...hexRgb(color));
+      this.pdf.circle(x + dotR, dotY, dotR, "F");
+
+      this.setC(C.heading);
+      this.pdf.text(spk, x + dotR * 2 + dotGap, bl);
+      x += chipW + chipGap;
+    }
+
+    this.y += lineH;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -518,7 +576,7 @@ function headingReserve(level: 1 | 2 | 3 | 4): number {
   return before + ptMm(sz) * HLH + after;
 }
 
-function renderMarkdown(pen: Pen, text: string) {
+function renderMarkdown(pen: Pen, text: string, useSerif = true) {
   const lines = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trimEnd();
@@ -530,18 +588,14 @@ function renderMarkdown(pen: Pen, text: string) {
     else if (/^#\s/.test(line)) { level = 2; headingText = line.slice(2); }
 
     if (level !== null) {
-      // Keep-with-next: heading + next 2 non-empty body lines must fit together.
       const need = headingReserve(level) + measureNextLines(pen, lines, i + 1, 2);
       pen.pageBreakHard(need);
       pen.heading(headingText, level);
     } else if (/^\s*[-*]\s+/.test(line)) {
-      // Reading-surface bullet → serif body.
-      pen.bullet(line.replace(/^\s*[-*]\s+/, ""), true);
+      pen.bullet(line.replace(/^\s*[-*]\s+/, ""), useSerif);
     } else if (line.trim() === "") {
       pen.gap(2);
     } else {
-      // Keep-with-next: if this paragraph is immediately followed (after any
-      // blank lines) by a bullet list, keep paragraph + first bullet together.
       let nextContentIdx = i + 1;
       while (nextContentIdx < lines.length && lines[nextContentIdx].trim() === "") {
         nextContentIdx++;
@@ -552,8 +606,7 @@ function renderMarkdown(pen: Pen, text: string) {
         const bulletH = pen.measureLine(nextLine);
         pen.pageBreakHard(paraH + bulletH);
       }
-      // Reading-surface paragraph → serif body.
-      pen.rich(parseInline(line), F.body, C.body, ML, CW, LH, true);
+      pen.rich(parseInline(line), F.body, C.body, ML, CW, LH, useSerif);
     }
   }
 }
@@ -596,7 +649,25 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
   if (data.duration) metaParts.push(`Duration: ${data.duration}`);
   if (data.language) metaParts.push(`Language: ${data.language}`);
   pen.plain(metaParts.join("  •  "), F.meta, C.meta);
-  pen.gap(4);
+  pen.gap(3);
+
+  // ── Speakers (chip row, mirrors the colour assignment used in transcript) ──
+  // Pre-compute speaker → colour so the chips at the top match the dots
+  // shown next to each utterance further down. Lower-cased keys mirror the
+  // matching done in the transcript renderer below.
+  const speakerColorMap = new Map<string, string>();
+  if (data.speakers && data.speakers.length) {
+    for (const spk of data.speakers) {
+      const key = spk.toLowerCase();
+      if (!speakerColorMap.has(key)) {
+        speakerColorMap.set(key, SPEAKER_COLORS[speakerColorMap.size % SPEAKER_COLORS.length]);
+      }
+    }
+    pen.speakerRow(data.speakers, speakerColorMap);
+    pen.gap(4);
+  } else {
+    pen.gap(1);
+  }
 
   // ── Summary ──
   if (data.summary) {
@@ -624,6 +695,8 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
         const promptH = ptMm(F.qa) * LH;
         const answerH = qa.answer ? measureMarkdownHead(pen, qa.answer, 2) : 0;
         pen.pageBreakHard(promptH + 1 + answerH);
+        // Q&A on the in-app page renders in the default sans body font, not
+        // serif — match that here so the PDF feels like the same document.
         pen.rich(
           [{ text: "Q: ", bold: true }, { text: qa.prompt, bold: true }],
           F.qa,
@@ -631,11 +704,11 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
           ML,
           CW,
           LH,
-          true,
+          false,
         );
         pen.gap(1);
       }
-      renderMarkdown(pen, qa.answer);
+      renderMarkdown(pen, qa.answer, false);
       pen.gap(3);
     }
   }
@@ -647,7 +720,8 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
     const firstTwoH = 2 * ptMm(F.transcript) * LH;
     pen.sectionHeading("Transcript", firstTwoH);
 
-    const speakerColorMap = new Map<string, string>();
+    // `speakerColorMap` is already initialised above (header chip row) so the
+    // colour for each speaker stays identical between the chips and the dots.
 
     for (const line of data.transcript.split("\n")) {
       if (!line.trim()) {
@@ -769,6 +843,15 @@ export function buildPdfBlocks(data: CanonicalExportData): PdfBlock[] {
     forceNewPage: false,
     gapAfterMm: 3,
   });
+
+  // Speakers row (mirrors the chip strip on the in-app transcript page)
+  if (data.speakers && data.speakers.length) {
+    blocks.push({
+      html: `Speakers: ${data.speakers.join(" · ")}`,
+      forceNewPage: false,
+      gapAfterMm: 3,
+    });
+  }
 
   // Summary
   if (data.summary) {
