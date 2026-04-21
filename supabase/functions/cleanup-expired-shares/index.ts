@@ -38,11 +38,22 @@ import { createServiceClient } from "../_shared/supabase.ts";
 const JOB_NAME = "cleanup-expired-shares";
 const EXPORT_TTL_DAYS = 7;
 const ORPHAN_GRACE_HOURS = 24; // ignore very fresh orphans (still being uploaded)
+/**
+ * Stale `share_pdf_cache` rows whose `last_used_at` is older than this are
+ * pruned each run to prevent unbounded DB growth. The shared-pdfs storage
+ * sweep above runs first, so by the time we get here many of these rows
+ * already point at deleted blobs — we just remove the index entry too.
+ *
+ * 30 days is a generous reuse window: re-shares within a month still hit
+ * the cache, while abandoned entries don't accumulate forever.
+ */
+const SHARE_CACHE_TTL_DAYS = 30;
 
 interface CleanupSummary {
   shared_pdfs_deleted: number;
   shared_pdfs_orphans_deleted: number;
   exports_deleted: number;
+  share_pdf_cache_deleted: number;
   missing_prefixes: number;
   errors: string[];
 }
@@ -51,6 +62,7 @@ interface DryRunReport {
   shared_pdfs: string[];
   shared_pdfs_orphans: string[];
   exports: string[];
+  share_pdf_cache_rows: string[]; // cache row IDs that would be deleted
   expired_share_rows: string[]; // share IDs that would be deleted
   exports_rows_nulled: string[]; // async_job IDs whose resource_url would be cleared
 }
