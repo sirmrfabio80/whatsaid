@@ -21,6 +21,22 @@
     <link rel="manifest" href="/site.webmanifest?v=2">
     <meta name="theme-color" content="#6054ba">
 
+    <!--
+      Font loading strategy:
+      - @font-face declarations in src/index.css already use `font-display: swap`,
+        so text renders immediately in the fallback and swaps when Inter loads.
+      - The upright Inter woff2 is preloaded from src/main.tsx (import-based) so
+        the file's content-hashed URL stays correct across Vite builds. Hardcoding
+        a `<link rel="preload" href="/assets/InterVariable-*.woff2">` here would
+        404 on every rebuild because the hash changes.
+      - Inter Italic is intentionally NOT preloaded; it is rarely used above-the-fold.
+    -->
+
+    <!-- Preconnect to backend origin so the first auth/session request is faster.
+         Same-origin assets do not need preconnect. -->
+    <link rel="preconnect" href="https://gidjkdtmagxuzhlntlbt.supabase.co" crossorigin>
+    <link rel="dns-prefetch" href="https://gidjkdtmagxuzhlntlbt.supabase.co">
+
     <script>
       // System preference dark mode — no toggle, follows OS
       (function () {
