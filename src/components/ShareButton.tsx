@@ -38,21 +38,35 @@ async function hashExportData(data: CanonicalExportData): Promise<string> {
     .slice(0, 32);
 }
 
-const PDF_CACHE_PREFIX = "share-pdf-cache:";
-type PdfCacheEntry = { hash: string; path: string };
+/**
+ * Share artifact format. Today only PDFs are uploaded for sharing, but the
+ * cache key is format-aware so a future "share as DOCX/JSON" path can't
+ * collide with an existing PDF entry that hashes to the same payload.
+ */
+type ShareFormat = "pdf" | "docx" | "json" | "txt";
 
-function readSessionCache(jobId: string): PdfCacheEntry | null {
+const SHARE_CACHE_PREFIX = "share-pdf-cache:";
+type ShareCacheEntry = { hash: string; path: string; format: ShareFormat };
+
+function sessionKey(jobId: string, format: ShareFormat): string {
+  return `${SHARE_CACHE_PREFIX}${jobId}:${format}`;
+}
+
+function readSessionCache(jobId: string, format: ShareFormat): ShareCacheEntry | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.sessionStorage.getItem(PDF_CACHE_PREFIX + jobId);
+    const raw = window.sessionStorage.getItem(sessionKey(jobId, format));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (
       parsed &&
       typeof parsed.hash === "string" &&
-      typeof parsed.path === "string"
+      typeof parsed.path === "string" &&
+      // Defensive: tolerate older entries without `format` (treat as PDF
+      // since that was the only format the previous cache stored).
+      (parsed.format === undefined || parsed.format === format)
     ) {
-      return parsed;
+      return { hash: parsed.hash, path: parsed.path, format };
     }
   } catch {
     /* noop */
@@ -60,11 +74,11 @@ function readSessionCache(jobId: string): PdfCacheEntry | null {
   return null;
 }
 
-function writeSessionCache(jobId: string, entry: PdfCacheEntry): void {
+function writeSessionCache(jobId: string, entry: ShareCacheEntry): void {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.setItem(
-      PDF_CACHE_PREFIX + jobId,
+      sessionKey(jobId, entry.format),
       JSON.stringify(entry),
     );
   } catch {
@@ -72,21 +86,21 @@ function writeSessionCache(jobId: string, entry: PdfCacheEntry): void {
   }
 }
 
-function clearSessionCache(jobId: string): void {
+function clearSessionCache(jobId: string, format: ShareFormat): void {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.removeItem(PDF_CACHE_PREFIX + jobId);
+    window.sessionStorage.removeItem(sessionKey(jobId, format));
   } catch {
     /* noop */
   }
 }
 
 /**
- * Verify a previously-uploaded PDF still exists in storage. Avoids reusing
- * a cached path that the cleanup job has already swept (shares older than
- * `expires_at` purge their PDFs).
+ * Verify a previously-uploaded share artifact still exists in storage.
+ * Avoids reusing a cached path that the cleanup job has already swept
+ * (shares older than `expires_at` purge their files).
  */
-async function pdfStillExists(path: string): Promise<boolean> {
+async function shareArtifactStillExists(path: string): Promise<boolean> {
   try {
     const slash = path.lastIndexOf("/");
     if (slash < 0) return false;
@@ -103,12 +117,15 @@ async function pdfStillExists(path: string): Promise<boolean> {
 }
 
 /**
- * Look up a previously-uploaded PDF for `(jobId, hash)` in the database
- * cache. Works across tabs / devices for the same authenticated user.
+ * Look up a previously-uploaded artifact for `(jobId, hash, format)` in the
+ * database cache. Works across tabs / devices for the same authenticated
+ * user. The DB unique constraint is `(job_id, content_hash, format)` so
+ * different formats with the same hash never alias.
  */
 async function lookupDbCache(
   jobId: string,
   hash: string,
+  format: ShareFormat,
 ): Promise<string | null> {
   try {
     const { data, error } = await supabase
@@ -116,6 +133,7 @@ async function lookupDbCache(
       .select("storage_path")
       .eq("job_id", jobId)
       .eq("content_hash", hash)
+      .eq("format", format)
       .maybeSingle();
     if (error || !data) return null;
     return data.storage_path ?? null;
@@ -125,15 +143,16 @@ async function lookupDbCache(
 }
 
 /**
- * Persist a fresh PDF entry in the DB cache and bump `last_used_at` on
- * subsequent reuses. The unique constraint on `(job_id, content_hash)`
- * makes this safe under concurrent calls (the second insert no-ops).
+ * Persist a fresh artifact entry in the DB cache and bump `last_used_at`
+ * on subsequent reuses. The unique constraint on
+ * `(job_id, content_hash, format)` makes this safe under concurrent calls.
  */
 async function persistDbCache(
   jobId: string,
   userId: string,
   hash: string,
   storagePath: string,
+  format: ShareFormat,
 ): Promise<void> {
   try {
     await supabase.from("share_pdf_cache").upsert(
@@ -142,34 +161,45 @@ async function persistDbCache(
         user_id: userId,
         content_hash: hash,
         storage_path: storagePath,
+        format,
         last_used_at: new Date().toISOString(),
       },
-      { onConflict: "job_id,content_hash" },
+      { onConflict: "job_id,content_hash,format" },
     );
   } catch {
     /* best effort */
   }
 }
 
-async function bumpDbCacheUsage(jobId: string, hash: string): Promise<void> {
+async function bumpDbCacheUsage(
+  jobId: string,
+  hash: string,
+  format: ShareFormat,
+): Promise<void> {
   try {
     await supabase
       .from("share_pdf_cache")
       .update({ last_used_at: new Date().toISOString() })
       .eq("job_id", jobId)
-      .eq("content_hash", hash);
+      .eq("content_hash", hash)
+      .eq("format", format);
   } catch {
     /* best effort */
   }
 }
 
-async function deleteDbCacheEntry(jobId: string, hash: string): Promise<void> {
+async function deleteDbCacheEntry(
+  jobId: string,
+  hash: string,
+  format: ShareFormat,
+): Promise<void> {
   try {
     await supabase
       .from("share_pdf_cache")
       .delete()
       .eq("job_id", jobId)
-      .eq("content_hash", hash);
+      .eq("content_hash", hash)
+      .eq("format", format);
   } catch {
     /* best effort */
   }
@@ -182,7 +212,9 @@ async function deleteDbCacheEntry(jobId: string, hash: string): Promise<void> {
  *   2. Database cache, scoped to the authenticated user (cross-tab/device)
  *   3. Generate + upload + persist to both caches
  *
- * Edits to the transcript/summary change the hash and force a fresh PDF.
+ * The cache key is `(jobId, hash, format)` end-to-end so future non-PDF
+ * share variants (DOCX, JSON, TXT) cannot reuse a PDF storage path. Edits
+ * to the transcript/summary change the hash and force a fresh upload.
  * Stale storage paths (already swept by cleanup) are detected and the
  * cache entries cleared before re-uploading.
  */
@@ -190,29 +222,30 @@ async function uploadPdfForShare(
   jobId: string,
   data: CanonicalExportData,
 ): Promise<string | null> {
+  const FORMAT: ShareFormat = "pdf";
   try {
     const hash = await hashExportData(data);
 
     // 1. Session cache (same tab)
-    const sessionHit = readSessionCache(jobId);
+    const sessionHit = readSessionCache(jobId, FORMAT);
     if (sessionHit && sessionHit.hash === hash) {
-      if (await pdfStillExists(sessionHit.path)) {
-        void bumpDbCacheUsage(jobId, hash);
+      if (await shareArtifactStillExists(sessionHit.path)) {
+        void bumpDbCacheUsage(jobId, hash, FORMAT);
         return sessionHit.path;
       }
-      clearSessionCache(jobId);
-      void deleteDbCacheEntry(jobId, hash);
+      clearSessionCache(jobId, FORMAT);
+      void deleteDbCacheEntry(jobId, hash, FORMAT);
     }
 
     // 2. DB cache (cross-tab / cross-device for the same user)
-    const dbHit = await lookupDbCache(jobId, hash);
+    const dbHit = await lookupDbCache(jobId, hash, FORMAT);
     if (dbHit) {
-      if (await pdfStillExists(dbHit)) {
-        writeSessionCache(jobId, { hash, path: dbHit });
-        void bumpDbCacheUsage(jobId, hash);
+      if (await shareArtifactStillExists(dbHit)) {
+        writeSessionCache(jobId, { hash, path: dbHit, format: FORMAT });
+        void bumpDbCacheUsage(jobId, hash, FORMAT);
         return dbHit;
       }
-      void deleteDbCacheEntry(jobId, hash);
+      void deleteDbCacheEntry(jobId, hash, FORMAT);
     }
 
     // 3. Generate fresh
@@ -225,7 +258,7 @@ async function uploadPdfForShare(
       console.error("PDF upload failed:", error);
       return null;
     }
-    writeSessionCache(jobId, { hash, path });
+    writeSessionCache(jobId, { hash, path, format: FORMAT });
 
     // Persist to DB cache so other tabs/devices can reuse. Best-effort —
     // requires an authenticated user; guests skip silently.
@@ -233,7 +266,7 @@ async function uploadPdfForShare(
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
       if (userId) {
-        void persistDbCache(jobId, userId, hash, path);
+        void persistDbCache(jobId, userId, hash, path, FORMAT);
       }
     } catch {
       /* noop */
