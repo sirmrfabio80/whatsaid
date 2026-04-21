@@ -41,7 +41,7 @@ async function hashExportData(data: CanonicalExportData): Promise<string> {
 const PDF_CACHE_PREFIX = "share-pdf-cache:";
 type PdfCacheEntry = { hash: string; path: string };
 
-function readPdfCache(jobId: string): PdfCacheEntry | null {
+function readSessionCache(jobId: string): PdfCacheEntry | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.sessionStorage.getItem(PDF_CACHE_PREFIX + jobId);
@@ -60,7 +60,7 @@ function readPdfCache(jobId: string): PdfCacheEntry | null {
   return null;
 }
 
-function writePdfCache(jobId: string, entry: PdfCacheEntry): void {
+function writeSessionCache(jobId: string, entry: PdfCacheEntry): void {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.setItem(
@@ -72,7 +72,7 @@ function writePdfCache(jobId: string, entry: PdfCacheEntry): void {
   }
 }
 
-function clearPdfCache(jobId: string): void {
+function clearSessionCache(jobId: string): void {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.removeItem(PDF_CACHE_PREFIX + jobId);
@@ -103,11 +103,88 @@ async function pdfStillExists(path: string): Promise<boolean> {
 }
 
 /**
+ * Look up a previously-uploaded PDF for `(jobId, hash)` in the database
+ * cache. Works across tabs / devices for the same authenticated user.
+ */
+async function lookupDbCache(
+  jobId: string,
+  hash: string,
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("share_pdf_cache")
+      .select("storage_path")
+      .eq("job_id", jobId)
+      .eq("content_hash", hash)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.storage_path ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist a fresh PDF entry in the DB cache and bump `last_used_at` on
+ * subsequent reuses. The unique constraint on `(job_id, content_hash)`
+ * makes this safe under concurrent calls (the second insert no-ops).
+ */
+async function persistDbCache(
+  jobId: string,
+  userId: string,
+  hash: string,
+  storagePath: string,
+): Promise<void> {
+  try {
+    await supabase.from("share_pdf_cache").upsert(
+      {
+        job_id: jobId,
+        user_id: userId,
+        content_hash: hash,
+        storage_path: storagePath,
+        last_used_at: new Date().toISOString(),
+      },
+      { onConflict: "job_id,content_hash" },
+    );
+  } catch {
+    /* best effort */
+  }
+}
+
+async function bumpDbCacheUsage(jobId: string, hash: string): Promise<void> {
+  try {
+    await supabase
+      .from("share_pdf_cache")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("job_id", jobId)
+      .eq("content_hash", hash);
+  } catch {
+    /* best effort */
+  }
+}
+
+async function deleteDbCacheEntry(jobId: string, hash: string): Promise<void> {
+  try {
+    await supabase
+      .from("share_pdf_cache")
+      .delete()
+      .eq("job_id", jobId)
+      .eq("content_hash", hash);
+  } catch {
+    /* best effort */
+  }
+}
+
+/**
  * Generate + upload a PDF for sharing, deduplicating across repeated share
- * attempts in the same tab. If the same job + identical export payload was
- * already uploaded, the existing storage path is reused — no second PDF is
- * generated and no second blob is uploaded. Edits to the transcript/summary
- * change the hash and force a fresh PDF.
+ * attempts. Lookup order:
+ *   1. In-tab session cache (fastest, no network)
+ *   2. Database cache, scoped to the authenticated user (cross-tab/device)
+ *   3. Generate + upload + persist to both caches
+ *
+ * Edits to the transcript/summary change the hash and force a fresh PDF.
+ * Stale storage paths (already swept by cleanup) are detected and the
+ * cache entries cleared before re-uploading.
  */
 async function uploadPdfForShare(
   jobId: string,
@@ -115,15 +192,30 @@ async function uploadPdfForShare(
 ): Promise<string | null> {
   try {
     const hash = await hashExportData(data);
-    const cached = readPdfCache(jobId);
-    if (cached && cached.hash === hash) {
-      if (await pdfStillExists(cached.path)) {
-        return cached.path;
+
+    // 1. Session cache (same tab)
+    const sessionHit = readSessionCache(jobId);
+    if (sessionHit && sessionHit.hash === hash) {
+      if (await pdfStillExists(sessionHit.path)) {
+        void bumpDbCacheUsage(jobId, hash);
+        return sessionHit.path;
       }
-      // Stale (cleanup swept it or share expired) — fall through and re-upload.
-      clearPdfCache(jobId);
+      clearSessionCache(jobId);
+      void deleteDbCacheEntry(jobId, hash);
     }
 
+    // 2. DB cache (cross-tab / cross-device for the same user)
+    const dbHit = await lookupDbCache(jobId, hash);
+    if (dbHit) {
+      if (await pdfStillExists(dbHit)) {
+        writeSessionCache(jobId, { hash, path: dbHit });
+        void bumpDbCacheUsage(jobId, hash);
+        return dbHit;
+      }
+      void deleteDbCacheEntry(jobId, hash);
+    }
+
+    // 3. Generate fresh
     const blob = await generatePdfBlob(data);
     const path = `${jobId}/${crypto.randomUUID()}.pdf`;
     const { error } = await supabase.storage
@@ -133,13 +225,27 @@ async function uploadPdfForShare(
       console.error("PDF upload failed:", error);
       return null;
     }
-    writePdfCache(jobId, { hash, path });
+    writeSessionCache(jobId, { hash, path });
+
+    // Persist to DB cache so other tabs/devices can reuse. Best-effort —
+    // requires an authenticated user; guests skip silently.
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (userId) {
+        void persistDbCache(jobId, userId, hash, path);
+      }
+    } catch {
+      /* noop */
+    }
+
     return path;
   } catch (err) {
     console.error("PDF generation failed:", err);
     return null;
   }
 }
+
 
 function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
