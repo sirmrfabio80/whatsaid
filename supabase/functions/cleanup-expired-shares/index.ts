@@ -481,6 +481,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         ok: true,
         dry_run: dryRun,
+        config,
         ...summary,
         ...(dryRun ? { would_delete: dryReport } : {}),
       }),
