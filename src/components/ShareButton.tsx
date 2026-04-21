@@ -462,25 +462,27 @@ async function uploadPdfForShare(
   const hash = await hashExportData(data);
   const key = uploadKey(jobId, hash, "pdf");
 
-  // Same-tab coalescing — share the same in-flight promise.
-  const existing = inFlightUploads.get(key);
-  if (existing) return existing;
+  // Acquire (or create) the shared in-flight promise. Ref-counted so all
+  // concurrent callers see the same result and the entry only clears once
+  // every subscriber has settled.
+  const promise = acquireInFlight(key, () =>
+    (async (): Promise<string | null> => {
+      // Cross-tab coalescing — wait briefly to see if a peer already started.
+      const peerResult = await waitForPeerLeader(key);
+      if (peerResult !== undefined) return peerResult;
 
-  const promise = (async (): Promise<string | null> => {
-    // Cross-tab coalescing — wait briefly to see if a peer already started.
-    const peerResult = await waitForPeerLeader(key);
-    if (peerResult !== undefined) return peerResult;
+      announceLeaseStart(key);
+      const result = await _uploadPdfForShareInner(jobId, data, hash);
+      announceLeaseDone(key, result);
+      return result;
+    })(),
+  );
 
-    announceLeaseStart(key);
-    const result = await _uploadPdfForShareInner(jobId, data, hash);
-    announceLeaseDone(key, result);
-    return result;
-  })().finally(() => {
-    inFlightUploads.delete(key);
-  });
-
-  inFlightUploads.set(key, promise);
-  return promise;
+  try {
+    return await promise;
+  } finally {
+    releaseInFlight(key);
+  }
 }
 
 async function _uploadPdfForShareInner(
