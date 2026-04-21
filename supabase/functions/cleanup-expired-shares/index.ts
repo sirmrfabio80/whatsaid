@@ -24,6 +24,13 @@ import { createServiceClient } from "../_shared/supabase.ts";
  *    duration. The row is created at start (status=running) and updated at
  *    end so failed/timed-out runs are still visible.
  *
+ * Dry-run mode:
+ *  - Pass `?dry_run=1` (or `{ "dry_run": true }` in the JSON body) to compute
+ *    what *would* be deleted without performing any storage removals or DB
+ *    mutations. Dry-runs do NOT write to `cleanup_logs` (audit log stays
+ *    clean) and the response includes `would_delete` arrays of object paths
+ *    so the caller can review before approving a real run.
+ *
  * Idempotent and safe to call repeatedly. Designed to run via pg_cron once
  * per hour.
  */
@@ -38,6 +45,14 @@ interface CleanupSummary {
   exports_deleted: number;
   missing_prefixes: number;
   errors: string[];
+}
+
+interface DryRunReport {
+  shared_pdfs: string[];
+  shared_pdfs_orphans: string[];
+  exports: string[];
+  expired_share_rows: string[]; // share IDs that would be deleted
+  exports_rows_nulled: string[]; // async_job IDs whose resource_url would be cleared
 }
 
 /**
@@ -57,11 +72,27 @@ function isMissingPrefixError(err: { message?: string } | null): boolean {
   );
 }
 
+async function parseDryRun(req: Request): Promise<boolean> {
+  const url = new URL(req.url);
+  const qp = url.searchParams.get("dry_run");
+  if (qp && (qp === "1" || qp.toLowerCase() === "true")) return true;
+  if (req.method === "POST") {
+    try {
+      const body = await req.clone().json();
+      if (body && typeof body === "object" && body.dry_run === true) return true;
+    } catch {
+      /* not JSON — ignore */
+    }
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const dryRun = await parseDryRun(req);
   const startedAt = new Date();
   const summary: CleanupSummary = {
     shared_pdfs_deleted: 0,
@@ -70,28 +101,38 @@ Deno.serve(async (req) => {
     missing_prefixes: 0,
     errors: [],
   };
+  const dryReport: DryRunReport = {
+    shared_pdfs: [],
+    shared_pdfs_orphans: [],
+    exports: [],
+    expired_share_rows: [],
+    exports_rows_nulled: [],
+  };
 
   const supabase = createServiceClient();
 
   // Insert a "running" log row up-front so timeouts / crashes are visible.
+  // Skipped in dry-run mode so previews don't pollute the audit log.
   let logId: string | null = null;
-  try {
-    const { data: logRow, error: logErr } = await supabase
-      .from("cleanup_logs")
-      .insert({
-        job_name: JOB_NAME,
-        started_at: startedAt.toISOString(),
-        status: "running",
-      })
-      .select("id")
-      .single();
-    if (logErr) {
-      console.warn(`[${JOB_NAME}] failed to insert log row:`, logErr.message);
-    } else {
-      logId = logRow.id;
+  if (!dryRun) {
+    try {
+      const { data: logRow, error: logErr } = await supabase
+        .from("cleanup_logs")
+        .insert({
+          job_name: JOB_NAME,
+          started_at: startedAt.toISOString(),
+          status: "running",
+        })
+        .select("id")
+        .single();
+      if (logErr) {
+        console.warn(`[${JOB_NAME}] failed to insert log row:`, logErr.message);
+      } else {
+        logId = logRow.id;
+      }
+    } catch (e) {
+      console.warn(`[${JOB_NAME}] log insert threw:`, e);
     }
-  } catch (e) {
-    console.warn(`[${JOB_NAME}] log insert threw:`, e);
   }
 
   const finalize = async (status: "completed" | "failed", topLevelError?: string) => {
@@ -132,11 +173,7 @@ Deno.serve(async (req) => {
     if (sharesErr) {
       summary.errors.push(`fetch expired shares: ${sharesErr.message}`);
     } else if (expiredShares && expiredShares.length > 0) {
-      console.log(`[${JOB_NAME}] Found ${expiredShares.length} expired share(s)`);
-      // Each share's PDF lives under `<job_id>/<uuid>.pdf` — we don't know
-      // the uuid from the row, so list the prefix and delete everything.
-      // Multiple shares can reference the same job_id; dedupe by job_id.
-      // Filter out any null/empty job_ids defensively.
+      console.log(`[${JOB_NAME}] Found ${expiredShares.length} expired share(s)${dryRun ? " (dry-run)" : ""}`);
       const uniqueJobIds = Array.from(
         new Set(expiredShares.map((s) => s.job_id).filter((id): id is string => !!id))
       );
@@ -154,7 +191,6 @@ Deno.serve(async (req) => {
           }
           continue;
         }
-        // Empty list = either missing prefix or empty folder. Either way, nothing to delete.
         if (!files || files.length === 0) {
           summary.missing_prefixes += 1;
           continue;
@@ -164,6 +200,12 @@ Deno.serve(async (req) => {
           .filter((f) => f && f.name)
           .map((f) => `${jobId}/${f.name}`);
         if (paths.length === 0) continue;
+
+        if (dryRun) {
+          dryReport.shared_pdfs.push(...paths);
+          summary.shared_pdfs_deleted += paths.length;
+          continue;
+        }
 
         const { error: removeErr } = await supabase.storage
           .from("shared-pdfs")
@@ -175,22 +217,22 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Delete the share rows themselves so we don't reprocess them, even
-      // when the underlying storage prefix was already gone.
       const expiredIds = expiredShares.map((s) => s.id);
-      const { error: delRowErr } = await supabase
-        .from("transcript_shares")
-        .delete()
-        .in("id", expiredIds);
-      if (delRowErr) {
-        summary.errors.push(`delete share rows: ${delRowErr.message}`);
+      if (dryRun) {
+        dryReport.expired_share_rows.push(...expiredIds);
+      } else {
+        const { error: delRowErr } = await supabase
+          .from("transcript_shares")
+          .delete()
+          .in("id", expiredIds);
+        if (delRowErr) {
+          summary.errors.push(`delete share rows: ${delRowErr.message}`);
+        }
       }
     }
 
     // -------------------------------------------------------------------
     // 1b. shared-pdfs: orphan sweep
-    // List top-level prefixes (job_ids) and remove any whose newest object
-    // is older than ORPHAN_GRACE_HOURS *and* has no matching transcript_share row.
     // -------------------------------------------------------------------
     const { data: rootDirs, error: rootErr } = await supabase.storage
       .from("shared-pdfs")
@@ -198,7 +240,6 @@ Deno.serve(async (req) => {
 
     if (rootErr) {
       if (isMissingPrefixError(rootErr)) {
-        // Bucket is empty / never written to — that's fine.
         console.log(`[${JOB_NAME}] shared-pdfs bucket appears empty`);
       } else {
         summary.errors.push(`list shared-pdfs root: ${rootErr.message}`);
@@ -206,7 +247,6 @@ Deno.serve(async (req) => {
     } else if (rootDirs && rootDirs.length > 0) {
       const graceCutoff = Date.now() - ORPHAN_GRACE_HOURS * 60 * 60 * 1000;
 
-      // Bulk-check which job_ids still have any share row at all.
       const candidateJobIds = rootDirs
         .map((d) => d.name)
         .filter((n): n is string => !!n);
@@ -247,6 +287,12 @@ Deno.serve(async (req) => {
             .map((f) => `${dir.name}/${f.name}`);
           if (paths.length === 0) continue;
 
+          if (dryRun) {
+            dryReport.shared_pdfs_orphans.push(...paths);
+            summary.shared_pdfs_orphans_deleted += paths.length;
+            continue;
+          }
+
           const { error: removeErr } = await supabase.storage
             .from("shared-pdfs")
             .remove(paths);
@@ -278,50 +324,65 @@ Deno.serve(async (req) => {
     if (exportsErr) {
       summary.errors.push(`fetch old exports: ${exportsErr.message}`);
     } else if (oldExports && oldExports.length > 0) {
-      console.log(`[${JOB_NAME}] Found ${oldExports.length} expired export(s)`);
+      console.log(`[${JOB_NAME}] Found ${oldExports.length} expired export(s)${dryRun ? " (dry-run)" : ""}`);
       const paths = oldExports
         .map((j) => j.resource_url as string | null)
         .filter((p): p is string => !!p && p.length > 0);
-      if (paths.length > 0) {
-        const { error: removeErr } = await supabase.storage
-          .from("exports")
-          .remove(paths);
-        if (removeErr) {
-          // Storage `.remove()` succeeds for missing objects; a hard error
-          // here means something else (auth, network). Still log it.
-          if (isMissingPrefixError(removeErr)) {
-            summary.missing_prefixes += paths.length;
+
+      if (dryRun) {
+        dryReport.exports.push(...paths);
+        dryReport.exports_rows_nulled.push(...oldExports.map((j) => j.id));
+        summary.exports_deleted += paths.length;
+      } else {
+        if (paths.length > 0) {
+          const { error: removeErr } = await supabase.storage
+            .from("exports")
+            .remove(paths);
+          if (removeErr) {
+            if (isMissingPrefixError(removeErr)) {
+              summary.missing_prefixes += paths.length;
+            } else {
+              summary.errors.push(`remove exports: ${removeErr.message}`);
+            }
           } else {
-            summary.errors.push(`remove exports: ${removeErr.message}`);
+            summary.exports_deleted += paths.length;
           }
-        } else {
-          summary.exports_deleted += paths.length;
         }
-      }
-      // Null out resource_url so we don't re-process; keep the row for history.
-      const ids = oldExports.map((j) => j.id);
-      const { error: nullErr } = await supabase
-        .from("async_jobs")
-        .update({ resource_url: null })
-        .in("id", ids);
-      if (nullErr) {
-        summary.errors.push(`null exports.resource_url: ${nullErr.message}`);
+        const ids = oldExports.map((j) => j.id);
+        const { error: nullErr } = await supabase
+          .from("async_jobs")
+          .update({ resource_url: null })
+          .in("id", ids);
+        if (nullErr) {
+          summary.errors.push(`null exports.resource_url: ${nullErr.message}`);
+        }
       }
     }
 
-    console.log(`[${JOB_NAME}] done`, JSON.stringify(summary));
+    console.log(
+      `[${JOB_NAME}] done${dryRun ? " (dry-run)" : ""}`,
+      JSON.stringify(summary),
+    );
     await finalize("completed");
 
-    return new Response(JSON.stringify({ ok: true, ...summary }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        dry_run: dryRun,
+        ...summary,
+        ...(dryRun ? { would_delete: dryReport } : {}),
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.error(`[${JOB_NAME}] Error:`, error);
     await finalize("failed", msg);
     return new Response(
-      JSON.stringify({ error: msg, ...summary }),
+      JSON.stringify({ error: msg, dry_run: dryRun, ...summary }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
