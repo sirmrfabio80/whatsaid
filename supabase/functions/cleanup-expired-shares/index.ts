@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
       .from("transcript_shares")
       .select("id, job_id")
       .lt("expires_at", nowIso)
-      .limit(500);
+      .limit(config.cleanup_batch_size);
 
     if (sharesErr) {
       summary.errors.push(`fetch expired shares: ${sharesErr.message}`);
