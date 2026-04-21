@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
           shared_pdfs_deleted: summary.shared_pdfs_deleted,
           shared_pdfs_orphans_deleted: summary.shared_pdfs_orphans_deleted,
           exports_deleted: summary.exports_deleted,
+          share_pdf_cache_deleted: summary.share_pdf_cache_deleted,
           missing_prefixes: summary.missing_prefixes,
           errors,
         })
