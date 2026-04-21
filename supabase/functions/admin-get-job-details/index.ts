@@ -19,6 +19,19 @@ Deno.serve(async (req) => {
     }
     const limit = Math.min(Math.max(body.limit ?? 20, 1), 50);
 
+    // SECURITY: validate job_id is a UUID before any interpolation into
+    // the analytics SQL string below (analytics endpoint does not support
+    // parameterized queries, so we must lock the input shape).
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (body.job_id !== undefined && body.job_id !== null) {
+      if (typeof body.job_id !== "string" || !UUID_RE.test(body.job_id)) {
+        return new Response(
+          JSON.stringify({ error: "job_id must be a UUID" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Fetch picker list (last N jobs)
     const { data: recentJobs, error: recentErr } = await adminClient
       .from("jobs")

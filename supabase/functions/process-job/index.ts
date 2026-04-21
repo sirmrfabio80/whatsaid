@@ -1,7 +1,9 @@
 import { corsHeaders } from "../_shared/cors.ts";
-import { createServiceClient } from "../_shared/supabase.ts";
+import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
 import { requireEnvs } from "../_shared/env.ts";
 import { markJobFailed } from "../_shared/job-failure.ts";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,23 +15,49 @@ Deno.serve(async (req) => {
       requireEnvs(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] as const);
     const supabase = createServiceClient();
 
-    const { job_id, custom_prompt, keyterms_prompt } = await req.json();
-    if (!job_id) {
+    // SECURITY: require an authenticated caller. process-job deducts credits
+    // and triggers expensive transcription, so we must verify the JWT in code
+    // (verify_jwt = false is the edge-function default) and confirm the
+    // caller owns the target job before proceeding.
+    const auth = await requireAuth(req.headers.get("Authorization"));
+    if (!auth.ok) return auth.response;
+    const callerId = auth.userId;
+
+    const { job_id, custom_prompt, keyterms_prompt, guest_token } = await req.json();
+    if (!job_id || typeof job_id !== "string" || !UUID_RE.test(job_id)) {
       return new Response(JSON.stringify({ error: "job_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 0. Fetch job to get user_id and credits_charged
+    // 0. Fetch job to get user_id, guest_token, and credits_charged
     const { data: jobRow, error: jobFetchError } = await supabase
       .from("jobs")
-      .select("user_id, credits_charged")
+      .select("user_id, credits_charged, guest_token")
       .eq("id", job_id)
       .maybeSingle();
 
     if (jobFetchError || !jobRow) {
       throw new Error("Job not found");
+    }
+
+    // SECURITY: ownership check. Authenticated callers must own the job.
+    // Guest jobs (user_id IS NULL) require a matching guest_token.
+    if (jobRow.user_id) {
+      if (jobRow.user_id !== callerId) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      if (!guest_token || guest_token !== jobRow.guest_token) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // 1. Check if user is admin (unlimited credits)
