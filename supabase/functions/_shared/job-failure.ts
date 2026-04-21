@@ -39,14 +39,31 @@ export async function markJobFailed(
 
   const message = sanitizeErrorForClient(error);
 
+  // Race-safe: never overwrite a job that has already reached `completed`.
+  // The pipeline has multiple async hops (process-job → transcribe →
+  // post-process), and a downstream caller can spuriously time out *after*
+  // the work has actually succeeded and the row was set to `completed`.
+  // Without this guard a successful job gets clobbered to `failed` and the
+  // user sees their finished transcript inside a "failed" record.
+  let updated: { status: string } | null = null;
   try {
-    await supabase
+    const { data } = await supabase
       .from("jobs")
       .update({ status: "failed", error_message: message })
-      .eq("id", jobId);
+      .eq("id", jobId)
+      .neq("status", "completed")
+      .select("status")
+      .maybeSingle();
+    updated = data ?? null;
   } catch (updateErr) {
     console.warn("[markJobFailed] failed to update job status", updateErr);
     // If we can't even mark the job, skip the notification too.
+    return;
+  }
+
+  // No row was updated → job was already `completed`. Skip notification too.
+  if (!updated) {
+    console.log(`[markJobFailed] job ${jobId} already completed — skipping failure write`);
     return;
   }
 
