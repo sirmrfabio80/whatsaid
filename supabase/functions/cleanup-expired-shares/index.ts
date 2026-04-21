@@ -429,7 +429,8 @@ Deno.serve(async (req) => {
     }
 
     // -------------------------------------------------------------------
-    // 3. share_pdf_cache: prune index rows untouched for SHARE_CACHE_TTL_DAYS.
+    // 3. share_pdf_cache: prune index rows untouched for the configured
+    //    TTL (see `cleanup_config.share_pdf_cache_ttl_days`).
     //
     // The actual blobs they reference are usually already gone (the
     // shared-pdfs sweep above runs first). This step bounds the cache
@@ -438,14 +439,14 @@ Deno.serve(async (req) => {
     // without TTL each user accumulates one row per historical hash.
     // -------------------------------------------------------------------
     const cacheCutoff = new Date(
-      Date.now() - SHARE_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000,
+      Date.now() - config.share_pdf_cache_ttl_days * 24 * 60 * 60 * 1000,
     ).toISOString();
 
     const { data: staleCacheRows, error: cacheFetchErr } = await supabase
       .from("share_pdf_cache")
       .select("id")
       .lt("last_used_at", cacheCutoff)
-      .limit(1000);
+      .limit(config.cleanup_batch_size);
 
     if (cacheFetchErr) {
       summary.errors.push(`fetch stale share_pdf_cache: ${cacheFetchErr.message}`);
