@@ -289,10 +289,19 @@ async function uploadPdfForShare(
     if (sessionHit && sessionHit.hash === hash) {
       if (await shareArtifactStillExists(sessionHit.path)) {
         void bumpDbCacheUsage(jobId, hash, FORMAT);
+        void logShareEvent({
+          jobId, format: FORMAT, hash,
+          action: "reused", source: "session", storagePath: sessionHit.path,
+        });
         return sessionHit.path;
       }
       clearSessionCache(jobId, FORMAT);
       void deleteDbCacheEntry(jobId, hash, FORMAT);
+      void logShareEvent({
+        jobId, format: FORMAT, hash,
+        action: "uploaded", source: "stale-session", storagePath: null,
+        reason: "session cache pointed to missing storage object",
+      });
     }
 
     // 2. DB cache (cross-tab / cross-device for the same user)
@@ -301,9 +310,18 @@ async function uploadPdfForShare(
       if (await shareArtifactStillExists(dbHit)) {
         writeSessionCache(jobId, { hash, path: dbHit, format: FORMAT });
         void bumpDbCacheUsage(jobId, hash, FORMAT);
+        void logShareEvent({
+          jobId, format: FORMAT, hash,
+          action: "reused", source: "db", storagePath: dbHit,
+        });
         return dbHit;
       }
       void deleteDbCacheEntry(jobId, hash, FORMAT);
+      void logShareEvent({
+        jobId, format: FORMAT, hash,
+        action: "uploaded", source: "stale-db", storagePath: null,
+        reason: "db cache pointed to missing storage object",
+      });
     }
 
     // 3. Generate fresh
@@ -328,6 +346,16 @@ async function uploadPdfForShare(
       }
     } catch {
       /* noop */
+    }
+
+    // Only log a "fresh upload" event if we didn't already log a stale
+    // miss above — those already explain the regeneration.
+    if (!sessionHit && !dbHit) {
+      void logShareEvent({
+        jobId, format: FORMAT, hash,
+        action: "uploaded", source: "fresh", storagePath: path,
+        reason: "no cache entry for this (job, format, hash)",
+      });
     }
 
     return path;
