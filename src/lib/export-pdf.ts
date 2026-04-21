@@ -596,7 +596,25 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
   if (data.duration) metaParts.push(`Duration: ${data.duration}`);
   if (data.language) metaParts.push(`Language: ${data.language}`);
   pen.plain(metaParts.join("  •  "), F.meta, C.meta);
-  pen.gap(4);
+  pen.gap(3);
+
+  // ── Speakers (chip row, mirrors the colour assignment used in transcript) ──
+  // Pre-compute speaker → colour so the chips at the top match the dots
+  // shown next to each utterance further down. Lower-cased keys mirror the
+  // matching done in the transcript renderer below.
+  const speakerColorMap = new Map<string, string>();
+  if (data.speakers && data.speakers.length) {
+    for (const spk of data.speakers) {
+      const key = spk.toLowerCase();
+      if (!speakerColorMap.has(key)) {
+        speakerColorMap.set(key, SPEAKER_COLORS[speakerColorMap.size % SPEAKER_COLORS.length]);
+      }
+    }
+    pen.speakerRow(data.speakers, speakerColorMap);
+    pen.gap(4);
+  } else {
+    pen.gap(1);
+  }
 
   // ── Summary ──
   if (data.summary) {
