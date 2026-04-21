@@ -264,6 +264,132 @@ async function logShareEvent(entry: ShareLogEntry): Promise<void> {
 }
 
 /**
+ * Per-(jobId, hash, format) concurrency guard.
+ *
+ * Without this, two simultaneous share clicks (same tab double-click, or
+ * two tabs both racing past the cache lookup before either upload
+ * finishes) would each generate a fresh PDF, upload a new blob, and
+ * persist competing rows in `share_pdf_cache`. The DB unique constraint
+ * `(job_id, content_hash, format)` would reject one of the two upserts —
+ * leaving an orphaned blob in storage that only the cleanup job will
+ * eventually sweep.
+ *
+ * Two layers:
+ *
+ *  1. **In-tab Map** — concurrent calls in the same tab share a single
+ *     in-flight `Promise`. Cleared on settle so retries after failure
+ *     still work.
+ *
+ *  2. **BroadcastChannel lease** — when a tab is about to upload, it
+ *     announces `start` on `whatsaid-share-upload`. Other tabs reaching
+ *     the upload step within `LEASE_WAIT_MS` of that announcement skip
+ *     their own upload and wait for the leader's `done` message (or fall
+ *     through after `LEADER_TIMEOUT_MS` and try the DB cache + upload
+ *     themselves — the DB upsert + storage `upsert: false` keep things
+ *     correct even if both eventually proceed).
+ */
+const inFlightUploads = new Map<string, Promise<string | null>>();
+
+const LEASE_WAIT_MS = 250; // how long we wait at the start of an upload to detect a peer leader
+const LEADER_TIMEOUT_MS = 30_000; // upper bound on how long we wait for a peer's result
+
+type LeaseMessage =
+  | { kind: "start"; key: string; tabId: string; at: number }
+  | { kind: "done"; key: string; tabId: string; path: string | null };
+
+let leaseChannel: BroadcastChannel | null = null;
+function getLeaseChannel(): BroadcastChannel | null {
+  if (typeof BroadcastChannel === "undefined") return null;
+  if (!leaseChannel) {
+    try {
+      leaseChannel = new BroadcastChannel("whatsaid-share-upload");
+    } catch {
+      leaseChannel = null;
+    }
+  }
+  return leaseChannel;
+}
+
+const TAB_ID =
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+
+function uploadKey(jobId: string, hash: string, format: ShareFormat): string {
+  return `${jobId}:${format}:${hash}`;
+}
+
+/**
+ * Wait briefly for a peer tab to announce it's already uploading the same
+ * key. Returns the peer's resulting path (or `null` failure) if observed,
+ * or `undefined` if no peer claimed leadership in time and the caller
+ * should proceed itself.
+ */
+async function waitForPeerLeader(
+  key: string,
+): Promise<string | null | undefined> {
+  const ch = getLeaseChannel();
+  if (!ch) return undefined;
+
+  return await new Promise<string | null | undefined>((resolve) => {
+    let leaderTabId: string | null = null;
+    let resolved = false;
+
+    const finish = (value: string | null | undefined) => {
+      if (resolved) return;
+      resolved = true;
+      ch.removeEventListener("message", onMsg as EventListener);
+      clearTimeout(waitTimer);
+      clearTimeout(leaderTimer);
+      resolve(value);
+    };
+
+    const onMsg = (ev: MessageEvent<LeaseMessage>) => {
+      const msg = ev.data;
+      if (!msg || msg.key !== key) return;
+      if (msg.kind === "start" && msg.tabId !== TAB_ID) {
+        // A peer started uploading — extend wait until they finish.
+        leaderTabId = msg.tabId;
+        clearTimeout(waitTimer);
+        leaderTimer = setTimeout(() => finish(null), LEADER_TIMEOUT_MS);
+      } else if (msg.kind === "done" && msg.tabId === leaderTabId) {
+        finish(msg.path);
+      }
+    };
+
+    ch.addEventListener("message", onMsg as EventListener);
+    // Initial short window: if no peer claims leadership, we proceed.
+    const waitTimer = setTimeout(() => finish(undefined), LEASE_WAIT_MS);
+    let leaderTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
+      /* replaced when a peer announces start */
+    }, 0);
+    clearTimeout(leaderTimer);
+  });
+}
+
+function announceLeaseStart(key: string): void {
+  const ch = getLeaseChannel();
+  if (!ch) return;
+  try {
+    const msg: LeaseMessage = { kind: "start", key, tabId: TAB_ID, at: Date.now() };
+    ch.postMessage(msg);
+  } catch {
+    /* best effort */
+  }
+}
+
+function announceLeaseDone(key: string, path: string | null): void {
+  const ch = getLeaseChannel();
+  if (!ch) return;
+  try {
+    const msg: LeaseMessage = { kind: "done", key, tabId: TAB_ID, path };
+    ch.postMessage(msg);
+  } catch {
+    /* best effort */
+  }
+}
+
+/**
  * Generate + upload a PDF for sharing, deduplicating across repeated share
  * attempts. Lookup order:
  *   1. In-tab session cache (fastest, no network)
@@ -275,10 +401,42 @@ async function logShareEvent(entry: ShareLogEntry): Promise<void> {
  * to the transcript/summary change the hash and force a fresh upload.
  * Stale storage paths (already swept by cleanup) are detected and the
  * cache entries cleared before re-uploading.
+ *
+ * Concurrent calls (same or different tabs) for the same key are coalesced
+ * — see `inFlightUploads` and the `BroadcastChannel` lease above.
  */
 async function uploadPdfForShare(
   jobId: string,
   data: CanonicalExportData,
+): Promise<string | null> {
+  const hash = await hashExportData(data);
+  const key = uploadKey(jobId, hash, "pdf");
+
+  // Same-tab coalescing — share the same in-flight promise.
+  const existing = inFlightUploads.get(key);
+  if (existing) return existing;
+
+  const promise = (async (): Promise<string | null> => {
+    // Cross-tab coalescing — wait briefly to see if a peer already started.
+    const peerResult = await waitForPeerLeader(key);
+    if (peerResult !== undefined) return peerResult;
+
+    announceLeaseStart(key);
+    const result = await _uploadPdfForShareInner(jobId, data, hash);
+    announceLeaseDone(key, result);
+    return result;
+  })().finally(() => {
+    inFlightUploads.delete(key);
+  });
+
+  inFlightUploads.set(key, promise);
+  return promise;
+}
+
+async function _uploadPdfForShareInner(
+  jobId: string,
+  data: CanonicalExportData,
+  hash: string,
 ): Promise<string | null> {
   const FORMAT: ShareFormat = "pdf";
   try {
