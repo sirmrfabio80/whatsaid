@@ -374,6 +374,48 @@ Deno.serve(async (req) => {
       }
     }
 
+    // -------------------------------------------------------------------
+    // 3. share_pdf_cache: prune index rows untouched for SHARE_CACHE_TTL_DAYS.
+    //
+    // The actual blobs they reference are usually already gone (the
+    // shared-pdfs sweep above runs first). This step bounds the cache
+    // table itself so it doesn't grow forever — repeated edits to the
+    // same job constantly produce new (job_id, content_hash) rows, and
+    // without TTL each user accumulates one row per historical hash.
+    // -------------------------------------------------------------------
+    const cacheCutoff = new Date(
+      Date.now() - SHARE_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const { data: staleCacheRows, error: cacheFetchErr } = await supabase
+      .from("share_pdf_cache")
+      .select("id")
+      .lt("last_used_at", cacheCutoff)
+      .limit(1000);
+
+    if (cacheFetchErr) {
+      summary.errors.push(`fetch stale share_pdf_cache: ${cacheFetchErr.message}`);
+    } else if (staleCacheRows && staleCacheRows.length > 0) {
+      console.log(
+        `[${JOB_NAME}] Found ${staleCacheRows.length} stale share_pdf_cache row(s)${dryRun ? " (dry-run)" : ""}`,
+      );
+      const ids = staleCacheRows.map((r) => r.id);
+      if (dryRun) {
+        dryReport.share_pdf_cache_rows.push(...ids);
+        summary.share_pdf_cache_deleted += ids.length;
+      } else {
+        const { error: cacheDelErr } = await supabase
+          .from("share_pdf_cache")
+          .delete()
+          .in("id", ids);
+        if (cacheDelErr) {
+          summary.errors.push(`delete share_pdf_cache rows: ${cacheDelErr.message}`);
+        } else {
+          summary.share_pdf_cache_deleted += ids.length;
+        }
+      }
+    }
+
     console.log(
       `[${JOB_NAME}] done${dryRun ? " (dry-run)" : ""}`,
       JSON.stringify(summary),
