@@ -663,6 +663,36 @@ export type Database = {
         }
         Relationships: []
       }
+      share_pdf_cache: {
+        Row: {
+          content_hash: string
+          created_at: string
+          id: string
+          job_id: string
+          last_used_at: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          id?: string
+          job_id: string
+          last_used_at?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          last_used_at?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
