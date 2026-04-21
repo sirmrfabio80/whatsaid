@@ -576,7 +576,7 @@ function headingReserve(level: 1 | 2 | 3 | 4): number {
   return before + ptMm(sz) * HLH + after;
 }
 
-function renderMarkdown(pen: Pen, text: string) {
+function renderMarkdown(pen: Pen, text: string, useSerif = true) {
   const lines = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trimEnd();
@@ -588,18 +588,14 @@ function renderMarkdown(pen: Pen, text: string) {
     else if (/^#\s/.test(line)) { level = 2; headingText = line.slice(2); }
 
     if (level !== null) {
-      // Keep-with-next: heading + next 2 non-empty body lines must fit together.
       const need = headingReserve(level) + measureNextLines(pen, lines, i + 1, 2);
       pen.pageBreakHard(need);
       pen.heading(headingText, level);
     } else if (/^\s*[-*]\s+/.test(line)) {
-      // Reading-surface bullet → serif body.
-      pen.bullet(line.replace(/^\s*[-*]\s+/, ""), true);
+      pen.bullet(line.replace(/^\s*[-*]\s+/, ""), useSerif);
     } else if (line.trim() === "") {
       pen.gap(2);
     } else {
-      // Keep-with-next: if this paragraph is immediately followed (after any
-      // blank lines) by a bullet list, keep paragraph + first bullet together.
       let nextContentIdx = i + 1;
       while (nextContentIdx < lines.length && lines[nextContentIdx].trim() === "") {
         nextContentIdx++;
@@ -610,8 +606,7 @@ function renderMarkdown(pen: Pen, text: string) {
         const bulletH = pen.measureLine(nextLine);
         pen.pageBreakHard(paraH + bulletH);
       }
-      // Reading-surface paragraph → serif body.
-      pen.rich(parseInline(line), F.body, C.body, ML, CW, LH, true);
+      pen.rich(parseInline(line), F.body, C.body, ML, CW, LH, useSerif);
     }
   }
 }
