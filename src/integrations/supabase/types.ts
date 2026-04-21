@@ -59,6 +59,27 @@ export type Database = {
         }
         Relationships: []
       }
+      cleanup_config: {
+        Row: {
+          cleanup_batch_size: number
+          id: number
+          share_pdf_cache_ttl_days: number
+          updated_at: string
+        }
+        Insert: {
+          cleanup_batch_size?: number
+          id?: number
+          share_pdf_cache_ttl_days?: number
+          updated_at?: string
+        }
+        Update: {
+          cleanup_batch_size?: number
+          id?: number
+          share_pdf_cache_ttl_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cleanup_logs: {
         Row: {
           created_at: string
