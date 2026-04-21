@@ -37,6 +37,19 @@ const Help = lazy(() => import("./pages/Help"));
 
 const queryClient = new QueryClient();
 
+/**
+ * Watches the current pathname and warms the JS chunks for routes likely
+ * to be visited next. Idle-scheduled and skipped on Save-Data / 2g.
+ * Renders nothing.
+ */
+const RoutePrefetcher = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    prefetchLikelyRoutes(pathname);
+  }, [pathname]);
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
