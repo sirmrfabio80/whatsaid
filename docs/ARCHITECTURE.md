@@ -549,8 +549,15 @@ For each driver: **Where · Trigger · Frequency · Sync/async · Provider
 - **Trigger:** `process-job` background dispatch.
 - **Frequency per transcript:**
   - **1** `POST /transcript` (submit).
-  - **N** `GET /transcript/:id` polls — every `poll_interval_ms`
-    (default 5 s) up to `max_polls` = 120 (≈10 min ceiling).
+  - **N** `GET /transcript/:id` polls — interval **dynamically backs
+    off**: base `poll_interval_ms` (default 5 s) for the first 60 s,
+    then 10 s up to 3 min elapsed, 20 s up to 10 min elapsed, 30 s
+    thereafter. `max_polls` (default 120) bounds the total iteration
+    count, not wall time. Approximate request counts:
+    - ≤60 s job: ~12 polls (unchanged from previous behaviour).
+    - 5-min job: ~30 polls (was ~60 → ~50% fewer).
+    - 30-min job: ~60 polls (was ~360 → ~83% fewer).
+    - 4-hour job: ~120 polls (was ~2400 → ~95% fewer).
   - **1** `DELETE /transcript/:id` after successful retrieval.
   - Heartbeat `UPDATE jobs … updated_at` every ~30 s (DB only).
   - **1** storage `remove("temp-audio")` on success.
@@ -586,11 +593,15 @@ Total here: **2–4** Lovable AI calls.
 #### F. Lazy title generation — `generate-title` (Lovable AI)
 - **Where:** invoked from `JobDetail` only when `!m.title &&
   jobStatus === "completed"`.
-- **Frequency:** once per transcript in normal flow (idempotent — the
-  function no-ops if a title already exists).
+- **Frequency:** once per transcript in normal flow.
 - **Calls:** **1**, model `google/gemini-2.5-flash-lite`.
-- **Race risk:** two tabs opening the job concurrently could each
-  fire the call before the DB write lands → see 10.8.
+- **Concurrency-safe:** the function runs an atomic
+  `UPDATE jobs SET title = '…' WHERE id = $1 AND title IS NULL`
+  before calling the AI gateway. Only the first invocation wins the
+  claim and bills a token; concurrent calls (e.g. the same job
+  opened in two tabs) short-circuit and return the placeholder /
+  final title without invoking the model. The placeholder is rolled
+  back on AI failure so retries are still possible.
 
 #### G. Background storage / provider cleanup
 - In-line `DELETE` to AssemblyAI + storage remove inside `transcribe`
@@ -599,6 +610,15 @@ Total here: **2–4** Lovable AI calls.
   per-job cost in healthy path.
 - `cleanup-stale-jobs` cron also runs (schedule *needs verification*
   against `pg_cron`).
+- `cleanup-expired-shares` cron sweeps the `shared-pdfs` and
+  `exports` storage buckets:
+  - **shared-pdfs:** deletes blobs whose `transcript_shares.expires_at`
+    is in the past (default 2-day TTL), then deletes the share rows;
+    also removes orphaned blobs older than 24 h that have no
+    matching share row.
+  - **exports:** deletes blobs for `async_jobs` of type `pdf_export`
+    that completed more than 7 days ago, and nulls their
+    `resource_url` so the row stays for history without re-processing.
 
 #### H. Post-conversion user actions (repeatable, 0 credits, all hit Lovable AI)
 - **Edit transcript → "Regenerate summary"** — `regenerate` with
@@ -733,11 +753,10 @@ share flow.
 
 ### 10.8 Optimisation opportunities
 
-- **Title generation race.** Lazy invoke from `JobDetail` can
-  double-fire if two tabs open the job concurrently — `generate-title`
-  has no idempotency guard beyond a post-update check. Consider
-  moving title generation into `post-process` to dedupe and remove
-  the lazy-load round-trip.
+- ~~**Title generation race.**~~ **Resolved** — `generate-title`
+  now uses an atomic `UPDATE … WHERE title IS NULL` claim so
+  concurrent invocations from multiple tabs never bill more than
+  one model call per transcript.
 - **Tag language classifier always runs.** `autoTag` LLM-classifies
   *every* candidate tag rather than only ASCII-suspicious ones; the
   prior `looksEnglish` heuristic is still in the file but unused.
@@ -752,19 +771,21 @@ share flow.
 - **Question counter rollback.** A Q&A AI call that throws after
   partial work still costs upstream tokens; current rollback only
   resets the DB counter. Streaming + abort would reduce waste.
-- **PDF storage retention.** `shared-pdfs` blobs survive past the
-  share's 2-day expiry — a cron sweep (analogous to
-  `watchdog-stale-jobs`) for shares older than `expires_at` would
-  reclaim storage.
+- ~~**PDF storage retention.**~~ **Resolved** —
+  `cleanup-expired-shares` cron deletes `shared-pdfs` blobs past
+  `transcript_shares.expires_at` and `exports` blobs older than
+  7 days.
 - **Auto-tag + classifier are sequential.** Two round-trips to the
   gateway. A single tool-calling prompt could return tags +
   per-tag language in one call.
 - **`suggest-speakers` is uncapped per click.** A debounce / cooldown
   or per-job daily limit would prevent runaway costs from a
   misbehaving UI.
-- **AssemblyAI poll interval is 5 s.** For very long files, raising
-  the interval would cut request count without affecting latency
-  materially.
+- ~~**AssemblyAI poll interval is fixed.**~~ **Resolved** — the
+  `transcribe` function now applies a stepped backoff
+  (5 s → 10 s → 20 s → 30 s) that cuts polling-request volume by
+  ~50% on 5-min jobs, ~83% on 30-min jobs, and ~95% on 4-hour jobs
+  with worst-case completion-detection lag of 30 s.
 
 ### 10.9 Observability gaps and items needing verification
 
@@ -777,11 +798,9 @@ Flagged "needs verification":
   differ materially per call.
 - Whether the Q&A 10-cap was *intended* to count edits/reruns of an
   existing question or only net-new questions.
-- Retention policy + TTL for `shared-pdfs` and `exports` buckets — no
-  scheduled cleanup function found for either.
-- Schedule + frequency of `cleanup-stale-jobs` and
-  `watchdog-stale-jobs` cron jobs (assumed every 5 min from
-  comments, not verified against `pg_cron`).
+- Schedule + frequency of `cleanup-stale-jobs`,
+  `watchdog-stale-jobs`, and the new `cleanup-expired-shares` cron
+  jobs (defaults assumed; verify against `pg_cron`).
 - Whether `audio_enhancement` ever changes AssemblyAI billable
   seconds (it changes file size, but AAI is duration-based).
 - Whether `process-email-queue` tick rate matches the documented
