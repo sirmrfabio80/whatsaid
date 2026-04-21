@@ -38,16 +38,26 @@ import { createServiceClient } from "../_shared/supabase.ts";
 const JOB_NAME = "cleanup-expired-shares";
 const EXPORT_TTL_DAYS = 7;
 const ORPHAN_GRACE_HOURS = 24; // ignore very fresh orphans (still being uploaded)
+
 /**
- * Stale `share_pdf_cache` rows whose `last_used_at` is older than this are
- * pruned each run to prevent unbounded DB growth. The shared-pdfs storage
- * sweep above runs first, so by the time we get here many of these rows
- * already point at deleted blobs — we just remove the index entry too.
+ * Defaults for tunables that live in `public.cleanup_config`. Used as a
+ * fallback when the row is missing/unreadable — keeps the cleanup job
+ * working even before the table is provisioned.
  *
- * 30 days is a generous reuse window: re-shares within a month still hit
- * the cache, while abandoned entries don't accumulate forever.
+ *  - `share_pdf_cache_ttl_days`: how long a `share_pdf_cache` row may sit
+ *    untouched (`last_used_at`) before it gets pruned. Generous default
+ *    (30 days) so re-shares within a month still hit the cache.
+ *  - `cleanup_batch_size`: cap on rows fetched per sweep (expired shares,
+ *    old exports, stale cache entries). Bounds the per-run work so the
+ *    function fits inside the edge runtime time/memory budget.
  */
-const SHARE_CACHE_TTL_DAYS = 30;
+const DEFAULT_SHARE_CACHE_TTL_DAYS = 30;
+const DEFAULT_CLEANUP_BATCH_SIZE = 1000;
+
+interface CleanupConfig {
+  share_pdf_cache_ttl_days: number;
+  cleanup_batch_size: number;
+}
 
 interface CleanupSummary {
   shared_pdfs_deleted: number;
