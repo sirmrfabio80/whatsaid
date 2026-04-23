@@ -204,87 +204,89 @@ export default function ParticipantsPanel({
       )}
 
       {/* Expandable participation overview */}
-      <Collapsible className="w-full" open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="flex items-center gap-2 w-full group cursor-pointer rounded-lg px-1 py-1 -mx-1 hover:bg-muted/30 transition-colors">
-          <Users className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">
-            {t("participants.overview")}
-          </span>
-          <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/60 transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`} />
-        </CollapsibleTrigger>
+      {showOverview && (
+        <Collapsible className="w-full" open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger className="flex items-center gap-2 w-full group cursor-pointer rounded-lg px-1 py-1 -mx-1 hover:bg-muted/30 transition-colors">
+            <Users className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("participants.overview")}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/60 transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+          </CollapsibleTrigger>
 
-        <CollapsibleContent className="w-full data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
-          <div className="mt-2 w-full rounded-xl border border-border/30 bg-muted/15 overflow-hidden">
-            {stats.length === 0 ? (
-              <div className="px-4 py-6 text-center">
-                <p className="text-xs text-muted-foreground">{t("participants.noData")}</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-border/20">
-                {stats.map((stat, i) => (
-                  <div key={stat.speaker} className="px-4 py-3 space-y-2">
-                    {/* Speaker row: avatar + name + stats */}
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-micro font-semibold text-white"
-                        style={{ backgroundColor: getSpeakerColor(i) }}
-                        aria-hidden="true"
-                      >
-                        {stat.initials}
-                      </div>
+          <CollapsibleContent className="w-full data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+            <div className="mt-2 w-full rounded-xl border border-border/30 bg-muted/15 overflow-hidden">
+              {stats.length === 0 ? (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-xs text-muted-foreground">{t("participants.noData")}</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/20">
+                  {stats.map((stat, i) => (
+                    <div key={stat.speaker} className="px-4 py-3 space-y-2">
+                      {/* Speaker row: avatar + name + stats */}
+                      <div className="flex items-center gap-3">
+                        {/* Avatar */}
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-micro font-semibold text-white"
+                          style={{ backgroundColor: getSpeakerColor(i) }}
+                          aria-hidden="true"
+                        >
+                          {stat.initials}
+                        </div>
 
-                      {/* Name + meta */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{stat.displayName}</p>
-                        <div className="flex items-center gap-3 text-caption text-muted-foreground">
-                          {stat.totalSeconds > 0 && (
+                        {/* Name + meta */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{stat.displayName}</p>
+                          <div className="flex items-center gap-3 text-caption text-muted-foreground">
+                            {stat.totalSeconds > 0 && (
+                              <span>
+                                {t("participants.spoken")}: {formatDuration(stat.totalSeconds)}
+                              </span>
+                            )}
                             <span>
-                              {t("participants.spoken")}: {formatDuration(stat.totalSeconds)}
+                              {t("participants.share")}: {stat.sharePercent}%
                             </span>
-                          )}
-                          <span>
-                            {t("participants.share")}: {stat.sharePercent}%
+                          </div>
+                        </div>
+
+                        {/* Share badge */}
+                        <div className="shrink-0 text-right">
+                          <span className="text-h3 tabular-nums text-foreground/80">
+                            {stat.sharePercent}%
                           </span>
                         </div>
                       </div>
 
-                      {/* Share badge */}
-                      <div className="shrink-0 text-right">
-                        <span className="text-h3 tabular-nums text-foreground/80">
-                          {stat.sharePercent}%
-                        </span>
-                      </div>
+                      {/* Timeline bar */}
+                      {hasTimeline && (
+                        <div
+                          className="relative h-2 rounded-full bg-muted/60 overflow-hidden"
+                          role="img"
+                          aria-label={`${stat.displayName} speaking timeline`}
+                        >
+                          {stat.timelineSegments.map(([start, end], j) => (
+                            <div
+                              key={j}
+                              className="absolute inset-y-0 rounded-full"
+                              style={{
+                                left: `${start * 100}%`,
+                                width: `${Math.max((end - start) * 100, 0.5)}%`,
+                                backgroundColor: getSpeakerColor(i),
+                                opacity: 0.75,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
-
-                    {/* Timeline bar */}
-                    {hasTimeline && (
-                      <div
-                        className="relative h-2 rounded-full bg-muted/60 overflow-hidden"
-                        role="img"
-                        aria-label={`${stat.displayName} speaking timeline`}
-                      >
-                        {stat.timelineSegments.map(([start, end], j) => (
-                          <div
-                            key={j}
-                            className="absolute inset-y-0 rounded-full"
-                            style={{
-                              left: `${start * 100}%`,
-                              width: `${Math.max((end - start) * 100, 0.5)}%`,
-                              backgroundColor: getSpeakerColor(i),
-                              opacity: 0.75,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 }
