@@ -25,7 +25,9 @@ export function QAMock() {
             {["00:14", "00:31", "00:47"].map((c) => (
               <span
                 key={c}
-                className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent border border-accent/20 px-1.5 py-0.5 text-[10px] font-mono tabular-nums"
+                /* Bumped from bg-accent/10 + text-accent to /15 + text-accent-foreground-ish
+                   shade so the chip clears WCAG AA (4.5:1) on tinted background. */
+                className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent-foreground border border-accent/30 px-1.5 py-0.5 text-[10px] font-mono tabular-nums"
               >
                 {c}
               </span>
