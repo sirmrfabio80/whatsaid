@@ -172,29 +172,36 @@ export default function ParticipantsPanel({
 
   const hasTimeline = stats.some((s) => s.timelineSegments.length > 0);
 
+  // Variant gates: chips-only renders just the chip row; overview-only
+  // renders just the expandable overview. "full" renders both stacked.
+  const showChips = variant === "full" || variant === "chips-only";
+  const showOverview = variant === "full" || variant === "overview-only";
+
   return (
     <div className="w-full space-y-3">
       {/* Read-only speaker chips */}
-      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={t("participants.title")}>
-        <span className="text-xs text-muted-foreground font-medium mr-1">
-          {t("participants.title")}
-        </span>
-        {speakers.map((speaker, i) => {
-          const name = speakerNames[speaker] || speaker;
-          return (
-            <span
-              key={speaker}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/30 px-3 py-1.5 text-xs font-medium"
-            >
+      {showChips && (
+        <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={t("participants.title")}>
+          <span className="text-xs text-muted-foreground font-medium mr-1">
+            {t("participants.title")}
+          </span>
+          {speakers.map((speaker, i) => {
+            const name = speakerNames[speaker] || speaker;
+            return (
               <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: getSpeakerColor(i) }}
-              />
-              <span>{name}</span>
-            </span>
-          );
-        })}
-      </div>
+                key={speaker}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/30 px-3 py-1.5 text-xs font-medium"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: getSpeakerColor(i) }}
+                />
+                <span>{name}</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {/* Expandable participation overview */}
       <Collapsible className="w-full" open={isOpen} onOpenChange={setIsOpen}>
