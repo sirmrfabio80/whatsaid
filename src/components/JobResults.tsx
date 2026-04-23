@@ -814,20 +814,33 @@ export default function JobResults({ jobId, currentTitle, onMetaLoaded, onReady,
         <TabsContent value="summary" className="mt-0">
           <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardContent className="p-0">
-              {/* Header row: Participants (left) + Listen (right) */}
+              {/* Header row: Participants chips (left) + Listen (right).
+                  The expandable participation overview stays in its own row
+                  below to keep the chip line scannable. */}
               {transcript && !regeneratingLang ? (
                 <div className="px-4 sm:px-5 pt-3 pb-3 border-b border-border/40 space-y-3">
-                  <div className="flex items-center justify-end">
-                    <ListenButton
-                      ownerId="summary"
-                      getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
-                      lang={speechLang}
-                    />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <ParticipantsPanel
+                        segments={parseSegments(activeTranscriptContent)}
+                        speakerNames={speakerNames}
+                        durationSeconds={meta?.duration_seconds ?? null}
+                        variant="chips-only"
+                      />
+                    </div>
+                    <div className="shrink-0">
+                      <ListenButton
+                        ownerId="summary"
+                        getText={() => summaryToSpeech(applySpeakerNames(activeSummaryContent ?? "", speakerNames))}
+                        lang={speechLang}
+                      />
+                    </div>
                   </div>
                   <ParticipantsPanel
                     segments={parseSegments(activeTranscriptContent)}
                     speakerNames={speakerNames}
                     durationSeconds={meta?.duration_seconds ?? null}
+                    variant="overview-only"
                   />
                 </div>
               ) : (
