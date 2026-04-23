@@ -8,6 +8,16 @@ interface ParticipantsPanelProps {
   segments: Segment[];
   speakerNames: Record<string, string>;
   durationSeconds: number | null;
+  /**
+   * Render mode:
+   *  - "full" (default): chip row + expandable overview (legacy single-block layout).
+   *  - "chips-only": just the read-only speaker chip row. Used when the chips
+   *    sit alongside another control (e.g. Listen) on the same row in the
+   *    Summary tab header.
+   *  - "overview-only": just the expandable participation overview, without
+   *    the chip row above it. Pairs with a "chips-only" sibling.
+   */
+  variant?: "full" | "chips-only" | "overview-only";
 }
 
 interface SpeakerStats {
@@ -139,7 +149,12 @@ function computeStats(
   }));
 }
 
-export default function ParticipantsPanel({ segments, speakerNames, durationSeconds }: ParticipantsPanelProps) {
+export default function ParticipantsPanel({
+  segments,
+  speakerNames,
+  durationSeconds,
+  variant = "full",
+}: ParticipantsPanelProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(true);
 
