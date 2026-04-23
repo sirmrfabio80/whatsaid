@@ -55,3 +55,16 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Cross-Origin-Opener-Policy: same-origin
+  # Add `preload` so the domain becomes eligible for the HSTS preload list.
+  # Existing header from the hosting layer is `max-age=31536000; includeSubDomains`.
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  # CSP in REPORT-ONLY mode for at least 1 week before enforcing.
+  # Allowlist:
+  #  - self          → first-party assets
+  #  - supabase.co   → REST, realtime, storage, edge functions
+  #  - paddle.com    → checkout iframe + scripts
+  #  - lovable.app   → preview/published origins
+  #  - data: blob:   → in-app generated previews (PDFs, audio waveforms)
+  #  - 'unsafe-inline' on style-src is required by Tailwind/shadcn runtime styles.
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://*.paddle.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co https://*.lovable.app; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.paddle.com https://*.lovable.app; frame-src 'self' https://*.paddle.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+
