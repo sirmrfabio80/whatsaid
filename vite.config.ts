@@ -13,6 +13,13 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: {
+    // Emit source maps but do NOT reference them from the .js files.
+    // - Lighthouse / our own error tracking can still resolve them.
+    // - Casual viewers cannot auto-discover them via DevTools.
+    // - Inflates deploy size by ~1 MB; acceptable trade-off for debuggability.
+    sourcemap: "hidden",
+  },
   worker: {
     format: "es",
     rollupOptions: {
