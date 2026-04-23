@@ -8,6 +8,8 @@ import {
   buildCustomUserPromptMulti,
   CUSTOM_OUTPUT_SYSTEM_PROMPT,
 } from "../_shared/prompts.ts";
+import { getEnglishName } from "../_shared/languages.ts";
+import { validateTranslation } from "../_shared/language-validation.ts";
 
 const MAX_EXTRA_SOURCES = 5;
 const MAX_COMBINED_EXTRA_CHARS = 200_000;
@@ -43,6 +45,14 @@ async function handleTranslateAll(
   jobId: string,
   targetLang: string,
 ) {
+  // Resolve and whitelist target language up-front.
+  const targetName = getEnglishName(targetLang);
+  if (!targetName) {
+    throw Object.assign(new Error(`Unsupported target language: ${targetLang}`), { statusCode: 400 });
+  }
+
+  console.log(`[regenerate] translate target=${targetLang} (${targetName}) job=${jobId}`);
+
   // Fetch job
   const { data: job, error: jobError } = await supabase
     .from("jobs")
@@ -76,15 +86,39 @@ async function handleTranslateAll(
   const outputIds = translatable.map((o: { id: string }) => o.id);
   const { data: existingVariants } = await supabase
     .from("job_output_variants")
-    .select("job_output_id, content, source_hash")
+    .select("id, job_output_id, content, source_hash")
     .in("job_output_id", outputIds)
     .eq("language", targetLang);
 
-  // Build map of fresh variants only (source_hash matches current transcript hash)
+  // Build map of fresh + valid variants. Stale rows are ignored (left for the
+  // next translate call to overwrite). Fresh-but-invalid rows are evicted now
+  // so the loop below regenerates them with the new prompt.
   const freshMap = new Map<string, string>();
-  for (const v of (existingVariants ?? [])) {
-    if (v.source_hash === sourceHash) {
-      freshMap.set(v.job_output_id, v.content);
+  const evictIds: string[] = [];
+  for (const v of (existingVariants ?? []) as Array<{ id: string; job_output_id: string; content: string; source_hash: string }>) {
+    if (v.source_hash !== sourceHash) {
+      console.log(`[regenerate] cache-read output=${v.job_output_id} status=stale`);
+      continue;
+    }
+    const check = validateTranslation(v.content, targetLang);
+    if (!check.ok) {
+      console.warn(`[regenerate] cache-read output=${v.job_output_id} status=invalid-${check.stage} reason=${check.reason}`);
+      evictIds.push(v.id);
+      continue;
+    }
+    console.log(`[regenerate] cache-read output=${v.job_output_id} status=hit`);
+    freshMap.set(v.job_output_id, v.content);
+  }
+
+  if (evictIds.length > 0) {
+    const { error: evictErr } = await supabase
+      .from("job_output_variants")
+      .delete()
+      .in("id", evictIds);
+    if (evictErr) {
+      console.warn(`[regenerate] cache-evict failed: ${evictErr.message}`);
+    } else {
+      console.log(`[regenerate] cache-evict count=${evictIds.length} reason=invalid`);
     }
   }
 
@@ -100,7 +134,13 @@ async function handleTranslateAll(
   }
 
   // Translate missing or stale outputs
-  const systemPrompt = `You are a professional translator. Translate the following content to ${targetLang}. Preserve ALL formatting exactly: markdown structure, speaker labels (e.g. "Speaker A:"), timestamps, section headings, bullet points, bold text. Do NOT add, remove, summarize, or interpret any content. Output ONLY the translated text.`;
+  const systemPrompt =
+    `You are a professional translator. Translate the following content into ${targetName} (ISO 639-1 code: ${targetLang}). ` +
+    `The output language MUST be ${targetName} — never any other language under any circumstances. ` +
+    `Preserve ALL formatting EXACTLY: markdown structure, headings, bullets, bold/italic, line breaks, ` +
+    `speaker labels (e.g. "Speaker A:"), timestamps (e.g. "[00:01:23]"), and section structure. ` +
+    `Do NOT add, remove, summarise, interpret, or comment on the content. ` +
+    `Output ONLY the translated text — no preface, no notes, no language tag.`;
 
   const result: Record<string, string> = {};
 
@@ -110,14 +150,28 @@ async function handleTranslateAll(
       continue;
     }
 
-    console.log(`[regenerate] Translating ${output.output_type} (${output.id}) to ${targetLang} [stale or missing]`);
+    console.log(`[regenerate] translate output=${output.id} type=${output.output_type} target=${targetLang} status=missing-or-stale`);
     const translated = await callAI(apiKey, MODEL_TRANSLATE, systemPrompt, output.content);
+
+    // Validate before caching. On failure, do not upsert and abort the whole
+    // batch with a clear error — the client toast handles it and the user can
+    // retry. Nothing partial gets cached.
+    const check = validateTranslation(translated, targetLang);
+    if (!check.ok) {
+      console.warn(`[regenerate] translate output=${output.id} outcome=rejected stage=${check.stage} reason=${check.reason} detected=${check.detectedScript}`);
+      throw Object.assign(
+        new Error(`translation_validation_failed: ${check.reason ?? "unknown"}`),
+        { statusCode: 422 },
+      );
+    }
+    console.log(`[regenerate] validate output=${output.id} stage=${check.stage} result=pass`);
 
     // Upsert variant with source_hash
     await supabase.from("job_output_variants").upsert(
       { job_output_id: output.id, language: targetLang, content: translated, source_hash: sourceHash },
       { onConflict: "job_output_id,language" }
     );
+    console.log(`[regenerate] translate output=${output.id} outcome=stored`);
 
     result[output.id] = translated;
   }
