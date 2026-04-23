@@ -2,7 +2,10 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import logoImg from "@/assets/logo.webp";
+// Small (96×96) variant of the brand mark — sized for the 36×36 navbar slot
+// (with a 2× factor for retina). The full-size logo.webp is reserved for
+// OG/social cards and the manifest. Saves ~13 KiB on every page load.
+import logoImg from "@/assets/logo-sm.webp";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import DesktopNav from "@/components/navbar/DesktopNav";
@@ -44,10 +47,26 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 glass-navbar">
+      {/* Skip-to-content link for keyboard users — visible only when focused.
+          Targets the <main id="main-content"> in App.tsx. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-background focus:text-foreground focus:shadow-lg focus:ring-2 focus:ring-primary"
+      >
+        Skip to main content
+      </a>
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        {/* Logo */}
+        {/* Logo — alt="" + aria-hidden because the adjacent <span> already
+            provides the accessible name "WhatSaid". Avoids redundant a11y label. */}
         <Link to="/" className="flex items-center gap-2 group">
-          <img src={logoImg} alt="WhatSaid" className="w-9 h-9 rounded-xl" />
+          <img
+            src={logoImg}
+            alt=""
+            aria-hidden="true"
+            width={36}
+            height={36}
+            className="w-9 h-9 rounded-xl"
+          />
           <span className="font-bold text-xl tracking-tight">WhatSaid</span>
         </Link>
 

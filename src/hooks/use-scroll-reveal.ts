@@ -13,7 +13,10 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsVisible(true);
+          // Defer the state flip to the next frame so the IntersectionObserver
+          // callback (which fires synchronously during scroll/layout) doesn't
+          // trigger a forced reflow inside the same task.
+          requestAnimationFrame(() => setIsVisible(true));
           observer.unobserve(el);
         }
       },

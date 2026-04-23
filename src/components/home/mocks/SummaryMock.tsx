@@ -41,8 +41,11 @@ export function SummaryMock() {
       </div>
 
       <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">Updated just now</span>
-        <span className="inline-flex items-center gap-1 text-[11px] text-accent">
+        <span className="text-[11px] text-foreground/70">Updated just now</span>
+        {/* Small status pill — needs to clear AA contrast on the muted card.
+            Switched from raw text-accent (light teal on light bg) to the
+            stronger foreground tone with a tinted dot for visual continuity. */}
+        <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent-foreground px-1.5 py-0.5 text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-accent" />
           in sync
         </span>

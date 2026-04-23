@@ -32,8 +32,9 @@ export function TranscriptMock() {
             <span className={`mt-2 w-1.5 h-1.5 rounded-full ${l.dot} shrink-0`} />
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="font-serif italic text-[12px] font-medium text-foreground">{l.name}</span>
-                <span className="font-mono text-[10px] text-foreground/60 tabular-nums">{l.time}</span>
+              <span className="font-serif italic text-[12px] font-medium text-foreground">{l.name}</span>
+                {/* Bumped opacity from /60 to /75 to clear AA contrast on the card surface. */}
+                <span className="font-mono text-[10px] text-foreground/75 tabular-nums">{l.time}</span>
               </div>
               <p className="font-serif text-[13px] text-foreground/85 leading-relaxed">{l.text}</p>
             </div>
@@ -46,7 +47,7 @@ export function TranscriptMock() {
           <div className="flex-1">
             <div className="flex items-baseline gap-2">
               <span className="font-serif italic text-[12px] font-medium text-foreground">Sarah</span>
-              <span className="font-mono text-[10px] text-foreground/60 tabular-nums">00:47</span>
+              <span className="font-mono text-[10px] text-foreground/75 tabular-nums">00:47</span>
             </div>
             <div className="rounded-md border-2 border-primary/60 bg-primary/5 px-2 py-1">
               <p className="font-serif text-[13px] text-foreground leading-relaxed">
