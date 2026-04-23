@@ -21,6 +21,28 @@ import { componentTagger } from "lovable-tagger";
  * Dev-mode is a no-op: there is no hashed CSS file in dev (Vite serves the
  * stylesheet through the dev server) and the plugin only runs at build time.
  */
+/**
+ * Selection rules (most → least specific, first match wins):
+ *
+ *  1. Walk the Rollup bundle for chunks where `isEntry === true`.
+ *     Vite attaches `viteMetadata.importedCss` (a Set of CSS asset filenames)
+ *     to each JS chunk listing the CSS that chunk synchronously imports.
+ *     The union of `importedCss` across all entry chunks IS, by definition,
+ *     the CSS the browser must have to paint the initial route — exactly
+ *     what we want to preload. This is rename-safe and chunking-strategy-safe.
+ *
+ *  2. Fallback: if no entry chunk advertises `importedCss` (older Vite, or
+ *     a CSS-only entry), select asset chunks whose name matches the entry's
+ *     own basename pattern (`assets/<entryName>-<hash>.css`).
+ *
+ *  3. Final fallback: legacy `assets/index-*.css` regex, which matches the
+ *     historical Vite default. Kept so the plugin never silently emits zero
+ *     preloads even on exotic bundle layouts.
+ *
+ * Per-route lazy CSS chunks are intentionally excluded — the browser
+ * discovers them via their owning JS chunk, and preloading them on the
+ * landing page wastes bandwidth.
+ */
 function cssPreloadPlugin(): Plugin {
   let cssAssetUrls: string[] = [];
 
@@ -29,16 +51,55 @@ function cssPreloadPlugin(): Plugin {
     apply: "build",
     enforce: "post",
     generateBundle(_options, bundle) {
-      cssAssetUrls = Object.values(bundle)
-        .filter(
-          (chunk): chunk is typeof chunk & { fileName: string; type: "asset" } =>
-            chunk.type === "asset" && chunk.fileName.endsWith(".css"),
-        )
-        // Only preload the top-level entry CSS (e.g. `assets/index-<hash>.css`).
-        // Per-route CSS chunks are smaller and discovered via their JS chunk;
-        // preloading them all would waste bandwidth on the landing page.
-        .filter((chunk) => /assets\/index-[^/]+\.css$/.test(chunk.fileName))
-        .map((chunk) => `/${chunk.fileName}`);
+      const cssFiles = new Set<string>();
+
+      // ── Rule 1: entry-chunk importedCss (preferred) ───────────────────
+      const entryChunks = Object.values(bundle).filter(
+        (chunk): chunk is typeof chunk & { type: "chunk"; isEntry: boolean } =>
+          chunk.type === "chunk" && chunk.isEntry,
+      );
+      for (const entry of entryChunks) {
+        // viteMetadata is added by Vite's internal CSS plugin; type it
+        // defensively because Rollup's OutputChunk doesn't expose it.
+        const meta = (entry as unknown as {
+          viteMetadata?: { importedCss?: Set<string> };
+        }).viteMetadata;
+        if (meta?.importedCss) {
+          for (const file of meta.importedCss) cssFiles.add(file);
+        }
+      }
+
+      // ── Rule 2: filename matches an entry chunk's basename ────────────
+      if (cssFiles.size === 0 && entryChunks.length > 0) {
+        // Build a regex like /assets\/(index|main|app)-[^/]+\.css$/ from
+        // the actual entry names, so a renamed entry still matches.
+        const entryNames = entryChunks
+          .map((c) => c.name)
+          .filter((n): n is string => typeof n === "string" && n.length > 0);
+        if (entryNames.length > 0) {
+          const escaped = entryNames.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+          const re = new RegExp(`(?:^|/)(?:${escaped.join("|")})-[^/]+\\.css$`);
+          for (const chunk of Object.values(bundle)) {
+            if (chunk.type === "asset" && re.test(chunk.fileName)) {
+              cssFiles.add(chunk.fileName);
+            }
+          }
+        }
+      }
+
+      // ── Rule 3: legacy `assets/index-*.css` final safety net ──────────
+      if (cssFiles.size === 0) {
+        for (const chunk of Object.values(bundle)) {
+          if (
+            chunk.type === "asset" &&
+            /(?:^|\/)index-[^/]+\.css$/.test(chunk.fileName)
+          ) {
+            cssFiles.add(chunk.fileName);
+          }
+        }
+      }
+
+      cssAssetUrls = Array.from(cssFiles).map((f) => (f.startsWith("/") ? f : `/${f}`));
     },
     transformIndexHtml(html) {
       if (cssAssetUrls.length === 0) return html;
