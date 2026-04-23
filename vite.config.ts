@@ -103,6 +103,37 @@ function cssPreloadPlugin(): Plugin {
     },
     transformIndexHtml(html) {
       if (cssAssetUrls.length === 0) return html;
+
+      // Idempotency guard. `transformIndexHtml` can run more than once for
+      // the same HTML string when:
+      //   - another plugin re-emits / re-transforms index.html later in the
+      //     pipeline (some SSR/SSG and analytics plugins do this);
+      //   - a wrapping framework (e.g. Astro/Storybook) replays the hook;
+      //   - the file is processed again during multi-output builds.
+      // Without a guard each run would append another identical preload
+      // tag, producing duplicate-header noise and useless duplicate
+      // requests if the URLs ever drifted.
+      //
+      // Strategy: skip injection if a preload for ALL of our target URLs
+      // is already present. We match on `rel="preload"` + `as="style"` +
+      // the exact href to avoid colliding with unrelated preload tags
+      // (fonts, images) the user may add to index.html later.
+      const alreadyInjected = cssAssetUrls.every((url) => {
+        const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        // Match attribute order: rel → as → href
+        const re = new RegExp(
+          `<link[^>]+rel=["']preload["'][^>]+as=["']style["'][^>]+href=["']${escaped}["']`,
+          "i",
+        );
+        // Match attribute order: href → rel → as (some HTML minifiers reorder).
+        const reAlt = new RegExp(
+          `<link[^>]+href=["']${escaped}["'][^>]+rel=["']preload["'][^>]+as=["']style["']`,
+          "i",
+        );
+        return re.test(html) || reAlt.test(html);
+      });
+      if (alreadyInjected) return html;
+
       const tags = cssAssetUrls
         .map((url) => `    <link rel="preload" as="style" href="${url}">`)
         .join("\n");
