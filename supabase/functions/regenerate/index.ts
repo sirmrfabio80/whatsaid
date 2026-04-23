@@ -8,6 +8,8 @@ import {
   buildCustomUserPromptMulti,
   CUSTOM_OUTPUT_SYSTEM_PROMPT,
 } from "../_shared/prompts.ts";
+import { getEnglishName } from "../_shared/languages.ts";
+import { validateTranslation } from "../_shared/language-validation.ts";
 
 const MAX_EXTRA_SOURCES = 5;
 const MAX_COMBINED_EXTRA_CHARS = 200_000;
