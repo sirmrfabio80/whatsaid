@@ -1,148 +1,100 @@
+# Top-3 SEO fixes from the 2026 guide
 
+Three small, isolated changes. No behaviour change for users; pure SEO/crawlability improvements.
 
-# Fix wrong-language translated transcripts (and stop serving cached garbage)
+## 1) Allow modern AI crawlers in `public/robots.txt`
 
-## Expected vs current behaviour
+**Current state:** the file lists Googlebot, Bingbot, Twitterbot, facebookexternalhit, and a wildcard. AI crawlers fall under `User-agent: *` and are technically allowed, but the 2026 guide recommends naming them explicitly so AI search engines (ChatGPT search, Perplexity, Claude, Google's AI Overviews) recognise the site as opted-in for content discovery.
 
-**Expected:** Selecting "Italian" returns Italian text for both transcript and summary, every time. If the AI ever returns the wrong language, the system rejects it, surfaces a clear error, and never caches it. Re-selecting Italian retries from scratch.
+**Change:** add explicit `User-agent` blocks for the major AI crawlers, each with `Allow: /` and `Disallow: /admin` to mirror the existing wildcard policy. Keep the `Sitemap:` line unchanged at the bottom.
 
-**Current (confirmed in DB for job `52591d3a-…`):**
-- Summary variant: Italian ✅
-- Transcript variant: **Bengali** ❌, cached under `language='it'`, `source_hash=59eef457e80bf4d2`
-- Re-selecting Italian returns the Bengali cache forever — the `(job_output_id, language)` key plus matching `source_hash` short-circuits regeneration in `handleTranslateAll` (lines 84–100).
+Crawlers to add:
+- `GPTBot` (OpenAI training)
+- `OAI-SearchBot` (ChatGPT search results)
+- `ChatGPT-User` (on-demand fetches from ChatGPT)
+- `PerplexityBot` (Perplexity search)
+- `ClaudeBot` (Anthropic Claude)
+- `Google-Extended` (Google's Bard/Gemini training opt-in — required separately from Googlebot)
+- `Applebot-Extended` (Apple Intelligence)
+- `Bytespider` (TikTok / ByteDance) — optional; skip if you'd rather not be indexed by them
+- `CCBot` (Common Crawl) — feeds many AI training sets
 
-**Root cause** (`supabase/functions/regenerate/index.ts:103`):
-```ts
-`Translate the following content to ${targetLang}.` // → "...to it."
-```
-The model receives the bare ISO code "it". For short content (the summary) Gemini guesses Italian; for the longer transcript with Speaker labels, it picked Bengali. This is reproducible on any language code.
+I'll add the first 7 by default and skip Bytespider unless you want it. The `/admin` disallow is preserved on every block so the admin panel stays out of all indexes.
 
-There is **no validation** between AI output and the `upsert` into `job_output_variants` (line 117), and **no validation on cache read** (line 86), so the bad result is sticky.
+**File:** `public/robots.txt` only.
 
-## Phased plan
+---
 
-### Phase 1 — Shared language metadata
+## 2) Add `BreadcrumbList` JSON-LD to inner pages
 
-Extend `src/lib/languages.ts` with an English name field used by both frontend and edge code:
+**Current state:** `Index.tsx` ships `SoftwareApplication`, `Pricing.tsx` ships `Product`+`Offer` per pack, `Help.tsx` ships `FAQPage`. None of them publish `BreadcrumbList`, which Google uses to render breadcrumb trails under search results and to understand site hierarchy.
 
-```ts
-export const LANGUAGES = [
-  { code: "auto", label: "Auto-detect", englishName: "Auto" },
-  { code: "en", label: "English", englishName: "English" },
-  { code: "it", label: "Italian", englishName: "Italian" },
-  // ...all 30 entries
-] as const;
+**Change:** add a single `BreadcrumbList` JSON-LD via the existing `JsonLd` component on these pages:
 
-export function getLanguageEnglishName(code: string): string | null { … }
-```
+- `/pricing` → Home › Pricing
+- `/help` → Home › Help
+- `/convert` → Home › Transcribe Audio
 
-Frontend `label` (i18n display) stays unchanged; only a new `englishName` field is added. Backwards compatible.
-
-Create a small mirror in edge land at `supabase/functions/_shared/languages.ts` (edge functions cannot import from `src/`). It exports the same `code → englishName` map plus a `LANGUAGE_SCRIPTS` map (see Phase 3). A short comment in both files points to each other so future additions stay in sync. A unit test in `src/test/languages.test.ts` asserts the two maps have identical key sets — drift becomes a test failure.
-
-### Phase 2 — Translation prompt fix
-
-In `handleTranslateAll`, replace the single hard-coded prompt with a per-call build that resolves the code first:
-
-```ts
-const targetName = getLanguageEnglishName(targetLang); // e.g. "Italian"
-if (!targetName || targetLang === "auto") {
-  throw Object.assign(new Error("Unsupported target language"), { statusCode: 400 });
+Schema shape (per page):
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://whatsaid.app/" },
+    { "@type": "ListItem", "position": 2, "name": "Pricing", "item": "https://whatsaid.app/pricing" }
+  ]
 }
-
-const systemPrompt =
-  `You are a professional translator. Translate the following content into ${targetName} (ISO 639-1 code: ${targetLang}). ` +
-  `The output language MUST be ${targetName} — never any other language under any circumstances. ` +
-  `Preserve ALL formatting EXACTLY: markdown structure, headings, bullets, bold/italic, line breaks, ` +
-  `speaker labels (e.g. "Speaker A:"), timestamps (e.g. "[00:01:23]"), and section structure. ` +
-  `Do NOT add, remove, summarise, interpret, or comment on the content. ` +
-  `Output ONLY the translated text — no preface, no notes, no language tag.`;
 ```
 
-Whitelist the code against the shared map before any AI call so we never send unknown codes to the model.
+Each page already imports `JsonLd`, so this is a 10-line constant + one extra `<JsonLd data={…} />` per page. No new files. No visual breadcrumb UI is being added — the schema is the only deliverable here, since the guide's recommendation is search-result enhancement, not in-page navigation.
 
-### Phase 3 — Two-stage validation before caching
+I will **not** add breadcrumbs to auth pages (`/login`, `/signup`, `/reset-password`), legal pages (`/privacy`, `/terms`, `/refund-policy`), or app-internal pages (`/profile`, `/settings`, `/history`, `/job/:id`, `/admin`) — those either don't appear in search or aren't worth the schema noise.
 
-Add `supabase/functions/_shared/language-validation.ts`:
+**Files:** `src/pages/Pricing.tsx`, `src/pages/Help.tsx`, `src/pages/Convert.tsx`.
 
-**Stage A — Script-family sanity check.** A `LANGUAGE_SCRIPTS` map classifies each supported code into one of:
-`latin`, `cyrillic`, `arabic`, `hebrew`, `devanagari`, `greek`, `cjk`, `japanese`, `korean`, `thai`.
+---
 
-Strip out non-letter ballast that is intentionally untranslated (timestamps `\[\d{2}:\d{2}:\d{2}\]`, "Speaker A:" labels, code spans `` ` … ` ``, URLs, numbers, markdown punctuation). On the **letters-only** remainder, count Unicode-range hits per script and require:
-- ≥ 70 % of letters in the expected script for the target language, AND
-- ≤ 5 % of letters in any **wrong non-Latin** script (catches the Bengali case: Bengali block U+0980–U+09FF must be ~0 % when target is Italian).
+## 3) Convert hidden navigation CTAs to real `<Link>` elements
 
-Sample size guard: if letters-only length < 40 chars (e.g. a tiny custom output), skip Stage A — too noisy.
+**Current state:** several primary CTAs use `<Button onClick={() => navigate('/x')}>`, which renders a `<button>` with no `href`. Crawlers treat these as non-links and don't follow them, so internal PageRank doesn't flow through. Confirmed offenders:
 
-**Stage B — Lightweight target-language verification.** Stage A alone passes Spanish-when-Italian-was-asked. To catch that, score the letters-only text against a small per-language stop-word/character-frequency fingerprint:
-- For Latin-script targets: a 30–50 word stop-word list per language (e.g. Italian `il, la, di, che, è, sono, non, per, con…`) — count matches per 1k tokens. Require the target language to be the top-scoring match by a margin of ≥ 1.3× over runner-up, OR ≥ 5 distinct stop-words present.
-- For non-Latin targets: Stage A's script check is already strong enough; Stage B is a no-op.
+- `src/pages/Index.tsx:119` — "View pricing" CTA → `/pricing`
+- `src/pages/Profile.tsx:107` — "Buy credits" → `/pricing`
+- `src/pages/Profile.tsx:137` — "Transcribe audio" → `/convert`
+- `src/pages/Profile.tsx:141` — "History" → `/history`
+- `src/pages/Profile.tsx:144` — "Settings" → `/settings`
+- `src/pages/JobDetail.tsx:239` — "Back to history" → `/history`
+- `src/pages/JobDetail.tsx:242` — "New transcription" → `/convert`
 
-This is intentionally cheap (no extra AI calls) and conservative. False-positive risk is tuned away by:
-- ignoring timestamps/speaker labels/URLs/code,
-- skipping Stage A on very short outputs,
-- requiring a margin (not absolute) on Stage B.
+**Change:** wrap each `<Button>` in a `<Link to="…">` using `asChild` (shadcn pattern), so the rendered DOM is an `<a href="…">` styled exactly like the current button. Same look, same click behaviour, but now crawlable. Example:
 
-**Wiring in `handleTranslateAll`:**
-- After `callAI` returns and **before** the upsert, run `validateTranslation(translated, targetLang)`. On failure: skip the upsert, throw `Object.assign(new Error("translation_validation_failed"), { statusCode: 422 })`. The existing client toast (`translationFailed`) fires; UI state is untouched because we never wrote.
-- On the cache-read path (lines 84–89): for each candidate fresh variant, also run `validateTranslation(v.content, targetLang)`. If it fails, drop it from `freshMap` so the loop re-translates, and `delete` the bad row in the same pass. This is the long-term self-healing piece — no schema migration required.
-
-### Phase 4 — One-off cleanup for job `52591d3a-…`
-
-Not a migration. A single safe maintenance statement, scoped tightly:
-
-```sql
--- Delete only the Bengali transcript variant. The Italian summary is correct
--- and is preserved.
-DELETE FROM public.job_output_variants v
-USING public.job_outputs jo
-WHERE v.job_output_id = jo.id
-  AND jo.job_id = '52591d3a-0494-4119-91d0-71b60ca99af1'
-  AND v.language = 'it'
-  AND jo.output_type = 'transcript';
+```tsx
+<Button asChild variant="outline" size="sm" className="rounded-lg">
+  <Link to="/pricing">Buy credits</Link>
+</Button>
 ```
 
-I will run this once via the read/write SQL path (with the user's confirmation) **after** Phases 1–3 are deployed, so the next click on Italian re-translates with the new prompt + validation.
+I will **not** touch:
+- The `useEffect`-based redirects on `Profile.tsx:21` and `JobDetail.tsx:61` (those are guards, not CTAs — must stay programmatic).
+- Buttons that submit forms, open dialogs, trigger Paddle checkout, or run async logic. Those genuinely aren't navigation.
 
-### Phase 5 — Observability
+**Files:** `src/pages/Index.tsx`, `src/pages/Profile.tsx`, `src/pages/JobDetail.tsx`.
 
-Add concise logs (no transcript content), all under the existing `[regenerate]` prefix:
+---
 
-```
-[regenerate] translate target=it (Italian) job=… outputs=N
-[regenerate] cache-read output=… status=hit|stale|invalid-script|invalid-fingerprint
-[regenerate] cache-evict output=… reason=invalid-<stage>
-[regenerate] validate output=… stage=A|B result=pass|fail script=<detected>
-[regenerate] translate output=… outcome=stored|rejected reason=<…>
-```
+## Out of scope for this pass
 
-No content, no PII. Just IDs, codes, stage names, outcomes.
+Deferred to a later, separate prompt to keep this change tight:
 
-## Files changed
-
-- `src/lib/languages.ts` — add `englishName` field on each entry + `getLanguageEnglishName()`.
-- `src/test/languages.test.ts` — **new**, asserts edge map is in sync with frontend.
-- `supabase/functions/_shared/languages.ts` — **new**, edge mirror of code → englishName + script classifier.
-- `supabase/functions/_shared/language-validation.ts` — **new**, `validateTranslation(text, code)` with two-stage logic and tests-friendly pure helpers.
-- `supabase/functions/regenerate/index.ts` — only `handleTranslateAll`: resolve language name, build new prompt, validate AI output before upsert, validate cached variants on read, evict invalid, add logs.
-
-Nothing else touched: summary regen, custom regen, summary_from_edit, exports, share, UI logic — all untouched.
-
-## Validation strategy summary
-
-| Check | Catches | Cost |
-|---|---|---|
-| Stage A — script ratio (≥70 % expected, ≤5 % wrong non-Latin) | Bengali-when-Italian, Arabic-when-French, Cyrillic-when-Spanish | regex + counters |
-| Stage B — stop-word fingerprint (Latin targets only) | Spanish-when-Italian, French-when-Portuguese | one pass over tokens |
-| Pre-cache validation | Stops bad upserts | 1× per translation |
-| On-read validation | Self-heals existing cache | 1× per cached read |
-
-Conservative thresholds + ignoring timestamps/speaker labels/URLs keep false positives near zero on real translations. Worst case: a legitimate translation is rejected, user sees `translationFailed`, retries, gets a fresh attempt. No data corruption possible.
+- Sitemap `<lastmod>` refresh — trivial but unrelated to crawl/discovery; can ship alongside any future content change.
+- H1 audit across components — requires a wider sweep; will do as a dedicated task if any issues surface.
+- `www` → apex 301 verification — hosting/DNS check, not a code change.
 
 ## Risks & rollback
 
-- **False-positive validation rejects a good translation.** Mitigated by short-output exemption and margin-based Stage B. Failure mode is "user retries", not "data lost". If it ever fires too often in production, raise the Stage A threshold from 70 %→60 % via one-line change.
-- **Edge/frontend map drift.** Mitigated by the `languages.test.ts` set-equality assertion.
-- **On-read cache eviction deletes a row another request was about to use.** The eviction is idempotent (`delete … where id = …`) and the same request re-translates and re-upserts. No correctness risk.
-- **Rollback.** Single edge function + 3 small new shared files. Reverting `regenerate/index.ts` to its current logic restores prior behaviour instantly. Cache-read validation can be feature-flagged off via a `VALIDATE_CACHED_TRANSLATIONS` constant if we ever need to disable it without redeploying everything.
+- **robots.txt:** purely additive. Worst case: a new crawler still ignores us. Reverting is one-file undo.
+- **BreadcrumbList JSON-LD:** invisible to users; invalid schema would just be ignored by Google. I'll match the exact shape Google's Rich Results Test accepts.
+- **Link conversion:** the `asChild` pattern is already used elsewhere in the codebase (e.g. `Help.tsx`, `Pricing.tsx`), so styling parity is guaranteed. No keyboard/focus regression — `<a>` is natively focusable.
 
+Total: 4 files edited, 0 files created, 0 dependencies added.
