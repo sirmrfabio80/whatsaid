@@ -1,14 +1,49 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
 
 User-agent: Twitterbot
 Allow: /
+Disallow: /admin
 
 User-agent: facebookexternalhit
 Allow: /
+Disallow: /admin
+
+# AI crawlers — explicit opt-in for AI search and answer engines.
+# Each block mirrors the wildcard policy: allow public content, block /admin.
+
+User-agent: GPTBot
+Allow: /
+Disallow: /admin
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin
 
 User-agent: *
 Allow: /
