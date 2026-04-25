@@ -33,6 +33,15 @@ const FAQ_PAGE_SCHEMA = {
   ),
 };
 
+const BREADCRUMB_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://whatsaid.app/" },
+    { "@type": "ListItem", position: 2, name: "Help", item: "https://whatsaid.app/help" },
+  ],
+};
+
 export default function Help() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
@@ -60,6 +69,7 @@ export default function Help() {
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <JsonLd data={FAQ_PAGE_SCHEMA} />
+      <JsonLd data={BREADCRUMB_SCHEMA} />
       <HelpHero query={filter} onQueryChange={setFilter} />
 
       {/* Quick links chips */}

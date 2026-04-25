@@ -28,6 +28,16 @@ import { requestNotificationPermission, isBrowserNotificationsEnabled } from "@/
 import { resumableUpload } from "@/lib/storage-resumable-upload";
 import { useJobHeartbeat } from "@/hooks/use-job-heartbeat";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { JsonLd } from "@/components/seo/JsonLd";
+
+const CONVERT_BREADCRUMB_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://whatsaid.app/" },
+    { "@type": "ListItem", position: 2, name: "Transcribe Audio", item: "https://whatsaid.app/convert" },
+  ],
+};
 
 type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
 type EnhanceSubstage = EnhanceProgressStage | null;
@@ -535,6 +545,7 @@ export default function Convert() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat relative overflow-hidden">
+      <JsonLd data={CONVERT_BREADCRUMB_SCHEMA} />
       {/* Off-axis decorative orb (desktop only) — matches marketing pages identity */}
       <div
         aria-hidden="true"

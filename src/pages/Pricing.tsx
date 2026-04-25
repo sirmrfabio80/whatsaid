@@ -95,6 +95,15 @@ const PRICING_SCHEMA = [
   },
 ];
 
+const BREADCRUMB_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://whatsaid.app/" },
+    { "@type": "ListItem", position: 2, name: "Pricing", item: "https://whatsaid.app/pricing" },
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Currency toggle
 // ---------------------------------------------------------------------------
@@ -346,6 +355,7 @@ export default function Pricing() {
       {PRICING_SCHEMA.map((schema, i) => (
         <JsonLd key={i} data={schema} />
       ))}
+      <JsonLd data={BREADCRUMB_SCHEMA} />
       {/* Processing purchase overlay */}
       {processingPurchase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">

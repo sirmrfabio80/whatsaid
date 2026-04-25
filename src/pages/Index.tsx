@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ const SOFTWARE_APP_SCHEMA = {
 export default function Index() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  
   const howItWorks = useScrollReveal();
   const privacy = useScrollReveal();
 
@@ -105,20 +105,22 @@ export default function Index() {
               {/* CTAs */}
               <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-3 md:max-w-[19.5rem] lg:max-w-none">
                 <Button
+                  asChild
                   size="lg"
                   className="h-12 px-7 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow w-full"
-                  onClick={() => navigate(heroPrimaryHref)}
                 >
-                  {t("home.ctaPrimary")}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <Link to={heroPrimaryHref}>
+                    {t("home.ctaPrimary")}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
                 </Button>
                 <Button
+                  asChild
                   size="lg"
                   variant="outline"
                   className="h-12 px-7 text-base font-medium rounded-lg w-full"
-                  onClick={() => navigate("/pricing")}
                 >
-                  {t("home.ctaPricingDetailed")}
+                  <Link to="/pricing">{t("home.ctaPricingDetailed")}</Link>
                 </Button>
               </div>
             </div>

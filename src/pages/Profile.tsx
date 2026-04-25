@@ -104,9 +104,11 @@ export default function Profile() {
                   <span className="text-body-sm text-muted-foreground ml-1.5">{t("common.credits")}</span>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => navigate("/pricing")}>
-                <CreditCard className="w-4 h-4 mr-1.5" />
-                {t("profile.buyMore")}
+              <Button asChild variant="outline" size="sm" className="rounded-lg">
+                <Link to="/pricing">
+                  <CreditCard className="w-4 h-4 mr-1.5" />
+                  {t("profile.buyMore")}
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -134,15 +136,17 @@ export default function Profile() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button className="flex-1 rounded-lg h-11" onClick={() => navigate("/convert")}>
-              {t("profile.convertAudio")}
-              <ArrowRight className="w-4 h-4 ml-2" />
+            <Button asChild className="flex-1 rounded-lg h-11">
+              <Link to="/convert">
+                {t("profile.convertAudio")}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
             </Button>
-            <Button variant="outline" className="flex-1 rounded-lg h-11" onClick={() => navigate("/history")}>
-              {t("profile.viewHistory")}
+            <Button asChild variant="outline" className="flex-1 rounded-lg h-11">
+              <Link to="/history">{t("profile.viewHistory")}</Link>
             </Button>
-            <Button variant="outline" className="flex-1 rounded-lg h-11" onClick={() => navigate("/settings")}>
-              {t("nav.settings")}
+            <Button asChild variant="outline" className="flex-1 rounded-lg h-11">
+              <Link to="/settings">{t("nav.settings")}</Link>
             </Button>
           </div>
         </div>
