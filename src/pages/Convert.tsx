@@ -545,6 +545,7 @@ export default function Convert() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat relative overflow-hidden">
+      <JsonLd data={CONVERT_BREADCRUMB_SCHEMA} />
       {/* Off-axis decorative orb (desktop only) — matches marketing pages identity */}
       <div
         aria-hidden="true"
