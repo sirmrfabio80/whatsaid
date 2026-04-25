@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -236,11 +236,15 @@ export default function JobDetail() {
           <div className={revealReady ? "block" : "hidden"}>
             {/* Block 1 — top action bar */}
             <div className={`flex items-center justify-between mb-8 ${REVEAL_CLASS}`} style={revealStyle(0)}>
-              <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground" onClick={() => navigate("/history")}>
-                <ArrowLeft className="w-4 h-4" /><span className="hidden sm:inline">{t("jobDetail.backToHistory")}</span>
+              <Button asChild variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground">
+                <Link to="/history">
+                  <ArrowLeft className="w-4 h-4" /><span className="hidden sm:inline">{t("jobDetail.backToHistory")}</span>
+                </Link>
               </Button>
-              <Button size="sm" className="rounded-full gap-1.5" onClick={() => navigate("/convert")}>
-                <Plus className="w-4 h-4" />{t("jobDetail.newTranscription")}
+              <Button asChild size="sm" className="rounded-full gap-1.5">
+                <Link to="/convert">
+                  <Plus className="w-4 h-4" />{t("jobDetail.newTranscription")}
+                </Link>
               </Button>
             </div>
 
