@@ -69,6 +69,7 @@ export default function Help() {
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <JsonLd data={FAQ_PAGE_SCHEMA} />
+      <JsonLd data={BREADCRUMB_SCHEMA} />
       <HelpHero query={filter} onQueryChange={setFilter} />
 
       {/* Quick links chips */}
