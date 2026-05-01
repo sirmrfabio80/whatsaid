@@ -897,6 +897,43 @@ export default function Convert() {
                     })}
                   </div>
 
+                  {languageDetectStatus && step !== "failed" && step !== "completed" && (
+                    <div
+                      className={`flex items-start gap-2.5 p-3 rounded-xl text-body-sm max-w-md w-full border ${
+                        languageDetectStatus.status === "success"
+                          ? "bg-primary/5 border-primary/20 text-foreground"
+                          : languageDetectStatus.status === "skipped"
+                            ? "bg-muted/60 border-border text-foreground/80"
+                            : "bg-warning/10 border-warning/30 text-foreground/90"
+                      }`}
+                      role="status"
+                      aria-live="polite"
+                    >
+                      {languageDetectStatus.status === "success" ? (
+                        <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                      ) : languageDetectStatus.status === "skipped" ? (
+                        <Info className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-warning" />
+                      )}
+                      <span>
+                        {languageDetectStatus.status === "success" && languageDetectStatus.language
+                          ? t("convert.langDetectSuccess", "Language detected: {{lang}}", {
+                              lang: getLanguageLabel(languageDetectStatus.language),
+                            })
+                          : languageDetectStatus.status === "skipped"
+                            ? t(
+                                "convert.langDetectSkipped",
+                                "Language detection skipped — recording was too short or unclear. We'll detect it during transcription.",
+                              )
+                            : t(
+                                "convert.langDetectFailed",
+                                "Language detection unavailable — continuing with auto-detect during transcription.",
+                              )}
+                      </span>
+                    </div>
+                  )}
+
                   {step !== "failed" && step !== "completed" && (
                     <div className="flex items-start gap-2.5 p-4 rounded-xl bg-primary/5 border border-primary/20 text-body-sm max-w-md">
                       <Info className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
