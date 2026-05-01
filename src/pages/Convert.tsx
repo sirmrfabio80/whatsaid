@@ -573,22 +573,33 @@ export default function Convert() {
       let finalLanguage = language;
       if (language === "auto") {
         setStep("detecting");
+        let detected: string | null = null;
+        let detectFailed = false;
         try {
           const detectRes = await supabase.functions.invoke("detect-language", {
             body: { job_id: newJobId },
           });
-          const detected: string | null =
-            (detectRes.data as { language?: string | null } | null)?.language ?? null;
+          if (detectRes.error) {
+            console.warn("[convert] language detection invoke error:", detectRes.error);
+            detectFailed = true;
+          } else {
+            detected =
+              (detectRes.data as { language?: string | null } | null)?.language ?? null;
+          }
+        } catch (detectErr) {
+          console.warn("[convert] language detection failed:", detectErr);
+          detectFailed = true;
+        }
 
-          // Show the gate UI (even if detection failed — user can pick manually).
+        if (detectFailed) {
+          // Soft-fail: skip the gate entirely and let transcribe run its own
+          // detection. The user is never blocked behind a stuck modal.
+          finalLanguage = "auto";
+        } else {
           finalLanguage = await new Promise<string>((resolve) => {
             setLanguageGate({ detected, resolve });
           });
           setLanguageGate(null);
-        } catch (detectErr) {
-          console.warn("[convert] language detection failed:", detectErr);
-          // Soft-fail: continue with auto so transcribe still runs detection.
-          finalLanguage = "auto";
         }
       }
 
