@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2, SearchX, RotateCw } from "lucide-react";
+import { FileAudio, Clock, Globe, ArrowRight, Inbox, Trash2, SearchX, RotateCw, ShieldCheck } from "lucide-react";
 import { formatDuration } from "@/lib/pricing";
 import { getLanguageLabel } from "@/lib/languages";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +36,7 @@ interface Job {
   speech_model: string | null;
   short_summary: string | null;
   error_message: string | null;
+  audio_deleted_at: string | null;
 }
 
 export default function History() {
@@ -76,7 +77,7 @@ export default function History() {
       setLoadError(false);
       const { data, error } = await supabase
         .from("jobs")
-        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary, error_message")
+        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary, error_message, audio_deleted_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
@@ -267,6 +268,15 @@ export default function History() {
                               <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
                               <span>{new Date(job.created_at).toLocaleDateString()}</span>
                             </div>
+                            {job.status === "completed" && job.audio_deleted_at && (
+                              <p
+                                className="mt-1.5 inline-flex items-center gap-1 text-caption text-muted-foreground/80"
+                                title={new Date(job.audio_deleted_at).toLocaleString()}
+                              >
+                                <ShieldCheck className="w-3 h-3 text-success" aria-hidden="true" />
+                                {t("history.audioDeleted", "Audio file deleted after transcription")}
+                              </p>
+                            )}
                             {job.short_summary && (
                               <p className="text-caption text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
                             )}
