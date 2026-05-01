@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export function useJobHeartbeat(
   jobId: string | null,
-  stage: "preparing" | "enhancing" | "uploading" | null,
+  stage: "preparing" | "enhancing" | "uploading" | "detecting_language" | null,
   intervalMs: number = 60_000,
 ) {
   const stageRef = useRef(stage);
