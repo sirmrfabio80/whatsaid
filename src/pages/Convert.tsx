@@ -99,6 +99,7 @@ export default function Convert() {
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [consentChecked, setConsentChecked] = useState(false);
+  const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
   const credits = creditsForDuration(duration);
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
