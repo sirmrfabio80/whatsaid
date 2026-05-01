@@ -193,6 +193,7 @@
     "discardDesc": "You'll lose {{time}} of audio. This can't be undone.",
     "discardKeep": "Keep recording",
     "discardConfirm": "Discard"
+  },
   "login": {
     "title": "Sign in to WhatSaid",
     "subtitle": "Access your transcription history and credits",
