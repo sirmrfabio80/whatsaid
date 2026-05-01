@@ -537,12 +537,14 @@ export default function Convert() {
         };
       }
 
-      // ── 4. Hand off to backend: flip to processing + queue process-job. ──
+      // ── 4. Persist the upload + tx config on the job row. We do NOT flip
+      // status to "processing" yet — the language-gate runs first so the
+      // user can confirm or override the detected language before the
+      // (expensive) full transcription begins.
       const { error: updateError } = await supabase
         .from("jobs")
         .update({
-          status: "processing" as const,
-          processing_stage: "queued",
+          processing_stage: "detecting_language",
           temp_file_path: filePath,
           transcription_config: txConfig,
         } as any)
@@ -557,6 +559,44 @@ export default function Convert() {
         clearTimeout(longFileToastRef.current);
         longFileToastRef.current = null;
       }
+
+      // ── 5. Language gate. Skip if the user already picked a language
+      // manually — their explicit choice always wins. Also skip on failure
+      // (we just fall through to the existing in-call detection in the
+      // transcribe function). ──
+      let finalLanguage = language;
+      if (language === "auto") {
+        setStep("detecting");
+        try {
+          const detectRes = await supabase.functions.invoke("detect-language", {
+            body: { job_id: newJobId },
+          });
+          const detected: string | null =
+            (detectRes.data as { language?: string | null } | null)?.language ?? null;
+
+          // Show the gate UI (even if detection failed — user can pick manually).
+          finalLanguage = await new Promise<string>((resolve) => {
+            setLanguageGate({ detected, resolve });
+          });
+          setLanguageGate(null);
+        } catch (detectErr) {
+          console.warn("[convert] language detection failed:", detectErr);
+          // Soft-fail: continue with auto so transcribe still runs detection.
+          finalLanguage = "auto";
+        }
+      }
+
+      // Persist the user's final choice + mark the gate as confirmed so the
+      // backend transcription uses it.
+      await supabase
+        .from("jobs")
+        .update({
+          language_selected: finalLanguage,
+          language_preview_confirmed: true,
+          status: "processing" as const,
+          processing_stage: "queued",
+        } as any)
+        .eq("id", newJobId);
 
       setStep("transcribing");
 
