@@ -916,21 +916,30 @@ export default function Convert() {
                       ) : (
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-warning" />
                       )}
-                      <span>
-                        {languageDetectStatus.status === "success" && languageDetectStatus.language
-                          ? t("convert.langDetectSuccess", "Language detected: {{lang}}", {
-                              lang: getLanguageLabel(languageDetectStatus.language),
-                            })
-                          : languageDetectStatus.status === "skipped"
-                            ? t(
-                                "convert.langDetectSkipped",
-                                "Language detection skipped — recording was too short or unclear. We'll detect it during transcription.",
-                              )
-                            : t(
-                                "convert.langDetectFailed",
-                                "Language detection unavailable — continuing with auto-detect during transcription.",
-                              )}
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p>
+                          {languageDetectStatus.status === "success" && languageDetectStatus.language
+                            ? t("convert.langDetectSuccess", "Language detected: {{lang}}", {
+                                lang: getLanguageLabel(languageDetectStatus.language),
+                              })
+                            : languageDetectStatus.status === "skipped"
+                              ? t(
+                                  "convert.langDetectSkipped",
+                                  "Language detection skipped — recording was too short or unclear. We'll detect it during transcription.",
+                                )
+                              : t(
+                                  "convert.langDetectFailed",
+                                  "Language detection unavailable — continuing with auto-detect during transcription.",
+                                )}
+                        </p>
+                        {languageDetectStatus.status !== "success" && languageDetectStatus.reason && (
+                          <p className="mt-1 text-caption text-muted-foreground break-words">
+                            {t("convert.langDetectReason", "Reason: {{reason}}", {
+                              reason: languageDetectStatus.reason,
+                            })}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 

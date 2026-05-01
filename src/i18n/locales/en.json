@@ -138,6 +138,7 @@
     "langDetectSuccess": "Language detected: {{lang}}",
     "langDetectSkipped": "Language detection skipped — recording was too short or unclear. We'll detect it during transcription.",
     "langDetectFailed": "Language detection unavailable — continuing with auto-detect during transcription.",
+    "langDetectReason": "Reason: {{reason}}",
     "stepTranscribing": "Transcribing with speaker labels...",
     "stepSummarising": "Generating summary & analysis...",
     "stepCompleted": "Processing complete",
