@@ -114,6 +114,7 @@ export default function Convert() {
     preparing: t("convert.stepEnhancing"),
     enhancing: t("convert.stepEnhancing"),
     uploading: t("convert.stepUploading"),
+    detecting: t("convert.stepDetecting", "Detecting language…"),
     transcribing: t("convert.stepTranscribing"),
     summarising: t("convert.stepSummarising"),
     completed: t("convert.stepCompleted"),
