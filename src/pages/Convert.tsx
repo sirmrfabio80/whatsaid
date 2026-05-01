@@ -33,6 +33,7 @@ import { resumableUpload } from "@/lib/storage-resumable-upload";
 import { useJobHeartbeat } from "@/hooks/use-job-heartbeat";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { getLanguageLabel } from "@/lib/languages";
 
 const CONVERT_BREADCRUMB_SCHEMA = {
   "@context": "https://schema.org",
