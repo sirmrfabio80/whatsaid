@@ -6,6 +6,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AudioUploader from "@/components/AudioUploader";
+import DirectRecorder from "@/components/DirectRecorder";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mic, Upload as UploadIcon } from "lucide-react";
 import JobResults from "@/components/JobResults";
 
 import LanguageSelector from "@/components/LanguageSelector";
