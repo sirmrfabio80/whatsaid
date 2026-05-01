@@ -12,6 +12,7 @@ import { Mic, Upload as UploadIcon } from "lucide-react";
 import JobResults from "@/components/JobResults";
 
 import LanguageSelector from "@/components/LanguageSelector";
+import LanguageGate from "@/components/LanguageGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
