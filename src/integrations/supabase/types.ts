@@ -424,6 +424,9 @@ export type Database = {
           guest_token: string | null
           id: string
           language_detected: string | null
+          language_detected_preview: string | null
+          language_preview_confirmed: boolean
+          language_preview_error: string | null
           language_selected: string | null
           location_label: string | null
           metadata_apple_creationdate: string | null
@@ -466,6 +469,9 @@ export type Database = {
           guest_token?: string | null
           id?: string
           language_detected?: string | null
+          language_detected_preview?: string | null
+          language_preview_confirmed?: boolean
+          language_preview_error?: string | null
           language_selected?: string | null
           location_label?: string | null
           metadata_apple_creationdate?: string | null
@@ -508,6 +514,9 @@ export type Database = {
           guest_token?: string | null
           id?: string
           language_detected?: string | null
+          language_detected_preview?: string | null
+          language_preview_confirmed?: boolean
+          language_preview_error?: string | null
           language_selected?: string | null
           location_label?: string | null
           metadata_apple_creationdate?: string | null
