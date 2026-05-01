@@ -838,7 +838,7 @@ export default function Convert() {
                         <Button
                           className="w-full h-12 text-base font-medium rounded-xl"
                           size="lg"
-                          onClick={handleConvert}
+                          onClick={() => handleConvert()}
                           disabled={processing || !consentChecked || !hasEnoughCredits}
                         >
                           {t("convert.convertNow")}<ArrowRight className="w-4 h-4 ml-2" />
