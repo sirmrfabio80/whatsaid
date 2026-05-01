@@ -644,6 +644,12 @@ export default function Convert() {
     setEnhanceSubstage(null);
     setErrorMessage(null);
     setJobId(null);
+    // If a language gate was open, resolve it with auto so any in-flight
+    // promise unblocks (it will be ignored by the failed pipeline anyway).
+    if (languageGate) {
+      try { languageGate.resolve("auto"); } catch { /* ignore */ }
+      setLanguageGate(null);
+    }
     if (pollRef.current) clearInterval(pollRef.current);
     if (longFileToastRef.current) {
       clearTimeout(longFileToastRef.current);
