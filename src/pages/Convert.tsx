@@ -6,6 +6,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AudioUploader from "@/components/AudioUploader";
+import DirectRecorder from "@/components/DirectRecorder";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mic, Upload as UploadIcon } from "lucide-react";
 import JobResults from "@/components/JobResults";
 
 import LanguageSelector from "@/components/LanguageSelector";
@@ -114,6 +117,17 @@ export default function Convert() {
     setDuration(dur);
     setFileCreationDate(creationDate);
     setChannelAnalysis(analysis);
+  }, []);
+
+  // Recorded audio takes the same path as an uploaded file. We pass null for
+  // creationDate (pipeline falls back to file.lastModified, which is correct
+  // for a freshly recorded blob) and null for channelAnalysis (pipeline
+  // already defaults safely when missing).
+  const handleRecordingReady = useCallback((f: File, dur: number) => {
+    setFile(f);
+    setDuration(dur);
+    setFileCreationDate(null);
+    setChannelAnalysis(null);
   }, []);
 
   useEffect(() => {
@@ -686,7 +700,26 @@ export default function Convert() {
           ) : (
             <Card ref={cardRef} className="rounded-xl border-border/50 bg-card shadow-sm mb-6">
               <CardContent className="p-6 sm:p-8">
-                <AudioUploader onFileSelected={handleFileSelected} />
+                {!file && (
+                  <Tabs defaultValue="upload" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 h-11">
+                      <TabsTrigger value="upload" className="rounded-lg h-9">
+                        <UploadIcon className="w-4 h-4 mr-2" />
+                        {t("convert.tabUpload")}
+                      </TabsTrigger>
+                      <TabsTrigger value="record" className="rounded-lg h-9">
+                        <Mic className="w-4 h-4 mr-2" />
+                        {t("convert.tabRecord")}
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="upload" className="mt-0">
+                      <AudioUploader onFileSelected={handleFileSelected} />
+                    </TabsContent>
+                    <TabsContent value="record" className="mt-0">
+                      <DirectRecorder onRecordingReady={handleRecordingReady} />
+                    </TabsContent>
+                  </Tabs>
+                )}
 
                 {file && duration > 0 && (
                   <div className="mt-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
