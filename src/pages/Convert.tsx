@@ -106,9 +106,13 @@ export default function Convert() {
 
   // Heartbeat: while we're doing local prep/enhance/upload work, bump
   // jobs.updated_at every 60s so the watchdog can't flag a live tab as stale.
-  const heartbeatStage: "preparing" | "enhancing" | "uploading" | null =
-    processing && (step === "enhancing" || step === "uploading")
-      ? (step === "uploading" ? "uploading" : "enhancing")
+  const heartbeatStage: "preparing" | "enhancing" | "uploading" | "detecting_language" | null =
+    processing && (step === "enhancing" || step === "uploading" || step === "detecting")
+      ? step === "uploading"
+        ? "uploading"
+        : step === "detecting"
+          ? "detecting_language"
+          : "enhancing"
       : null;
   useJobHeartbeat(jobId, heartbeatStage);
 
