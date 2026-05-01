@@ -101,6 +101,11 @@ export default function Convert() {
 
   const [consentChecked, setConsentChecked] = useState(false);
   const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
+  // Surfaced status of the pre-flight language detection so the user always
+  // knows what happened (success / skipped / failed). Null = not run yet.
+  const [languageDetectStatus, setLanguageDetectStatus] = useState<
+    null | { status: "success" | "skipped" | "failed"; language: string | null; reason?: string }
+  >(null);
   const credits = creditsForDuration(duration);
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
