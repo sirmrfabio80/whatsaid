@@ -193,6 +193,7 @@
     "discardDesc": "Perderai {{time}} di audio. L'azione non può essere annullata.",
     "discardKeep": "Mantieni registrazione",
     "discardConfirm": "Elimina"
+  },
   "login": {
     "title": "Accedi a WhatSaid",
     "subtitle": "Accedi alla cronologia delle trascrizioni e ai crediti",

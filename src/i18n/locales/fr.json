@@ -193,6 +193,7 @@
     "discardDesc": "Vous perdrez {{time}} d'audio. Cette action est irréversible.",
     "discardKeep": "Conserver l'enregistrement",
     "discardConfirm": "Supprimer"
+  },
   "login": {
     "title": "Se connecter à WhatSaid",
     "subtitle": "Accédez à votre historique de transcriptions et vos crédits",
