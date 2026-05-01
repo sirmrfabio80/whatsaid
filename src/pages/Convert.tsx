@@ -425,7 +425,7 @@ export default function Convert() {
       };
 
       let enhancementMeta: EnhancementMeta;
-      let uploadFile = file;
+      let uploadFile = effFile;
 
       // ── 2. Enhance (worker for long M4A/MP4, in-memory otherwise). ──
       if (!eligible) {
