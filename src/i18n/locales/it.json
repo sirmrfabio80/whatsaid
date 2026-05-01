@@ -134,6 +134,7 @@
     "subtitle": "Carica un file per ottenere una trascrizione, un riassunto e un'analisi AI personalizzata.",
     "stepEnhancing": "Miglioramento audio...",
     "stepUploading": "Caricamento audio...",
+    "stepDetecting": "Rilevamento della lingua…",
     "stepTranscribing": "Trascrizione con etichette dei relatori...",
     "stepSummarising": "Generazione riassunto e analisi...",
     "stepCompleted": "Elaborazione completata",
@@ -572,6 +573,19 @@
     "language": "Lingua",
     "detected": "(rilevata: {{lang}})",
     "autoDetect": "Rilevamento automatico"
+  },
+  "languageGate": {
+    "detectingTitle": "Rilevamento della lingua…",
+    "detectingBody": "Analisi rapida dei primi secondi del tuo audio.",
+    "detectedTitle": "Lingua rilevata",
+    "detectedBody": "Conferma la lingua o scegline un'altra. La trascrizione partirà automaticamente.",
+    "weHeard": "Abbiamo sentito",
+    "unknown": "Impossibile rilevare",
+    "changeLabel": "Usa una lingua diversa",
+    "continue": "Continua",
+    "continueIn": "Continua ({{n}} s)",
+    "pause": "Pausa",
+    "resume": "Riprendi il conto alla rovescia"
   },
   "notFound": {
     "title": "404",
