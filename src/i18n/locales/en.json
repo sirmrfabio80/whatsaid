@@ -134,6 +134,7 @@
     "subtitle": "Upload a file to get a transcript, summary, and custom AI analysis.",
     "stepEnhancing": "Enhancing audio...",
     "stepUploading": "Uploading audio...",
+    "stepDetecting": "Detecting language…",
     "stepTranscribing": "Transcribing with speaker labels...",
     "stepSummarising": "Generating summary & analysis...",
     "stepCompleted": "Processing complete",
@@ -572,6 +573,19 @@
     "language": "Language",
     "detected": "(detected: {{lang}})",
     "autoDetect": "Auto-detect"
+  },
+  "languageGate": {
+    "detectingTitle": "Detecting language…",
+    "detectingBody": "Quickly checking the first few seconds of your audio.",
+    "detectedTitle": "Detected language",
+    "detectedBody": "Confirm the language or pick a different one. Transcription will start automatically.",
+    "weHeard": "We heard",
+    "unknown": "Could not detect",
+    "changeLabel": "Use a different language",
+    "continue": "Continue",
+    "continueIn": "Continue ({{n}}s)",
+    "pause": "Pause",
+    "resume": "Resume countdown"
   },
   "notFound": {
     "title": "404",

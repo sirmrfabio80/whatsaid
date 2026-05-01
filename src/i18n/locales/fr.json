@@ -134,6 +134,7 @@
     "subtitle": "Téléchargez un fichier pour obtenir une transcription, un résumé et une analyse IA personnalisée.",
     "stepEnhancing": "Amélioration de l'audio...",
     "stepUploading": "Téléchargement de l'audio...",
+    "stepDetecting": "Détection de la langue…",
     "stepTranscribing": "Transcription avec identification des intervenants...",
     "stepSummarising": "Génération du résumé et de l'analyse...",
     "stepCompleted": "Traitement terminé",
@@ -572,6 +573,19 @@
     "language": "Langue",
     "detected": "(détectée : {{lang}})",
     "autoDetect": "Détection automatique"
+  },
+  "languageGate": {
+    "detectingTitle": "Détection de la langue…",
+    "detectingBody": "Analyse rapide des premières secondes de votre audio.",
+    "detectedTitle": "Langue détectée",
+    "detectedBody": "Confirmez la langue ou choisissez-en une autre. La transcription démarrera automatiquement.",
+    "weHeard": "Nous avons entendu",
+    "unknown": "Détection impossible",
+    "changeLabel": "Utiliser une autre langue",
+    "continue": "Continuer",
+    "continueIn": "Continuer ({{n}} s)",
+    "pause": "Pause",
+    "resume": "Reprendre le compte à rebours"
   },
   "notFound": {
     "title": "404",

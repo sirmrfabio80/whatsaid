@@ -12,6 +12,7 @@ import { Mic, Upload as UploadIcon } from "lucide-react";
 import JobResults from "@/components/JobResults";
 
 import LanguageSelector from "@/components/LanguageSelector";
+import LanguageGate from "@/components/LanguageGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +43,15 @@ const CONVERT_BREADCRUMB_SCHEMA = {
   ],
 };
 
-type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
+type ProcessingStep = "preparing" | "enhancing" | "uploading" | "detecting" | "transcribing" | "summarising" | "completed" | "failed";
+
+// Imperative gate used between upload and transcription. Resolves with the
+// final language the user wants to use (either the detected one, or their
+// override). Null when no gate is active.
+interface LanguageGateState {
+  detected: string | null; // null while still detecting
+  resolve: (chosenLanguage: string) => void;
+}
 type EnhanceSubstage = EnhanceProgressStage | null;
 
 export default function Convert() {
@@ -91,14 +100,19 @@ export default function Convert() {
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [consentChecked, setConsentChecked] = useState(false);
+  const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
   const credits = creditsForDuration(duration);
   const hasEnoughCredits = isAdmin || (creditBalance !== undefined ? creditBalance >= credits : true);
 
   // Heartbeat: while we're doing local prep/enhance/upload work, bump
   // jobs.updated_at every 60s so the watchdog can't flag a live tab as stale.
-  const heartbeatStage: "preparing" | "enhancing" | "uploading" | null =
-    processing && (step === "enhancing" || step === "uploading")
-      ? (step === "uploading" ? "uploading" : "enhancing")
+  const heartbeatStage: "preparing" | "enhancing" | "uploading" | "detecting_language" | null =
+    processing && (step === "enhancing" || step === "uploading" || step === "detecting")
+      ? step === "uploading"
+        ? "uploading"
+        : step === "detecting"
+          ? "detecting_language"
+          : "enhancing"
       : null;
   useJobHeartbeat(jobId, heartbeatStage);
 
@@ -106,6 +120,7 @@ export default function Convert() {
     preparing: t("convert.stepEnhancing"),
     enhancing: t("convert.stepEnhancing"),
     uploading: t("convert.stepUploading"),
+    detecting: t("convert.stepDetecting", "Detecting language…"),
     transcribing: t("convert.stepTranscribing"),
     summarising: t("convert.stepSummarising"),
     completed: t("convert.stepCompleted"),
@@ -173,6 +188,7 @@ export default function Convert() {
         const stage = job.processing_stage;
         if (stage === "enhancing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
         else if (stage === "uploading") setStep((prev) => prev === "uploading" ? prev : "uploading");
+        else if (stage === "detecting_language") setStep((prev) => prev === "detecting" ? prev : "detecting");
         else if (stage === "preparing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
       } else if (job.status === "processing") {
         const { count } = await supabase
@@ -527,12 +543,14 @@ export default function Convert() {
         };
       }
 
-      // ── 4. Hand off to backend: flip to processing + queue process-job. ──
+      // ── 4. Persist the upload + tx config on the job row. We do NOT flip
+      // status to "processing" yet — the language-gate runs first so the
+      // user can confirm or override the detected language before the
+      // (expensive) full transcription begins.
       const { error: updateError } = await supabase
         .from("jobs")
         .update({
-          status: "processing" as const,
-          processing_stage: "queued",
+          processing_stage: "detecting_language",
           temp_file_path: filePath,
           transcription_config: txConfig,
         } as any)
@@ -547,6 +565,44 @@ export default function Convert() {
         clearTimeout(longFileToastRef.current);
         longFileToastRef.current = null;
       }
+
+      // ── 5. Language gate. Skip if the user already picked a language
+      // manually — their explicit choice always wins. Also skip on failure
+      // (we just fall through to the existing in-call detection in the
+      // transcribe function). ──
+      let finalLanguage = language;
+      if (language === "auto") {
+        setStep("detecting");
+        try {
+          const detectRes = await supabase.functions.invoke("detect-language", {
+            body: { job_id: newJobId },
+          });
+          const detected: string | null =
+            (detectRes.data as { language?: string | null } | null)?.language ?? null;
+
+          // Show the gate UI (even if detection failed — user can pick manually).
+          finalLanguage = await new Promise<string>((resolve) => {
+            setLanguageGate({ detected, resolve });
+          });
+          setLanguageGate(null);
+        } catch (detectErr) {
+          console.warn("[convert] language detection failed:", detectErr);
+          // Soft-fail: continue with auto so transcribe still runs detection.
+          finalLanguage = "auto";
+        }
+      }
+
+      // Persist the user's final choice + mark the gate as confirmed so the
+      // backend transcription uses it.
+      await supabase
+        .from("jobs")
+        .update({
+          language_selected: finalLanguage,
+          language_preview_confirmed: true,
+          status: "processing" as const,
+          processing_stage: "queued",
+        } as any)
+        .eq("id", newJobId);
 
       setStep("transcribing");
 
@@ -593,6 +649,12 @@ export default function Convert() {
     setEnhanceSubstage(null);
     setErrorMessage(null);
     setJobId(null);
+    // If a language gate was open, resolve it with auto so any in-flight
+    // promise unblocks (it will be ignored by the failed pipeline anyway).
+    if (languageGate) {
+      try { languageGate.resolve("auto"); } catch { /* ignore */ }
+      setLanguageGate(null);
+    }
     if (pollRef.current) clearInterval(pollRef.current);
     if (longFileToastRef.current) {
       clearTimeout(longFileToastRef.current);
@@ -603,6 +665,12 @@ export default function Convert() {
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat relative overflow-hidden">
       <JsonLd data={CONVERT_BREADCRUMB_SCHEMA} />
+      {languageGate && (
+        <LanguageGate
+          detected={languageGate.detected}
+          onConfirm={(lang) => languageGate.resolve(lang)}
+        />
+      )}
       {/* Off-axis decorative orb (desktop only) — matches marketing pages identity */}
       <div
         aria-hidden="true"
@@ -663,8 +731,8 @@ export default function Convert() {
                     </div>
                   )}
                   <div className="w-full max-w-sm space-y-4">
-                    {(["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
-                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "transcribing", "summarising", "completed"];
+                    {(["enhancing", "uploading", "detecting", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
+                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "detecting", "transcribing", "summarising", "completed"];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         allSteps.indexOf(step!) > allSteps.indexOf(s)
