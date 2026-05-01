@@ -358,8 +358,8 @@ export default function Convert() {
         .insert({
           id: newJobId,
           user_id: user.id,
-          file_name: file.name,
-          file_size_bytes: file.size,
+          file_name: effFile.name,
+          file_size_bytes: effFile.size,
           duration_seconds: Math.round(duration),
           language_selected: language,
           credits_charged: credits,
