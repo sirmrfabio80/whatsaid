@@ -467,7 +467,7 @@ export default function Convert() {
           };
         } catch (enhanceError) {
           console.warn("Audio enhancement failed, uploading original:", enhanceError);
-          uploadFile = file;
+          uploadFile = effFile;
           enhancementMeta = {
             eligible: true,
             attempted: true,
