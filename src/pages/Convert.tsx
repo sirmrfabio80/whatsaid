@@ -358,8 +358,8 @@ export default function Convert() {
         .insert({
           id: newJobId,
           user_id: user.id,
-          file_name: file.name,
-          file_size_bytes: file.size,
+          file_name: effFile.name,
+          file_size_bytes: effFile.size,
           duration_seconds: Math.round(duration),
           language_selected: language,
           credits_charged: credits,
@@ -425,7 +425,7 @@ export default function Convert() {
       };
 
       let enhancementMeta: EnhancementMeta;
-      let uploadFile = file;
+      let uploadFile = effFile;
 
       // ── 2. Enhance (worker for long M4A/MP4, in-memory otherwise). ──
       if (!eligible) {
@@ -450,7 +450,7 @@ export default function Convert() {
         await supabase.from("jobs").update({ processing_stage: "enhancing" }).eq("id", newJobId);
         try {
           const result = await enhanceAudioForTranscriptionAuto(
-            file,
+            effFile,
             (stage) => setEnhanceSubstage(stage),
             settingsSnapshot,
           );
@@ -467,7 +467,7 @@ export default function Convert() {
           };
         } catch (enhanceError) {
           console.warn("Audio enhancement failed, uploading original:", enhanceError);
-          uploadFile = file;
+          uploadFile = effFile;
           enhancementMeta = {
             eligible: true,
             attempted: true,

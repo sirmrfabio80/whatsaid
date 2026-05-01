@@ -58,7 +58,10 @@ export async function resumableUpload(
       metadata: {
         bucketName: opts.bucketName,
         objectName: opts.objectName,
-        contentType: opts.file.type || "application/octet-stream",
+        // Supabase Storage rejects MIME types with codec parameters
+        // (e.g. "audio/mp4;codecs=mp4a.40.2" → 415). Strip parameters so
+        // only the base type is sent.
+        contentType: (opts.file.type || "application/octet-stream").split(";")[0].trim(),
         cacheControl: "3600",
       },
       chunkSize: CHUNK_SIZE_BYTES,

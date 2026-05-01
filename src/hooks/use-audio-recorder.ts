@@ -586,7 +586,11 @@ export function useAudioRecorder(): UseAudioRecorderResult {
         setStatusBoth("error");
         return null;
       }
-      const mime = mimeType || chunks[0].type || "audio/webm";
+      const rawMime = mimeType || chunks[0].type || "audio/webm";
+      // Strip codec parameters from the container MIME (e.g.
+      // "audio/mp4;codecs=mp4a.40.2" → "audio/mp4"). Some servers — including
+      // Supabase Storage — reject MIME types with parameters.
+      const mime = rawMime.split(";")[0].trim() || "audio/webm";
       const blob = new Blob(chunks, { type: mime });
       const filename = buildRecordingFileName(mime);
       file = new File([blob], filename, { type: mime, lastModified: Date.now() });
