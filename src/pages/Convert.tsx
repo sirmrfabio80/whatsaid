@@ -119,6 +119,17 @@ export default function Convert() {
     setChannelAnalysis(analysis);
   }, []);
 
+  // Recorded audio takes the same path as an uploaded file. We pass null for
+  // creationDate (pipeline falls back to file.lastModified, which is correct
+  // for a freshly recorded blob) and null for channelAnalysis (pipeline
+  // already defaults safely when missing).
+  const handleRecordingReady = useCallback((f: File, dur: number) => {
+    setFile(f);
+    setDuration(dur);
+    setFileCreationDate(null);
+    setChannelAnalysis(null);
+  }, []);
+
   useEffect(() => {
     if (!jobId || !processing) return;
 
