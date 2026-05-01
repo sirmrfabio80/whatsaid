@@ -183,6 +183,7 @@ export default function Convert() {
         const stage = job.processing_stage;
         if (stage === "enhancing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
         else if (stage === "uploading") setStep((prev) => prev === "uploading" ? prev : "uploading");
+        else if (stage === "detecting_language") setStep((prev) => prev === "detecting" ? prev : "detecting");
         else if (stage === "preparing") setStep((prev) => prev === "enhancing" ? prev : "enhancing");
       } else if (job.status === "processing") {
         const { count } = await supabase
