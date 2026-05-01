@@ -268,170 +268,203 @@ export function useAudioRecorder(): UseAudioRecorderResult {
   }, []);
 
   // ── Public API ─────────────────────────────────────────────────────────────
-  const start = useCallback(async () => {
-    const sup = checkRecordingSupport();
-    if (!sup.supported) {
-      setStatusBoth("unsupported");
-      setErrorCode("unsupported");
-      return;
-    }
-    setErrorCode(null);
-    setErrorMessage(null);
-    setStatusBoth("requesting");
 
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-    } catch (err) {
-      const name = (err as { name?: string })?.name ?? "";
-      const code: RecorderErrorCode =
-        name === "NotAllowedError" || name === "SecurityError"
-          ? "permission_denied"
-          : name === "NotFoundError" || name === "OverconstrainedError"
-            ? "no_mic"
-            : "unknown";
-      setErrorCode(code);
-      setErrorMessage(
-        code === "permission_denied"
-          ? "Microphone permission was denied."
-          : code === "no_mic"
-            ? "No microphone was found on this device."
-            : (err as Error)?.message ?? "Could not access the microphone.",
-      );
-      setStatusBoth("error");
-      return;
-    }
+  /**
+   * Acquire mic + create MediaRecorder + wire events.
+   * If `preserveSession` is true we keep the existing sessionId, chunk index,
+   * and accumulated elapsed time — used when resuming after an interruption
+   * where the previous MediaRecorder went inactive (e.g. iOS lock, OS muted
+   * the track). Returns true on success, false on failure (status already set).
+   */
+  const prepareRecorder = useCallback(
+    async (preserveSession: boolean, preferredMime?: string | null): Promise<boolean> => {
+      const sup = checkRecordingSupport();
+      if (!sup.supported) {
+        setStatusBoth("unsupported");
+        setErrorCode("unsupported");
+        return false;
+      }
+      setErrorCode(null);
+      setErrorMessage(null);
+      setStatusBoth("requesting");
 
-    streamRef.current = stream;
-
-    // Set up analyser for level meter
-    try {
-      const Ctor: typeof AudioContext =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext!;
-      const ctx = new Ctor();
-      audioCtxRef.current = ctx;
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 1024;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-    } catch {
-      // Level meter is non-critical
-    }
-
-    // Set up MediaRecorder
-    const chosenMime = pickBestMimeType();
-    let recorder: MediaRecorder;
-    try {
-      recorder = chosenMime
-        ? new MediaRecorder(stream, { mimeType: chosenMime })
-        : new MediaRecorder(stream);
-    } catch (err) {
-      teardownStream();
-      setErrorCode("unknown");
-      setErrorMessage((err as Error)?.message ?? "Could not start recorder.");
-      setStatusBoth("error");
-      return;
-    }
-
-    const actualMime = recorder.mimeType || chosenMime || "";
-    setMimeType(actualMime);
-    recorderRef.current = recorder;
-
-    // Fresh session
-    const sessionId = (typeof crypto !== "undefined" && "randomUUID" in crypto)
-      ? crypto.randomUUID()
-      : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    sessionIdRef.current = sessionId;
-    chunkIndexRef.current = 0;
-    accumulatedMsRef.current = 0;
-    segmentStartedAtRef.current = null;
-    setElapsedMs(0);
-    finalisingRef.current = false;
-
-    recorder.ondataavailable = (ev) => {
-      if (!ev.data || ev.data.size === 0) return;
-      const idx = chunkIndexRef.current;
-      chunkIndexRef.current = idx + 1;
-      const sid = sessionIdRef.current;
-      if (!sid) return;
-      // Serialise writes so chunks land in order even on slow disks
-      writeQueueRef.current = writeQueueRef.current
-        .then(() => appendChunk(sid, idx, ev.data))
-        .catch((err) => {
-          console.error("[recorder] chunk write failed:", err);
-          setErrorCode("storage");
-          setErrorMessage("Could not save recording chunk.");
-          setStatusBoth("error");
-          try {
-            recorderRef.current?.stop();
-          } catch {
-            // Ignore
-          }
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
-    };
+      } catch (err) {
+        const name = (err as { name?: string })?.name ?? "";
+        const code: RecorderErrorCode =
+          name === "NotAllowedError" || name === "SecurityError"
+            ? "permission_denied"
+            : name === "NotFoundError" || name === "OverconstrainedError"
+              ? "no_mic"
+              : "unknown";
+        setErrorCode(code);
+        setErrorMessage(
+          code === "permission_denied"
+            ? "Microphone permission was denied."
+            : code === "no_mic"
+              ? "No microphone was found on this device."
+              : (err as Error)?.message ?? "Could not access the microphone.",
+        );
+        setStatusBoth(preserveSession ? "interrupted" : "error");
+        return false;
+      }
 
-    recorder.onerror = (ev) => {
-      console.error("[recorder] error event:", ev);
-      setErrorCode("unknown");
-      setErrorMessage("Recording failed unexpectedly.");
-      setStatusBoth("error");
-    };
-
-    // Track ended (e.g. permission revoked, OS muted)
-    const audioTracks = stream.getAudioTracks();
-    audioTracks.forEach((t) => {
-      t.onended = () => {
-        if (statusRef.current === "recording" || statusRef.current === "paused") {
-          try {
-            recorderRef.current?.pause();
-          } catch {
-            // Ignore
-          }
-          stopLevelMeter();
-          if (segmentStartedAtRef.current != null) {
-            accumulatedMsRef.current += Date.now() - segmentStartedAtRef.current;
-            segmentStartedAtRef.current = null;
-          }
-          if (elapsedTimerRef.current != null) {
-            window.clearInterval(elapsedTimerRef.current);
-            elapsedTimerRef.current = null;
-          }
-          setErrorCode("track_ended");
-          setStatusBoth("interrupted");
-        }
-      };
-    });
-
-    try {
-      recorder.start(TIMESLICE_MS);
-    } catch (err) {
+      // Tear down any previous stream/context before swapping in the new one.
       teardownStream();
-      setErrorCode("unknown");
-      setErrorMessage((err as Error)?.message ?? "Could not start recorder.");
-      setStatusBoth("error");
-      return;
-    }
+      streamRef.current = stream;
 
-    setStatusBoth("recording");
-    startElapsedTimer();
-    startLevelMeter();
-    void acquireWakeLock();
-  }, [
-    acquireWakeLock,
-    setStatusBoth,
-    startElapsedTimer,
-    startLevelMeter,
-    stopLevelMeter,
-    teardownStream,
-  ]);
+      // Set up analyser for level meter
+      try {
+        const Ctor: typeof AudioContext =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext!;
+        const ctx = new Ctor();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+      } catch {
+        // Level meter is non-critical
+      }
+
+      // Set up MediaRecorder. When resuming we try the original MIME first
+      // so concatenated chunks have the same container.
+      const targetMime = (preferredMime ?? "") || pickBestMimeType();
+      let recorder: MediaRecorder;
+      try {
+        recorder = targetMime
+          ? new MediaRecorder(stream, { mimeType: targetMime })
+          : new MediaRecorder(stream);
+      } catch {
+        // Original mime might not be supported on this fresh stream — fall back.
+        try {
+          const fallback = pickBestMimeType();
+          recorder = fallback
+            ? new MediaRecorder(stream, { mimeType: fallback })
+            : new MediaRecorder(stream);
+        } catch (err2) {
+          teardownStream();
+          setErrorCode("unknown");
+          setErrorMessage((err2 as Error)?.message ?? "Could not start recorder.");
+          setStatusBoth("error");
+          return false;
+        }
+      }
+
+      const actualMime = recorder.mimeType || targetMime || "";
+      // Only update mime on a fresh session so we don't lie about a resumed
+      // session's container if the browser swapped it.
+      if (!preserveSession) setMimeType(actualMime);
+      recorderRef.current = recorder;
+
+      if (!preserveSession) {
+        // Fresh session
+        const sessionId = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+          ? crypto.randomUUID()
+          : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        sessionIdRef.current = sessionId;
+        chunkIndexRef.current = 0;
+        accumulatedMsRef.current = 0;
+        segmentStartedAtRef.current = null;
+        setElapsedMs(0);
+        finalisingRef.current = false;
+      }
+      // When preserveSession=true we keep sessionIdRef, chunkIndexRef and
+      // accumulatedMsRef as-is so the new chunks append after the old ones.
+
+      recorder.ondataavailable = (ev) => {
+        if (!ev.data || ev.data.size === 0) return;
+        const idx = chunkIndexRef.current;
+        chunkIndexRef.current = idx + 1;
+        const sid = sessionIdRef.current;
+        if (!sid) return;
+        writeQueueRef.current = writeQueueRef.current
+          .then(() => appendChunk(sid, idx, ev.data))
+          .catch((err) => {
+            console.error("[recorder] chunk write failed:", err);
+            setErrorCode("storage");
+            setErrorMessage("Could not save recording chunk.");
+            setStatusBoth("error");
+            try {
+              recorderRef.current?.stop();
+            } catch {
+              // Ignore
+            }
+          });
+      };
+
+      recorder.onerror = (ev) => {
+        console.error("[recorder] error event:", ev);
+        setErrorCode("unknown");
+        setErrorMessage("Recording failed unexpectedly.");
+        setStatusBoth("error");
+      };
+
+      // Track ended (e.g. permission revoked, OS muted)
+      const audioTracks = stream.getAudioTracks();
+      audioTracks.forEach((t) => {
+        t.onended = () => {
+          if (statusRef.current === "recording" || statusRef.current === "paused") {
+            try {
+              recorderRef.current?.pause();
+            } catch {
+              // Ignore
+            }
+            stopLevelMeter();
+            if (segmentStartedAtRef.current != null) {
+              accumulatedMsRef.current += Date.now() - segmentStartedAtRef.current;
+              segmentStartedAtRef.current = null;
+            }
+            if (elapsedTimerRef.current != null) {
+              window.clearInterval(elapsedTimerRef.current);
+              elapsedTimerRef.current = null;
+            }
+            setErrorCode("track_ended");
+            setStatusBoth("interrupted");
+          }
+        };
+      });
+
+      try {
+        recorder.start(TIMESLICE_MS);
+      } catch (err) {
+        teardownStream();
+        setErrorCode("unknown");
+        setErrorMessage((err as Error)?.message ?? "Could not start recorder.");
+        setStatusBoth("error");
+        return false;
+      }
+
+      setStatusBoth("recording");
+      startElapsedTimer();
+      startLevelMeter();
+      void acquireWakeLock();
+      return true;
+    },
+    [
+      acquireWakeLock,
+      setStatusBoth,
+      startElapsedTimer,
+      startLevelMeter,
+      stopLevelMeter,
+      teardownStream,
+    ],
+  );
+
+  const start = useCallback(async () => {
+    await prepareRecorder(false);
+  }, [prepareRecorder]);
+
 
   const pause = useCallback(() => {
     const r = recorderRef.current;
@@ -454,15 +487,13 @@ export function useAudioRecorder(): UseAudioRecorderResult {
     void releaseWakeLock();
   }, [releaseWakeLock, setStatusBoth, stopLevelMeter]);
 
-  const resume = useCallback(() => {
-    const r = recorderRef.current;
-    if (!r) return;
+  const resume = useCallback(async () => {
     if (statusRef.current !== "paused" && statusRef.current !== "interrupted") return;
 
-    // If recorder is still alive (paused), just resume. If it's "inactive"
-    // (e.g. after a track ended), we cannot resume the same recorder — surface
-    // an error so the user knows to stop & finalise what they have.
-    if (r.state === "paused") {
+    const r = recorderRef.current;
+
+    // Soft case: the recorder is still alive (we paused it) — just resume.
+    if (r && r.state === "paused") {
       try {
         r.resume();
         setStatusBoth("recording");
@@ -476,14 +507,28 @@ export function useAudioRecorder(): UseAudioRecorderResult {
         setErrorMessage("Could not resume recording.");
         setStatusBoth("error");
       }
-    } else {
-      // Recorder is inactive — cannot resume. The user should Stop to finalise
-      // whatever they already have.
-      setErrorCode("track_ended");
-      setErrorMessage("Recording can't be resumed. Tap Stop to finalise what's been captured.");
-      setStatusBoth("interrupted");
+      return;
     }
-  }, [acquireWakeLock, setStatusBoth, startElapsedTimer, startLevelMeter]);
+
+    // Hard case: recorder is inactive (track ended, OS killed mic, iOS lock).
+    // We have to acquire a fresh mic + create a new MediaRecorder, but keep
+    // the same sessionId so previously captured chunks stay in sequence.
+    // On stop() everything concatenates into one file.
+    if (!sessionIdRef.current) {
+      // No session to continue — treat as a fresh start.
+      await prepareRecorder(false, mimeType);
+      return;
+    }
+    await prepareRecorder(true, mimeType);
+  }, [
+    acquireWakeLock,
+    mimeType,
+    prepareRecorder,
+    setStatusBoth,
+    startElapsedTimer,
+    startLevelMeter,
+  ]);
+
 
   const stop = useCallback(async (): Promise<{ file: File; durationSeconds: number } | null> => {
     const r = recorderRef.current;
