@@ -246,8 +246,26 @@ export default function Convert() {
     };
   }, [user, searchParams, setSearchParams, queryClient, refreshCredits, t]);
 
-  const handleConvert = async () => {
-    if (!file || !user) return;
+  interface ConvertOverrides {
+    file?: File;
+    duration?: number;
+    fileCreationDate?: AudioCreationDateResult | null;
+    channelAnalysis?: AudioChannelAnalysis | null;
+  }
+
+  const handleConvert = async (overrides?: ConvertOverrides) => {
+    // Resolve from overrides or fall back to component state. This lets the
+    // recorder auto-submit immediately on Stop without waiting for setState
+    // to flush.
+    const effFile = overrides?.file ?? file;
+    const effDuration = overrides?.duration ?? duration;
+    const effFileCreationDate =
+      overrides?.fileCreationDate !== undefined ? overrides.fileCreationDate : fileCreationDate;
+    const effChannelAnalysis =
+      overrides?.channelAnalysis !== undefined ? overrides.channelAnalysis : channelAnalysis;
+    const effCredits = creditsForDuration(effDuration);
+
+    if (!effFile || !user) return;
 
     // Quietly request browser notification permission so we can alert the user
     // if they navigate away or background the tab. Skip if the user has muted
@@ -277,17 +295,17 @@ export default function Convert() {
     // No redundant decode probe here — that was the main thread freeze for
     // long files. If both header and decoded values are missing, default to
     // stereo (the safer default for diarization-routed content).
-    const decodedCh = channelAnalysis?.decodedChannelCount ?? null;
-    const headerCh = channelAnalysis?.headerChannelCount ?? channelAnalysis?.detectedChannelCount ?? null;
+    const decodedCh = effChannelAnalysis?.decodedChannelCount ?? null;
+    const headerCh = effChannelAnalysis?.headerChannelCount ?? effChannelAnalysis?.detectedChannelCount ?? null;
     const resolvedCh = decodedCh ?? headerCh;
     if (resolvedCh == null) {
       console.warn("[convert] No channel count from analysis, defaulting to stereo");
     }
     const inputChannels: 1 | 2 = resolvedCh === 1 ? 1 : 2;
 
-    const fileLastModifiedIso = new Date(file.lastModified).toISOString();
-    const recordedAt = fileCreationDate ? fileCreationDate.isoString : fileLastModifiedIso;
-    const recordedAtSource = fileCreationDate ? fileCreationDate.source : "file_last_modified";
+    const fileLastModifiedIso = new Date(effFile.lastModified).toISOString();
+    const recordedAt = effFileCreationDate ? effFileCreationDate.isoString : fileLastModifiedIso;
+    const recordedAtSource = effFileCreationDate ? effFileCreationDate.source : "file_last_modified";
 
     try {
       // ── 1. Insert the jobs row IMMEDIATELY so the row exists from second one. ──
