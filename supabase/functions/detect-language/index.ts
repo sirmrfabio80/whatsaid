@@ -4,18 +4,37 @@
 //
 // Strategy:
 //   - Use AssemblyAI's "nano" speech model with language_detection=true.
-//   - Limit decoded audio to the first ~30s via `audio_end_at`.
-//   - Poll quickly (1.5s) up to ~30s.
-//
-// This function does NOT delete the audio (the main `transcribe` function
-// still owns audio lifecycle). It writes the detected ISO code to
-// `jobs.language_detected_preview`. Errors are logged to
-// `jobs.language_preview_error` and the client is allowed to continue.
+//   - Limit decoded audio to the first ~30s via `audio_end_at`. The client
+//     can pass `extend_preview=true` on a retry to widen this window so
+//     very short recordings get a second, longer look.
+//   - Poll quickly (1.5s) up to ~25s.
+//   - Always responds 200 with a structured `status` of
+//     "success" | "skipped" | "failed" so the client never gets stuck.
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
 
 const POLL_MS = 1500;
-const MAX_POLLS = 25; // ~37s budget
+const MAX_POLLS = 17; // ~25s upstream poll budget — keep under client timeout
+const DEFAULT_PREVIEW_MS = 30_000;
+const EXTENDED_PREVIEW_MS = 90_000;
+
+type DetectStatus = "success" | "skipped" | "failed";
+
+interface DetectResponse {
+  status: DetectStatus;
+  language: string | null;
+  reason?: string;
+  fallback?: boolean;
+  preview_ms: number;
+  cached?: boolean;
+}
+
+function jsonResponse(payload: DetectResponse, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,6 +43,7 @@ Deno.serve(async (req) => {
 
   const supabase = createServiceClient();
   let jobId = "";
+  let previewMs = DEFAULT_PREVIEW_MS;
 
   try {
     const ASSEMBLYAI_API_KEY = Deno.env.get("ASSEMBLYAI_API_KEY");
@@ -35,6 +55,9 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     jobId = typeof body?.job_id === "string" ? body.job_id : "";
+    const extendPreview = body?.extend_preview === true;
+    previewMs = extendPreview ? EXTENDED_PREVIEW_MS : DEFAULT_PREVIEW_MS;
+
     if (!jobId) {
       return new Response(JSON.stringify({ error: "job_id required" }), {
         status: 400,
@@ -57,12 +80,16 @@ Deno.serve(async (req) => {
     }
     if (!job.temp_file_path) throw new Error("Job has no audio yet");
 
-    // Idempotency: if we already have a preview, return it immediately.
-    if (job.language_detected_preview) {
-      return new Response(
-        JSON.stringify({ success: true, language: job.language_detected_preview, cached: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    // Idempotency: if we already have a preview, return it immediately —
+    // unless this is an explicit extended-preview retry, in which case we
+    // re-run with the wider window.
+    if (job.language_detected_preview && !extendPreview) {
+      return jsonResponse({
+        status: "success",
+        language: job.language_detected_preview,
+        cached: true,
+        preview_ms: previewMs,
+      });
     }
 
     const { data: signed, error: signErr } = await supabase.storage
@@ -70,8 +97,6 @@ Deno.serve(async (req) => {
       .createSignedUrl(job.temp_file_path, 3600);
     if (signErr || !signed?.signedUrl) throw new Error("Could not sign audio URL");
 
-    // EU base URL is fine for a tiny detection-only pass; full transcribe
-    // still does its own geo routing.
     const baseUrl = "https://api.eu.assemblyai.com/v2";
 
     const submitRes = await fetch(`${baseUrl}/transcript`, {
@@ -84,10 +109,7 @@ Deno.serve(async (req) => {
         audio_url: signed.signedUrl,
         speech_model: "nano",
         language_detection: true,
-        // Only decode the first 30 seconds — language detection converges fast
-        // and we save provider cost + latency.
-        audio_end_at: 30_000,
-        // Disable everything we don't need.
+        audio_end_at: previewMs,
         punctuate: false,
         format_text: false,
         disfluencies: false,
@@ -125,26 +147,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Best-effort delete the throwaway transcript (don't fail the request).
+    // Best-effort delete the throwaway transcript.
     fetch(`${baseUrl}/transcript/${transcriptId}`, {
       method: "DELETE",
       headers: { Authorization: ASSEMBLYAI_API_KEY },
     }).catch(() => {});
 
     if (!detected) {
-      // Timed out or no language returned — write a soft error and let the
-      // client move on. The full transcribe call will still attempt detection.
+      // Inconclusive — most often a too-short / too-quiet recording.
+      const reason = `no_language_detected (status=${lastStatus}, preview_ms=${previewMs})`;
       await supabase
         .from("jobs")
         .update({
-          language_preview_error: `no_language_detected (status=${lastStatus})`,
+          language_preview_error: reason,
+          language_detection_diagnostics: {
+            type: "inconclusive",
+            preview_ms: previewMs,
+            upstream_status: lastStatus,
+            timestamp: new Date().toISOString(),
+          },
         })
         .eq("id", jobId);
 
-      return new Response(
-        JSON.stringify({ success: false, language: null, reason: "no_language" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return jsonResponse({
+        status: "skipped",
+        language: null,
+        reason: "inconclusive",
+        fallback: true,
+        preview_ms: previewMs,
+      });
     }
 
     await supabase
@@ -152,13 +183,19 @@ Deno.serve(async (req) => {
       .update({
         language_detected_preview: detected,
         language_preview_error: null,
+        language_detection_diagnostics: {
+          type: "success",
+          preview_ms: previewMs,
+          timestamp: new Date().toISOString(),
+        },
       })
       .eq("id", jobId);
 
-    return new Response(
-      JSON.stringify({ success: true, language: detected }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      status: "success",
+      language: detected,
+      preview_ms: previewMs,
+    });
   } catch (err) {
     console.error("[detect-language] error:", err);
     const msg = err instanceof Error ? err.message : "unknown";
@@ -166,15 +203,26 @@ Deno.serve(async (req) => {
       try {
         await supabase
           .from("jobs")
-          .update({ language_preview_error: msg.slice(0, 500) })
+          .update({
+            language_preview_error: msg.slice(0, 500),
+            language_detection_diagnostics: {
+              type: "runtime",
+              message: msg.slice(0, 500),
+              preview_ms: previewMs,
+              timestamp: new Date().toISOString(),
+            },
+          })
           .eq("id", jobId);
       } catch { /* ignore */ }
     }
-    // Soft failure: respond 200 with success=false so the client can continue
-    // straight to the full transcription without blocking the user.
-    return new Response(
-      JSON.stringify({ success: false, language: null, error: msg }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    // Soft failure: 200 with status=failed + fallback=true so the client
+    // can continue straight to the full transcription without blocking.
+    return jsonResponse({
+      status: "failed",
+      language: null,
+      reason: msg.slice(0, 200),
+      fallback: true,
+      preview_ms: previewMs,
+    });
   }
 });
