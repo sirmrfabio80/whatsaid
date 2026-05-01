@@ -36,6 +36,7 @@ interface Job {
   speech_model: string | null;
   short_summary: string | null;
   error_message: string | null;
+  audio_deleted_at: string | null;
 }
 
 export default function History() {
