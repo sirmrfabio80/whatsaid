@@ -700,7 +700,26 @@ export default function Convert() {
           ) : (
             <Card ref={cardRef} className="rounded-xl border-border/50 bg-card shadow-sm mb-6">
               <CardContent className="p-6 sm:p-8">
-                <AudioUploader onFileSelected={handleFileSelected} />
+                {!file && (
+                  <Tabs defaultValue="upload" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 h-11">
+                      <TabsTrigger value="upload" className="rounded-lg h-9">
+                        <UploadIcon className="w-4 h-4 mr-2" />
+                        {t("convert.tabUpload")}
+                      </TabsTrigger>
+                      <TabsTrigger value="record" className="rounded-lg h-9">
+                        <Mic className="w-4 h-4 mr-2" />
+                        {t("convert.tabRecord")}
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="upload" className="mt-0">
+                      <AudioUploader onFileSelected={handleFileSelected} />
+                    </TabsContent>
+                    <TabsContent value="record" className="mt-0">
+                      <DirectRecorder onRecordingReady={handleRecordingReady} />
+                    </TabsContent>
+                  </Tabs>
+                )}
 
                 {file && duration > 0 && (
                   <div className="mt-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
