@@ -42,7 +42,15 @@ const CONVERT_BREADCRUMB_SCHEMA = {
   ],
 };
 
-type ProcessingStep = "preparing" | "enhancing" | "uploading" | "transcribing" | "summarising" | "completed" | "failed";
+type ProcessingStep = "preparing" | "enhancing" | "uploading" | "detecting" | "transcribing" | "summarising" | "completed" | "failed";
+
+// Imperative gate used between upload and transcription. Resolves with the
+// final language the user wants to use (either the detected one, or their
+// override). Null when no gate is active.
+interface LanguageGateState {
+  detected: string | null; // null while still detecting
+  resolve: (chosenLanguage: string) => void;
+}
 type EnhanceSubstage = EnhanceProgressStage | null;
 
 export default function Convert() {
