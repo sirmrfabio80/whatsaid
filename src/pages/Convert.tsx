@@ -450,7 +450,7 @@ export default function Convert() {
         await supabase.from("jobs").update({ processing_stage: "enhancing" }).eq("id", newJobId);
         try {
           const result = await enhanceAudioForTranscriptionAuto(
-            file,
+            effFile,
             (stage) => setEnhanceSubstage(stage),
             settingsSnapshot,
           );
