@@ -720,8 +720,8 @@ export default function Convert() {
                     </div>
                   )}
                   <div className="w-full max-w-sm space-y-4">
-                    {(["enhancing", "uploading", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
-                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "transcribing", "summarising", "completed"];
+                    {(["enhancing", "uploading", "detecting", "transcribing", "summarising", "completed"] as ProcessingStep[]).map((s) => {
+                      const allSteps: ProcessingStep[] = ["enhancing", "uploading", "detecting", "transcribing", "summarising", "completed"];
                       const isCurrent = step === s;
                       const isPast = step !== "failed" && (
                         allSteps.indexOf(step!) > allSteps.indexOf(s)
