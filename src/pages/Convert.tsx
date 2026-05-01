@@ -578,33 +578,136 @@ export default function Convert() {
       let finalLanguage = language;
       if (language === "auto") {
         setStep("detecting");
-        let detected: string | null = null;
-        let detectFailed = false;
-        try {
-          const detectRes = await supabase.functions.invoke("detect-language", {
-            body: { job_id: newJobId },
-          });
-          if (detectRes.error) {
-            console.warn("[convert] language detection invoke error:", detectRes.error);
-            detectFailed = true;
-          } else {
-            detected =
-              (detectRes.data as { language?: string | null } | null)?.language ?? null;
+        setLanguageDetectStatus(null);
+
+        // Timeout + retry. The edge function targets ~25s upstream; we cap
+        // each client attempt at 35s, then retry once with extend_preview=true
+        // for very short / inconclusive recordings.
+        type DetectPayload = {
+          status?: "success" | "skipped" | "failed";
+          language?: string | null;
+          reason?: string;
+          fallback?: boolean;
+        };
+
+        const PER_ATTEMPT_MS = 35_000;
+        const MAX_ATTEMPTS = 2;
+
+        const callDetect = async (extendPreview: boolean): Promise<{
+          payload: DetectPayload | null;
+          diag: Record<string, unknown> | null;
+        }> => {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), PER_ATTEMPT_MS);
+          try {
+            const res = await supabase.functions.invoke("detect-language", {
+              body: { job_id: newJobId, extend_preview: extendPreview },
+            });
+            clearTimeout(timer);
+            if (res.error) {
+              // FunctionsHttpError exposes context.status on most failures;
+              // 404 → not deployed, 5xx → runtime error inside the function.
+              const ctx = (res.error as { context?: { status?: number } } | null)?.context;
+              const status = ctx?.status ?? null;
+              const errType = status === 404 ? "deployment" : "runtime";
+              return {
+                payload: null,
+                diag: {
+                  invoke_error: {
+                    type: errType,
+                    status_code: status,
+                    message: res.error.message ?? String(res.error),
+                    extend_preview: extendPreview,
+                    timestamp: new Date().toISOString(),
+                  },
+                },
+              };
+            }
+            return { payload: (res.data ?? null) as DetectPayload | null, diag: null };
+          } catch (err) {
+            clearTimeout(timer);
+            const aborted = (err as { name?: string })?.name === "AbortError";
+            return {
+              payload: null,
+              diag: {
+                invoke_error: {
+                  type: aborted ? "timeout" : "network",
+                  status_code: null,
+                  message: err instanceof Error ? err.message : String(err),
+                  extend_preview: extendPreview,
+                  timestamp: new Date().toISOString(),
+                },
+              },
+            };
           }
-        } catch (detectErr) {
-          console.warn("[convert] language detection failed:", detectErr);
-          detectFailed = true;
+        };
+
+        let detectStatus: "success" | "skipped" | "failed" = "failed";
+        let detected: string | null = null;
+        let detectReason: string | undefined;
+        const attempts: Array<Record<string, unknown>> = [];
+
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+          const extend = attempt > 0; // second pass widens the preview window
+          const { payload, diag } = await callDetect(extend);
+          attempts.push({
+            attempt: attempt + 1,
+            extend_preview: extend,
+            ok: !!payload,
+            payload_status: payload?.status ?? null,
+            ...(diag ?? {}),
+          });
+
+          if (payload?.status === "success" && payload.language) {
+            detectStatus = "success";
+            detected = payload.language;
+            detectReason = undefined;
+            break;
+          }
+          if (payload?.status === "skipped") {
+            // Inconclusive — keep going to the extended-preview retry.
+            detectStatus = "skipped";
+            detectReason = payload.reason ?? "inconclusive";
+            if (attempt === MAX_ATTEMPTS - 1) break;
+            continue;
+          }
+          // Failed (function-level) or invoke error — retry once, then bail.
+          detectStatus = "failed";
+          detectReason = payload?.reason ?? (diag ? "invoke_error" : "unknown");
+          if (attempt === MAX_ATTEMPTS - 1) break;
         }
 
-        if (detectFailed) {
-          // Soft-fail: skip the gate entirely and let transcribe run its own
-          // detection. The user is never blocked behind a stuck modal.
-          finalLanguage = "auto";
-        } else {
+        // Persist client-side diagnostics so admins can troubleshoot 404s,
+        // timeouts, or runtime errors per job.
+        try {
+          await supabase
+            .from("jobs")
+            .update({
+              language_detection_diagnostics: {
+                attempts,
+                final_status: detectStatus,
+                final_language: detected,
+                reason: detectReason ?? null,
+                client_recorded_at: new Date().toISOString(),
+              },
+            } as any)
+            .eq("id", newJobId);
+        } catch (diagErr) {
+          console.warn("[convert] could not write detection diagnostics:", diagErr);
+        }
+
+        setLanguageDetectStatus({ status: detectStatus, language: detected, reason: detectReason });
+
+        if (detectStatus === "success") {
+          // Open the gate so the user can confirm/override.
           finalLanguage = await new Promise<string>((resolve) => {
             setLanguageGate({ detected, resolve });
           });
           setLanguageGate(null);
+        } else {
+          // Skipped or failed — never block the user. Fall through to the
+          // transcribe function which still does its own in-call detection.
+          finalLanguage = "auto";
         }
       }
 
