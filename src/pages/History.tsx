@@ -77,7 +77,7 @@ export default function History() {
       setLoadError(false);
       const { data, error } = await supabase
         .from("jobs")
-        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary, error_message")
+        .select("id, file_name, title, status, duration_seconds, language_detected, language_selected, credits_charged, created_at, speech_model, short_summary, error_message, audio_deleted_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
