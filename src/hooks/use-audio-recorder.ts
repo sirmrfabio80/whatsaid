@@ -487,15 +487,13 @@ export function useAudioRecorder(): UseAudioRecorderResult {
     void releaseWakeLock();
   }, [releaseWakeLock, setStatusBoth, stopLevelMeter]);
 
-  const resume = useCallback(() => {
-    const r = recorderRef.current;
-    if (!r) return;
+  const resume = useCallback(async () => {
     if (statusRef.current !== "paused" && statusRef.current !== "interrupted") return;
 
-    // If recorder is still alive (paused), just resume. If it's "inactive"
-    // (e.g. after a track ended), we cannot resume the same recorder — surface
-    // an error so the user knows to stop & finalise what they have.
-    if (r.state === "paused") {
+    const r = recorderRef.current;
+
+    // Soft case: the recorder is still alive (we paused it) — just resume.
+    if (r && r.state === "paused") {
       try {
         r.resume();
         setStatusBoth("recording");
@@ -509,14 +507,28 @@ export function useAudioRecorder(): UseAudioRecorderResult {
         setErrorMessage("Could not resume recording.");
         setStatusBoth("error");
       }
-    } else {
-      // Recorder is inactive — cannot resume. The user should Stop to finalise
-      // whatever they already have.
-      setErrorCode("track_ended");
-      setErrorMessage("Recording can't be resumed. Tap Stop to finalise what's been captured.");
-      setStatusBoth("interrupted");
+      return;
     }
-  }, [acquireWakeLock, setStatusBoth, startElapsedTimer, startLevelMeter]);
+
+    // Hard case: recorder is inactive (track ended, OS killed mic, iOS lock).
+    // We have to acquire a fresh mic + create a new MediaRecorder, but keep
+    // the same sessionId so previously captured chunks stay in sequence.
+    // On stop() everything concatenates into one file.
+    if (!sessionIdRef.current) {
+      // No session to continue — treat as a fresh start.
+      await prepareRecorder(false, mimeType);
+      return;
+    }
+    await prepareRecorder(true, mimeType);
+  }, [
+    acquireWakeLock,
+    mimeType,
+    prepareRecorder,
+    setStatusBoth,
+    startElapsedTimer,
+    startLevelMeter,
+  ]);
+
 
   const stop = useCallback(async (): Promise<{ file: File; durationSeconds: number } | null> => {
     const r = recorderRef.current;
