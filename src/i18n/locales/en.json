@@ -380,7 +380,8 @@
     "loadErrorDesc": "Something went wrong while fetching your history. Please try again.",
     "uploadInterrupted": "Upload interrupted — retry",
     "uploadInterruptedDesc": "Your upload didn't finish. No credits were charged.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "audioDeleted": "Audio file deleted after transcription"
   },
   "jobDetail": {
     "backToHistory": "Back to history",
