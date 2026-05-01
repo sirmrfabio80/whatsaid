@@ -119,16 +119,41 @@ export default function Convert() {
     setChannelAnalysis(analysis);
   }, []);
 
-  // Recorded audio takes the same path as an uploaded file. We pass null for
-  // creationDate (pipeline falls back to file.lastModified, which is correct
-  // for a freshly recorded blob) and null for channelAnalysis (pipeline
-  // already defaults safely when missing).
+  // Recorded audio takes the same path as an uploaded file, but auto-submits
+  // immediately on Stop so the user doesn't have to re-confirm anything.
+  // Tapping Stop is itself the consent action (they recorded it themselves).
+  // creationDate=null → pipeline falls back to file.lastModified.
+  // channelAnalysis=null → pipeline already defaults safely when missing.
+  // The recorded audio is uploaded to the private temp-audio bucket and
+  // deleted by process-job once the transcript is generated, exactly like
+  // any uploaded file.
   const handleRecordingReady = useCallback((f: File, dur: number) => {
     setFile(f);
     setDuration(dur);
     setFileCreationDate(null);
     setChannelAnalysis(null);
-  }, []);
+
+    if (!user) {
+      toast.error(t("convert.signInToConvert"));
+      return;
+    }
+    const requiredCredits = creditsForDuration(dur);
+    const balance = creditBalance ?? 0;
+    if (!isAdmin && balance < requiredCredits) {
+      toast.error(
+        t("convert.noCreditsDesc", { required: requiredCredits, balance }),
+      );
+      return;
+    }
+
+    void handleConvert({
+      file: f,
+      duration: dur,
+      fileCreationDate: null,
+      channelAnalysis: null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, creditBalance, t]);
 
   useEffect(() => {
     if (!jobId || !processing) return;
