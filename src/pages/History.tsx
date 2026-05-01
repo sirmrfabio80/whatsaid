@@ -268,6 +268,15 @@ export default function History() {
                               <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{getLanguageLabel(job.language_selected ?? job.language_detected)}</span>
                               <span>{new Date(job.created_at).toLocaleDateString()}</span>
                             </div>
+                            {job.status === "completed" && job.audio_deleted_at && (
+                              <p
+                                className="mt-1.5 inline-flex items-center gap-1 text-caption text-muted-foreground/80"
+                                title={new Date(job.audio_deleted_at).toLocaleString()}
+                              >
+                                <ShieldCheck className="w-3 h-3 text-success" aria-hidden="true" />
+                                {t("history.audioDeleted", "Audio file deleted after transcription")}
+                              </p>
+                            )}
                             {job.short_summary && (
                               <p className="text-caption text-muted-foreground/70 mt-2 line-clamp-2 leading-relaxed">{job.short_summary}</p>
                             )}
