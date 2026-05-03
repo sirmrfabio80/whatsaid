@@ -934,9 +934,19 @@ export default function Convert() {
                         </p>
                         {languageDetectStatus.status !== "success" && languageDetectStatus.reason && (
                           <p className="mt-1 text-caption text-muted-foreground break-words">
-                            {t("convert.langDetectReason", "Reason: {{reason}}", {
-                              reason: languageDetectStatus.reason,
-                            })}
+                            {languageDetectStatus.reason === "low_confidence"
+                              ? t(
+                                  "convert.langDetectReasonLowConfidence",
+                                  "Detection wasn't confident enough — pick a language manually or let auto-detect handle it during transcription.",
+                                )
+                              : languageDetectStatus.reason === "inconclusive"
+                                ? t(
+                                    "convert.langDetectReasonInconclusive",
+                                    "Couldn't detect a language — recording may be too short, too quiet, or contain no speech.",
+                                  )
+                                : t("convert.langDetectReason", "Reason: {{reason}}", {
+                                    reason: languageDetectStatus.reason,
+                                  })}
                           </p>
                         )}
                       </div>

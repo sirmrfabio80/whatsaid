@@ -248,6 +248,13 @@ export default function History() {
                                     <RotateCw className="w-3 h-3" aria-hidden="true" />
                                     {t("history.uploadInterrupted")}
                                   </Badge>
+                                ) : job.status === "completed" && job.short_summary === "No speech detected in audio." ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-muted/60 text-muted-foreground border-border text-[11px] inline-flex items-center gap-1.5"
+                                  >
+                                    {t("history.noSpeechDetected", "No speech detected · credit refunded")}
+                                  </Badge>
                                 ) : (
                                   <Badge variant="outline" className={`${statusColor(job.status)} text-[11px] inline-flex items-center gap-1.5`}>
                                     {(job.status === "processing" || job.status === "pending" || job.status === "uploading") && (

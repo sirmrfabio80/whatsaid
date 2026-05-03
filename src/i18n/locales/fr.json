@@ -139,6 +139,8 @@
     "langDetectSkipped": "Détection ignorée — enregistrement trop court ou peu clair. Nous la détecterons lors de la transcription.",
     "langDetectFailed": "Détection indisponible — la langue sera détectée pendant la transcription.",
     "langDetectReason": "Raison : {{reason}}",
+    "langDetectReasonLowConfidence": "Détection peu fiable — choisis une langue manuellement ou laisse la détection automatique pendant la transcription.",
+    "langDetectReasonInconclusive": "Aucune langue détectée — l'enregistrement est peut-être trop court, trop silencieux ou sans parole.",
     "stepTranscribing": "Transcription avec identification des intervenants...",
     "stepSummarising": "Génération du résumé et de l'analyse...",
     "stepCompleted": "Traitement terminé",
@@ -384,6 +386,7 @@
     "loadErrorDesc": "Une erreur s'est produite lors du chargement de votre historique. Veuillez réessayer.",
     "uploadInterrupted": "Envoi interrompu — réessayer",
     "uploadInterruptedDesc": "Votre envoi ne s'est pas terminé. Aucun crédit n'a été débité.",
+    "noSpeechDetected": "Aucune parole détectée · crédit remboursé",
     "tryAgain": "Réessayer",
     "audioDeleted": "Fichier audio supprimé après la transcription"
   },

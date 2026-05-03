@@ -139,6 +139,8 @@
     "langDetectSkipped": "Language detection skipped — recording was too short or unclear. We'll detect it during transcription.",
     "langDetectFailed": "Language detection unavailable — continuing with auto-detect during transcription.",
     "langDetectReason": "Reason: {{reason}}",
+    "langDetectReasonLowConfidence": "Detection wasn't confident enough — pick a language manually or let auto-detect handle it during transcription.",
+    "langDetectReasonInconclusive": "Couldn't detect a language — recording may be too short, too quiet, or contain no speech.",
     "stepTranscribing": "Transcribing with speaker labels...",
     "stepSummarising": "Generating summary & analysis...",
     "stepCompleted": "Processing complete",
@@ -384,6 +386,7 @@
     "loadErrorDesc": "Something went wrong while fetching your history. Please try again.",
     "uploadInterrupted": "Upload interrupted — retry",
     "uploadInterruptedDesc": "Your upload didn't finish. No credits were charged.",
+    "noSpeechDetected": "No speech detected · credit refunded",
     "tryAgain": "Try again",
     "audioDeleted": "Audio file deleted after transcription"
   },
