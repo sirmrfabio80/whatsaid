@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         audio_url: signed.signedUrl,
-        speech_models: ["nano"],
+        speech_models: ["universal-2"],
         language_detection: true,
         audio_end_at: previewMs,
         punctuate: false,
