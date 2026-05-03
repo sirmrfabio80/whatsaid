@@ -49,12 +49,86 @@ Deno.serve(async (req) => {
       .eq("output_type", "transcript")
       .single();
 
-    if (txError || !transcriptRow?.content) {
+    if (txError || transcriptRow == null) {
       throw new Error(`Transcript not found for job ${job_id}: ${txError?.message}`);
     }
 
-    const transcript = transcriptRow.content;
+    const transcript = transcriptRow.content ?? "";
     console.log(`[post-process] Processing job ${job_id}, transcript length: ${transcript.length}`);
+
+    // 1b. Handle empty transcript (silence / non-speech audio) gracefully.
+    // Mark the job as completed with a clear message and refund the credit.
+    if (transcript.trim().length === 0) {
+      console.log(`[post-process] Empty transcript for job ${job_id} — treating as no-speech result.`);
+
+      const noSpeechMessage = "No speech detected in audio.";
+
+      // Insert a placeholder summary so the UI has something to render.
+      await supabase.from("job_outputs").insert({
+        job_id,
+        output_type: "summary",
+        content: `## Overview\n\n${noSpeechMessage}\n\nThe recording appeared to contain only background noise or silence. Try a clearer recording, or one closer to the speaker.`,
+      });
+
+      // Fetch job for credit refund + notification.
+      const { data: jobInfo } = await supabase
+        .from("jobs")
+        .select("user_id, title, file_name, credits_charged")
+        .eq("id", job_id)
+        .single();
+
+      // Refund the credits that process-job deducted (skip admins / 0-credit jobs).
+      if (jobInfo?.user_id && (jobInfo.credits_charged ?? 0) > 0) {
+        const { data: adminRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", jobInfo.user_id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (!adminRole) {
+          try {
+            await supabase.rpc("add_credits", {
+              p_user_id: jobInfo.user_id,
+              p_amount: jobInfo.credits_charged,
+              p_reason: `Refund: no speech detected`,
+            });
+            console.log(`[post-process] Refunded ${jobInfo.credits_charged} credit(s) for job ${job_id}`);
+          } catch (refundErr) {
+            console.error(`[post-process] Refund failed for job ${job_id}:`, refundErr);
+          }
+        }
+      }
+
+      await supabase
+        .from("jobs")
+        .update({
+          status: "completed",
+          short_summary: noSpeechMessage,
+          summary_language: "en",
+        })
+        .eq("id", job_id);
+
+      if (jobInfo?.user_id) {
+        const notifTitle = jobInfo.title || jobInfo.file_name || "Transcript";
+        await supabase.from("notifications").insert({
+          user_id: jobInfo.user_id,
+          type: "transcript_ready",
+          title: notifTitle,
+          description: noSpeechMessage,
+          status: "info",
+          resource_type: "job",
+          resource_id: job_id,
+        });
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, job_id, no_speech: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+
 
     // Read job to get detected language
     const { data: jobRow } = await supabase
