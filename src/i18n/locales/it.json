@@ -386,6 +386,7 @@
     "loadErrorDesc": "Si è verificato un errore durante il caricamento dello storico. Riprova.",
     "uploadInterrupted": "Caricamento interrotto — riprova",
     "uploadInterruptedDesc": "Il caricamento non è stato completato. Nessun credito è stato addebitato.",
+    "noSpeechDetected": "Nessun parlato rilevato · credito rimborsato",
     "tryAgain": "Riprova",
     "audioDeleted": "File audio eliminato dopo la trascrizione"
   },
