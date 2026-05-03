@@ -126,6 +126,7 @@ Deno.serve(async (req) => {
     if (!transcriptId) throw new Error("No transcript id from detection");
 
     let detected: string | null = null;
+    let detectedConfidence: number | null = null;
     let lastStatus = "queued";
 
     for (let i = 0; i < MAX_POLLS; i++) {
@@ -141,6 +142,8 @@ Deno.serve(async (req) => {
       lastStatus = String(data.status ?? "");
       if (data.status === "completed") {
         detected = (data.language_code as string) ?? null;
+        const conf = data.language_confidence;
+        detectedConfidence = typeof conf === "number" ? conf : null;
         break;
       }
       if (data.status === "error") {
@@ -154,17 +157,28 @@ Deno.serve(async (req) => {
       headers: { Authorization: ASSEMBLYAI_API_KEY },
     }).catch(() => {});
 
-    if (!detected) {
-      // Inconclusive — most often a too-short / too-quiet recording.
-      const reason = `no_language_detected (status=${lastStatus}, preview_ms=${previewMs})`;
+    const CONFIDENCE_THRESHOLD = 0.5;
+    const lowConfidence =
+      detected !== null &&
+      detectedConfidence !== null &&
+      detectedConfidence < CONFIDENCE_THRESHOLD;
+
+    if (!detected || lowConfidence) {
+      const reason = lowConfidence
+        ? `low_confidence (lang=${detected}, conf=${detectedConfidence?.toFixed(2)})`
+        : `no_language_detected (status=${lastStatus}, preview_ms=${previewMs})`;
+      const reasonCode = lowConfidence ? "low_confidence" : "inconclusive";
+
       await supabase
         .from("jobs")
         .update({
           language_preview_error: reason,
           language_detection_diagnostics: {
-            type: "inconclusive",
+            type: lowConfidence ? "low_confidence" : "inconclusive",
             preview_ms: previewMs,
             upstream_status: lastStatus,
+            language_guess: detected,
+            language_confidence: detectedConfidence,
             timestamp: new Date().toISOString(),
           },
         })
@@ -173,7 +187,7 @@ Deno.serve(async (req) => {
       return jsonResponse({
         status: "skipped",
         language: null,
-        reason: "inconclusive",
+        reason: reasonCode,
         fallback: true,
         preview_ms: previewMs,
       });
@@ -187,6 +201,7 @@ Deno.serve(async (req) => {
         language_detection_diagnostics: {
           type: "success",
           preview_ms: previewMs,
+          language_confidence: detectedConfidence,
           timestamp: new Date().toISOString(),
         },
       })
