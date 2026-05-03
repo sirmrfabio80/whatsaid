@@ -386,6 +386,7 @@
     "loadErrorDesc": "Something went wrong while fetching your history. Please try again.",
     "uploadInterrupted": "Upload interrupted — retry",
     "uploadInterruptedDesc": "Your upload didn't finish. No credits were charged.",
+    "noSpeechDetected": "No speech detected · credit refunded",
     "tryAgain": "Try again",
     "audioDeleted": "Audio file deleted after transcription"
   },
