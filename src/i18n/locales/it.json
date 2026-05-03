@@ -139,6 +139,8 @@
     "langDetectSkipped": "Rilevamento saltato — registrazione troppo breve o poco chiara. La rileveremo durante la trascrizione.",
     "langDetectFailed": "Rilevamento non disponibile — la lingua verrà rilevata durante la trascrizione.",
     "langDetectReason": "Motivo: {{reason}}",
+    "langDetectReasonLowConfidence": "Rilevamento poco affidabile — scegli una lingua manualmente o lascia il rilevamento automatico durante la trascrizione.",
+    "langDetectReasonInconclusive": "Nessuna lingua rilevata — la registrazione potrebbe essere troppo breve, silenziosa o senza parlato.",
     "stepTranscribing": "Trascrizione con etichette dei relatori...",
     "stepSummarising": "Generazione riassunto e analisi...",
     "stepCompleted": "Elaborazione completata",
