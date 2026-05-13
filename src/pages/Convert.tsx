@@ -334,6 +334,9 @@ export default function Convert() {
     setUploadAuthFailed(false);
     setPendingRetryFile(null);
     setPendingRetryJobId(null);
+    setUploadProgress(null);
+    setUploadRetryCount(0);
+    setUploadRetrying(false);
 
     // Scroll to top of page with smooth animation
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
