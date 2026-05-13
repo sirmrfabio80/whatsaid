@@ -1,0 +1,15 @@
+# WhatSaid
+
+> AI audio transcription with speaker labels, structured summaries, key actions, and custom Q&A. Upload .m4a, .mp3, or .wav and get instant results. Pay-as-you-go credits — no subscription.
+
+WhatSaid converts audio recordings into useful text. Each credit processes one audio file and produces a full transcript with speaker labels, a structured summary with key actions, and answers to custom prompts. Audio files are deleted immediately after processing — only the generated text is retained.
+
+## Pages
+
+- [Home](/): Product overview, capabilities, and how it works.
+- [Transcribe audio](/convert): Upload audio and start a transcription job.
+- [Pricing](/pricing): Credit packs and per-credit value (£4.99 single, £14.99 5-pack, £39.99 20-pack).
+- [Help & FAQ](/help): How-to guides, troubleshooting, and frequently asked questions.
+- [Privacy policy](/privacy): How audio, transcripts, and personal data are handled.
+- [Terms of service](/terms): Account use, credit purchases, and acceptable use.
+- [Refund policy](/refund-policy): Refund rules for credit-pack purchases.
