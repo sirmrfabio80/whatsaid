@@ -889,6 +889,9 @@ export default function Convert() {
         objectName: filePath,
         file: retryFile,
         jobId: retryJobId,
+        onUploadCreated: (handle) => {
+          uploadHandleRef.current = handle;
+        },
         onProgress: (uploaded, total) => {
           setUploadProgress({ uploaded, total });
           if (uploaded >= total) setUploadRetrying(false);
@@ -908,6 +911,7 @@ export default function Convert() {
           }
         },
       });
+      uploadHandleRef.current = null;
       uploadMeta = {
         resumable: true,
         chunk_size_mb: result.chunkSizeMb,
@@ -915,6 +919,10 @@ export default function Convert() {
         resumed_from_previous: result.resumedFromPrevious,
       };
     } catch (uploadError) {
+      uploadHandleRef.current = null;
+      if (uploadError instanceof UploadAbortedError) {
+        return;
+      }
       const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
       const isAuth = /not authenticated|unauthorized|401|403/i.test(msg);
       if (isAuth) {
