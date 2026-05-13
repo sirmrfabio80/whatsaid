@@ -492,6 +492,20 @@ export default function Convert() {
       setStep("uploading");
       await supabase.from("jobs").update({ processing_stage: "uploading" }).eq("id", newJobId);
 
+      // Defensive: long enhancement work can leave the in-memory session
+      // stale. Make sure we have a usable token before TUS starts.
+      {
+        const { data: s } = await supabase.auth.getSession();
+        if (!s.session?.access_token) {
+          const { data: r } = await supabase.auth.refreshSession();
+          if (!r.session?.access_token) {
+            toast.error(t("convert.sessionExpired", "Your session expired during processing. Please sign in again to upload."));
+            navigate("/login");
+            return;
+          }
+        }
+      }
+
       const safeUploadName = sanitizeStorageFilename(uploadFile.name);
       const filePath = `${user.id}/${newJobId}/${safeUploadName}`;
 
