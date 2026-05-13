@@ -878,13 +878,20 @@ export default function Convert() {
         objectName: filePath,
         file: retryFile,
         jobId: retryJobId,
+        onProgress: (uploaded, total) => {
+          setUploadProgress({ uploaded, total });
+          if (uploaded >= total) setUploadRetrying(false);
+        },
         onChunkComplete: () => {
+          setUploadRetrying(false);
           void supabase
             .from("jobs")
             .update({ updated_at: new Date().toISOString() })
             .eq("id", retryJobId);
         },
         onRetry: (attempt) => {
+          setUploadRetryCount((n) => Math.max(n, attempt));
+          setUploadRetrying(true);
           if (attempt === 1) {
             toast.info(t("convert.uploadPausedRetrying", "Upload paused — retrying…"));
           }
