@@ -31,14 +31,28 @@ export interface ResumableUploadResult {
  * - Resumes from previous interrupted upload if the same jobId is retried
  *   in the same browser (URL persisted in localStorage by tus-js-client)
  */
+/**
+ * Resolve a usable access token. Tries the cached session first, then a
+ * forced refresh — long CPU-bound work (e.g. audio enhancement) can leave
+ * the in-memory session stale by the time upload starts.
+ */
+async function getFreshAccessToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  let token = data.session?.access_token ?? null;
+  if (!token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    token = refreshed.session?.access_token ?? null;
+  }
+  if (!token) {
+    throw new Error("Not authenticated — cannot upload");
+  }
+  return token;
+}
+
 export async function resumableUpload(
   opts: ResumableUploadOptions,
 ): Promise<ResumableUploadResult> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData.session?.access_token;
-  if (!accessToken) {
-    throw new Error("Not authenticated — cannot upload");
-  }
+  let accessToken = await getFreshAccessToken();
 
   let retries = 0;
   let resumedFromPrevious = false;
