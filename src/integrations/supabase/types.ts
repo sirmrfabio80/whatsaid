@@ -699,6 +699,42 @@ export type Database = {
         }
         Relationships: []
       }
+      seo_monitoring_alerts: {
+        Row: {
+          category: string
+          details: Json
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          notified_at: string | null
+          resolved_at: string | null
+          severity: string
+          signature: string
+        }
+        Insert: {
+          category: string
+          details?: Json
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          notified_at?: string | null
+          resolved_at?: string | null
+          severity: string
+          signature: string
+        }
+        Update: {
+          category?: string
+          details?: Json
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          notified_at?: string | null
+          resolved_at?: string | null
+          severity?: string
+          signature?: string
+        }
+        Relationships: []
+      }
       share_artifact_log: {
         Row: {
           action: string
