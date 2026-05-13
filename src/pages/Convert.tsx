@@ -549,6 +549,19 @@ export default function Convert() {
         };
       } catch (uploadError) {
         const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
+        const isAuth = /not authenticated|unauthorized|401|403/i.test(msg);
+        if (isAuth) {
+          setUploadAuthFailed(true);
+          setPendingRetryFile(uploadFile);
+          setPendingRetryJobId(newJobId);
+          setStep("failed");
+          setProcessing(false);
+          if (longFileToastRef.current) {
+            clearTimeout(longFileToastRef.current);
+            longFileToastRef.current = null;
+          }
+          return; // Don't mark job failed — let the user retry upload.
+        }
         throw new Error(`Upload failed: ${msg}`);
       }
 
