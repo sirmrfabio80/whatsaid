@@ -105,6 +105,8 @@ export default function Convert() {
   const [jobId, setJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const uploadHandleRef = useRef<{ abort: () => Promise<void> | void } | null>(null);
+  const [cancelingUpload, setCancelingUpload] = useState(false);
 
   const [consentChecked, setConsentChecked] = useState(false);
   const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
