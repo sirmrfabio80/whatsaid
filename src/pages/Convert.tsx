@@ -835,6 +835,9 @@ export default function Convert() {
 
     setUploadAuthFailed(false);
     setErrorMessage(null);
+    setUploadProgress(null);
+    setUploadRetryCount(0);
+    setUploadRetrying(false);
     setStep("uploading");
     setProcessing(true);
 
