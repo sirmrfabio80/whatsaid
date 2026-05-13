@@ -148,5 +148,18 @@ export async function resumableUpload(
       // findPreviousUploads can fail in private browsing — just start fresh.
       upload.start();
     });
+
+    opts.onUploadCreated?.({
+      abort: async () => {
+        aborted = true;
+        try {
+          // shouldTerminate=true also DELETEs the partial upload on the server
+          await upload.abort(true);
+        } catch {
+          /* ignore — we'll reject via onError or directly below */
+        }
+        reject(new UploadAbortedError());
+      },
+    });
   });
 }
