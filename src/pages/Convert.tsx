@@ -1191,25 +1191,43 @@ export default function Convert() {
                     </div>
                   )}
 
-                  {step === "failed" && errorMessage && (
-                    <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-body-sm max-w-sm">
-                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                      <span>{errorMessage}</span>
+                  {uploadAuthFailed ? (
+                    <div className="flex flex-col items-center gap-4 p-5 rounded-xl bg-warning/10 border border-warning/30 text-foreground text-body-sm max-w-sm w-full">
+                      <div className="flex items-start gap-3 w-full">
+                        <AlertCircle className="w-5 h-5 mt-0.5 shrink-0 text-warning" />
+                        <div className="text-left">
+                          <p className="font-medium">
+                            {t("convert.uploadAuthFailedTitle", "Session expired during upload")}
+                          </p>
+                          <p className="mt-1 text-muted-foreground">
+                            {t("convert.uploadAuthFailedDesc", "Your sign-in session timed out while your file was being prepared. You can retry the upload without re-processing the audio.")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full">
+                        <Button className="rounded-xl flex-1" onClick={handleRetryUpload}>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          {t("convert.retryUpload", "Retry upload")}
+                        </Button>
+                        <Button variant="ghost" className="rounded-xl" onClick={handleReset}>
+                          {t("common.tryAgain", "Start over")}
+                        </Button>
+                      </div>
                     </div>
-                  )}
-
-                  {file && (
-                    <div className="flex items-center gap-2 text-body-sm text-muted-foreground">
-                      <FileAudio className="w-4 h-4" />
-                      <span className="truncate max-w-[200px]">{file.name}</span>
-                      <span>· {formatDuration(duration)}</span>
-                    </div>
-                  )}
-
-                  {step === "failed" && (
-                    <Button className="rounded-xl" onClick={handleReset}>
-                      {t("common.tryAgain")}
-                    </Button>
+                  ) : (
+                    <>
+                      {step === "failed" && errorMessage && (
+                        <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-body-sm max-w-sm">
+                          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                          <span>{errorMessage}</span>
+                        </div>
+                      )}
+                      {step === "failed" && (
+                        <Button className="rounded-xl" onClick={handleReset}>
+                          {t("common.tryAgain")}
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </CardContent>
