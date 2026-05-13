@@ -99,6 +99,9 @@ export default function Convert() {
   const [uploadAuthFailed, setUploadAuthFailed] = useState(false);
   const [pendingRetryFile, setPendingRetryFile] = useState<File | null>(null);
   const [pendingRetryJobId, setPendingRetryJobId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
+  const [uploadRetryCount, setUploadRetryCount] = useState(0);
+  const [uploadRetrying, setUploadRetrying] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -331,6 +334,9 @@ export default function Convert() {
     setUploadAuthFailed(false);
     setPendingRetryFile(null);
     setPendingRetryJobId(null);
+    setUploadProgress(null);
+    setUploadRetryCount(0);
+    setUploadRetrying(false);
 
     // Scroll to top of page with smooth animation
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -527,15 +533,20 @@ export default function Convert() {
           objectName: filePath,
           file: uploadFile,
           jobId: newJobId,
+          onProgress: (uploaded, total) => {
+            setUploadProgress({ uploaded, total });
+            if (uploaded >= total) setUploadRetrying(false);
+          },
           onChunkComplete: () => {
-            // Each successful chunk also bumps updated_at — extra safety on
-            // top of the 60s heartbeat for very large files.
+            setUploadRetrying(false);
             void supabase
               .from("jobs")
               .update({ updated_at: new Date().toISOString() })
               .eq("id", newJobId);
           },
           onRetry: (attempt) => {
+            setUploadRetryCount((n) => Math.max(n, attempt));
+            setUploadRetrying(true);
             if (attempt === 1) {
               toast.info(t("convert.uploadPausedRetrying", "Upload paused — retrying…"));
             }
@@ -804,6 +815,9 @@ export default function Convert() {
     setUploadAuthFailed(false);
     setPendingRetryFile(null);
     setPendingRetryJobId(null);
+    setUploadProgress(null);
+    setUploadRetryCount(0);
+    setUploadRetrying(false);
     setJobId(null);
     setLanguageDetectStatus(null);
     // If a language gate was open, resolve it with auto so any in-flight
@@ -826,6 +840,9 @@ export default function Convert() {
 
     setUploadAuthFailed(false);
     setErrorMessage(null);
+    setUploadProgress(null);
+    setUploadRetryCount(0);
+    setUploadRetrying(false);
     setStep("uploading");
     setProcessing(true);
 
@@ -861,13 +878,20 @@ export default function Convert() {
         objectName: filePath,
         file: retryFile,
         jobId: retryJobId,
+        onProgress: (uploaded, total) => {
+          setUploadProgress({ uploaded, total });
+          if (uploaded >= total) setUploadRetrying(false);
+        },
         onChunkComplete: () => {
+          setUploadRetrying(false);
           void supabase
             .from("jobs")
             .update({ updated_at: new Date().toISOString() })
             .eq("id", retryJobId);
         },
         onRetry: (attempt) => {
+          setUploadRetryCount((n) => Math.max(n, attempt));
+          setUploadRetrying(true);
           if (attempt === 1) {
             toast.info(t("convert.uploadPausedRetrying", "Upload paused — retrying…"));
           }
@@ -1121,6 +1145,47 @@ export default function Convert() {
                               <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent animate-shimmer motion-reduce:animate-none motion-reduce:w-full motion-reduce:bg-primary/40 motion-reduce:bg-none" />
                             </div>
                           )}
+                          {s === "uploading" && isCurrent && step !== "failed" && (() => {
+                            const total = uploadProgress?.total ?? 0;
+                            const uploaded = uploadProgress?.uploaded ?? 0;
+                            const pct = total > 0 ? Math.min(100, Math.round((uploaded / total) * 100)) : 0;
+                            const mbUploaded = (uploaded / 1024 / 1024).toFixed(1);
+                            const mbTotal = total > 0 ? (total / 1024 / 1024).toFixed(1) : "—";
+                            return (
+                              <div className="w-full space-y-1.5">
+                                <div
+                                  className="h-1.5 w-full overflow-hidden rounded-full bg-primary/10"
+                                  role="progressbar"
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                  aria-valuenow={pct}
+                                  aria-label={t("convert.uploadProgressLabel", "Upload progress")}
+                                >
+                                  <div
+                                    className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between gap-2 text-caption text-muted-foreground">
+                                  <span>{pct}% · {mbUploaded} / {mbTotal} MB</span>
+                                  {uploadRetrying ? (
+                                    <span
+                                      className="inline-flex items-center gap-1 text-warning"
+                                      role="status"
+                                      aria-live="polite"
+                                    >
+                                      <RefreshCw className="w-3 h-3 animate-spin" />
+                                      {t("convert.uploadChunkRetry", "Retrying chunk… (attempt {{n}})", { n: uploadRetryCount })}
+                                    </span>
+                                  ) : uploadRetryCount > 0 ? (
+                                    <span className="text-muted-foreground">
+                                      {t("convert.uploadChunkRetried", "Recovered after {{n}} retr{{s}}", { n: uploadRetryCount, s: uploadRetryCount === 1 ? "y" : "ies" })}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}
