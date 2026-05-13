@@ -1243,6 +1243,19 @@ export default function Convert() {
                     })}
                   </div>
 
+                  {step === "uploading" && !uploadAuthFailed && (
+                    <Button
+                      variant="outline"
+                      className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={handleCancelUpload}
+                      disabled={cancelingUpload}
+                    >
+                      {cancelingUpload
+                        ? t("convert.cancelingUpload", "Canceling…")
+                        : t("convert.cancelUpload", "Cancel upload")}
+                    </Button>
+                  )}
+
                   {languageDetectStatus && step !== "failed" && step !== "completed" && (
                     <div
                       className={`flex items-start gap-2.5 p-3 rounded-xl text-body-sm max-w-md w-full border ${
