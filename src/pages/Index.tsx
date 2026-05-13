@@ -33,6 +33,45 @@ const SOFTWARE_APP_SCHEMA = {
   },
 };
 
+const FAQ_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What does one credit include?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "One credit processes one audio file and includes the full transcript, structured summary, and Q&A — all saved in your account. The number of credits depends on audio length (see the credit table on the pricing page).",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Do credits expire?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Credits remain available in your account based on the product terms. They don't disappear after a few days.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I download my results?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes — TXT, JSON, and DOCX download immediately. PDF is generated in the background and saved when ready.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What happens to my audio file?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "It's deleted immediately after processing. Only your transcript, summary and outputs are kept in your account.",
+      },
+    },
+  ],
+};
+
 export default function Index() {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -58,6 +97,7 @@ export default function Index() {
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter">
       <JsonLd data={SOFTWARE_APP_SCHEMA} />
+      <JsonLd data={FAQ_SCHEMA} />
       {/* 1 — Hero (split layout) */}
       <section className="relative overflow-hidden">
         {/* Layered ambient field */}
