@@ -810,6 +810,9 @@ export default function Convert() {
     setUploadAuthFailed(false);
     setPendingRetryFile(null);
     setPendingRetryJobId(null);
+    setUploadProgress(null);
+    setUploadRetryCount(0);
+    setUploadRetrying(false);
     setJobId(null);
     setLanguageDetectStatus(null);
     // If a language gate was open, resolve it with auto so any in-flight
