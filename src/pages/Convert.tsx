@@ -958,7 +958,7 @@ export default function Convert() {
         }
 
         detectStatus = "failed";
-        detectReason = payload?.reason ?? (diag ? "invoke_error" : "unknown");
+        detectReason = payload?.reason ? String(payload.reason) : (diag ? "invoke_error" : "unknown");
         if (attempt === MAX_ATTEMPTS - 1) break;
       }
 
