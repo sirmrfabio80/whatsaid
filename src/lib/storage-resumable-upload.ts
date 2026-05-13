@@ -86,10 +86,23 @@ export async function resumableUpload(
       onShouldRetry: (err, retryAttempt) => {
         retries = Math.max(retries, retryAttempt + 1);
         const error = err instanceof Error ? err : new Error(String(err));
-        // Skip retry on auth errors — token won't fix itself.
         const status = (err as { originalResponse?: { getStatus?: () => number } })
           ?.originalResponse?.getStatus?.();
-        if (status === 401 || status === 403) return false;
+        // On auth failure, try once to refresh the token and retry.
+        if (status === 401 || status === 403) {
+          getFreshAccessToken()
+            .then((tok) => {
+              accessToken = tok;
+              upload.options.headers = {
+                ...(upload.options.headers ?? {}),
+                authorization: `Bearer ${tok}`,
+                "x-upsert": "false",
+              };
+            })
+            .catch(() => {});
+          // Allow one retry attempt after auth refresh; subsequent 401s give up.
+          return retryAttempt === 0;
+        }
         opts.onRetry?.(retryAttempt + 1, error);
         return true;
       },
