@@ -93,6 +93,10 @@ export async function resumableUpload(
       },
       chunkSize: CHUNK_SIZE_BYTES,
       onError: (err) => {
+        if (aborted) {
+          reject(new UploadAbortedError());
+          return;
+        }
         const error = err instanceof Error ? err : new Error(String(err));
         reject(error);
       },
