@@ -794,20 +794,25 @@ export default function Convert() {
         clearTimeout(longFileToastRef.current);
         longFileToastRef.current = null;
       }
-      // Mark the row failed so watchdog/Admin/poller all stay consistent.
+      const rawMsg = error instanceof Error ? error.message : "An unknown error occurred.";
+      // "TypeError: Load failed" is Safari's network-failure message and is
+      // not actionable for users. Translate it into something concrete.
+      const friendlyMsg = /load failed|network ?error|failed to fetch/i.test(rawMsg)
+        ? t("convert.networkError", "Network error while preparing your file. Please check your connection and try again.")
+        : rawMsg;
       try {
         await supabase
           .from("jobs")
           .update({
             status: "failed" as const,
-            error_message: error instanceof Error ? error.message : "An unknown error occurred.",
+            error_message: rawMsg,
           } as any)
           .eq("id", newJobId);
       } catch (markErr) {
         console.warn("Could not mark job failed:", markErr);
       }
       setStep("failed");
-      setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
+      setErrorMessage(friendlyMsg);
       setProcessing(false);
     }
   };

@@ -186,7 +186,35 @@ export async function enhanceAudioForTranscriptionAuto(
   const isM4aLike = ext === "m4a" || ext === "mp4" || ext === "mov" || ext === "aac" ||
     file.type.includes("mp4") || file.type.includes("m4a");
   const SIZE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
+  // Hard ceiling: above this we never attempt decode in-browser. Safari
+  // throws "TypeError: Load failed" from decodeAudioData / Blob.arrayBuffer
+  // for very large m4a inputs, and even when the auto-router catches that
+  // and falls back, the second decode attempt also fails and wastes a few
+  // hundred MB of RAM. For these files we just upload the original — the
+  // backend transcription provider handles loudness/quality fine on its own.
+  const SKIP_ENHANCE_BYTES = 25 * 1024 * 1024; // 25 MB (~25 min m4a)
   const useWorker = isM4aLike && file.size > SIZE_THRESHOLD;
+
+  const passthrough = (): AudioEnhanceResult => {
+    const safeBase = sanitizeStorageFilename(file.name.replace(/\.[^.]+$/, ""));
+    return {
+      file: new File([file], safeBase + (ext ? `.${ext}` : ""), { type: file.type || "application/octet-stream" }),
+      metadata: {
+        applied: false,
+        reason: "failed",
+        input_channels: 2,
+        duration_ms: 0,
+        measured: null,
+      },
+    };
+  };
+
+  if (file.size > SKIP_ENHANCE_BYTES) {
+    console.info(
+      `[audio-enhance] Skipping enhancement — file ${(file.size / 1024 / 1024).toFixed(1)} MB exceeds ${(SKIP_ENHANCE_BYTES / 1024 / 1024).toFixed(0)} MB safe-decode ceiling. Uploading original.`,
+    );
+    return passthrough();
+  }
 
   if (useWorker) {
     try {
@@ -200,17 +228,7 @@ export async function enhanceAudioForTranscriptionAuto(
     return await enhanceAudioForTranscription(file, onProgress, opts);
   } catch (legacyErr) {
     console.warn("[audio-enhance] In-memory path failed, returning original file:", legacyErr);
-    const safeBase = sanitizeStorageFilename(file.name.replace(/\.[^.]+$/, ""));
-    return {
-      file: new File([file], safeBase + (ext ? `.${ext}` : ""), { type: file.type || "application/octet-stream" }),
-      metadata: {
-        applied: false,
-        reason: "failed",
-        input_channels: 2,
-        duration_ms: 0,
-        measured: null,
-      },
-    };
+    return passthrough();
   }
 }
 
