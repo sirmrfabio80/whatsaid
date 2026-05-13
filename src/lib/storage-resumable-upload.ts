@@ -31,14 +31,28 @@ export interface ResumableUploadResult {
  * - Resumes from previous interrupted upload if the same jobId is retried
  *   in the same browser (URL persisted in localStorage by tus-js-client)
  */
+/**
+ * Resolve a usable access token. Tries the cached session first, then a
+ * forced refresh — long CPU-bound work (e.g. audio enhancement) can leave
+ * the in-memory session stale by the time upload starts.
+ */
+async function getFreshAccessToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  let token = data.session?.access_token ?? null;
+  if (!token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    token = refreshed.session?.access_token ?? null;
+  }
+  if (!token) {
+    throw new Error("Not authenticated — cannot upload");
+  }
+  return token;
+}
+
 export async function resumableUpload(
   opts: ResumableUploadOptions,
 ): Promise<ResumableUploadResult> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData.session?.access_token;
-  if (!accessToken) {
-    throw new Error("Not authenticated — cannot upload");
-  }
+  let accessToken = await getFreshAccessToken();
 
   let retries = 0;
   let resumedFromPrevious = false;
@@ -72,10 +86,23 @@ export async function resumableUpload(
       onShouldRetry: (err, retryAttempt) => {
         retries = Math.max(retries, retryAttempt + 1);
         const error = err instanceof Error ? err : new Error(String(err));
-        // Skip retry on auth errors — token won't fix itself.
         const status = (err as { originalResponse?: { getStatus?: () => number } })
           ?.originalResponse?.getStatus?.();
-        if (status === 401 || status === 403) return false;
+        // On auth failure, try once to refresh the token and retry.
+        if (status === 401 || status === 403) {
+          getFreshAccessToken()
+            .then((tok) => {
+              accessToken = tok;
+              upload.options.headers = {
+                ...(upload.options.headers ?? {}),
+                authorization: `Bearer ${tok}`,
+                "x-upsert": "false",
+              };
+            })
+            .catch(() => {});
+          // Allow one retry attempt after auth refresh; subsequent 401s give up.
+          return retryAttempt === 0;
+        }
         opts.onRetry?.(retryAttempt + 1, error);
         return true;
       },

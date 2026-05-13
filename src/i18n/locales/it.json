@@ -147,6 +147,7 @@
     "stepFailed": "Elaborazione fallita",
     "longFileToast": "File lungo — preparazione dell'audio nel browser. Mantieni questa scheda aperta.",
     "uploadPausedRetrying": "Upload in pausa — nuovo tentativo…",
+    "sessionExpired": "La sessione è scaduta durante l’elaborazione. Accedi di nuovo per caricare.",
     "canLeavePage": "Puoi lasciare questa pagina — ti avviseremo quando la trascrizione sarà pronta.",
     "customPromptLabel": "Prompt AI personalizzato",
     "customPromptOptional": "(facoltativo)",

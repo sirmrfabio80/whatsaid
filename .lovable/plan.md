@@ -1,42 +1,32 @@
 ## Problem
 
-The `detect-language` edge function fails with HTTP 400 from AssemblyAI:
+For long files, the flow runs ~2.5 min of in-browser audio enhancement before calling `resumableUpload`. Inside `resumableUpload`, `supabase.auth.getSession()` returns no `access_token`, so it throws `Not authenticated — cannot upload`. The user is in fact logged in (the earlier `jobs` insert succeeded with `user.id`) — the session simply isn't being recovered reliably at that point (likely a stale/expired in-memory session after long CPU work, or storage read returning null in the iframe context).
 
-```
-"speech_models" must be a non-empty list containing one or more of: "universal-3-pro", "universal-2"
-```
-
-We previously switched from the deprecated `speech_model: "nano"` string to `speech_models: ["nano"]`. But on the AssemblyAI **EU** endpoint (`api.eu.assemblyai.com`), the `speech_models` array only accepts `"universal-3-pro"` or `"universal-2"` — `"nano"` is not a valid member there. So every detection submit returns 400, the UI shows "Language detection unavailable", and the flow falls back to auto-detect during full transcription.
-
-This is why the warning appears on **every** recording, regardless of length or content (Noise_party.m4a, Vicki - Financial advisor.m4a, etc).
+We need the upload to use a guaranteed-fresh access token.
 
 ## Fix
 
-### 1. `supabase/functions/detect-language/index.ts`
-Replace the invalid `speech_models: ["nano"]` with a valid EU value. Use:
+Make `resumableUpload` resilient to a missing/stale session, and pass the already-known auth context from the caller as a fallback.
 
-```ts
-speech_models: ["universal-2"],
-```
+### 1. `src/lib/storage-resumable-upload.ts`
+- Replace the single `getSession()` with a small helper that:
+  1. Calls `supabase.auth.getSession()`.
+  2. If `access_token` is missing, calls `supabase.auth.refreshSession()` and retries.
+  3. If still missing, throws the clear `Not authenticated — cannot upload` error (same message, so existing UI copy still applies).
+- Refresh the access token inside `onBeforeRequest` of the TUS upload as well, so each chunk request uses the latest token (defends against token rotation mid-upload on very long files).
 
-`universal-2` is the lightweight option available on EU and is appropriate for a fast 30–90s language-detection pre-pass. (`universal-3-pro` is heavier and slower — overkill for a preview.) We keep `audio_end_at`, `language_detection: true`, and the existing polling/timeout logic.
+### 2. `src/pages/Convert.tsx`
+- Before calling `resumableUpload`, do a defensive `await supabase.auth.getSession()` and, if missing, `await supabase.auth.refreshSession()`. If both fail, surface a friendly toast (`convert.sessionExpired`) and route the user to `/login` instead of throwing the cryptic upload error.
+- No change to enhancement, job-insert, or post-upload logic.
 
-### 2. Verify against the main `transcribe` function
-Quickly read `supabase/functions/transcribe/index.ts` to confirm the full transcription job is not making the same mistake. If it also passes an invalid `speech_models` value on EU, fix it the same way; otherwise leave it alone.
-
-### 3. Redeploy
-Deploy `detect-language` (and `transcribe` if touched) so the next recording exercises the fix.
-
-### 4. No UI / schema / i18n changes needed
-The existing status pill + reason line already surface whatever the function returns — once detection succeeds, the warning will simply stop appearing. The diagnostics column added previously stays as-is.
-
-## Verification
-
-After deploy:
-- Record a short clip → detection should return `status: "success"` with a language code, no warning banner.
-- Check `detect-language` edge logs: no more `[400] speech_models` errors.
+### 3. i18n (en/fr/it)
+- Add `convert.sessionExpired` string: "Your session expired during processing. Please sign in again to upload."
 
 ## Out of scope
+- Audio enhancement pipeline, TUS chunk size, retry policy.
+- Guest flow (this code path is logged-in only).
+- Backend / edge functions.
 
-- No changes to the credit model, upload pipeline, or History deletion confirmation.
-- No changes to the language gate UX.
+## Verification
+- Re-upload the same 40-min `.m4a`. Confirm no "Not authenticated" error and the file uploads after enhancement completes.
+- Sign out mid-enhancement (manual test) → expect the friendly session-expired toast and redirect, not the raw error.
