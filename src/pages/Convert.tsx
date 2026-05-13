@@ -801,6 +801,9 @@ export default function Convert() {
     setStep(null);
     setEnhanceSubstage(null);
     setErrorMessage(null);
+    setUploadAuthFailed(false);
+    setPendingRetryFile(null);
+    setPendingRetryJobId(null);
     setJobId(null);
     setLanguageDetectStatus(null);
     // If a language gate was open, resolve it with auto so any in-flight
@@ -813,6 +816,199 @@ export default function Convert() {
     if (longFileToastRef.current) {
       clearTimeout(longFileToastRef.current);
       longFileToastRef.current = null;
+    }
+  };
+
+  const handleRetryUpload = async () => {
+    const retryFile = pendingRetryFile;
+    const retryJobId = pendingRetryJobId;
+    if (!retryFile || !retryJobId || !user) return;
+
+    setUploadAuthFailed(false);
+    setErrorMessage(null);
+    setStep("uploading");
+    setProcessing(true);
+
+    // Re-validate session before retrying.
+    {
+      const { data: s } = await supabase.auth.getSession();
+      if (!s.session?.access_token) {
+        const { data: r } = await supabase.auth.refreshSession();
+        if (!r.session?.access_token) {
+          toast.error(t("convert.sessionExpired", "Your session expired during processing. Please sign in again to upload."));
+          setUploadAuthFailed(true);
+          setStep("failed");
+          setProcessing(false);
+          navigate("/login");
+          return;
+        }
+      }
+    }
+
+    const safeUploadName = sanitizeStorageFilename(retryFile.name);
+    const filePath = `${user.id}/${retryJobId}/${safeUploadName}`;
+
+    let uploadMeta: {
+      resumable: boolean;
+      chunk_size_mb: number;
+      retries: number;
+      resumed_from_previous: boolean;
+    };
+
+    try {
+      const result = await resumableUpload({
+        bucketName: "temp-audio",
+        objectName: filePath,
+        file: retryFile,
+        jobId: retryJobId,
+        onChunkComplete: () => {
+          void supabase
+            .from("jobs")
+            .update({ updated_at: new Date().toISOString() })
+            .eq("id", retryJobId);
+        },
+        onRetry: (attempt) => {
+          if (attempt === 1) {
+            toast.info(t("convert.uploadPausedRetrying", "Upload paused — retrying…"));
+          }
+        },
+      });
+      uploadMeta = {
+        resumable: true,
+        chunk_size_mb: result.chunkSizeMb,
+        retries: result.retries,
+        resumed_from_previous: result.resumedFromPrevious,
+      };
+    } catch (uploadError) {
+      const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
+      const isAuth = /not authenticated|unauthorized|401|403/i.test(msg);
+      if (isAuth) {
+        setUploadAuthFailed(true);
+        setStep("failed");
+        setProcessing(false);
+        if (longFileToastRef.current) {
+          clearTimeout(longFileToastRef.current);
+          longFileToastRef.current = null;
+        }
+        return;
+      }
+      throw new Error(`Upload failed: ${msg}`);
+    }
+
+    // ── Post-upload continuation: same as handleConvert from this point. ──
+    // We don't have enhancementMeta here (it's local to handleConvert), so
+    // we leave the existing transcription_config untouched — the prior
+    // enhancement metadata is already stored on the job row from the
+    // first attempt.
+    const { error: updateError } = await supabase
+      .from("jobs")
+      .update({
+        processing_stage: "detecting_language",
+        temp_file_path: filePath,
+      } as any)
+      .eq("id", retryJobId);
+
+    if (updateError) {
+      throw new Error(updateError.message || "Could not finalize job");
+    }
+
+    if (longFileToastRef.current) {
+      clearTimeout(longFileToastRef.current);
+      longFileToastRef.current = null;
+    }
+
+    let finalLanguage = language;
+    if (language === "auto") {
+      setStep("detecting");
+      setLanguageDetectStatus(null);
+
+      const MAX_ATTEMPTS = 2;
+      const TIMEOUT_MS = 35_000;
+      let detected: string | null = null;
+      let detectStatus: "success" | "skipped" | "failed" = "failed";
+      let detectReason: string | null = null;
+
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+        let diag: string | null = null;
+        let payload: Record<string, unknown> | null = null;
+        try {
+          const { data, error } = await supabase.functions.invoke("detect-language", {
+            body: { job_id: retryJobId, extend_preview: attempt > 0 },
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          payload = (data ?? {}) as Record<string, unknown>;
+          if (!error && payload.language) {
+            detected = String(payload.language);
+            detectStatus = "success";
+            break;
+          }
+          if (payload?.skipped) {
+            detectStatus = "skipped";
+            detectReason = payload.reason ? String(payload.reason) : null;
+            break;
+          }
+          diag = payload?.diagnostic ? String(payload.diagnostic) : null;
+        } catch (e) {
+          clearTimeout(timeoutId);
+          diag = e instanceof Error ? e.message : String(e);
+        }
+
+        detectStatus = "failed";
+        detectReason = payload?.reason ?? (diag ? "invoke_error" : "unknown");
+        if (attempt === MAX_ATTEMPTS - 1) break;
+      }
+
+      try {
+        await supabase
+          .from("jobs")
+          .update({
+            language_detection_diagnostics: {
+              attempts: MAX_ATTEMPTS,
+              final_status: detectStatus,
+              final_language: detected,
+              reason: detectReason ?? null,
+              client_recorded_at: new Date().toISOString(),
+            },
+          } as any)
+          .eq("id", retryJobId);
+      } catch (diagErr) {
+        console.warn("[convert] could not write detection diagnostics:", diagErr);
+      }
+
+      setLanguageDetectStatus({ status: detectStatus, language: detected, reason: detectReason });
+
+      if (detectStatus === "success") {
+        finalLanguage = await new Promise<string>((resolve) => {
+          setLanguageGate({ detected, resolve });
+        });
+        setLanguageGate(null);
+      } else {
+        finalLanguage = "auto";
+      }
+    }
+
+    await supabase
+      .from("jobs")
+      .update({
+        language_selected: finalLanguage,
+        language_preview_confirmed: true,
+        status: "processing" as const,
+        processing_stage: "queued",
+      } as any)
+      .eq("id", retryJobId);
+
+    setStep("transcribing");
+
+    const { error: fnError } = await supabase.functions.invoke("process-job", {
+      body: { job_id: retryJobId, custom_prompt: customPrompt || null },
+    });
+
+    if (fnError) {
+      console.error("process-job invoke error:", fnError);
     }
   };
 
