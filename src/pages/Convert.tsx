@@ -96,6 +96,9 @@ export default function Convert() {
   const [step, setStep] = useState<ProcessingStep | null>(null);
   const [enhanceSubstage, setEnhanceSubstage] = useState<EnhanceSubstage>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploadAuthFailed, setUploadAuthFailed] = useState(false);
+  const [pendingRetryFile, setPendingRetryFile] = useState<File | null>(null);
+  const [pendingRetryJobId, setPendingRetryJobId] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
