@@ -15,6 +15,18 @@ export interface ResumableUploadOptions {
   onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
   onChunkComplete?: () => void; // fired after each successful chunk (for heartbeat)
   onRetry?: (attempt: number, err: Error) => void;
+  /**
+   * Called once the underlying tus upload is created/started, exposing a
+   * handle the caller can use to abort (e.g. user-cancelled upload).
+   */
+  onUploadCreated?: (handle: { abort: () => Promise<void> | void }) => void;
+}
+
+export class UploadAbortedError extends Error {
+  constructor() {
+    super("Upload aborted by user");
+    this.name = "UploadAbortedError";
+  }
 }
 
 export interface ResumableUploadResult {
@@ -56,6 +68,7 @@ export async function resumableUpload(
 
   let retries = 0;
   let resumedFromPrevious = false;
+  let aborted = false;
 
   return new Promise<ResumableUploadResult>((resolve, reject) => {
     const upload = new tus.Upload(opts.file, {
@@ -80,6 +93,10 @@ export async function resumableUpload(
       },
       chunkSize: CHUNK_SIZE_BYTES,
       onError: (err) => {
+        if (aborted) {
+          reject(new UploadAbortedError());
+          return;
+        }
         const error = err instanceof Error ? err : new Error(String(err));
         reject(error);
       },
@@ -130,6 +147,19 @@ export async function resumableUpload(
     }).catch(() => {
       // findPreviousUploads can fail in private browsing — just start fresh.
       upload.start();
+    });
+
+    opts.onUploadCreated?.({
+      abort: async () => {
+        aborted = true;
+        try {
+          // shouldTerminate=true also DELETEs the partial upload on the server
+          await upload.abort(true);
+        } catch {
+          /* ignore — we'll reject via onError or directly below */
+        }
+        reject(new UploadAbortedError());
+      },
     });
   });
 }

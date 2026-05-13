@@ -29,7 +29,7 @@ import { Link } from "react-router-dom";
 import type { AudioCreationDateResult } from "@/lib/audio-creation-date";
 import type { AudioChannelAnalysis } from "@/lib/audio-channels";
 import { requestNotificationPermission, isBrowserNotificationsEnabled } from "@/lib/browser-notifications";
-import { resumableUpload } from "@/lib/storage-resumable-upload";
+import { resumableUpload, UploadAbortedError } from "@/lib/storage-resumable-upload";
 import { useJobHeartbeat } from "@/hooks/use-job-heartbeat";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -105,6 +105,8 @@ export default function Convert() {
   const [jobId, setJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const uploadHandleRef = useRef<{ abort: () => Promise<void> | void } | null>(null);
+  const [cancelingUpload, setCancelingUpload] = useState(false);
 
   const [consentChecked, setConsentChecked] = useState(false);
   const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
@@ -533,6 +535,9 @@ export default function Convert() {
           objectName: filePath,
           file: uploadFile,
           jobId: newJobId,
+          onUploadCreated: (handle) => {
+            uploadHandleRef.current = handle;
+          },
           onProgress: (uploaded, total) => {
             setUploadProgress({ uploaded, total });
             if (uploaded >= total) setUploadRetrying(false);
@@ -552,6 +557,7 @@ export default function Convert() {
             }
           },
         });
+        uploadHandleRef.current = null;
         uploadMeta = {
           resumable: true,
           chunk_size_mb: result.chunkSizeMb,
@@ -559,6 +565,11 @@ export default function Convert() {
           resumed_from_previous: result.resumedFromPrevious,
         };
       } catch (uploadError) {
+        uploadHandleRef.current = null;
+        if (uploadError instanceof UploadAbortedError) {
+          // User cancelled — job is already marked canceled by the cancel handler.
+          return;
+        }
         const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
         const isAuth = /not authenticated|unauthorized|401|403/i.test(msg);
         if (isAuth) {
@@ -801,6 +812,39 @@ export default function Convert() {
     }
   };
 
+  const handleCancelUpload = async () => {
+    const handle = uploadHandleRef.current;
+    const currentJobId = jobId;
+    if (!handle || cancelingUpload) return;
+    setCancelingUpload(true);
+    try {
+      // Mark the job canceled first so the UI/history reflect it even if
+      // the abort request is slow.
+      if (currentJobId) {
+        await supabase
+          .from("jobs")
+          .update({
+            status: "canceled" as never,
+            processing_stage: null,
+            error_message: "Upload canceled by user",
+          } as never)
+          .eq("id", currentJobId);
+      }
+      await handle.abort();
+    } catch {
+      /* ignore */
+    } finally {
+      uploadHandleRef.current = null;
+      if (longFileToastRef.current) {
+        clearTimeout(longFileToastRef.current);
+        longFileToastRef.current = null;
+      }
+      toast.info(t("convert.uploadCanceledToast", "Upload canceled."));
+      handleReset();
+      setCancelingUpload(false);
+    }
+  };
+
   const handleReset = () => {
     setFile(null);
     setDuration(0);
@@ -878,6 +922,9 @@ export default function Convert() {
         objectName: filePath,
         file: retryFile,
         jobId: retryJobId,
+        onUploadCreated: (handle) => {
+          uploadHandleRef.current = handle;
+        },
         onProgress: (uploaded, total) => {
           setUploadProgress({ uploaded, total });
           if (uploaded >= total) setUploadRetrying(false);
@@ -897,6 +944,7 @@ export default function Convert() {
           }
         },
       });
+      uploadHandleRef.current = null;
       uploadMeta = {
         resumable: true,
         chunk_size_mb: result.chunkSizeMb,
@@ -904,6 +952,10 @@ export default function Convert() {
         resumed_from_previous: result.resumedFromPrevious,
       };
     } catch (uploadError) {
+      uploadHandleRef.current = null;
+      if (uploadError instanceof UploadAbortedError) {
+        return;
+      }
       const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
       const isAuth = /not authenticated|unauthorized|401|403/i.test(msg);
       if (isAuth) {
@@ -1190,6 +1242,19 @@ export default function Convert() {
                       );
                     })}
                   </div>
+
+                  {step === "uploading" && !uploadAuthFailed && (
+                    <Button
+                      variant="outline"
+                      className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={handleCancelUpload}
+                      disabled={cancelingUpload}
+                    >
+                      {cancelingUpload
+                        ? t("convert.cancelingUpload", "Canceling…")
+                        : t("convert.cancelUpload", "Cancel upload")}
+                    </Button>
+                  )}
 
                   {languageDetectStatus && step !== "failed" && step !== "completed" && (
                     <div

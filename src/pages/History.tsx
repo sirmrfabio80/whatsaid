@@ -131,6 +131,7 @@ export default function History() {
       case "completed": return "bg-success/10 text-success border-success/20";
       case "processing": return "bg-warning/10 text-warning border-warning/20";
       case "failed": return "bg-destructive/10 text-destructive border-destructive/20";
+      case "canceled": return "bg-muted text-muted-foreground border-border";
       default: return "bg-muted text-muted-foreground";
     }
   };
