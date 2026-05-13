@@ -565,6 +565,11 @@ export default function Convert() {
           resumed_from_previous: result.resumedFromPrevious,
         };
       } catch (uploadError) {
+        uploadHandleRef.current = null;
+        if (uploadError instanceof UploadAbortedError) {
+          // User cancelled — job is already marked canceled by the cancel handler.
+          return;
+        }
         const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
         const isAuth = /not authenticated|unauthorized|401|403/i.test(msg);
         if (isAuth) {
