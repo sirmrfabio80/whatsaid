@@ -535,6 +535,9 @@ export default function Convert() {
           objectName: filePath,
           file: uploadFile,
           jobId: newJobId,
+          onUploadCreated: (handle) => {
+            uploadHandleRef.current = handle;
+          },
           onProgress: (uploaded, total) => {
             setUploadProgress({ uploaded, total });
             if (uploaded >= total) setUploadRetrying(false);
@@ -554,6 +557,7 @@ export default function Convert() {
             }
           },
         });
+        uploadHandleRef.current = null;
         uploadMeta = {
           resumable: true,
           chunk_size_mb: result.chunkSizeMb,
