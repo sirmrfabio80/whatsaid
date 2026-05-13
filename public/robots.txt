@@ -1,52 +1,136 @@
 User-agent: Googlebot
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: Bingbot
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: Twitterbot
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: facebookexternalhit
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 # AI crawlers — explicit opt-in for AI search and answer engines.
-# Each block mirrors the wildcard policy: allow public content, block /admin.
+# Each block mirrors the wildcard policy: allow public content, block auth and admin paths.
 
 User-agent: GPTBot
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: PerplexityBot
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: ClaudeBot
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: Google-Extended
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: Applebot-Extended
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-password
+Disallow: /profile
+Disallow: /settings
+Disallow: /notifications
 
 Sitemap: https://whatsaid.app/sitemap.xml
