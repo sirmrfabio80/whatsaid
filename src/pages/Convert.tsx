@@ -812,6 +812,39 @@ export default function Convert() {
     }
   };
 
+  const handleCancelUpload = async () => {
+    const handle = uploadHandleRef.current;
+    const currentJobId = jobId;
+    if (!handle || cancelingUpload) return;
+    setCancelingUpload(true);
+    try {
+      // Mark the job canceled first so the UI/history reflect it even if
+      // the abort request is slow.
+      if (currentJobId) {
+        await supabase
+          .from("jobs")
+          .update({
+            status: "canceled" as never,
+            processing_stage: null,
+            error_message: "Upload canceled by user",
+          } as never)
+          .eq("id", currentJobId);
+      }
+      await handle.abort();
+    } catch {
+      /* ignore */
+    } finally {
+      uploadHandleRef.current = null;
+      if (longFileToastRef.current) {
+        clearTimeout(longFileToastRef.current);
+        longFileToastRef.current = null;
+      }
+      toast.info(t("convert.uploadCanceledToast", "Upload canceled."));
+      handleReset();
+      setCancelingUpload(false);
+    }
+  };
+
   const handleReset = () => {
     setFile(null);
     setDuration(0);
