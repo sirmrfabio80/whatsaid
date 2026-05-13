@@ -68,6 +68,7 @@ export async function resumableUpload(
 
   let retries = 0;
   let resumedFromPrevious = false;
+  let aborted = false;
 
   return new Promise<ResumableUploadResult>((resolve, reject) => {
     const upload = new tus.Upload(opts.file, {
