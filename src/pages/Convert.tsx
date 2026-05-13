@@ -22,7 +22,7 @@ import { sanitizeStorageFilename } from "@/lib/sanitize-filename";
 import { parseTemplateConfig, DEFAULT_TEMPLATE_CONFIG, type TranscribeTemplateConfig } from "@/lib/transcribe-template";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard
+  ArrowRight, FileAudio, Clock, CheckCircle2, AlertCircle, FileText, Info, CreditCard, RefreshCw
 } from "lucide-react";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Link } from "react-router-dom";
