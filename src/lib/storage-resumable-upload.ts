@@ -15,6 +15,18 @@ export interface ResumableUploadOptions {
   onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
   onChunkComplete?: () => void; // fired after each successful chunk (for heartbeat)
   onRetry?: (attempt: number, err: Error) => void;
+  /**
+   * Called once the underlying tus upload is created/started, exposing a
+   * handle the caller can use to abort (e.g. user-cancelled upload).
+   */
+  onUploadCreated?: (handle: { abort: () => Promise<void> | void }) => void;
+}
+
+export class UploadAbortedError extends Error {
+  constructor() {
+    super("Upload aborted by user");
+    this.name = "UploadAbortedError";
+  }
 }
 
 export interface ResumableUploadResult {
