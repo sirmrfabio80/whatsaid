@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { AiGatewayError, callAiGateway } from "../_shared/ai-gateway.ts";
 import { createServiceClient, requireAuth, type SupabaseClient } from "../_shared/supabase.ts";
+import { enforceQuota } from "../_shared/quota.ts";
 import {
   buildSummarySystemPrompt,
   buildSummaryUserPrompt,
@@ -372,6 +373,13 @@ Deno.serve(async (req) => {
 
     const supabase = createServiceClient();
 
+    // SECURITY: require auth at the top. Previously this was only enforced
+    // when extra_job_ids was supplied, leaving the AI gateway open to any
+    // caller with a valid job_id (high spend risk).
+    const auth = await requireAuth(req.headers.get("Authorization"));
+    if (!auth.ok) return auth.response;
+    const callerId = auth.userId;
+
     const body = await req.json();
     const { job_id, custom_prompt, output_type, target_language } = body;
 
@@ -380,6 +388,46 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Ownership check — service-role client bypasses RLS, so verify here.
+    const { data: ownerRow } = await supabase
+      .from("jobs")
+      .select("user_id")
+      .eq("id", job_id)
+      .maybeSingle();
+    if (!ownerRow || ownerRow.user_id !== callerId) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Quotas: cap regenerations per user/day and per job lifetime.
+    const action = output_type === "translate_all"
+      ? "regenerate_translate_all"
+      : output_type === "summary_from_edit"
+      ? "regenerate_summary_from_edit"
+      : output_type === "summary"
+      ? "regenerate_summary"
+      : "regenerate_custom";
+
+    const userBlocked = await enforceQuota(supabase, {
+      userId: callerId,
+      action,
+      scope: "user_day",
+      window: "1 day",
+      limit: 100,
+      jobId: job_id,
+    });
+    if (userBlocked) return userBlocked;
+
+    const jobBlocked = await enforceQuota(supabase, {
+      userId: callerId,
+      action,
+      scope: "job_lifetime",
+      limit: 20,
+      jobId: job_id,
+    });
+    if (jobBlocked) return jobBlocked;
 
     // ── translate_all ──
     if (output_type === "translate_all") {
@@ -426,21 +474,7 @@ Deno.serve(async (req) => {
         .slice(0, MAX_EXTRA_SOURCES);
 
       if (requested.length > 0) {
-        const auth = await requireAuth(req.headers.get("Authorization"));
-        if (!auth.ok) return auth.response;
-        const callerId = auth.userId;
-
-        // Verify the caller owns the primary job (defense in depth — service role bypasses RLS).
-        const { data: primaryOwner } = await supabase
-          .from("jobs")
-          .select("user_id")
-          .eq("id", job_id)
-          .maybeSingle();
-        if (!primaryOwner || primaryOwner.user_id !== callerId) {
-          return new Response(JSON.stringify({ error: "Forbidden" }), {
-            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+        // Auth + primary ownership already enforced at the top of the handler.
 
         // Validate ownership + completion for each extra. Drop unauthorized/invalid silently.
         const { data: ownedRows } = await supabase

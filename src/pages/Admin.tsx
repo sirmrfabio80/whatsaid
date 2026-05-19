@@ -6,6 +6,7 @@ import WatchdogTab from "@/components/admin/WatchdogTab";
 import FaqFeedbackTab from "@/components/admin/FaqFeedbackTab";
 import OthersTab from "@/components/admin/OthersTab";
 import DiagnosticsTab from "@/components/admin/DiagnosticsTab";
+import UsageTab from "@/components/admin/UsageTab";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Admin() {
@@ -29,6 +30,7 @@ export default function Admin() {
             <TabsTrigger value="watchdog">Watchdog</TabsTrigger>
             <TabsTrigger value="faq-feedback">FAQ feedback</TabsTrigger>
             <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+            <TabsTrigger value="usage">Usage</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
@@ -45,6 +47,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="diagnostics" className="space-y-6">
             <DiagnosticsTab />
+          </TabsContent>
+          <TabsContent value="usage" className="space-y-6">
+            <UsageTab />
           </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />

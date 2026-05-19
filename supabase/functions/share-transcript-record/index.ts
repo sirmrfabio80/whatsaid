@@ -1,5 +1,6 @@
 import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/constants.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { enforceQuota } from '../_shared/quota.ts'
 import { createServiceClient, requireAuth } from '../_shared/supabase.ts'
 
 function escapeHtml(str: string): string {
@@ -68,6 +69,29 @@ Deno.serve(async (req) => {
     }
 
     const serviceClient = createServiceClient()
+
+    // Same quotas as share-transcript: per-recipient-per-job-per-day = 3,
+    // per-user-per-day = 30. share_transcript_email is the shared bucket so
+    // a user can't dodge the cap by alternating between the two endpoints.
+    const recipientBlocked = await enforceQuota(serviceClient, {
+      userId: user.id,
+      action: 'share_transcript_email',
+      scope: 'recipient_job_day',
+      window: '1 day',
+      limit: 3,
+      jobId: job_id,
+      scopeKey: recipient_email.toLowerCase().trim(),
+    })
+    if (recipientBlocked) return recipientBlocked
+    const userBlocked = await enforceQuota(serviceClient, {
+      userId: user.id,
+      action: 'share_transcript_email',
+      scope: 'user_day',
+      window: '1 day',
+      limit: 30,
+    })
+    if (userBlocked) return userBlocked
+
 
     const { data: senderProfile } = await serviceClient
       .from('profiles')

@@ -1,5 +1,6 @@
 import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { enforceQuota } from "../_shared/quota.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
 
 Deno.serve(async (req) => {
@@ -40,6 +41,18 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Quota: 50 tag generations per user per day. Auto-tagging normally runs
+    // once per job; this cap blocks runaway loops without affecting normal use.
+    const blocked = await enforceQuota(supabase, {
+      userId: user.id,
+      action: "generate_tags",
+      scope: "user_day",
+      window: "1 day",
+      limit: 50,
+      jobId: job_id,
+    });
+    if (blocked) return blocked;
 
     const result = await autoTag(supabase, job_id, LOVABLE_API_KEY);
 
