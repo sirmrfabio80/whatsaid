@@ -79,6 +79,18 @@ serve(async (req) => {
     let aiTranslations: Record<string, string> = {};
 
     if (missingOriginals.length > 0) {
+      // Quota only counts cache-miss calls (actual AI gateway hits).
+      // 200 calls/user/day is generous but blocks pathological loops.
+      const blocked = await enforceQuota(supabase, {
+        userId,
+        action: "translate_tags",
+        scope: "user_day",
+        window: "1 day",
+        limit: 200,
+        metadata: { missing: missingOriginals.length, target_lang },
+      });
+      if (blocked) return blocked;
+
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) {
         throw new Error("LOVABLE_API_KEY is not configured");
