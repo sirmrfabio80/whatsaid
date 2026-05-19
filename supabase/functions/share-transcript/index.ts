@@ -196,6 +196,28 @@ Deno.serve(async (req) => {
 
     const serviceClient = createServiceClient()
 
+    // Quotas: prevent email-bombing a single recipient and cap per-user daily
+    // share volume. These run before any heavy work so abuse is cheap to reject.
+    const recipientBlocked = await enforceQuota(serviceClient, {
+      userId: user.id,
+      action: 'share_transcript_email',
+      scope: 'recipient_job_day',
+      window: '1 day',
+      limit: 3,
+      jobId: job_id,
+      scopeKey: recipient_email.toLowerCase().trim(),
+    })
+    if (recipientBlocked) return recipientBlocked
+    const userBlocked = await enforceQuota(serviceClient, {
+      userId: user.id,
+      action: 'share_transcript_email',
+      scope: 'user_day',
+      window: '1 day',
+      limit: 30,
+    })
+    if (userBlocked) return userBlocked
+
+
     const { data: senderProfile } = await serviceClient
       .from('profiles')
       .select('display_name, email')
