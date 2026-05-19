@@ -1009,6 +1009,42 @@ export type Database = {
         }
         Relationships: []
       }
+      usage_events: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          job_id: string | null
+          metadata: Json | null
+          scope: string
+          scope_key: string | null
+          units: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          metadata?: Json | null
+          scope: string
+          scope_key?: string | null
+          units?: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          metadata?: Json | null
+          scope?: string
+          scope_key?: string | null
+          units?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -1040,6 +1076,20 @@ export type Database = {
           p_user_id: string
         }
         Returns: number
+      }
+      check_and_record_usage: {
+        Args: {
+          p_action: string
+          p_job_id?: string
+          p_limit?: number
+          p_metadata?: Json
+          p_scope: string
+          p_scope_key?: string
+          p_units?: number
+          p_user_id: string
+          p_window?: string
+        }
+        Returns: Json
       }
       deduct_credits: {
         Args: {

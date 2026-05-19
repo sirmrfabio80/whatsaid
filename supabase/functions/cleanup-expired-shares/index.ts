@@ -471,9 +471,58 @@ Deno.serve(async (req) => {
       }
     }
 
+    // -------------------------------------------------------------------
+    // 4. TTL prune for cleanup_logs and finished async_jobs (30 days).
+    //    Keeps the largest housekeeping tables from growing unbounded.
+    //    Counts surface in cleanup_logs.metadata for observability.
+    // -------------------------------------------------------------------
+    const ttlCutoff = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    let cleanup_logs_pruned = 0;
+    let async_jobs_pruned = 0;
+
+    if (!dryRun) {
+      const { data: oldLogs, error: oldLogsErr } = await supabase
+        .from("cleanup_logs")
+        .delete()
+        .lt("created_at", ttlCutoff)
+        .select("id");
+      if (oldLogsErr) {
+        summary.errors.push(`prune cleanup_logs: ${oldLogsErr.message}`);
+      } else {
+        cleanup_logs_pruned = oldLogs?.length ?? 0;
+      }
+
+      const { data: oldAsync, error: oldAsyncErr } = await supabase
+        .from("async_jobs")
+        .delete()
+        .in("status", ["completed", "failed"])
+        .lt("updated_at", ttlCutoff)
+        .select("id");
+      if (oldAsyncErr) {
+        summary.errors.push(`prune async_jobs: ${oldAsyncErr.message}`);
+      } else {
+        async_jobs_pruned = oldAsync?.length ?? 0;
+      }
+
+      if (logId && (cleanup_logs_pruned > 0 || async_jobs_pruned > 0)) {
+        try {
+          await supabase
+            .from("cleanup_logs")
+            .update({
+              metadata: { cleanup_logs_pruned, async_jobs_pruned },
+            })
+            .eq("id", logId);
+        } catch (e) {
+          console.warn(`[${JOB_NAME}] write ttl metadata failed:`, e);
+        }
+      }
+    }
+
     console.log(
       `[${JOB_NAME}] done${dryRun ? " (dry-run)" : ""}`,
-      JSON.stringify(summary),
+      JSON.stringify({ ...summary, cleanup_logs_pruned, async_jobs_pruned }),
     );
     await finalize("completed");
 
@@ -483,6 +532,8 @@ Deno.serve(async (req) => {
         dry_run: dryRun,
         config,
         ...summary,
+        cleanup_logs_pruned,
+        async_jobs_pruned,
         ...(dryRun ? { would_delete: dryReport } : {}),
       }),
       {
