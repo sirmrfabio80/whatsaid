@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
+import { requireAuth } from "../_shared/supabase.ts";
 import {
   buildSpeakerSuggestSystemPrompt,
   buildSpeakerSuggestUserPrompt,
@@ -108,6 +109,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const auth = await requireAuth(req.headers.get("Authorization"));
+  if (!auth.ok) return auth.response;
 
   try {
     const {
