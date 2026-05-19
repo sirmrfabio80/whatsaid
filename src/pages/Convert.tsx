@@ -350,8 +350,6 @@ export default function Convert() {
       toast.info(t("convert.longFileToast"));
     }, 90_000);
 
-    const newJobId = crypto.randomUUID();
-
     // Derive channel count from the analysis already produced by AudioUploader.
     // No redundant decode probe here — that was the main thread freeze for
     // long files. If both header and decoded values are missing, default to
@@ -368,34 +366,40 @@ export default function Convert() {
     const recordedAt = effFileCreationDate ? effFileCreationDate.isoString : fileLastModifiedIso;
     const recordedAtSource = effFileCreationDate ? effFileCreationDate.source : "file_last_modified";
 
+    let newJobId: string;
     try {
-      // ── 1. Insert the jobs row IMMEDIATELY so the row exists from second one. ──
-      // We use status="uploading" + processing_stage="preparing" so the existing
-      // poller (which we widened) can reflect early phases. Watchdog only acts
-      // on status="processing", so this row is safe from premature stale-kill.
-      const { error: insertError } = await supabase
-        .from("jobs")
-        .insert({
-          id: newJobId,
-          user_id: user.id,
+      // ── 1. Server-authoritative job creation. The create-job edge function
+      // validates inputs, re-derives credits_charged from duration via the
+      // shared pricing module, and inserts the row as service role. A BEFORE
+      // UPDATE trigger then locks billing columns from client edits.
+      const { data: created, error: insertError } = await supabase.functions.invoke<{
+        job_id: string;
+        credits_charged: number;
+      }>("create-job", {
+        body: {
           file_name: effFile.name,
           file_size_bytes: effFile.size,
           duration_seconds: Math.round(duration),
           language_selected: language,
-          credits_charged: credits,
-          status: "uploading" as const,
-          processing_stage: "preparing",
+          audio_channels: resolvedCh ?? null,
           recorded_at: recordedAt,
           recorded_at_source: recordedAtSource,
           metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
           metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
           metadata_file_lastmodified: fileLastModifiedIso,
           metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
-          audio_channels: resolvedCh ?? null,
-        } as any);
+        },
+      });
 
-      if (insertError) {
-        throw new Error(insertError.message || "Could not create job");
+      if (insertError || !created?.job_id) {
+        throw new Error(insertError?.message || "Could not create job");
+      }
+      newJobId = created.job_id;
+      if (created.credits_charged !== credits) {
+        // Soft-warn: client UX showed a different cost. Server figure wins.
+        console.warn(
+          `[convert] credits mismatch (client=${credits} server=${created.credits_charged})`,
+        );
       }
 
       // Start polling immediately so the UI is honest from the very first second.
