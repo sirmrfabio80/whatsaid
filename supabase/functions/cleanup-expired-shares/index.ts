@@ -532,6 +532,8 @@ Deno.serve(async (req) => {
         dry_run: dryRun,
         config,
         ...summary,
+        cleanup_logs_pruned,
+        async_jobs_pruned,
         ...(dryRun ? { would_delete: dryReport } : {}),
       }),
       {
