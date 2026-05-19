@@ -1,5 +1,6 @@
 import { autoTag } from "../_shared/auto-tag.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { enforceQuota } from "../_shared/quota.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
 
 Deno.serve(async (req) => {
