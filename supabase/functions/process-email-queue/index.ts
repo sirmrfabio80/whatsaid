@@ -1,6 +1,5 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
-import { createClient, type SupabaseClient } from '../_shared/supabase.ts'
-import { requireEnvs } from '../_shared/env.ts'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -18,8 +17,8 @@ function isRateLimited(error: unknown): boolean {
   return error instanceof Error && error.message.includes('429')
 }
 
-// Check if an error is a forbidden (403) response, which means emails are
-// disabled for this project. Retrying won't help — move straight to DLQ.
+// Check if an error is a forbidden (403) response. Retrying won't help.
+// Move straight to DLQ.
 function isForbidden(error: unknown): boolean {
   if (error && typeof error === 'object' && 'status' in error) {
     return (error as { status: number }).status === 403
@@ -80,20 +79,12 @@ async function moveToDlq(
 }
 
 Deno.serve(async (req) => {
-  let apiKey: string
-  let supabaseUrl: string
-  let supabaseServiceKey: string
-  try {
-    const env = requireEnvs([
-      'LOVABLE_API_KEY',
-      'SUPABASE_URL',
-      'SUPABASE_SERVICE_ROLE_KEY',
-    ] as const)
-    apiKey = env.LOVABLE_API_KEY
-    supabaseUrl = env.SUPABASE_URL
-    supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY
-  } catch (err) {
-    console.error('[process-email-queue]', (err as Error).message)
+  const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+  if (!apiKey || !supabaseUrl || !supabaseServiceKey) {
+    console.error('Missing required environment variables')
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -333,12 +324,12 @@ Deno.serve(async (req) => {
           )
         }
 
-        // 403 means emails are disabled for this project — retrying won't help.
-        // Move straight to DLQ and stop processing the rest of the batch.
+        // 403s are permanent configuration or authorization failures for this
+        // message, so move straight to DLQ and stop processing the rest of the batch.
         if (isForbidden(error)) {
-          await moveToDlq(supabase, queue, msg, 'Emails disabled for this project')
+          await moveToDlq(supabase, queue, msg, errorMsg.slice(0, 1000))
           return new Response(
-            JSON.stringify({ processed: totalProcessed, stopped: 'emails_disabled' }),
+            JSON.stringify({ processed: totalProcessed, stopped: 'forbidden' }),
             { headers: { 'Content-Type': 'application/json' } }
           )
         }
