@@ -226,6 +226,37 @@ Deno.serve(async (req) => {
       `[paddle-webhook] Added ${credits} credits to user ${userId}. New balance: ${newBalance}`
     );
 
+    // Look up buyer email for admin notification (best-effort)
+    let buyerEmail: string | null = data?.customer?.email ?? null;
+    if (!buyerEmail) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("user_id", userId)
+        .maybeSingle();
+      buyerEmail = profile?.email ?? null;
+    }
+
+    const totals = data?.details?.totals ?? data?.totals ?? {};
+    const amount =
+      typeof totals?.grand_total === "string"
+        ? (Number(totals.grand_total) / 100).toFixed(2)
+        : undefined;
+    const currency = data?.currency_code ?? totals?.currency_code;
+
+    // Fire-and-forget admin notification
+    notifyAdminOfPurchase({
+      userEmail: buyerEmail,
+      userId,
+      credits,
+      amount,
+      currency,
+      transactionId: paddleTransactionId,
+      newBalance: typeof newBalance === "number" ? newBalance : undefined,
+    }).catch((e) =>
+      console.error("[paddle-webhook] admin notify dispatch failed", e)
+    );
+
     return new Response(
       JSON.stringify({ success: true, credits, newBalance }),
       {
