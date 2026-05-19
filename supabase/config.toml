@@ -7,8 +7,6 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = true
   [functions.eval-transcribe]
     verify_jwt = false
-  [functions.paddle-webhook]
-    verify_jwt = false
   [functions.send-transactional-email]
     verify_jwt = true
   [functions.preview-transactional-email]
