@@ -42,6 +42,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Quota: 50 tag generations per user per day. Auto-tagging normally runs
+    // once per job; this cap blocks runaway loops without affecting normal use.
+    const blocked = await enforceQuota(supabase, {
+      userId: user.id,
+      action: "generate_tags",
+      scope: "user_day",
+      window: "1 day",
+      limit: 50,
+      jobId: job_id,
+    });
+    if (blocked) return blocked;
+
     const result = await autoTag(supabase, job_id, LOVABLE_API_KEY);
 
     return new Response(JSON.stringify(result), {
