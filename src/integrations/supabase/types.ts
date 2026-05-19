@@ -1115,13 +1115,6 @@ export type Database = {
           review_count: number
         }[]
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
       move_to_dlq: {
         Args: {
           dlq_name: string
