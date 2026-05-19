@@ -86,10 +86,12 @@ export async function requireAdmin(
 
   const { userId } = auth;
   const adminClient = createServiceClient();
-  const { data: isAdmin } = await adminClient.rpc("has_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
+  const { data: isAdmin } = await adminClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
   if (!isAdmin) {
     const { corsHeaders } = await import("./cors.ts");
     return {
