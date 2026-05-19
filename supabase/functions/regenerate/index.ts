@@ -474,21 +474,7 @@ Deno.serve(async (req) => {
         .slice(0, MAX_EXTRA_SOURCES);
 
       if (requested.length > 0) {
-        const auth = await requireAuth(req.headers.get("Authorization"));
-        if (!auth.ok) return auth.response;
-        const callerId = auth.userId;
-
-        // Verify the caller owns the primary job (defense in depth — service role bypasses RLS).
-        const { data: primaryOwner } = await supabase
-          .from("jobs")
-          .select("user_id")
-          .eq("id", job_id)
-          .maybeSingle();
-        if (!primaryOwner || primaryOwner.user_id !== callerId) {
-          return new Response(JSON.stringify({ error: "Forbidden" }), {
-            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+        // Auth + primary ownership already enforced at the top of the handler.
 
         // Validate ownership + completion for each extra. Drop unauthorized/invalid silently.
         const { data: ownedRows } = await supabase
