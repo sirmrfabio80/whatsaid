@@ -9,6 +9,35 @@ import { MagicLinkEmail } from '../_shared/email-templates/magic-link.tsx'
 import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
+import { ADMIN_NOTIFY_EMAIL } from '../_shared/constants.ts'
+
+async function notifyAdminOfSignup(userEmail: string, userId?: string) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!supabaseUrl || !serviceKey) return
+  const res = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${serviceKey}`,
+      apikey: serviceKey,
+    },
+    body: JSON.stringify({
+      templateName: 'admin-new-signup',
+      recipientEmail: ADMIN_NOTIFY_EMAIL,
+      idempotencyKey: `admin-signup-${userId ?? userEmail}`,
+      templateData: {
+        userEmail,
+        userId,
+        signupAt: new Date().toISOString(),
+      },
+    }),
+  })
+  if (!res.ok) {
+    console.error('[auth-email-hook] admin notify non-ok', res.status, await res.text())
+  }
+}
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -207,6 +236,13 @@ async function handleWebhook(req: Request): Promise<Response> {
   // payload.type is the hook event type ("auth")
   const emailType = payload.data.action_type
   console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+
+  // Fire-and-forget admin notification on new signup
+  if (emailType === 'signup') {
+    notifyAdminOfSignup(payload.data.email, payload.data.user_id ?? payload.data.user?.id).catch(
+      (err) => console.error('[auth-email-hook] admin signup notify failed', err)
+    )
+  }
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {

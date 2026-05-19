@@ -1,5 +1,57 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { ADMIN_NOTIFY_EMAIL } from "../_shared/constants.ts";
+
+async function notifyAdminOfPurchase(input: {
+  userEmail: string | null;
+  userId: string;
+  credits: number;
+  amount?: string;
+  currency?: string;
+  transactionId: string;
+  newBalance?: number;
+}) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return;
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/functions/v1/send-transactional-email`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+        },
+        body: JSON.stringify({
+          templateName: "admin-credit-purchase",
+          recipientEmail: ADMIN_NOTIFY_EMAIL,
+          idempotencyKey: `admin-purchase-${input.transactionId}`,
+          templateData: {
+            userEmail: input.userEmail ?? "(unknown)",
+            userId: input.userId,
+            credits: input.credits,
+            amount: input.amount,
+            currency: input.currency,
+            transactionId: input.transactionId,
+            newBalance: input.newBalance,
+            purchasedAt: new Date().toISOString(),
+          },
+        }),
+      }
+    );
+    if (!res.ok) {
+      console.error(
+        "[paddle-webhook] admin purchase notify non-ok",
+        res.status,
+        await res.text()
+      );
+    }
+  } catch (err) {
+    console.error("[paddle-webhook] admin purchase notify error", err);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Paddle signature verification (Paddle Billing / v2 webhooks)
@@ -172,6 +224,37 @@ Deno.serve(async (req) => {
 
     console.log(
       `[paddle-webhook] Added ${credits} credits to user ${userId}. New balance: ${newBalance}`
+    );
+
+    // Look up buyer email for admin notification (best-effort)
+    let buyerEmail: string | null = data?.customer?.email ?? null;
+    if (!buyerEmail) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("user_id", userId)
+        .maybeSingle();
+      buyerEmail = profile?.email ?? null;
+    }
+
+    const totals = data?.details?.totals ?? data?.totals ?? {};
+    const amount =
+      typeof totals?.grand_total === "string"
+        ? (Number(totals.grand_total) / 100).toFixed(2)
+        : undefined;
+    const currency = data?.currency_code ?? totals?.currency_code;
+
+    // Fire-and-forget admin notification
+    notifyAdminOfPurchase({
+      userEmail: buyerEmail,
+      userId,
+      credits,
+      amount,
+      currency,
+      transactionId: paddleTransactionId,
+      newBalance: typeof newBalance === "number" ? newBalance : undefined,
+    }).catch((e) =>
+      console.error("[paddle-webhook] admin notify dispatch failed", e)
     );
 
     return new Response(
