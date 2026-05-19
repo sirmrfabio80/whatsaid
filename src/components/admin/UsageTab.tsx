@@ -127,7 +127,7 @@ export default function UsageTab() {
         </CardHeader>
         <CardContent className="space-y-6">
           {loading ? (
-            <LoadingState label="Loading usage events…" />
+            <LoadingState rows={3} />
           ) : error ? (
             <EmptyState
               icon={BarChart3}
