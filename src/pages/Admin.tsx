@@ -30,6 +30,7 @@ export default function Admin() {
             <TabsTrigger value="watchdog">Watchdog</TabsTrigger>
             <TabsTrigger value="faq-feedback">FAQ feedback</TabsTrigger>
             <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+            <TabsTrigger value="usage">Usage</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
@@ -46,6 +47,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="diagnostics" className="space-y-6">
             <DiagnosticsTab />
+          </TabsContent>
+          <TabsContent value="usage" className="space-y-6">
+            <UsageTab />
           </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
