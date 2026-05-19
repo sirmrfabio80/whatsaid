@@ -6,6 +6,7 @@ import WatchdogTab from "@/components/admin/WatchdogTab";
 import FaqFeedbackTab from "@/components/admin/FaqFeedbackTab";
 import OthersTab from "@/components/admin/OthersTab";
 import DiagnosticsTab from "@/components/admin/DiagnosticsTab";
+import UsageTab from "@/components/admin/UsageTab";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Admin() {
