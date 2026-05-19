@@ -50,6 +50,8 @@ function isPermissionDenied(error: unknown): boolean {
 Deno.test({
   name: "anon client cannot execute locked SECURITY DEFINER helpers",
   ignore: !HAS_ANON,
+  sanitizeOps: false,
+  sanitizeResources: false,
   fn: async () => {
     const anon = createClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
     for (const { name, args } of LOCKED_RPCS) {
@@ -67,6 +69,8 @@ Deno.test({
 Deno.test({
   name: "anon client cannot call private.has_role via REST",
   ignore: !HAS_ANON,
+  sanitizeOps: false,
+  sanitizeResources: false,
   fn: async () => {
     const anon = createClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
     // public.has_role was dropped; private schema isn't exposed by PostgREST.
@@ -84,6 +88,8 @@ Deno.test({
 Deno.test({
   name: "authenticated client cannot execute locked SECURITY DEFINER helpers",
   ignore: !(HAS_ANON && HAS_SERVICE),
+  sanitizeOps: false,
+  sanitizeResources: false,
   fn: async () => {
     const admin = createClient(SUPABASE_URL!, SERVICE_KEY!, { auth: { persistSession: false } });
     const email = `sec-rpc-${crypto.randomUUID()}@example.com`;
@@ -124,6 +130,8 @@ Deno.test({
 Deno.test({
   name: "service_role can execute locked SECURITY DEFINER helpers",
   ignore: !HAS_SERVICE,
+  sanitizeOps: false,
+  sanitizeResources: false,
   fn: async () => {
     const admin = createClient(SUPABASE_URL!, SERVICE_KEY!, { auth: { persistSession: false } });
 
