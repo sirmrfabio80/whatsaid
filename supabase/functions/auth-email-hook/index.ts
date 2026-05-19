@@ -208,6 +208,13 @@ async function handleWebhook(req: Request): Promise<Response> {
   const emailType = payload.data.action_type
   console.log('Received auth event', { emailType, email: payload.data.email, run_id })
 
+  // Fire-and-forget admin notification on new signup
+  if (emailType === 'signup') {
+    notifyAdminOfSignup(payload.data.email, payload.data.user_id ?? payload.data.user?.id).catch(
+      (err) => console.error('[auth-email-hook] admin signup notify failed', err)
+    )
+  }
+
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
     console.error('Unknown email type', { emailType, run_id })
