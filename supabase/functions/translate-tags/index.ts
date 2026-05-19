@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { AI_GATEWAY_URL } from "../_shared/ai-gateway.ts";
-import { createServiceClient } from "../_shared/supabase.ts";
+import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
+import { enforceQuota } from "../_shared/quota.ts";
 
 const MODEL = "google/gemini-2.5-flash-lite";
 
@@ -15,6 +16,12 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: require auth. translate-tags reaches the AI gateway; an open
+    // endpoint here would be a direct spend vector.
+    const auth = await requireAuth(req.headers.get("Authorization"));
+    if (!auth.ok) return auth.response;
+    const { userId } = auth;
+
     const { tags, target_lang } = await req.json();
 
     if (!Array.isArray(tags) || tags.length === 0 || typeof target_lang !== "string") {
