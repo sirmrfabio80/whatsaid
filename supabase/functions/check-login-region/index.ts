@@ -30,28 +30,32 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   const stored = profile?.country ?? null;
-  if (stored === ALLOWED_COUNTRY) {
-    return jsonResponse({ allowed: true, country: stored });
-  }
+  const ipCountry = detectIpCountry(req);
+
+  // Strict rule (Option B): non-admins must (a) have GB or unknown profile
+  // country, AND (b) be connecting from a GB IP right now. Unknown IP fails
+  // closed. Travelling GB users and privacy-proxy users are intentionally
+  // blocked — the only exception is admin bypass above.
   if (stored && stored !== ALLOWED_COUNTRY) {
     return jsonResponse({ allowed: false, reason: "region_blocked", country: stored });
   }
 
-  // stored is NULL → fall back to IP detection and backfill
-  const ipCountry = detectIpCountry(req);
-  if (ipCountry && isAllowedCountry(ipCountry)) {
+  if (!ipCountry) {
+    return jsonResponse({ allowed: false, reason: "unknown", country: stored });
+  }
+
+  if (!isAllowedCountry(ipCountry)) {
+    if (!stored) {
+      await admin.from("profiles").update({ country: ipCountry }).eq("user_id", userId);
+    }
+    return jsonResponse({ allowed: false, reason: "region_blocked", country: ipCountry });
+  }
+
+  // IP is GB. Backfill profile.country if it was null.
+  if (!stored) {
     await admin.from("profiles").update({ country: ALLOWED_COUNTRY }).eq("user_id", userId);
     return jsonResponse({ allowed: true, country: ALLOWED_COUNTRY, backfilled: true });
   }
 
-  // Store sentinel/detected code so future logins are fast.
-  const toStore = ipCountry && /^[A-Z]{2}$/.test(ipCountry) ? ipCountry : "XX";
-  // 'XX' fails the iso2 check (it doesn't — it matches /^[A-Z]{2}$/), so we can store it.
-  await admin.from("profiles").update({ country: toStore }).eq("user_id", userId);
-
-  return jsonResponse({
-    allowed: false,
-    reason: ipCountry ? "region_blocked" : "unknown",
-    country: toStore,
-  });
+  return jsonResponse({ allowed: true, country: ALLOWED_COUNTRY });
 });
