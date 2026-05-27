@@ -74,6 +74,8 @@ export async function openCheckout(opts: {
   email?: string;
   onSuccess?: () => void;
   successUrl?: string;
+  /** Extra fields merged into Paddle `custom_data` (e.g. consent_id). */
+  customData?: Record<string, string | number | boolean | null>;
 }): Promise<void> {
   await initPaddle();
   const paddle = getPaddle();
@@ -86,7 +88,7 @@ export async function openCheckout(opts: {
 
   paddle.Checkout.open({
     items: [{ priceId: opts.priceId, quantity: 1 }],
-    customData: { user_id: opts.userId },
+    customData: { user_id: opts.userId, ...(opts.customData ?? {}) },
     customer: {
       ...(opts.email ? { email: opts.email } : {}),
       address: { countryCode: "GB" },
