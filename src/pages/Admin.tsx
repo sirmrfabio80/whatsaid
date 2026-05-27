@@ -34,6 +34,7 @@ export default function Admin() {
             <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
             <TabsTrigger value="usage">Usage</TabsTrigger>
             <TabsTrigger value="retention">Retention</TabsTrigger>
+            <TabsTrigger value="retention-monitor">Retention monitor</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
