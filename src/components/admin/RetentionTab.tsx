@@ -166,7 +166,7 @@ export default function RetentionTab() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <LoadingState label="Loading retention config…" />
+            <LoadingState rows={3} />
           ) : rows.length === 0 ? (
             <EmptyState title="No retention rows" description="Seed defaults are missing." />
           ) : (
