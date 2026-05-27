@@ -282,45 +282,74 @@ export default function Pricing() {
       navigate(`/signup?intent=purchase&product=${productId}`);
       return;
     }
-
     const product = PRICING_PRODUCTS.find((p) => p.id === productId);
     if (!product?.paddlePriceId) {
       toast.error(t("pricing.comingSoon"));
       return;
     }
-
-    const priorBalance = creditBalance;
-
-    openCheckout({
-      priceId: product.paddlePriceId,
-      userId: user.id,
-      email: user.email,
-      successUrl: `${window.location.origin}/convert?purchased=true&priorBalance=${encodeURIComponent(String(priorBalance))}`,
-      onSuccess: () => {
-        setProcessingPurchase(true);
-        let attempts = 0;
-        const poll = setInterval(async () => {
-          attempts++;
-          const { data } = await supabase
-            .from("credit_balances")
-            .select("balance")
-            .eq("user_id", user.id)
-            .maybeSingle();
-          if (data && data.balance > priorBalance) {
-            clearInterval(poll);
-            setProcessingPurchase(false);
-            toast.success(t("pricing.purchaseSuccess"));
-            refreshCredits();
-          } else if (attempts >= 10) {
-            clearInterval(poll);
-            setProcessingPurchase(false);
-            toast.info(t("pricing.creditsArrivingShortly", "Credits arriving shortly — refresh if needed"));
-            refreshCredits();
-          }
-        }, 2000);
-      },
-    });
+    setPendingProductId(productId);
+    setConsentOpen(true);
   }
+
+  async function handleConsentConfirm() {
+    if (!user || !pendingProductId) {
+      setConsentOpen(false);
+      return;
+    }
+    const product = PRICING_PRODUCTS.find((p) => p.id === pendingProductId);
+    if (!product?.paddlePriceId) {
+      setConsentOpen(false);
+      return;
+    }
+    const priorBalance = creditBalance;
+    setConsentLoading(true);
+    try {
+      await openCheckoutWithConsent({
+        priceId: product.paddlePriceId,
+        userId: user.id,
+        email: user.email,
+        packageId: product.id,
+        successUrl: `${window.location.origin}/convert?purchased=true&priorBalance=${encodeURIComponent(String(priorBalance))}`,
+        onSuccess: () => {
+          setProcessingPurchase(true);
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            const { data } = await supabase
+              .from("credit_balances")
+              .select("balance")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            if (data && data.balance > priorBalance) {
+              clearInterval(poll);
+              setProcessingPurchase(false);
+              toast.success(t("pricing.purchaseSuccess"));
+              refreshCredits();
+            } else if (attempts >= 10) {
+              clearInterval(poll);
+              setProcessingPurchase(false);
+              toast.info(t("pricing.creditsArrivingShortly", "Credits arriving shortly — refresh if needed"));
+              refreshCredits();
+            }
+          }, 2000);
+        },
+      });
+      setConsentOpen(false);
+      setPendingProductId(null);
+    } catch (err) {
+      console.error("[pricing] consent/checkout failed", err);
+      toast.error("Could not start checkout. Please try again.");
+    } finally {
+      setConsentLoading(false);
+    }
+  }
+
+  function handleConsentCancel() {
+    if (consentLoading) return;
+    setConsentOpen(false);
+    setPendingProductId(null);
+  }
+
 
   function handleGetStarted() {
     if (user) {
