@@ -178,23 +178,6 @@ export function parseTemplateConfig(raw: unknown): TranscribeTemplateConfig {
 }
 
 /**
- * Resolve which AssemblyAI base URL would be used for a given country code,
- * given the template's geo-routing config. Mirrors the edge function logic.
- *
- * @param cfg     The active template config.
- * @param country ISO-3166-1 alpha-2 country code (case-insensitive), or null/empty for "unknown".
- */
-export function resolveBaseUrl(
-  cfg: TranscribeTemplateConfig,
-  country: string | null | undefined,
-): string {
-  if (cfg.geo_routing_enabled && (country ?? "").toUpperCase() === "US") {
-    return cfg.us_base_url;
-  }
-  return cfg.base_url;
-}
-
-/**
  * Build the AssemblyAI request payload that the transcribe edge function
  * would send right now for a given draft config and sample job context.
  *
@@ -213,8 +196,6 @@ export interface PreviewSampleJob {
   speakers_expected?: number;
   /** Optional: which prompting strategy to apply (defaults to template's default_strategy). */
   strategy?: DefaultStrategy;
-  /** Optional: simulated detected country (ISO-2). Used only for resolveBaseUrl preview. */
-  country?: string;
 }
 
 export const DEFAULT_PREVIEW_SAMPLE: PreviewSampleJob = {
@@ -284,9 +265,6 @@ export function configsEqual(
     if (a.speech_models[i] !== b.speech_models[i]) return false;
   }
   return (
-    a.base_url === b.base_url &&
-    a.geo_routing_enabled === b.geo_routing_enabled &&
-    a.us_base_url === b.us_base_url &&
     a.temperature === b.temperature &&
     a.speech_threshold === b.speech_threshold &&
     a.speaker_labels === b.speaker_labels &&
