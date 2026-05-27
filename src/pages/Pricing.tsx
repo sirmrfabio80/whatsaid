@@ -731,6 +731,12 @@ export default function Pricing() {
           </Button>
         </div>
       </section>
+      <Reg37ConsentDialog
+        open={consentOpen}
+        loading={consentLoading}
+        onCancel={handleConsentCancel}
+        onConfirm={handleConsentConfirm}
+      />
     </div>
   );
 }
