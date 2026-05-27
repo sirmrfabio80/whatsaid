@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < MAX_POLLS; i++) {
       await new Promise((r) => setTimeout(r, POLL_MS));
-      const pollRes = await fetch(`${baseUrl}/transcript/${transcriptId}`, {
+      const pollRes = await assemblyAIFetch(`${baseUrl}/transcript/${transcriptId}`, {
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });
       if (!pollRes.ok) {
