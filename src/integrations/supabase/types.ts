@@ -131,6 +131,83 @@ export type Database = {
         }
         Relationships: []
       }
+      consent_events: {
+        Row: {
+          accepted_at: string
+          consent_type: string
+          id: string
+          ip_hash: string | null
+          metadata: Json | null
+          package_id: string | null
+          user_agent: string | null
+          user_id: string | null
+          version: string
+        }
+        Insert: {
+          accepted_at?: string
+          consent_type: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json | null
+          package_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          version: string
+        }
+        Update: {
+          accepted_at?: string
+          consent_type?: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json | null
+          package_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_events_version_fkey"
+            columns: ["version"]
+            isOneToOne: false
+            referencedRelation: "consent_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
+      consent_versions: {
+        Row: {
+          consent_type: string
+          effective_from: string
+          effective_to: string | null
+          text_en: string
+          text_fr: string | null
+          text_hash: string
+          text_it: string | null
+          version: string
+        }
+        Insert: {
+          consent_type: string
+          effective_from?: string
+          effective_to?: string | null
+          text_en: string
+          text_fr?: string | null
+          text_hash: string
+          text_it?: string | null
+          version: string
+        }
+        Update: {
+          consent_type?: string
+          effective_from?: string
+          effective_to?: string | null
+          text_en?: string
+          text_fr?: string | null
+          text_hash?: string
+          text_it?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       credit_balances: {
         Row: {
           balance: number
