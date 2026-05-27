@@ -76,7 +76,6 @@ const FALLBACK_CONFIG: ActiveTemplateConfig = {
 function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const f = FALLBACK_CONFIG;
-  const asString = (v: unknown, fb: string): string => typeof v === "string" ? v : fb;
   const asBool = (v: unknown, fb: boolean): boolean => typeof v === "boolean" ? v : fb;
   const asNum = (v: unknown, fb: number): number => typeof v === "number" && Number.isFinite(v) ? v : fb;
   const speech_models = Array.isArray(r.speech_models)
@@ -88,10 +87,8 @@ function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
       ? (s as string)
       : f.default_strategy;
   })();
+  const asString = (v: unknown, fb: string): string => typeof v === "string" ? v : fb;
   return {
-    base_url: asString(r.base_url, f.base_url),
-    geo_routing_enabled: asBool(r.geo_routing_enabled, f.geo_routing_enabled),
-    us_base_url: asString(r.us_base_url, f.us_base_url),
     speech_models: speech_models.length > 0 ? speech_models : f.speech_models,
     temperature: asNum(r.temperature, f.temperature),
     speech_threshold: asNum(r.speech_threshold, f.speech_threshold),
