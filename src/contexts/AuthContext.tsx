@@ -14,6 +14,8 @@ interface AuthContextType {
   avatarUrl: string | null;
   displayName: string | null;
   needsPasswordSetup: boolean;
+  regionChecking: boolean;
+  regionBlocked: boolean;
   refreshCredits: () => Promise<void>;
   refreshAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -28,6 +30,8 @@ const AuthContext = createContext<AuthContextType>({
   avatarUrl: null,
   displayName: null,
   needsPasswordSetup: false,
+  regionChecking: false,
+  regionBlocked: false,
   refreshCredits: async () => {},
   refreshAvatar: async () => {},
   signOut: async () => {},
@@ -44,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+  const [regionChecking, setRegionChecking] = useState(false);
+  const [regionBlocked, setRegionBlocked] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
