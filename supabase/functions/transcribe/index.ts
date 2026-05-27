@@ -576,7 +576,7 @@ Deno.serve(async (req) => {
       transcriptPayload,
       job_id,
       cfg,
-      resolvedBaseUrl,
+      ASSEMBLYAI_EU_BASE_URL,
       supabase,
     );
 
@@ -738,7 +738,7 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const deleteRes = await fetch(`${resolvedBaseUrl}/transcript/${transcriptId}`, {
+      const deleteRes = await fetch(`${ASSEMBLYAI_EU_BASE_URL}/transcript/${transcriptId}`, {
         method: "DELETE",
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });
