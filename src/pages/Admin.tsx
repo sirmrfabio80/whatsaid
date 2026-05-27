@@ -53,6 +53,12 @@ export default function Admin() {
           <TabsContent value="usage" className="space-y-6">
             <UsageTab />
           </TabsContent>
+          <TabsContent value="retention" className="space-y-6">
+            <RetentionTab />
+          </TabsContent>
+          <TabsContent value="others" className="space-y-6">
+            <OthersTab />
+          </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
           </TabsContent>
