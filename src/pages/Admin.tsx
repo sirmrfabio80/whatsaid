@@ -59,9 +59,6 @@ export default function Admin() {
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
           </TabsContent>
-          <TabsContent value="others" className="space-y-6">
-            <OthersTab />
-          </TabsContent>
         </Tabs>
       </main>
     </AdminGuard>
