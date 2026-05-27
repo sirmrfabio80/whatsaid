@@ -4,7 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
-import { initPaddle, openCheckout } from "@/lib/paddle-checkout";
+import { initPaddle } from "@/lib/paddle-checkout";
+import { openCheckoutWithConsent } from "@/lib/openCheckoutWithConsent";
+import { Reg37ConsentDialog } from "@/components/Reg37ConsentDialog";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -248,6 +250,9 @@ export default function Pricing() {
   const { user, creditBalance, refreshCredits } = useAuth();
   const navigate = useNavigate();
   const [processingPurchase, setProcessingPurchase] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [pendingProductId, setPendingProductId] = useState<PricingProduct["id"] | null>(null);
 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(undefined);
   const { prices, loading, currency } = usePaddlePricing(selectedCurrency);
@@ -277,45 +282,74 @@ export default function Pricing() {
       navigate(`/signup?intent=purchase&product=${productId}`);
       return;
     }
-
     const product = PRICING_PRODUCTS.find((p) => p.id === productId);
     if (!product?.paddlePriceId) {
       toast.error(t("pricing.comingSoon"));
       return;
     }
-
-    const priorBalance = creditBalance;
-
-    openCheckout({
-      priceId: product.paddlePriceId,
-      userId: user.id,
-      email: user.email,
-      successUrl: `${window.location.origin}/convert?purchased=true&priorBalance=${encodeURIComponent(String(priorBalance))}`,
-      onSuccess: () => {
-        setProcessingPurchase(true);
-        let attempts = 0;
-        const poll = setInterval(async () => {
-          attempts++;
-          const { data } = await supabase
-            .from("credit_balances")
-            .select("balance")
-            .eq("user_id", user.id)
-            .maybeSingle();
-          if (data && data.balance > priorBalance) {
-            clearInterval(poll);
-            setProcessingPurchase(false);
-            toast.success(t("pricing.purchaseSuccess"));
-            refreshCredits();
-          } else if (attempts >= 10) {
-            clearInterval(poll);
-            setProcessingPurchase(false);
-            toast.info(t("pricing.creditsArrivingShortly", "Credits arriving shortly — refresh if needed"));
-            refreshCredits();
-          }
-        }, 2000);
-      },
-    });
+    setPendingProductId(productId);
+    setConsentOpen(true);
   }
+
+  async function handleConsentConfirm() {
+    if (!user || !pendingProductId) {
+      setConsentOpen(false);
+      return;
+    }
+    const product = PRICING_PRODUCTS.find((p) => p.id === pendingProductId);
+    if (!product?.paddlePriceId) {
+      setConsentOpen(false);
+      return;
+    }
+    const priorBalance = creditBalance;
+    setConsentLoading(true);
+    try {
+      await openCheckoutWithConsent({
+        priceId: product.paddlePriceId,
+        userId: user.id,
+        email: user.email,
+        packageId: product.id,
+        successUrl: `${window.location.origin}/convert?purchased=true&priorBalance=${encodeURIComponent(String(priorBalance))}`,
+        onSuccess: () => {
+          setProcessingPurchase(true);
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            const { data } = await supabase
+              .from("credit_balances")
+              .select("balance")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            if (data && data.balance > priorBalance) {
+              clearInterval(poll);
+              setProcessingPurchase(false);
+              toast.success(t("pricing.purchaseSuccess"));
+              refreshCredits();
+            } else if (attempts >= 10) {
+              clearInterval(poll);
+              setProcessingPurchase(false);
+              toast.info(t("pricing.creditsArrivingShortly", "Credits arriving shortly — refresh if needed"));
+              refreshCredits();
+            }
+          }, 2000);
+        },
+      });
+      setConsentOpen(false);
+      setPendingProductId(null);
+    } catch (err) {
+      console.error("[pricing] consent/checkout failed", err);
+      toast.error("Could not start checkout. Please try again.");
+    } finally {
+      setConsentLoading(false);
+    }
+  }
+
+  function handleConsentCancel() {
+    if (consentLoading) return;
+    setConsentOpen(false);
+    setPendingProductId(null);
+  }
+
 
   function handleGetStarted() {
     if (user) {
@@ -697,6 +731,12 @@ export default function Pricing() {
           </Button>
         </div>
       </section>
+      <Reg37ConsentDialog
+        open={consentOpen}
+        loading={consentLoading}
+        onCancel={handleConsentCancel}
+        onConfirm={handleConsentConfirm}
+      />
     </div>
   );
 }
