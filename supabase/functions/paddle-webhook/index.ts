@@ -212,6 +212,57 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Reg. 37 consent verification. Block credit grant if the checkout was
+    // not preceded by a recorded consent_id linked to this user. We alert
+    // admins on any bypass so we can investigate (likely a stale client
+    // bundle or someone calling Paddle outside the official flow).
+    const consentId: string | undefined = data?.custom_data?.consent_id;
+    const consentVersion: string | undefined = data?.custom_data?.consent_version;
+    const supabaseGuard = createServiceClient();
+    if (!consentId) {
+      console.error(
+        `[paddle-webhook] Missing consent_id tx=${paddleTransactionId} user=${userId} — refusing credit grant`,
+      );
+      notifyAdminOfPurchase({
+        userEmail: data?.customer?.email ?? null,
+        userId,
+        credits: 0,
+        transactionId: paddleTransactionId,
+        bypassReason: "missing_consent_id",
+      }).catch(() => {});
+      return new Response(
+        JSON.stringify({ ignored: "missing_consent_id" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const { data: consentRow, error: consentErr } = await supabaseGuard
+      .from("consent_events")
+      .select("id, user_id, version")
+      .eq("id", consentId)
+      .maybeSingle();
+    if (consentErr || !consentRow || consentRow.user_id !== userId) {
+      console.error(
+        `[paddle-webhook] Consent verification failed tx=${paddleTransactionId} user=${userId} consent=${consentId}`,
+        consentErr,
+      );
+      notifyAdminOfPurchase({
+        userEmail: data?.customer?.email ?? null,
+        userId,
+        credits: 0,
+        transactionId: paddleTransactionId,
+        bypassReason: "consent_mismatch",
+      }).catch(() => {});
+      return new Response(
+        JSON.stringify({ ignored: "consent_mismatch" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if (consentVersion && consentRow.version !== consentVersion) {
+      console.warn(
+        `[paddle-webhook] Consent version drift tx=${paddleTransactionId} stored=${consentRow.version} claimed=${consentVersion}`,
+      );
+    }
+
     const credits = creditsFromEvent(data);
     if (credits <= 0) {
       console.error("[paddle-webhook] Could not determine credits", paddleTransactionId);
