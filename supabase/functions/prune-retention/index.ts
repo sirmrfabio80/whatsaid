@@ -39,13 +39,16 @@ interface DatasetReport {
 }
 
 async function isAdmin(supabase: ReturnType<typeof createClient>, userId: string): Promise<boolean> {
-  // Uses the SECURITY DEFINER helper that already powers our RLS policies.
-  const { data, error } = await supabase.rpc("has_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
+  // has_role lives in the `private` schema and isn't reachable over REST, so
+  // we check user_roles directly with the service-role client.
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
   if (error) return false;
-  return data === true;
+  return !!data;
 }
 
 async function countCandidates(
