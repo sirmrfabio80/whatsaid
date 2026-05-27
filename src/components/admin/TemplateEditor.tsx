@@ -25,7 +25,6 @@ interface Props {
 type DisabledInfo = { disabled: boolean; reason?: string };
 type DisabledMap = {
   apply_prompt_on_diarization: DisabledInfo;
-  apply_prompt_on_diarization: DisabledInfo;
   recovery_prompt: DisabledInfo;
   review_prompt: DisabledInfo;
   apply_to_mono: DisabledInfo;
@@ -73,12 +72,6 @@ function computeDisabled(value: TranscribeTemplateConfig): DisabledMap {
     value.default_strategy === "keyterms" || value.default_strategy === "none";
 
   return {
-    us_base_url: {
-      disabled: !value.geo_routing_enabled,
-      reason: !value.geo_routing_enabled
-        ? "Geo-routing is OFF — all requests use the default base URL."
-        : undefined,
-    },
     apply_prompt_on_diarization: {
       disabled: promptlessStrategy,
       reason: promptlessStrategy
