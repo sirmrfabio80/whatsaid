@@ -1112,9 +1112,18 @@ generalise to AI / STT spend.
 
 ---
 
-_Last updated alongside the share-dedup pipeline (`share_pdf_cache`,
-`share_artifact_log`, `cleanup_config`, `validate_share_pdf_cache_path`
-trigger, multi-tier `ShareButton` lookup, and `export-cache.ts` LRU).
-Refresh this document whenever you touch the data model, design
-tokens, edge function surface, high-level flows, or the cost drivers
-enumerated in section 10._
+_Last updated alongside the UK-only geo-gating (`profiles.country`,
+`trg_profiles_lock_country`, `geo-check`, `validate-signup-country`,
+`check-login-region`, Paddle GB lock), the spend guardrails phase
+(`usage_events`, `check_and_record_usage`, `create-job`,
+`trg_jobs_lock_billing_columns`, `enforceQuota` rollout, Admin Usage
+tab, `process-email-queue` retuned to 30 s, `cleanup-expired-shares`
+extended to `cleanup_logs` / `async_jobs` pruning), the
+AssemblyAI EU-only hardening (`_shared/assemblyai.ts → assemblyAIFetch`
++ `assertAssemblyAIUrl`, template config sanitisation), admin email
+notifications (`ADMIN_NOTIFY_EMAIL`, `admin-new-signup`,
+`admin-credit-purchase`), and the move of `has_role` into the
+`private` schema. Refresh this document whenever you touch the data
+model, design tokens, edge function surface, high-level flows, or the
+cost drivers enumerated in section 10._
+
