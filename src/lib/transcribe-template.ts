@@ -9,15 +9,16 @@
  * with safe fallbacks).
  */
 
+/**
+ * AssemblyAI base URL. WhatSaid is EU-only by policy — this is the single
+ * source of truth on the client side. Mirrors
+ * `supabase/functions/_shared/assemblyai.ts`.
+ */
+export const ASSEMBLYAI_EU_BASE_URL = "https://api.eu.assemblyai.com/v2";
+
 export type DefaultStrategy = "recovery" | "review" | "keyterms" | "none";
 
 export interface TranscribeTemplateConfig {
-  /** AssemblyAI API base URL — used for all requests when geo-routing is OFF, and for non-US requests when ON. */
-  base_url: string;
-  /** When true: US-detected requests use `us_base_url`; everyone else uses `base_url`. */
-  geo_routing_enabled: boolean;
-  /** AssemblyAI API base URL used for US-detected requests (when geo-routing is ON). */
-  us_base_url: string;
   /** Ordered list of AssemblyAI speech models, e.g. ["universal-3-pro"]. */
   speech_models: string[];
   /** Sampling temperature (0 = deterministic). */
