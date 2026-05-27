@@ -16,17 +16,14 @@ function stripInlineLanguageTags(text: string): { text: string; stripped: boolea
 }
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { ASSEMBLYAI_EU_BASE_URL } from "../_shared/assemblyai.ts";
 
 // Hardcoded fallbacks if no active template row exists. These mirror the
 // "Default" template seeded in the database.
-const FALLBACK_BASE_URL = "https://api.eu.assemblyai.com/v2";
 const FALLBACK_POLL_INTERVAL_MS = 5000;
 const FALLBACK_MAX_POLLS = 120;
 
 interface ActiveTemplateConfig {
-  base_url: string;
-  geo_routing_enabled: boolean;
-  us_base_url: string;
   speech_models: string[];
   temperature: number;
   speech_threshold: number;
@@ -44,9 +41,6 @@ interface ActiveTemplateConfig {
 }
 
 const FALLBACK_CONFIG: ActiveTemplateConfig = {
-  base_url: FALLBACK_BASE_URL,
-  geo_routing_enabled: false,
-  us_base_url: "https://api.assemblyai.com/v2",
   speech_models: ["universal-3-pro"],
   temperature: 0,
   speech_threshold: 0.05,
@@ -75,36 +69,6 @@ const FALLBACK_CONFIG: ActiveTemplateConfig = {
 };
 
 /**
- * Detect the requesting client's country from common edge/proxy headers.
- * Returns an uppercase ISO-3166-1 alpha-2 code, or null if unknown.
- */
-function detectCountry(req: Request): string | null {
-  const headers = req.headers;
-  const candidates = [
-    headers.get("cf-ipcountry"),
-    headers.get("x-vercel-ip-country"),
-    headers.get("x-country-code"),
-  ];
-  for (const c of candidates) {
-    const v = (c ?? "").trim().toUpperCase();
-    if (v && v !== "XX" && v !== "T1") return v;
-  }
-  return null;
-}
-
-/**
- * Mirror of `resolveBaseUrl` in src/lib/transcribe-template.ts.
- * Returns the AssemblyAI base URL to use for this request, given the
- * template's geo-routing configuration and the detected country.
- */
-function resolveBaseUrl(cfg: ActiveTemplateConfig, country: string | null): string {
-  if (cfg.geo_routing_enabled && country === "US") {
-    return cfg.us_base_url;
-  }
-  return cfg.base_url;
-}
-
-/**
  * Coerce raw JSON config from the active template row into a complete,
  * typed ActiveTemplateConfig. Missing/invalid fields fall back to the
  * hardcoded defaults. Never throws.
@@ -112,7 +76,6 @@ function resolveBaseUrl(cfg: ActiveTemplateConfig, country: string | null): stri
 function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const f = FALLBACK_CONFIG;
-  const asString = (v: unknown, fb: string): string => typeof v === "string" ? v : fb;
   const asBool = (v: unknown, fb: boolean): boolean => typeof v === "boolean" ? v : fb;
   const asNum = (v: unknown, fb: number): number => typeof v === "number" && Number.isFinite(v) ? v : fb;
   const speech_models = Array.isArray(r.speech_models)
@@ -124,10 +87,8 @@ function parseActiveConfig(raw: unknown): ActiveTemplateConfig {
       ? (s as string)
       : f.default_strategy;
   })();
+  const asString = (v: unknown, fb: string): string => typeof v === "string" ? v : fb;
   return {
-    base_url: asString(r.base_url, f.base_url),
-    geo_routing_enabled: asBool(r.geo_routing_enabled, f.geo_routing_enabled),
-    us_base_url: asString(r.us_base_url, f.us_base_url),
     speech_models: speech_models.length > 0 ? speech_models : f.speech_models,
     temperature: asNum(r.temperature, f.temperature),
     speech_threshold: asNum(r.speech_threshold, f.speech_threshold),
@@ -413,18 +374,12 @@ Deno.serve(async (req) => {
     // over these admin defaults further down.
     const cfg = await loadActiveConfig(supabase);
 
-    // Per-request region routing. Detect the caller's country from edge
-    // proxy headers and resolve the AssemblyAI base URL according to the
-    // template's geo_routing settings.
-    const detectedCountry = detectCountry(req);
-    const resolvedBaseUrl = resolveBaseUrl(cfg, detectedCountry);
+    // AssemblyAI is EU-only by policy. No geo-routing, no overrides.
     console.log(JSON.stringify({
       event: "region_routing_resolved",
-      country: detectedCountry,
-      base_url: resolvedBaseUrl,
-      geo_routing_enabled: cfg.geo_routing_enabled,
+      base_url: ASSEMBLYAI_EU_BASE_URL,
     }));
-    console.log(`[transcribe] country=${detectedCountry ?? "unknown"} base_url=${resolvedBaseUrl}`);
+    console.log(`[transcribe] base_url=${ASSEMBLYAI_EU_BASE_URL}`);
 
     const requestBody = await req.json().catch(() => ({}));
     const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
@@ -621,7 +576,7 @@ Deno.serve(async (req) => {
       transcriptPayload,
       job_id,
       cfg,
-      resolvedBaseUrl,
+      ASSEMBLYAI_EU_BASE_URL,
       supabase,
     );
 
@@ -783,7 +738,7 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const deleteRes = await fetch(`${resolvedBaseUrl}/transcript/${transcriptId}`, {
+      const deleteRes = await fetch(`${ASSEMBLYAI_EU_BASE_URL}/transcript/${transcriptId}`, {
         method: "DELETE",
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });

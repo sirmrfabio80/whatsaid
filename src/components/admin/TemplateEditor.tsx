@@ -24,7 +24,6 @@ interface Props {
 
 type DisabledInfo = { disabled: boolean; reason?: string };
 type DisabledMap = {
-  us_base_url: DisabledInfo;
   apply_prompt_on_diarization: DisabledInfo;
   recovery_prompt: DisabledInfo;
   review_prompt: DisabledInfo;
@@ -73,12 +72,6 @@ function computeDisabled(value: TranscribeTemplateConfig): DisabledMap {
     value.default_strategy === "keyterms" || value.default_strategy === "none";
 
   return {
-    us_base_url: {
-      disabled: !value.geo_routing_enabled,
-      reason: !value.geo_routing_enabled
-        ? "Geo-routing is OFF — all requests use the default base URL."
-        : undefined,
-    },
     apply_prompt_on_diarization: {
       disabled: promptlessStrategy,
       reason: promptlessStrategy
@@ -178,36 +171,16 @@ export default function TemplateEditor({ value, onChange, disabled }: Props) {
   return (
     <div className="space-y-8">
       <Section title="Region routing">
-        <ToggleField
-          label="Enable geo-routing"
-          hint="When ON, requests detected as coming from the US are sent to the US base URL; everyone else uses the default base URL. When OFF, all requests use the default base URL."
-          checked={value.geo_routing_enabled}
-          onChange={(v) => set("geo_routing_enabled", v)}
-          disabled={disabled}
-        />
-        <Field
-          label="Default base URL (non-US)"
-          hint="Used for all requests when geo-routing is OFF, and for non-US requests when ON."
-        >
-          <Input
-            value={value.base_url}
-            onChange={(e) => set("base_url", e.target.value)}
-            disabled={disabled}
-          />
-        </Field>
-        <Field
-          label="US base URL"
-          hint="Used for US-detected requests when geo-routing is ON."
-          disabledReason={d.us_base_url.reason}
-          isDisabled={d.us_base_url.disabled}
-        >
-          <Input
-            value={value.us_base_url}
-            onChange={(e) => set("us_base_url", e.target.value)}
-            disabled={disabled || d.us_base_url.disabled}
-          />
-        </Field>
+        <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Region: EU (locked).</span>{" "}
+          All AssemblyAI requests are routed to{" "}
+          <code className="rounded bg-background px-1 py-0.5 text-xs">
+            https://api.eu.assemblyai.com/v2
+          </code>
+          . Geo-routing and US fallback have been permanently disabled by policy.
+        </div>
       </Section>
+
 
       <Section title="Model">
         <Field
