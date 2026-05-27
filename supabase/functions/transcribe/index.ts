@@ -229,7 +229,7 @@ async function submitAndPollTranscript(
   baseUrl: string,
   supabase: SupabaseClient,
 ): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
-  const submitRes = await fetch(`${baseUrl}/transcript`, {
+  const submitRes = await assemblyAIFetch(`${baseUrl}/transcript`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
