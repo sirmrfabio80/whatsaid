@@ -58,6 +58,9 @@ export default function Admin() {
           <TabsContent value="retention" className="space-y-6">
             <RetentionTab />
           </TabsContent>
+          <TabsContent value="retention-monitor" className="space-y-6">
+            <RetentionMonitorTab />
+          </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
           </TabsContent>
