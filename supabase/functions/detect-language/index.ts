@@ -12,7 +12,7 @@
 //     "success" | "skipped" | "failed" so the client never gets stuck.
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
-import { ASSEMBLYAI_EU_BASE_URL } from "../_shared/assemblyai.ts";
+import { ASSEMBLYAI_EU_BASE_URL, assemblyAIFetch } from "../_shared/assemblyai.ts";
 
 const POLL_MS = 1500;
 const MAX_POLLS = 17; // ~25s upstream poll budget — keep under client timeout
