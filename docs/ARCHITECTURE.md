@@ -362,17 +362,41 @@ some files exceed 120 min and consume multiple credits each).
   `exports_deleted`, `share_pdf_cache_deleted`), plus
   `missing_prefixes`, `errors`, `duration_ms`, and run `status`
   (`running | completed | failed`). The row is inserted at start so
-  timed-out runs are still visible.
+  timed-out runs are still visible. Rows older than 30 days are pruned
+  by `cleanup-expired-shares` itself, alongside finished `async_jobs`
+  older than 30 days.
 - **`email_send_log`**, **`email_send_state`**,
   **`email_unsubscribe_tokens`**, **`suppressed_emails`** — internal
-  email pipeline backing `auth-email-hook` and `process-email-queue`.
+  email pipeline backing `auth-email-hook`, `send-transactional-email`,
+  and `process-email-queue`.
+
+### 5.5.1 Usage / quota ledger
+
+- **`usage_events`** — append-only ledger backing the
+  `check_and_record_usage` RPC. Columns:
+  `(user_id, job_id?, action, scope, scope_key?, units, metadata, created_at)`
+  with `scope ∈ {user_day, user_lifetime, job_day, job_lifetime,
+  recipient_job_day}`. Indexes on `(user_id, action, created_at)`,
+  `(job_id, action, created_at)`, and `(action, scope_key,
+  created_at)` keep window queries cheap. RLS: users see their own
+  rows; admins see all; service-role full access. Quotas currently
+  enforced (see `_shared/quota.ts`):
+    - `regenerate_*`: 100 / user / day, 20 / job lifetime
+    - `generate_tags`: capped per user / day
+    - `translate_tags`: capped per user / day
+    - `share_transcript_email`: 3 / recipient / job / day, 30 / user / day
+    - `suggest_speakers`: capped per click
 
 ### 5.6.1 Triggers
 
 - `validate_share_pdf_cache_path` (BEFORE INSERT OR UPDATE on
-  `share_pdf_cache`) — see §5.4. This is the only path-integrity
-  trigger in the schema; other tables rely on `CHECK` constraints and
-  RLS predicates.
+  `share_pdf_cache`) — see §5.4.
+- `trg_jobs_lock_billing_columns` (BEFORE UPDATE on `jobs`) — rejects
+  any non-`service_role` mutation of `user_id`, `credits_charged`,
+  `duration_seconds`, `file_size_bytes`, `file_name`, `guest_token`.
+- `trg_profiles_lock_country` (BEFORE UPDATE on `profiles`) — makes
+  `country` immutable once set (only `service_role` can transition
+  `NULL → 'GB'` or override via admin paths).
 
 ### 5.6 Help & admin
 
@@ -380,15 +404,29 @@ some files exceed 120 min and consume multiple credits each).
   per `(faq_anchor, locale)`. Anyone can `INSERT` (regex-validated);
   admins can `SELECT`.
 - **`transcribe_settings_templates`** — admin-managed AssemblyAI request
-  presets (`config` jsonb, `is_active`).
+  presets (`config` jsonb, `is_active`). The `config.base_url` is
+  pinned to `https://api.eu.assemblyai.com/v2`; geo-routing /
+  `us_base_url` fields were stripped from existing rows and removed
+  from the editor UI (see §6).
+- **`reviews`**, **`seo_monitoring_alerts`** — public-facing customer
+  reviews and the Search Console monitoring queue (read by
+  `monitor-search-console`).
 
 ### 5.7 RPCs (SECURITY DEFINER)
 
-- `has_role(_user_id, _role)` — RLS-safe role check.
+- `private.has_role(_user_id, _role)` — RLS-safe role check (lives in
+  the `private` schema; not exposed via REST).
 - `add_credits(p_user_id, p_amount, p_reason, p_stripe_session_id?)`
 - `deduct_credits(p_user_id, p_amount, p_reason, p_job_id?)`
+- `check_and_record_usage(p_user_id, p_action, p_scope, p_job_id?,
+  p_scope_key?, p_window?, p_limit, p_units?, p_metadata?)` — atomic
+  quota check + ledger insert under an advisory lock so two concurrent
+  callers cannot both slip past a cap. Returns
+  `{ allowed, used, limit, scope }`.
 - `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq` —
   `pgmq` wrappers used by the email worker.
+
+
 
 ### 5.8 Storage
 
