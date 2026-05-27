@@ -191,13 +191,19 @@ can only access their own rows except where noted. Roles are stored in a
   `display_name`, `email` (contact), `avatar_url`, `ui_language`
   (`en`|`it`|`fr`), `needs_password_setup`, **`preferred_voice`** (`'male'|'female'`,
   default `'female'`, `CHECK`), **`playback_speed`** (`real`, default
-  `1.0`, `CHECK IN (0.75, 1.0, 1.25, 1.5)`).
+  `1.0`, `CHECK IN (0.75, 1.0, 1.25, 1.5)`), **`country`** (ISO-3166-1
+  alpha-2, `CHECK '^[A-Z]{2}$'`, **immutable** once set via the
+  `trg_profiles_lock_country` trigger). `country` is populated by
+  `handle_new_user` from signup metadata and backfilled by
+  `check-login-region` on first verified login.
   RLS: user can `SELECT` / `INSERT` / `UPDATE` own row (`auth.uid() =
   user_id`); no `DELETE`.
 - **`user_roles`** — `(user_id, role)` with `app_role` enum
   (`admin | moderator | user`). Admin-only management; users can read
-  their own roles. Use the `has_role(_user_id, _role)` security-definer
-  function in RLS predicates to avoid recursion.
+  their own roles. Use the `private.has_role(_user_id, _role)`
+  security-definer function in RLS predicates to avoid recursion (moved
+  out of `public` so it is not callable via the Data API / REST).
+
 
 ### 5.2 Credits & billing
 
