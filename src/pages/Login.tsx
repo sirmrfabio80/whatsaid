@@ -11,6 +11,7 @@ import { AlertCircle, Check, ArrowLeft } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { lovable } from "@/integrations/lovable/index";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
 
 export default function Login() {
   const { t } = useTranslation();
@@ -33,6 +34,7 @@ export default function Login() {
   const purchaseIntent = searchParams.get("intent") === "purchase";
   const productParam = searchParams.get("product");
   const redirectParam = searchParams.get("redirect");
+  const blockedParam = searchParams.get("blocked");
   const redirectAfterAuth = redirectParam || (purchaseIntent ? "/pricing" : "/");
 
   useEffect(() => {
@@ -148,6 +150,11 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {blockedParam === "region" && (
+            <div className="mb-4">
+              <RegionBlockedNotice reason="region_blocked" />
+            </div>
+          )}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">{t("login.email")}</Label>

@@ -196,6 +196,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // UK-only billing guard. WhatSaid is currently available to UK residents
+    // only; refuse to grant credits for any non-GB billing country.
+    const billingCountry: string | undefined =
+      data?.customer?.address?.country_code ??
+      data?.billing_details?.address?.country_code ??
+      data?.address?.country_code;
+    if (!billingCountry || billingCountry.toUpperCase() !== "GB") {
+      console.warn(
+        `[paddle-webhook] Non-GB billing country=${billingCountry ?? "unknown"} tx=${paddleTransactionId} user=${userId} — credits not granted`,
+      );
+      return new Response(
+        JSON.stringify({ ignored: "non_gb_billing", billingCountry: billingCountry ?? null }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const credits = creditsFromEvent(data);
     if (credits <= 0) {
       console.error("[paddle-webhook] Could not determine credits", paddleTransactionId);

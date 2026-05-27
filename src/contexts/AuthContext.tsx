@@ -14,6 +14,8 @@ interface AuthContextType {
   avatarUrl: string | null;
   displayName: string | null;
   needsPasswordSetup: boolean;
+  regionChecking: boolean;
+  regionBlocked: boolean;
   refreshCredits: () => Promise<void>;
   refreshAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -28,6 +30,8 @@ const AuthContext = createContext<AuthContextType>({
   avatarUrl: null,
   displayName: null,
   needsPasswordSetup: false,
+  regionChecking: false,
+  regionBlocked: false,
   refreshCredits: async () => {},
   refreshAvatar: async () => {},
   signOut: async () => {},
@@ -44,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+  const [regionChecking, setRegionChecking] = useState(false);
+  const [regionBlocked, setRegionBlocked] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -106,6 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAvatarUrl(null);
     setDisplayName(null);
     setNeedsPasswordSetup(false);
+    setRegionBlocked(false);
+    setRegionChecking(false);
   };
 
   useEffect(() => {
@@ -124,31 +132,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Region gate: when a user is present, verify they’re allowed. Runs once
+  // per user.id. If denied, signs out and redirects to /login?blocked=region.
   useEffect(() => {
-    if (user) {
+    if (!user) {
+      setRegionBlocked(false);
+      setRegionChecking(false);
+      return;
+    }
+    let cancelled = false;
+    setRegionChecking(true);
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("check-login-region");
+        if (cancelled) return;
+        if (error || !data?.allowed) {
+          setRegionBlocked(true);
+          await supabase.auth.signOut();
+          setUser(null);
+          setSession(null);
+          navigate("/login?blocked=region", { replace: true });
+        } else {
+          setRegionBlocked(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setRegionBlocked(true);
+          await supabase.auth.signOut();
+          setUser(null);
+          setSession(null);
+          navigate("/login?blocked=region", { replace: true });
+        }
+      } finally {
+        if (!cancelled) setRegionChecking(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, navigate]);
+
+  useEffect(() => {
+    if (user && !regionBlocked && !regionChecking) {
       refreshCredits();
       refreshProfile(user.id);
       refreshAdminStatus(user.id);
     }
-  }, [user, refreshCredits, refreshProfile, refreshAdminStatus]);
+  }, [user, regionBlocked, regionChecking, refreshCredits, refreshProfile, refreshAdminStatus]);
 
   // Redirect to /set-password if the flag is set
   useEffect(() => {
-    if (!loading && user && needsPasswordSetup && location.pathname !== "/set-password") {
+    if (!loading && user && !regionBlocked && !regionChecking && needsPasswordSetup && location.pathname !== "/set-password") {
       navigate("/set-password", { replace: true });
     }
-  }, [loading, user, needsPasswordSetup, location.pathname, navigate]);
+  }, [loading, user, regionBlocked, regionChecking, needsPasswordSetup, location.pathname, navigate]);
 
-  // Redeem any pending invites after login
+  // Redeem any pending invites after login — only when allowed by region check.
   const handleCreditsRedeemed = useCallback(() => {
     refreshCredits();
     if (user) refreshProfile(user.id);
   }, [refreshCredits, refreshProfile, user]);
 
-  useRedeemInvites(user?.id, user?.email ?? undefined, handleCreditsRedeemed);
+  const gatedUserId = regionBlocked || regionChecking ? undefined : user?.id;
+  const gatedEmail = regionBlocked || regionChecking ? undefined : user?.email ?? undefined;
+  useRedeemInvites(gatedUserId, gatedEmail, handleCreditsRedeemed);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, creditBalance, isAdmin, avatarUrl, displayName, needsPasswordSetup, refreshCredits, refreshAvatar, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, creditBalance, isAdmin, avatarUrl, displayName, needsPasswordSetup, regionChecking, regionBlocked, refreshCredits, refreshAvatar, signOut }}>
       {children}
     </AuthContext.Provider>
   );

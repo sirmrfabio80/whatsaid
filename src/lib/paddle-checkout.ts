@@ -87,7 +87,10 @@ export async function openCheckout(opts: {
   paddle.Checkout.open({
     items: [{ priceId: opts.priceId, quantity: 1 }],
     customData: { user_id: opts.userId },
-    customer: opts.email ? { email: opts.email } : undefined,
+    customer: {
+      ...(opts.email ? { email: opts.email } : {}),
+      address: { countryCode: "GB" },
+    },
     settings: {
       displayMode: "overlay",
       theme: "dark",

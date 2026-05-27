@@ -6,10 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import logoImg from "@/assets/logo.webp";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { COUNTRIES } from "@/lib/countries";
+import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
 
 export default function Signup() {
   const { t } = useTranslation();
@@ -21,26 +30,54 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [country, setCountry] = useState<string>("GB");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [regionBlockReason, setRegionBlockReason] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const purchaseIntent = searchParams.get("intent") === "purchase";
-  const productParam = searchParams.get("product");
   const redirectParam = searchParams.get("redirect");
+
+  /**
+   * Server-side region gate. Returns true if the caller may proceed with signup.
+   * On failure, sets the user-facing notice and returns false.
+   */
+  const validateRegion = async (): Promise<boolean> => {
+    setRegionBlockReason(null);
+    const { data, error: invokeError } = await supabase.functions.invoke(
+      "validate-signup-country",
+      { body: { declaredCountry: country } },
+    );
+    if (invokeError) {
+      setError("We couldn’t verify your region. Please try again.");
+      return false;
+    }
+    if (!data?.allowed) {
+      setRegionBlockReason(data?.reason ?? "region_blocked");
+      return false;
+    }
+    return true;
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    const ok = await validateRegion();
+    if (!ok) {
+      setLoading(false);
+      return;
+    }
+
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: displayName },
+        data: { full_name: displayName, country: "GB" },
         emailRedirectTo: redirectParam
           ? `${window.location.origin}${redirectParam}`
           : window.location.origin,
@@ -85,6 +122,11 @@ export default function Signup() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {regionBlockReason && (
+            <div className="mb-4">
+              <RegionBlockedNotice reason={regionBlockReason} />
+            </div>
+          )}
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">{t("signup.displayName")}</Label>
@@ -93,6 +135,24 @@ export default function Signup() {
             <div className="space-y-2">
               <Label htmlFor="email">{t("signup.email")}</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="rounded-xl h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger id="country" className="rounded-xl h-11">
+                  <SelectValue placeholder="Select your country" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-caption text-muted-foreground">
+                WhatSaid is currently available to UK residents only.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t("signup.password")}</Label>
