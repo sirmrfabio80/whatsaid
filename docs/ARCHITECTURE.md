@@ -851,7 +851,8 @@ For each driver: **Where · Trigger · Frequency · Sync/async · Provider
   `language_detection` + `language_confidence_threshold`,
   `speech_threshold`, `disfluencies`, `keyterms_prompt`, `prompt`,
   `speaker_options`. *Needs verification* which flags are paid
-  add-ons under our current plan/region (EU vs US base URL).
+  add-ons under our current plan (region is fixed: EU only — see §9).
+
 - **Avoidable?** No (this is the product). Not cacheable.
 
 #### E. Post-processing — `post-process` (Lovable AI, automatic)
