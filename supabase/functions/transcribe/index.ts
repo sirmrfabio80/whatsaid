@@ -293,7 +293,7 @@ async function submitAndPollTranscript(
     const pollIntervalMs = computePollInterval(elapsedMs);
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
-    const pollRes = await fetch(`${baseUrl}/transcript/${transcriptId}`, {
+    const pollRes = await assemblyAIFetch(`${baseUrl}/transcript/${transcriptId}`, {
       headers: { Authorization: apiKey },
     });
 
