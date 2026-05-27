@@ -124,11 +124,17 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   let caller: "service" | "admin" | null = null;
-  if (token && token === SERVICE_KEY) {
-    caller = "service";
-  } else if (token) {
-    const { data: { user } } = await admin.auth.getUser(token);
-    if (user && (await isAdmin(admin, user.id))) caller = "admin";
+  if (token) {
+    // Decode the JWT payload (no verification needed — the platform has
+    // already verified it; we only read the role claim).
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1] ?? ""));
+      if (payload?.role === "service_role") caller = "service";
+    } catch { /* fall through to user lookup */ }
+    if (!caller) {
+      const { data: { user } } = await admin.auth.getUser(token);
+      if (user && (await isAdmin(admin, user.id))) caller = "admin";
+    }
   }
   if (!caller) {
     return new Response(JSON.stringify({ error: "forbidden" }), {
