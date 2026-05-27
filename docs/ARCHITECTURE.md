@@ -278,7 +278,15 @@ some files exceed 120 min and consume multiple credits each).
 
 ### 5.3 Jobs & outputs
 
-- **`jobs`** — central job record. Key columns:
+- **`jobs`** — central job record. Rows are **created server-side only**
+  by the `create-job` edge function (which validates file size /
+  duration and recomputes `credits_charged` from
+  `_shared/pricing.ts → creditsForDuration`); the client may not insert
+  directly. Once inserted, the following columns are immutable from any
+  non-`service_role` caller via the `trg_jobs_lock_billing_columns`
+  BEFORE-UPDATE trigger: `user_id`, `credits_charged`,
+  `duration_seconds`, `file_size_bytes`, `file_name`, `guest_token`.
+  Key columns:
   - identity: `user_id` (nullable for guest), `guest_token`, `guest_email`
   - status: `status` enum (`pending | uploading | processing | completed | failed`),
     `error_message`
@@ -306,6 +314,7 @@ some files exceed 120 min and consume multiple credits each).
   translations. Authenticated reads, service-role writes.
 - **`tag_quality_flags`** — admin-only queue of flagged auto-tags
   pending fix / translation.
+
 
 ### 5.4 Sharing
 
