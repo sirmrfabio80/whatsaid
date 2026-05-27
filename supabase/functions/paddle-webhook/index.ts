@@ -29,9 +29,10 @@ async function notifyAdminOfPurchase(input: {
         body: JSON.stringify({
           templateName: "admin-credit-purchase",
           recipientEmail: ADMIN_NOTIFY_EMAIL,
-          idempotencyKey: `admin-purchase-${input.transactionId}`,
+          idempotencyKey: `admin-purchase-${input.transactionId}${input.bypassReason ? ":" + input.bypassReason : ""}`,
           templateData: {
             userEmail: input.userEmail ?? "(unknown)",
+            bypassReason: input.bypassReason,
             userId: input.userId,
             credits: input.credits,
             amount: input.amount,
