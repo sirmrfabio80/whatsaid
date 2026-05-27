@@ -74,9 +74,6 @@ export interface TranscribeTemplateConfig {
 }
 
 export const DEFAULT_TEMPLATE_CONFIG: TranscribeTemplateConfig = {
-  base_url: "https://api.eu.assemblyai.com/v2",
-  geo_routing_enabled: false,
-  us_base_url: "https://api.assemblyai.com/v2",
   speech_models: ["universal-3-pro"],
   temperature: 0,
   speech_threshold: 0.05,
@@ -143,9 +140,6 @@ export function parseTemplateConfig(raw: unknown): TranscribeTemplateConfig {
   })();
 
   return {
-    base_url: asString(r.base_url, d.base_url),
-    geo_routing_enabled: asBool(r.geo_routing_enabled, d.geo_routing_enabled),
-    us_base_url: asString(r.us_base_url, d.us_base_url),
     speech_models: speech_models.length > 0 ? speech_models : d.speech_models,
     temperature: asNum(r.temperature, d.temperature),
     speech_threshold: asNum(r.speech_threshold, d.speech_threshold),
