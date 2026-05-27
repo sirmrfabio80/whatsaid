@@ -20,6 +20,10 @@ export function RegionBlockedNotice({ reason }: { reason?: string }) {
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription className="space-y-2">
         <p>{detail}</p>
+        <p className="text-sm opacity-90">
+          If you’re in the UK but using a VPN or a network that hides your
+          location, please disable it and try again — or contact support.
+        </p>
         <p>
           Questions?{" "}
           <a
