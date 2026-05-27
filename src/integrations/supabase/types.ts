@@ -1226,6 +1226,35 @@ export type Database = {
         }
         Returns: number
       }
+      admin_update_retention_config: {
+        Args: {
+          p_dataset_key: string
+          p_description: string
+          p_enabled: boolean
+          p_legal_basis: string
+          p_reason: string
+          p_retention_days: number
+          p_strategy: string
+        }
+        Returns: {
+          created_at: string
+          dataset_key: string
+          description: string | null
+          enabled: boolean
+          id: string
+          legal_basis: string | null
+          retention_days: number
+          strategy: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "retention_config"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_and_record_usage: {
         Args: {
           p_action: string
