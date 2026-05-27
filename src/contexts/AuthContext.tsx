@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -132,14 +132,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Region gate: when a user is present, verify they’re allowed. Runs once
-  // per user.id. If denied, signs out and redirects to /login?blocked=region.
+  // Region gate: when a user is present, verify they're allowed. Runs at most
+  // ONCE per user.id for the lifetime of the provider — preventing a loop if
+  // the edge function is unreachable (network error) while Supabase keeps
+  // re-emitting the session via token refresh.
+  const regionCheckedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!user) {
       setRegionBlocked(false);
       setRegionChecking(false);
       return;
     }
+    if (regionCheckedRef.current.has(user.id)) {
+      // Already evaluated this user once — don't re-fire even if the
+      // auth client re-emits the session.
+      return;
+    }
+    regionCheckedRef.current.add(user.id);
     let cancelled = false;
     setRegionChecking(true);
     (async () => {
@@ -148,20 +157,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (error || !data?.allowed) {
           setRegionBlocked(true);
-          await supabase.auth.signOut();
+          await supabase.auth.signOut().catch(() => {});
           setUser(null);
           setSession(null);
-          navigate("/login?blocked=region", { replace: true });
+          if (location.pathname !== "/login") {
+            navigate("/login?blocked=region", { replace: true });
+          }
         } else {
           setRegionBlocked(false);
         }
       } catch {
         if (!cancelled) {
+          // Network failure reaching the region check — fail closed but
+          // do NOT loop. Sign out and leave the user on /login.
           setRegionBlocked(true);
-          await supabase.auth.signOut();
+          await supabase.auth.signOut().catch(() => {});
           setUser(null);
           setSession(null);
-          navigate("/login?blocked=region", { replace: true });
+          if (location.pathname !== "/login") {
+            navigate("/login?blocked=region", { replace: true });
+          }
         }
       } finally {
         if (!cancelled) setRegionChecking(false);
@@ -170,7 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   useEffect(() => {
     if (user && !regionBlocked && !regionChecking) {
