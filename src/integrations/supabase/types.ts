@@ -752,6 +752,75 @@ export type Database = {
         }
         Relationships: []
       }
+      retention_config: {
+        Row: {
+          created_at: string
+          dataset_key: string
+          description: string | null
+          enabled: boolean
+          id: string
+          legal_basis: string | null
+          retention_days: number
+          strategy: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          dataset_key: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          legal_basis?: string | null
+          retention_days: number
+          strategy: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          dataset_key?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          legal_basis?: string | null
+          retention_days?: number
+          strategy?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      retention_config_audit: {
+        Row: {
+          after: Json
+          before: Json
+          changed_at: string
+          changed_by: string | null
+          dataset_key: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          after: Json
+          before: Json
+          changed_at?: string
+          changed_by?: string | null
+          dataset_key: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          after?: Json
+          before?: Json
+          changed_at?: string
+          changed_by?: string | null
+          dataset_key?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           comment: string | null
