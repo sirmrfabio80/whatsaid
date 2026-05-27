@@ -1,91 +1,172 @@
-# Pin AssemblyAI to EU-only
+## Phase 1 (revised) — Reg. 37 acknowledgement at Paddle checkout
 
-## Goal
-Make `https://api.eu.assemblyai.com/v2` the **only** AssemblyAI endpoint the codebase can ever reach. Remove geo-routing entirely (no toggle, no US fallback, no admin override, no migration path back to US). Fix the `cleanup-assemblyai` US-base-URL bug. Leave the regional auth guard, transcription business logic, and audio-deletion sequence untouched.
+Incorporates your review. Material issues #1–#4 are folded in; quality items #5–#10 are accepted as listed; nits adopted.
 
-## Confirmed search results
+### Why this first
+A UK consumer can today buy a credit pack via Paddle, consume credits, and still validly exercise the 14-day cancellation right under reg. 29 of the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013. Reg. 37 extinguishes that right only if, **before supply begins**, the consumer (a) expressly consents to immediate supply and (b) acknowledges the resulting loss of the cancellation right. The current checkout (`openCheckout` in `src/lib/paddle-checkout.ts`) captures neither.
 
-**1. Every place in the repo that touches an AssemblyAI host:**
-| File | Current value |
-|---|---|
-| `supabase/functions/transcribe/index.ts:22` | `FALLBACK_BASE_URL = "https://api.eu.assemblyai.com/v2"` |
-| `supabase/functions/transcribe/index.ts:49` | `us_base_url: "https://api.assemblyai.com/v2"` |
-| `supabase/functions/cleanup-assemblyai/index.ts:4` | `ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2"` ← **bug** |
-| `supabase/functions/detect-language/index.ts:100` | `baseUrl = "https://api.eu.assemblyai.com/v2"` ← already EU |
-| `src/lib/transcribe-template.ts:76, 78` | `base_url` (EU) and `us_base_url` (US) defaults |
-| `supabase/migrations/20260417163903_*.sql:63` | seeded template with `"base_url": "https://api.eu.assemblyai.com/v2"` (historical seed — leave the file alone; new migration overwrites live data) |
+### Definition we are adopting (#3)
+- **"Supply begins" = the moment credits are credited to the user's wallet** (i.e. on a successful `transaction.completed` Paddle webhook). This is the conservative-to-the-consumer-but-still-Reg.37-valid reading, and it matches what we already do.
+- **Refund posture (#4):** unused full packs remain refundable on request within 14 days. Once any credit from a pack has been consumed, the cancellation right is extinguished under reg. 37; partial-consumption refunds are at WhatSaid's discretion and not a statutory entitlement. This wording goes into `RefundPolicy.tsx` and is referenced from `Terms.tsx`.
+- Solicitor must confirm whether a credit pack is "digital content" or "digital service" under the 2013 Regs; the plan implicitly treats it as digital content. (Nit accepted.)
 
-No other file references `api.assemblyai.com` or `api.eu.assemblyai.com`. The regional auth guard (`_shared/region.ts`, `geo-check`, `check-login-region`, `validate-signup-country`) is independent and out of scope.
+### What changes
 
-**2. Code paths in `transcribe/index.ts` where transcript persists but audio (storage + AssemblyAI) is NOT deleted:**
+**1. New table `consent_versions` (#1, #8) — self-contained evidence**
+- `version` (PK, e.g. `cca2013.reg37.immediate-supply.2026-05-v1`)
+- `consent_type` text (namespaced: `cca2013.reg37.immediate-supply`)
+- `text_en`, `text_it`, `text_fr` (the literal wording shown to users — both checkbox labels + explanatory paragraph, as JSON or three text cols)
+- `effective_from`, `effective_to` (nullable)
+- `text_hash` text — `sha256(text_en || text_it || text_fr)` first 16 chars; UNIQUE
+- RLS: `SELECT` to `authenticated`; only `service_role` may INSERT
+- Seeded by the migration with the launch version. Subsequent versions inserted by a service-role admin tool (out of scope for Phase 1).
+- The frontend constant `REG37_CONSENT_VERSION` is computed at build/runtime from `sha256(text)` and asserted against the row pulled from the DB, so editing the strings without seeding a new row fails loudly (replaces the "remember to bump" footgun in #8).
 
-Success-path ordering (lines 749–826):
-1. UPDATE `jobs` with `assemblyai_transcript_id`, `assemblyai_delete_status='pending'`.
-2. INSERT `job_outputs` transcript row.
-3. `fetch DELETE /transcript/{id}` (try/catch — failures recorded as `assemblyai_delete_status='failed'`, **never re-thrown**).
-4. `supabase.storage.from('temp-audio').remove([temp_file_path])` — failures only logged, never re-thrown.
-5. UPDATE `jobs.audio_deleted_at = now()` (runs unconditionally).
+**2. New table `consent_events` — per-purchase contract evidence**
+- `id uuid PK`, `user_id`, `consent_type`, `version` (FK → `consent_versions.version`), `package_id`, `ip_hash`, `user_agent` (≤255 chars), `accepted_at`, `metadata jsonb`
+- RLS: users SELECT their own; `service_role` ALL.
+- Index on (`user_id`, `consent_type`, `accepted_at DESC`).
+- **Retention horizon (#7):** designed for **6-year retention** (Limitation Act 1980, breach-of-contract). Storage estimate and any future cascade-delete in Phase 2 must respect this. No FK on `user_id` — when an account is deleted in `delete-account`, consent rows are anonymised (set `user_id = NULL`, scrub `ip_hash` and `user_agent`) rather than deleted, so the audit trail survives Right to Erasure for legitimate-interest legal-defence retention.
 
-Findings:
-- ✅ **No code path persists the transcript and then skips both deletions.** Both DELETE calls are unconditional once `INSERT job_outputs` succeeds; both are wrapped so they cannot abort the function.
-- ⚠️ **Soft risks to flag (do NOT fix in this change — out of scope):**
-  - If `supabase.storage.remove` fails, `audio_deleted_at` is **still** set to `now()`, masking the orphan in `temp-audio/{user_id}/{job_id}.{ext}`. There is no retry queue equivalent to `cleanup-assemblyai` for storage orphans (only `watchdog-stale-jobs` covers stuck jobs, not successful-but-orphaned audio).
-  - If `INSERT job_outputs` fails, the function throws before either deletion. In this branch the transcript is **not** persisted (so the user's invariant holds), but the AssemblyAI-side transcript and the audio file are both leaked until `cleanup-assemblyai` (AssemblyAI side) and `watchdog-stale-jobs` (storage side, via `markJobFailed`) pick them up.
-  - The pre-flight `detect-language` function also `fetch DELETE`s its throwaway transcript best-effort with no retry; failures there leak a short detection transcript on AssemblyAI.
+**3. `record-consent` edge function**
+- JWT-validated via `requireAuth`.
+- Zod body: `{ consent_type, version, package_id }`.
+- Verifies `version` exists in `consent_versions` and is currently effective; rejects 409 otherwise.
+- Computes `ip_hash = HMAC-SHA256(env CONSENT_IP_SALT_SECRET, today_yyyymmdd_utc || ip)` (#6 — HMAC of an env secret keyed by day; correlation across days is intentionally impossible, which is the desired privacy property).
+- Inserts a `consent_events` row, returns `{ ok: true, consent_id }`.
 
-These are noted for the record; the user said "verify, do not change" and "do not introduce new logic" — they will not be modified in this plan.
+**4. Pre-checkout consent dialog**
+- New `Reg37ConsentDialog` component (shadcn `Dialog`).
+- Two **separately required** checkboxes (kept as-is — you confirmed this is right):
+  1. "I want my credits to be made available immediately after payment so I can start transcribing right away."
+  2. "I understand that, because I am requesting immediate supply, I will lose my statutory 14-day right to cancel under the Consumer Contracts Regulations 2013 once those credits are credited to my account."
+- Short paragraph with link to `/refund-policy`.
+- Accessibility (#9, explicit): focus trap, ESC closes (Continue stays disabled), `aria-describedby` ties the paragraph to the dialog, both checkbox labels fully wrap at 320 px, all interactive targets ≥44 px, respects `prefers-reduced-motion`.
+- **Always shown per purchase, never session-cached (#10).** Closing the dialog (X / outside click / ESC) records nothing and does not open Paddle.
 
-## Files to change (in this exact order)
+**5. Wire consent_id into Paddle (#2)**
+- `openCheckoutWithConsent(opts)` wraps the existing `openCheckout`. Flow:
+  1. Open `Reg37ConsentDialog`.
+  2. On both-ticked + Continue → POST `record-consent` → receive `consent_id`.
+  3. Call `openCheckout({ ...opts, customData: { user_id, consent_id, consent_version } })`.
+- `paddle-webhook` reads `data.custom_data.consent_id` and `consent_version` and:
+  - If present → verify the row exists, belongs to the same `user_id`, and matches the version; record `metadata.paddle_transaction_id` on the consent row.
+  - If absent or mismatched → **still grant credits** (your call, correct), but emit a **hard requirement** admin alert via existing transactional-email infra and write an audit row to a new `consent_audit_anomalies` table (or to `consent_events.metadata` as a flagged row). Drops the 30-minute time-window entirely.
+- All call sites switch to `openCheckoutWithConsent`: `PricingTeaserStrip`, Pricing page, out-of-credits prompts in `Convert.tsx` and `History.tsx`.
 
-### Code changes — safe to apply against the current schema (geo keys ignored, never written)
+**6. i18n posture for legally-binding text (#5)**
+- Phase 1 ships **EN-only** for the consent dialog and the two checkbox labels — the consent text is legal artefact, not UX copy. Users on IT/FR UI still see the consent strings in English. The surrounding non-binding chrome (titles, button labels) remains translated.
+- `it_text` / `fr_text` columns in `consent_versions` are left NULL on the launch row; populated later only after a qualified UK-law legal translator review. The schema is already there; only the seeding is deferred.
 
-1. **NEW** `supabase/functions/_shared/assemblyai.ts`
-   - Exports `export const ASSEMBLYAI_EU_BASE_URL = "https://api.eu.assemblyai.com/v2"` and nothing else.
+**7. Policy copy updates**
+- `RefundPolicy.tsx`: explicit Reg. 37 narrative — "supply begins when credits land in your wallet"; unused full packs refundable within 14 days; partial-consumption refunds are discretionary.
+- `Terms.tsx`: short paragraph mirroring the same rule, linking to Refund Policy as the single source of truth.
+- EN copy updated; IT/FR untouched in this phase (consistent with #5).
 
-2. **EDIT** `supabase/functions/transcribe/index.ts`
-   - Import `ASSEMBLYAI_EU_BASE_URL` from `../_shared/assemblyai.ts`.
-   - Replace `FALLBACK_BASE_URL` constant with the imported one.
-   - Drop `geo_routing_enabled` and `us_base_url` from `ActiveTemplateConfig` interface, from `FALLBACK_CONFIG`, and from `parseActiveConfig()` (it stops reading those keys — old rows that still contain them are simply ignored).
-   - Delete `detectCountry()` and `resolveBaseUrl()`.
-   - In `Deno.serve`: remove the `detectedCountry` + `resolvedBaseUrl` block; pass `ASSEMBLYAI_EU_BASE_URL` directly into `submitAndPollTranscript` and into the post-success `DELETE /transcript/{id}` call.
-   - Keep the `region_routing_resolved` log event for dashboard continuity, but emit `{ event: "region_routing_resolved", base_url: ASSEMBLYAI_EU_BASE_URL }` only — remove `country` and `geo_routing_enabled` fields.
-   - Leave every other transcription/diarization/heartbeat/polling/error-handling line untouched.
+### Out of scope (deferred to later plans)
+- Retention/pruning of `consent_events` (Phase 2 — set the 6y rule).
+- Self-service consent history export (Phase 3 — DSR).
+- Cookie banner, uploader attestation, share-recipient Art. 14 notice, full policy rewrite, accessibility statement page.
+- Admin UI to seed new `consent_versions` rows (manual SQL via service role for now).
 
-3. **EDIT** `supabase/functions/cleanup-assemblyai/index.ts`
-   - Replace the local `ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2"` constant with an import of `ASSEMBLYAI_EU_BASE_URL` from `../_shared/assemblyai.ts`. (Fixes the bug.)
+### Regression test gate
 
-4. **EDIT** `supabase/functions/detect-language/index.ts`
-   - Replace the local `const baseUrl = "https://api.eu.assemblyai.com/v2"` with the imported `ASSEMBLYAI_EU_BASE_URL`. (Value unchanged; eliminates the duplicate string so the invariant is enforced by `grep`.)
+**Vitest (`src/test/reg37-consent.test.tsx`):**
+- Dialog: Continue disabled until both checkboxes ticked.
+- Closing the dialog (X, ESC, outside click) → `record-consent` NOT called, `openCheckout` NOT called. *(adds the missing test you flagged)*
+- On Continue → `record-consent` called once with the version derived from the visible text hash; `openCheckout` called with `customData.consent_id` set.
+- If `record-consent` rejects → checkout never opens, toast shown.
+- Accessibility: focus trap traps; both labels rendered without truncation at 320 px width.
 
-5. **EDIT** `src/lib/transcribe-template.ts`
-   - Remove `base_url`, `geo_routing_enabled`, `us_base_url` from `TranscribeTemplateConfig`.
-   - Remove them from `DEFAULT_TEMPLATE_CONFIG`, from `parseTemplateConfig` (stop reading those keys), and from `configsEqual`.
-   - Delete `resolveBaseUrl()` and the `country` field on `PreviewSampleJob`.
-   - `buildPreviewPayload` is unaffected (it never uses `base_url`).
+**Deno edge tests:**
+- `record-consent`: rejects anon, rejects unknown/expired version, rejects malformed body, accepts valid request and writes one row whose `ip_hash` is HMAC-shaped (64 hex chars).
+- `paddle-webhook`: with valid `consent_id` in `custom_data` → credits granted + consent row updated with tx id, no anomaly written; with missing `consent_id` → credits still granted + anomaly row written + admin alert dispatched.
 
-6. **EDIT** `src/components/admin/TemplateEditor.tsx`
-   - Delete the entire "Region routing" `<Section>` (geo toggle + default base URL + US base URL inputs).
-   - Remove `us_base_url` from `DisabledMap` and `computeDisabled()`.
+**SQL smoke:**
+- Service role can INSERT into `consent_events`; authenticated user can only SELECT own; UPDATE/DELETE denied for client roles.
+- `consent_versions` SELECT works for authenticated; INSERT denied.
 
-7. **EDIT** `src/components/admin/RequestPreviewPanel.tsx`
-   - Stop importing `resolveBaseUrl`. Replace the dynamic `resolvedBaseUrl` calculation with the imported `ASSEMBLYAI_EU_BASE_URL` constant (mirrored to a small client-side constant in `src/lib/transcribe-template.ts` so the FE doesn't import from edge code).
-   - Remove the "Sample country" `<Select>`, the `sampleCountry` state, the `country` arg passed to `buildPreviewPayload`, and the "Geo-routing ON/OFF" badge. Keep the read-only endpoint display showing `${ASSEMBLYAI_EU_BASE_URL}/transcript`.
+**Manual E2E:**
+1. Buy £4.99 pack — dialog appears, both checkboxes required, `consent_events` row written with the new version, Paddle opens, webhook links the row to the tx id, credits granted.
+2. Devtools bypass: call `openCheckout` directly without consent → Paddle opens, webhook fires, credits granted, **anomaly row + admin email present**.
+3. 3DS challenge scenario (delayed `transaction.completed`) — consent_id still resolves the link regardless of elapsed time. *(replaces the 30-min window)*
+4. EN/IT/FR users all see the consent dialog in English in Phase 1.
+5. Existing `src/test/pricing.shared.test.ts` still passes; no pricing math changed.
 
-### Migration — applied last so it cannot race ahead of code that still reads the dropped keys
+### Technical details
 
-8. **NEW** Supabase migration:
-   - Single `UPDATE public.transcribe_settings_templates SET config = (config - 'geo_routing_enabled' - 'us_base_url') || jsonb_build_object('base_url', 'https://api.eu.assemblyai.com/v2'), updated_at = now();`
-   - Does **not** drop the `config` column, does **not** touch any other column, does **not** restructure the table.
-   - After this runs every existing row is geo-key-free and pinned to the EU base URL. New rows written by the (already-updated) admin UI never include the dropped keys.
+```text
+Migration (new tables, seed launch version)
+───────────────────────────────────────────
+CREATE TABLE public.consent_versions (
+  version text PRIMARY KEY,
+  consent_type text NOT NULL,
+  text_en text NOT NULL,
+  text_it text,
+  text_fr text,
+  text_hash text NOT NULL UNIQUE,
+  effective_from timestamptz NOT NULL DEFAULT now(),
+  effective_to timestamptz
+);
+GRANT SELECT ON public.consent_versions TO authenticated;
+GRANT ALL ON public.consent_versions TO service_role;
+ALTER TABLE public.consent_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone authenticated can read consent versions"
+  ON public.consent_versions FOR SELECT TO authenticated USING (true);
 
-## Invariants enforced after this change
+CREATE TABLE public.consent_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid,                    -- nullable to survive account deletion (audit)
+  consent_type text NOT NULL,      -- e.g. 'cca2013.reg37.immediate-supply'
+  version text NOT NULL REFERENCES public.consent_versions(version),
+  package_id text,
+  ip_hash text,
+  user_agent text,
+  accepted_at timestamptz NOT NULL DEFAULT now(),
+  metadata jsonb                   -- { paddle_transaction_id, anomaly?: true, ... }
+);
+GRANT SELECT ON public.consent_events TO authenticated;
+GRANT ALL ON public.consent_events TO service_role;
+ALTER TABLE public.consent_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users view own consents"
+  ON public.consent_events FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+CREATE INDEX idx_consent_events_user_type
+  ON public.consent_events(user_id, consent_type, accepted_at DESC);
 
-- `rg 'api\.assemblyai\.com|api\.eu\.assemblyai\.com'` returns exactly **two** hits: `_shared/assemblyai.ts` (the single source of truth) and the existing migration `20260417163903_*.sql` (historical seed, harmless). I'll verify this with a grep after the edits.
-- No symbol named `geo_routing_enabled`, `us_base_url`, `resolveBaseUrl`, or `detectCountry` exists anywhere in `src/` or `supabase/functions/`.
-- The four success-path steps (insert transcript → AssemblyAI DELETE → storage remove → set `audio_deleted_at` / `assemblyai_delete_status`) remain in place, untouched.
+-- Seed the launch version
+INSERT INTO public.consent_versions (version, consent_type, text_en, text_hash)
+VALUES (
+  'cca2013.reg37.immediate-supply.2026-05-v1',
+  'cca2013.reg37.immediate-supply',
+  '<full literal EN text of both checkboxes + paragraph>',
+  '<sha256 first 16 chars>'
+);
 
-## Open questions before I implement
+Edge function: supabase/functions/record-consent/index.ts
+  - requireAuth
+  - zod { consent_type, version, package_id }
+  - look up version row; reject if missing or effective_to < now()
+  - HMAC-SHA256(env CONSENT_IP_SALT_SECRET, yyyymmdd_utc || ip) → ip_hash
+  - insert consent_events; return { ok, consent_id }
 
-1. **Log shape continuity.** I plan to keep the `region_routing_resolved` event with `{ base_url }` only (no `country`, no `geo_routing_enabled`). If your observability dashboard requires those two fields to remain present (even as `null`/`false`), say so and I'll keep them as fixed nulls instead of removing them.
-2. **Admin "Region routing" section.** I'll remove the entire `<Section title="Region routing">` block (toggle + both URL inputs). If you'd rather keep a one-line read-only "Region: EU (locked)" indicator there for admin reassurance, confirm and I'll add it.
-3. **Soft risk flags.** Section 2 above lists three residual cleanup gaps (storage orphan with `audio_deleted_at` still stamped; transcript-insert failure leaking both sides; `detect-language` throwaway transcript leak). Confirm you want them **logged only in this plan** and addressed separately, not folded into this change.
+Frontend (src/lib/paddle-checkout.ts)
+  - openCheckoutWithConsent(opts) wraps openCheckout
+  - passes customData.consent_id + customData.consent_version through to Paddle
+
+Webhook (supabase/functions/paddle-webhook/index.ts)
+  - read consent_id + consent_version from event.data.custom_data
+  - link to consent row OR insert anomaly + dispatch admin email (hard requirement)
+  - credits still granted in both branches
+```
+
+New secret to add: `CONSENT_IP_SALT_SECRET` (random 32-byte hex). I'll request it via `add_secret` at the start of build mode.
+
+### Deliverables
+- 1 migration (two tables + seed)
+- 1 new edge function (`record-consent`)
+- 1 new dialog component + 1 checkout wrapper
+- `paddle-webhook` updated to verify + audit
+- Copy updates in `RefundPolicy.tsx`, `Terms.tsx` (EN)
+- Vitest + Deno tests
+- `docs/ARCHITECTURE.md` §3 updated
