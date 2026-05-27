@@ -374,18 +374,12 @@ Deno.serve(async (req) => {
     // over these admin defaults further down.
     const cfg = await loadActiveConfig(supabase);
 
-    // Per-request region routing. Detect the caller's country from edge
-    // proxy headers and resolve the AssemblyAI base URL according to the
-    // template's geo_routing settings.
-    const detectedCountry = detectCountry(req);
-    const resolvedBaseUrl = resolveBaseUrl(cfg, detectedCountry);
+    // AssemblyAI is EU-only by policy. No geo-routing, no overrides.
     console.log(JSON.stringify({
       event: "region_routing_resolved",
-      country: detectedCountry,
-      base_url: resolvedBaseUrl,
-      geo_routing_enabled: cfg.geo_routing_enabled,
+      base_url: ASSEMBLYAI_EU_BASE_URL,
     }));
-    console.log(`[transcribe] country=${detectedCountry ?? "unknown"} base_url=${resolvedBaseUrl}`);
+    console.log(`[transcribe] base_url=${ASSEMBLYAI_EU_BASE_URL}`);
 
     const requestBody = await req.json().catch(() => ({}));
     const job_id = typeof requestBody?.job_id === "string" ? requestBody.job_id : "";
