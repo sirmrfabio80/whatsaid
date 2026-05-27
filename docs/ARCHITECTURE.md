@@ -27,6 +27,19 @@ Audio is **deleted from storage immediately after processing**
 (`audio_deleted_at` is recorded on the `jobs` row). Only generated text +
 metadata is retained.
 
+**Region restriction.** WhatSaid is **UK-only by policy**. Signup, login,
+invite redemption, and Paddle checkout are all hard-gated to country
+code `GB` (ISO-3166-1 alpha-2). The gate is enforced at four layers:
+client UI (`Signup`, `Login`, `AuthContext`), edge functions
+(`validate-signup-country`, `check-login-region`, `geo-check`), the
+Paddle billing address (`paddle-checkout.ts` forces
+`countryCode: "GB"` and `paddle-webhook` rejects non-GB transactions),
+and the database (`profiles.country` ISO-2 `CHECK` + immutability
+trigger). The policy is fail-closed: when the source IP region cannot
+be determined, the request is rejected with a "region not verified"
+message.
+
+
 ---
 
 ## 2. Tech stack
@@ -178,13 +191,19 @@ can only access their own rows except where noted. Roles are stored in a
   `display_name`, `email` (contact), `avatar_url`, `ui_language`
   (`en`|`it`|`fr`), `needs_password_setup`, **`preferred_voice`** (`'male'|'female'`,
   default `'female'`, `CHECK`), **`playback_speed`** (`real`, default
-  `1.0`, `CHECK IN (0.75, 1.0, 1.25, 1.5)`).
+  `1.0`, `CHECK IN (0.75, 1.0, 1.25, 1.5)`), **`country`** (ISO-3166-1
+  alpha-2, `CHECK '^[A-Z]{2}$'`, **immutable** once set via the
+  `trg_profiles_lock_country` trigger). `country` is populated by
+  `handle_new_user` from signup metadata and backfilled by
+  `check-login-region` on first verified login.
   RLS: user can `SELECT` / `INSERT` / `UPDATE` own row (`auth.uid() =
   user_id`); no `DELETE`.
 - **`user_roles`** — `(user_id, role)` with `app_role` enum
   (`admin | moderator | user`). Admin-only management; users can read
-  their own roles. Use the `has_role(_user_id, _role)` security-definer
-  function in RLS predicates to avoid recursion.
+  their own roles. Use the `private.has_role(_user_id, _role)`
+  security-definer function in RLS predicates to avoid recursion (moved
+  out of `public` so it is not callable via the Data API / REST).
+
 
 ### 5.2 Credits & billing
 
@@ -259,7 +278,15 @@ some files exceed 120 min and consume multiple credits each).
 
 ### 5.3 Jobs & outputs
 
-- **`jobs`** — central job record. Key columns:
+- **`jobs`** — central job record. Rows are **created server-side only**
+  by the `create-job` edge function (which validates file size /
+  duration and recomputes `credits_charged` from
+  `_shared/pricing.ts → creditsForDuration`); the client may not insert
+  directly. Once inserted, the following columns are immutable from any
+  non-`service_role` caller via the `trg_jobs_lock_billing_columns`
+  BEFORE-UPDATE trigger: `user_id`, `credits_charged`,
+  `duration_seconds`, `file_size_bytes`, `file_name`, `guest_token`.
+  Key columns:
   - identity: `user_id` (nullable for guest), `guest_token`, `guest_email`
   - status: `status` enum (`pending | uploading | processing | completed | failed`),
     `error_message`
@@ -287,6 +314,7 @@ some files exceed 120 min and consume multiple credits each).
   translations. Authenticated reads, service-role writes.
 - **`tag_quality_flags`** — admin-only queue of flagged auto-tags
   pending fix / translation.
+
 
 ### 5.4 Sharing
 
@@ -334,17 +362,41 @@ some files exceed 120 min and consume multiple credits each).
   `exports_deleted`, `share_pdf_cache_deleted`), plus
   `missing_prefixes`, `errors`, `duration_ms`, and run `status`
   (`running | completed | failed`). The row is inserted at start so
-  timed-out runs are still visible.
+  timed-out runs are still visible. Rows older than 30 days are pruned
+  by `cleanup-expired-shares` itself, alongside finished `async_jobs`
+  older than 30 days.
 - **`email_send_log`**, **`email_send_state`**,
   **`email_unsubscribe_tokens`**, **`suppressed_emails`** — internal
-  email pipeline backing `auth-email-hook` and `process-email-queue`.
+  email pipeline backing `auth-email-hook`, `send-transactional-email`,
+  and `process-email-queue`.
+
+### 5.5.1 Usage / quota ledger
+
+- **`usage_events`** — append-only ledger backing the
+  `check_and_record_usage` RPC. Columns:
+  `(user_id, job_id?, action, scope, scope_key?, units, metadata, created_at)`
+  with `scope ∈ {user_day, user_lifetime, job_day, job_lifetime,
+  recipient_job_day}`. Indexes on `(user_id, action, created_at)`,
+  `(job_id, action, created_at)`, and `(action, scope_key,
+  created_at)` keep window queries cheap. RLS: users see their own
+  rows; admins see all; service-role full access. Quotas currently
+  enforced (see `_shared/quota.ts`):
+    - `regenerate_*`: 100 / user / day, 20 / job lifetime
+    - `generate_tags`: capped per user / day
+    - `translate_tags`: capped per user / day
+    - `share_transcript_email`: 3 / recipient / job / day, 30 / user / day
+    - `suggest_speakers`: capped per click
 
 ### 5.6.1 Triggers
 
 - `validate_share_pdf_cache_path` (BEFORE INSERT OR UPDATE on
-  `share_pdf_cache`) — see §5.4. This is the only path-integrity
-  trigger in the schema; other tables rely on `CHECK` constraints and
-  RLS predicates.
+  `share_pdf_cache`) — see §5.4.
+- `trg_jobs_lock_billing_columns` (BEFORE UPDATE on `jobs`) — rejects
+  any non-`service_role` mutation of `user_id`, `credits_charged`,
+  `duration_seconds`, `file_size_bytes`, `file_name`, `guest_token`.
+- `trg_profiles_lock_country` (BEFORE UPDATE on `profiles`) — makes
+  `country` immutable once set (only `service_role` can transition
+  `NULL → 'GB'` or override via admin paths).
 
 ### 5.6 Help & admin
 
@@ -352,15 +404,29 @@ some files exceed 120 min and consume multiple credits each).
   per `(faq_anchor, locale)`. Anyone can `INSERT` (regex-validated);
   admins can `SELECT`.
 - **`transcribe_settings_templates`** — admin-managed AssemblyAI request
-  presets (`config` jsonb, `is_active`).
+  presets (`config` jsonb, `is_active`). The `config.base_url` is
+  pinned to `https://api.eu.assemblyai.com/v2`; geo-routing /
+  `us_base_url` fields were stripped from existing rows and removed
+  from the editor UI (see §6).
+- **`reviews`**, **`seo_monitoring_alerts`** — public-facing customer
+  reviews and the Search Console monitoring queue (read by
+  `monitor-search-console`).
 
 ### 5.7 RPCs (SECURITY DEFINER)
 
-- `has_role(_user_id, _role)` — RLS-safe role check.
+- `private.has_role(_user_id, _role)` — RLS-safe role check (lives in
+  the `private` schema; not exposed via REST).
 - `add_credits(p_user_id, p_amount, p_reason, p_stripe_session_id?)`
 - `deduct_credits(p_user_id, p_amount, p_reason, p_job_id?)`
+- `check_and_record_usage(p_user_id, p_action, p_scope, p_job_id?,
+  p_scope_key?, p_window?, p_limit, p_units?, p_metadata?)` — atomic
+  quota check + ledger insert under an advisory lock so two concurrent
+  callers cannot both slip past a cap. Returns
+  `{ allowed, used, limit, scope }`.
 - `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq` —
   `pgmq` wrappers used by the email worker.
+
+
 
 ### 5.8 Storage
 
@@ -378,25 +444,38 @@ automatically; default `verify_jwt` policy lives in `supabase/config.toml`.
 
 | Function | Purpose |
 |---|---|
-| `transcribe` | Submit audio to AssemblyAI; persist job config |
+| `create-job` | **Server-authoritative job creation.** Validates file size / duration, recomputes `credits_charged` via `_shared/pricing.ts`, and inserts the `jobs` row. Clients can no longer insert into `jobs` directly. |
+| `transcribe` | Submit audio to AssemblyAI; persist job config. Uses `_shared/assemblyai.ts → assemblyAIFetch`, which asserts every request URL against `ASSEMBLYAI_EU_BASE_URL` and throws `AssemblyAIRegionViolation` on any non-EU host. |
 | `process-job` | Deduct credits, dispatch `transcribe` + `post-process`, delete audio |
 | `post-process` | Generate summary (+ optional custom-prompt output) + auto-tags via Lovable AI; emits a `notifications` row |
-| `regenerate` | Re-run summary, custom prompt, or `translate_all` on existing transcript |
-| `generate-tags`, `generate-title` | Targeted single-output regen |
-| `suggest-speakers`, `identify-speakers` | Speaker-naming heuristics + LLM |
-| `translate-tags`, `scan-non-english-tags`, `fix-flagged-tags` | Tag i18n maintenance |
-| `share-transcript`, `share-transcript-record`, `claim-transcript-share`, `download-shared-pdf` | Sharing pipeline |
-| `paddle-webhook` | Verifies Paddle events → adds credits via `add_credits` |
-| `invite-user`, `redeem-invite` | Admin-issued credit invites |
+| `regenerate` | Re-run summary, custom prompt, or `translate_all` on existing transcript. Top-level auth + ownership check; quota-gated. |
+| `generate-tags`, `generate-title` | Targeted single-output regen. `generate-tags` is quota-gated. |
+| `suggest-speakers`, `identify-speakers` | Speaker-naming heuristics + LLM. `suggest-speakers` requires auth and is quota-gated per click. |
+| `translate-tags`, `scan-non-english-tags`, `fix-flagged-tags` | Tag i18n maintenance. `translate-tags` requires auth and is quota-gated. |
+| `detect-language` | AssemblyAI-backed language detection probe used by Convert preflight. Routed through `assemblyAIFetch`. |
+| `share-transcript`, `share-transcript-record`, `claim-transcript-share`, `download-shared-pdf` | Sharing pipeline. Share creators are double-quota-gated (per-recipient/day + per-user/day). |
+| `paddle-webhook` | Verifies Paddle events → adds credits via `add_credits`. **Rejects non-GB billing addresses.** Triggers an admin email on each successful credit purchase. |
+| `invite-user`, `redeem-invite` | Admin-issued credit invites. `redeem-invite` is gated by the region check. |
 | `validate-profile-email` | Pre-save email uniqueness check |
+| `validate-signup-country` | Pre-signup region gate: requires declared country `GB` **and** a `GB` source-IP (`cf-ipcountry` / equivalent). Fail-closed if the IP region is missing. |
+| `check-login-region` | Post-login region gate. On non-GB or unknown IP for non-admins, signs the user out and redirects to `/login?blocked=region`. Backfills `profiles.country` on first verified login. |
+| `geo-check` | Best-effort IP-country lookup used by signup/login flows. |
 | `delete-account` | Cascading account + storage cleanup |
-| `auth-email-hook`, `process-email-queue` | Outbound transactional + auth email pipeline |
-| `cleanup-assemblyai`, `cleanup-stale-jobs`, `watchdog-stale-jobs` | Scheduled cleanup |
-| `cleanup-expired-shares` | Three-phase storage sweep: (1) `shared-pdfs` blobs past `transcript_shares.expires_at` + 24 h-grace orphan dirs, (2) `exports` blobs for `pdf_export` async jobs older than 7 days (also nulls `resource_url`), (3) `share_pdf_cache` rows past `cleanup_config.share_pdf_cache_ttl_days`. Supports `?dry_run=1`; batch size + cache TTL come from `cleanup_config`; per-run audit row in `cleanup_logs`. |
+| `auth-email-hook`, `process-email-queue`, `send-transactional-email`, `preview-transactional-email`, `handle-email-unsubscribe`, `handle-email-suppression` | Outbound transactional + auth email pipeline. `auth-email-hook` and `paddle-webhook` additionally fan out admin notifications to `ADMIN_NOTIFY_EMAIL` (see `_shared/constants.ts`) on new signups and on credit purchases. |
+| `cleanup-assemblyai`, `cleanup-stale-jobs`, `watchdog-stale-jobs` | Scheduled cleanup. `cleanup-assemblyai` retries failed AAI deletions and uses `assemblyAIFetch` (EU-locked). |
+| `cleanup-expired-shares` | Three-phase storage sweep plus log retention: (1) `shared-pdfs` blobs past `transcript_shares.expires_at` + 24 h-grace orphan dirs, (2) `exports` blobs for `pdf_export` async jobs older than 7 days (also nulls `resource_url`), (3) `share_pdf_cache` rows past `cleanup_config.share_pdf_cache_ttl_days`. Also prunes `cleanup_logs` and finished `async_jobs` older than 30 days. Supports `?dry_run=1`; batch size + cache TTL come from `cleanup_config`; per-run audit row in `cleanup_logs`. |
+| `monitor-search-console` | Periodically polls Google Search Console and writes anomalies to `seo_monitoring_alerts`. |
 | `admin-get-job-details` | Admin-only deep job inspection |
 
-`_shared/` holds CORS, Supabase client, prompts, sanitizers, AI Gateway
-helper, and email templates.
+`_shared/` holds CORS, Supabase client (`requireAuth`,
+`createServiceClient`), prompts, sanitizers, AI Gateway helper,
+**`pricing.ts`** (canonical `creditsForDuration` used by both client and
+`create-job`), **`quota.ts` + `usage-rpc.test.ts`** (quota wrapper for
+`check_and_record_usage` and live-DB regression tests),
+**`assemblyai.ts` + `assemblyai.test.ts`** (EU-only fetch guard), and
+email templates (both auth and transactional, including
+`admin-new-signup` and `admin-credit-purchase`).
+
 
 ---
 
@@ -659,13 +738,22 @@ or other metrics:
 
 ## 9. Reference: key external dependencies
 
-- **AssemblyAI** — STT provider. Templates live in
-  `transcribe_settings_templates`; deletion lifecycle in
+- **AssemblyAI** — STT provider, **EU region only**. All calls go
+  through `_shared/assemblyai.ts → assemblyAIFetch`, which asserts the
+  URL host equals `api.eu.assemblyai.com` (via `assertAssemblyAIUrl`)
+  and throws `AssemblyAIRegionViolation` otherwise. Templates live in
+  `transcribe_settings_templates` with `config.base_url` pinned to the
+  EU endpoint; geo-routing and `us_base_url` fields have been removed
+  from the schema rows and the admin UI. Deletion lifecycle in
   `cleanup-assemblyai`.
 - **Lovable AI Gateway** — model access for summaries / Q&A / tags /
   speaker identification (no user-supplied API key required).
-- **Paddle** — merchant of record for credit purchases. Webhook signature
-  verification in `paddle-webhook`; pricing model in `mem://features/pricing`.
+- **Paddle** — merchant of record for credit purchases, locked to
+  GB billing. Webhook signature verification + non-GB rejection in
+  `paddle-webhook`; pricing model in `mem://features/pricing`.
+- **Google Search Console** — read by `monitor-search-console` to feed
+  `seo_monitoring_alerts`.
+
 
 ---
 
@@ -763,7 +851,8 @@ For each driver: **Where · Trigger · Frequency · Sync/async · Provider
   `language_detection` + `language_confidence_threshold`,
   `speech_threshold`, `disfluencies`, `keyterms_prompt`, `prompt`,
   `speaker_options`. *Needs verification* which flags are paid
-  add-ons under our current plan/region (EU vs US base URL).
+  add-ons under our current plan (region is fixed: EU only — see §9).
+
 - **Avoidable?** No (this is the product). Not cacheable.
 
 #### E. Post-processing — `post-process` (Lovable AI, automatic)
@@ -993,19 +1082,20 @@ share flow.
 Flagged "needs verification":
 
 - AssemblyAI per-feature pricing — which payload flags are paid
-  add-ons under our current plan/region (EU vs US base URL).
+  add-ons under our current plan (region is fixed to EU; see §9 and
+  the `assertAssemblyAIUrl` guard in `_shared/assemblyai.ts`).
 - Lovable AI per-model billing units (token-based vs request-based)
   and whether `gemini-2.5-flash-lite` vs `gemini-3-flash-preview`
   differ materially per call.
 - Whether the Q&A 10-cap was *intended* to count edits/reruns of an
   existing question or only net-new questions.
 - Schedule + frequency of `cleanup-stale-jobs`,
-  `watchdog-stale-jobs`, and the new `cleanup-expired-shares` cron
-  jobs (defaults assumed; verify against `pg_cron`).
+  `watchdog-stale-jobs`, and `cleanup-expired-shares` cron jobs
+  (defaults assumed; verify against `pg_cron`). `process-email-queue`
+  was retuned from 5 s to **30 s** to cut no-op invocation cost.
 - Whether `audio_enhancement` ever changes AssemblyAI billable
   seconds (it changes file size, but AAI is duration-based).
-- Whether `process-email-queue` tick rate matches the documented
-  default for the configured queue.
+
 - `BroadcastChannel` availability on the long tail of older mobile
   Safari (< 15.4). On unsupported browsers `ShareButton` silently
   falls back to the remaining four tiers (in-tab Map →
@@ -1022,9 +1112,18 @@ generalise to AI / STT spend.
 
 ---
 
-_Last updated alongside the share-dedup pipeline (`share_pdf_cache`,
-`share_artifact_log`, `cleanup_config`, `validate_share_pdf_cache_path`
-trigger, multi-tier `ShareButton` lookup, and `export-cache.ts` LRU).
-Refresh this document whenever you touch the data model, design
-tokens, edge function surface, high-level flows, or the cost drivers
-enumerated in section 10._
+_Last updated alongside the UK-only geo-gating (`profiles.country`,
+`trg_profiles_lock_country`, `geo-check`, `validate-signup-country`,
+`check-login-region`, Paddle GB lock), the spend guardrails phase
+(`usage_events`, `check_and_record_usage`, `create-job`,
+`trg_jobs_lock_billing_columns`, `enforceQuota` rollout, Admin Usage
+tab, `process-email-queue` retuned to 30 s, `cleanup-expired-shares`
+extended to `cleanup_logs` / `async_jobs` pruning), the
+AssemblyAI EU-only hardening (`_shared/assemblyai.ts → assemblyAIFetch`
++ `assertAssemblyAIUrl`, template config sanitisation), admin email
+notifications (`ADMIN_NOTIFY_EMAIL`, `admin-new-signup`,
+`admin-credit-purchase`), and the move of `has_role` into the
+`private` schema. Refresh this document whenever you touch the data
+model, design tokens, edge function surface, high-level flows, or the
+cost drivers enumerated in section 10._
+
