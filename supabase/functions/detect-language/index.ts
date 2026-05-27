@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
     }
 
     // Best-effort delete the throwaway transcript.
-    fetch(`${baseUrl}/transcript/${transcriptId}`, {
+    assemblyAIFetch(`${baseUrl}/transcript/${transcriptId}`, {
       method: "DELETE",
       headers: { Authorization: ASSEMBLYAI_API_KEY },
     }).catch(() => {});
