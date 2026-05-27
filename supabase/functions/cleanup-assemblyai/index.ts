@@ -1,7 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
-
-const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
+import { ASSEMBLYAI_EU_BASE_URL } from "../_shared/assemblyai.ts";
 
 /**
  * Retries deletion of AssemblyAI transcripts that failed during initial cleanup.
@@ -46,7 +45,7 @@ Deno.serve(async (req) => {
     for (const job of failedJobs) {
       try {
         const deleteRes = await fetch(
-          `${ASSEMBLYAI_BASE}/transcript/${job.assemblyai_transcript_id}`,
+          `${ASSEMBLYAI_EU_BASE_URL}/transcript/${job.assemblyai_transcript_id}`,
           {
             method: "DELETE",
             headers: { Authorization: ASSEMBLYAI_API_KEY },

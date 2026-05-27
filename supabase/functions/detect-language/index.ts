@@ -12,6 +12,7 @@
 //     "success" | "skipped" | "failed" so the client never gets stuck.
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
+import { ASSEMBLYAI_EU_BASE_URL } from "../_shared/assemblyai.ts";
 
 const POLL_MS = 1500;
 const MAX_POLLS = 17; // ~25s upstream poll budget — keep under client timeout
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
       .createSignedUrl(job.temp_file_path, 3600);
     if (signErr || !signed?.signedUrl) throw new Error("Could not sign audio URL");
 
-    const baseUrl = "https://api.eu.assemblyai.com/v2";
+    const baseUrl = ASSEMBLYAI_EU_BASE_URL;
 
     const submitRes = await fetch(`${baseUrl}/transcript`, {
       method: "POST",
