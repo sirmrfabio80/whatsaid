@@ -444,25 +444,38 @@ automatically; default `verify_jwt` policy lives in `supabase/config.toml`.
 
 | Function | Purpose |
 |---|---|
-| `transcribe` | Submit audio to AssemblyAI; persist job config |
+| `create-job` | **Server-authoritative job creation.** Validates file size / duration, recomputes `credits_charged` via `_shared/pricing.ts`, and inserts the `jobs` row. Clients can no longer insert into `jobs` directly. |
+| `transcribe` | Submit audio to AssemblyAI; persist job config. Uses `_shared/assemblyai.ts → assemblyAIFetch`, which asserts every request URL against `ASSEMBLYAI_EU_BASE_URL` and throws `AssemblyAIRegionViolation` on any non-EU host. |
 | `process-job` | Deduct credits, dispatch `transcribe` + `post-process`, delete audio |
 | `post-process` | Generate summary (+ optional custom-prompt output) + auto-tags via Lovable AI; emits a `notifications` row |
-| `regenerate` | Re-run summary, custom prompt, or `translate_all` on existing transcript |
-| `generate-tags`, `generate-title` | Targeted single-output regen |
-| `suggest-speakers`, `identify-speakers` | Speaker-naming heuristics + LLM |
-| `translate-tags`, `scan-non-english-tags`, `fix-flagged-tags` | Tag i18n maintenance |
-| `share-transcript`, `share-transcript-record`, `claim-transcript-share`, `download-shared-pdf` | Sharing pipeline |
-| `paddle-webhook` | Verifies Paddle events → adds credits via `add_credits` |
-| `invite-user`, `redeem-invite` | Admin-issued credit invites |
+| `regenerate` | Re-run summary, custom prompt, or `translate_all` on existing transcript. Top-level auth + ownership check; quota-gated. |
+| `generate-tags`, `generate-title` | Targeted single-output regen. `generate-tags` is quota-gated. |
+| `suggest-speakers`, `identify-speakers` | Speaker-naming heuristics + LLM. `suggest-speakers` requires auth and is quota-gated per click. |
+| `translate-tags`, `scan-non-english-tags`, `fix-flagged-tags` | Tag i18n maintenance. `translate-tags` requires auth and is quota-gated. |
+| `detect-language` | AssemblyAI-backed language detection probe used by Convert preflight. Routed through `assemblyAIFetch`. |
+| `share-transcript`, `share-transcript-record`, `claim-transcript-share`, `download-shared-pdf` | Sharing pipeline. Share creators are double-quota-gated (per-recipient/day + per-user/day). |
+| `paddle-webhook` | Verifies Paddle events → adds credits via `add_credits`. **Rejects non-GB billing addresses.** Triggers an admin email on each successful credit purchase. |
+| `invite-user`, `redeem-invite` | Admin-issued credit invites. `redeem-invite` is gated by the region check. |
 | `validate-profile-email` | Pre-save email uniqueness check |
+| `validate-signup-country` | Pre-signup region gate: requires declared country `GB` **and** a `GB` source-IP (`cf-ipcountry` / equivalent). Fail-closed if the IP region is missing. |
+| `check-login-region` | Post-login region gate. On non-GB or unknown IP for non-admins, signs the user out and redirects to `/login?blocked=region`. Backfills `profiles.country` on first verified login. |
+| `geo-check` | Best-effort IP-country lookup used by signup/login flows. |
 | `delete-account` | Cascading account + storage cleanup |
-| `auth-email-hook`, `process-email-queue` | Outbound transactional + auth email pipeline |
-| `cleanup-assemblyai`, `cleanup-stale-jobs`, `watchdog-stale-jobs` | Scheduled cleanup |
-| `cleanup-expired-shares` | Three-phase storage sweep: (1) `shared-pdfs` blobs past `transcript_shares.expires_at` + 24 h-grace orphan dirs, (2) `exports` blobs for `pdf_export` async jobs older than 7 days (also nulls `resource_url`), (3) `share_pdf_cache` rows past `cleanup_config.share_pdf_cache_ttl_days`. Supports `?dry_run=1`; batch size + cache TTL come from `cleanup_config`; per-run audit row in `cleanup_logs`. |
+| `auth-email-hook`, `process-email-queue`, `send-transactional-email`, `preview-transactional-email`, `handle-email-unsubscribe`, `handle-email-suppression` | Outbound transactional + auth email pipeline. `auth-email-hook` and `paddle-webhook` additionally fan out admin notifications to `ADMIN_NOTIFY_EMAIL` (see `_shared/constants.ts`) on new signups and on credit purchases. |
+| `cleanup-assemblyai`, `cleanup-stale-jobs`, `watchdog-stale-jobs` | Scheduled cleanup. `cleanup-assemblyai` retries failed AAI deletions and uses `assemblyAIFetch` (EU-locked). |
+| `cleanup-expired-shares` | Three-phase storage sweep plus log retention: (1) `shared-pdfs` blobs past `transcript_shares.expires_at` + 24 h-grace orphan dirs, (2) `exports` blobs for `pdf_export` async jobs older than 7 days (also nulls `resource_url`), (3) `share_pdf_cache` rows past `cleanup_config.share_pdf_cache_ttl_days`. Also prunes `cleanup_logs` and finished `async_jobs` older than 30 days. Supports `?dry_run=1`; batch size + cache TTL come from `cleanup_config`; per-run audit row in `cleanup_logs`. |
+| `monitor-search-console` | Periodically polls Google Search Console and writes anomalies to `seo_monitoring_alerts`. |
 | `admin-get-job-details` | Admin-only deep job inspection |
 
-`_shared/` holds CORS, Supabase client, prompts, sanitizers, AI Gateway
-helper, and email templates.
+`_shared/` holds CORS, Supabase client (`requireAuth`,
+`createServiceClient`), prompts, sanitizers, AI Gateway helper,
+**`pricing.ts`** (canonical `creditsForDuration` used by both client and
+`create-job`), **`quota.ts` + `usage-rpc.test.ts`** (quota wrapper for
+`check_and_record_usage` and live-DB regression tests),
+**`assemblyai.ts` + `assemblyai.test.ts`** (EU-only fetch guard), and
+email templates (both auth and transactional, including
+`admin-new-signup` and `admin-credit-purchase`).
+
 
 ---
 
