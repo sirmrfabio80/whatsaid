@@ -16,7 +16,7 @@ function stripInlineLanguageTags(text: string): { text: string; stripped: boolea
 }
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { ASSEMBLYAI_EU_BASE_URL } from "../_shared/assemblyai.ts";
+import { ASSEMBLYAI_EU_BASE_URL, assemblyAIFetch } from "../_shared/assemblyai.ts";
 
 // Hardcoded fallbacks if no active template row exists. These mirror the
 // "Default" template seeded in the database.
