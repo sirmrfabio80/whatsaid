@@ -10,6 +10,8 @@ async function notifyAdminOfPurchase(input: {
   currency?: string;
   transactionId: string;
   newBalance?: number;
+  /** When set, signals a Reg.37 bypass anomaly rather than a normal purchase. */
+  bypassReason?: string;
 }) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
