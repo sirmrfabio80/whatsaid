@@ -15,3 +15,9 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
+  [functions.geo-check]
+    verify_jwt = false
+  [functions.validate-signup-country]
+    verify_jwt = false
+  [functions.check-login-region]
+    verify_jwt = false
