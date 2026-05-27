@@ -32,6 +32,7 @@ export default function Admin() {
             <TabsTrigger value="faq-feedback">FAQ feedback</TabsTrigger>
             <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
             <TabsTrigger value="usage">Usage</TabsTrigger>
+            <TabsTrigger value="retention">Retention</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
