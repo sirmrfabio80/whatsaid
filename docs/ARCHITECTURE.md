@@ -27,6 +27,19 @@ Audio is **deleted from storage immediately after processing**
 (`audio_deleted_at` is recorded on the `jobs` row). Only generated text +
 metadata is retained.
 
+**Region restriction.** WhatSaid is **UK-only by policy**. Signup, login,
+invite redemption, and Paddle checkout are all hard-gated to country
+code `GB` (ISO-3166-1 alpha-2). The gate is enforced at four layers:
+client UI (`Signup`, `Login`, `AuthContext`), edge functions
+(`validate-signup-country`, `check-login-region`, `geo-check`), the
+Paddle billing address (`paddle-checkout.ts` forces
+`countryCode: "GB"` and `paddle-webhook` rejects non-GB transactions),
+and the database (`profiles.country` ISO-2 `CHECK` + immutability
+trigger). The policy is fail-closed: when the source IP region cannot
+be determined, the request is rejected with a "region not verified"
+message.
+
+
 ---
 
 ## 2. Tech stack
