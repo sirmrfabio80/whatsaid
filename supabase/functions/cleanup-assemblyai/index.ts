@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     for (const job of failedJobs) {
       try {
-        const deleteRes = await fetch(
+        const deleteRes = await assemblyAIFetch(
           `${ASSEMBLYAI_EU_BASE_URL}/transcript/${job.assemblyai_transcript_id}`,
           {
             method: "DELETE",
