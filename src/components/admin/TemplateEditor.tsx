@@ -24,7 +24,7 @@ interface Props {
 
 type DisabledInfo = { disabled: boolean; reason?: string };
 type DisabledMap = {
-  us_base_url: DisabledInfo;
+  apply_prompt_on_diarization: DisabledInfo;
   apply_prompt_on_diarization: DisabledInfo;
   recovery_prompt: DisabledInfo;
   review_prompt: DisabledInfo;
