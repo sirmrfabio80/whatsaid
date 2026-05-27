@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
 
     const baseUrl = ASSEMBLYAI_EU_BASE_URL;
 
-    const submitRes = await fetch(`${baseUrl}/transcript`, {
+    const submitRes = await assemblyAIFetch(`${baseUrl}/transcript`, {
       method: "POST",
       headers: {
         Authorization: ASSEMBLYAI_API_KEY,
