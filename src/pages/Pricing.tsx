@@ -250,6 +250,9 @@ export default function Pricing() {
   const { user, creditBalance, refreshCredits } = useAuth();
   const navigate = useNavigate();
   const [processingPurchase, setProcessingPurchase] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [pendingProductId, setPendingProductId] = useState<PricingProduct["id"] | null>(null);
 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(undefined);
   const { prices, loading, currency } = usePaddlePricing(selectedCurrency);
