@@ -738,13 +738,22 @@ or other metrics:
 
 ## 9. Reference: key external dependencies
 
-- **AssemblyAI** — STT provider. Templates live in
-  `transcribe_settings_templates`; deletion lifecycle in
+- **AssemblyAI** — STT provider, **EU region only**. All calls go
+  through `_shared/assemblyai.ts → assemblyAIFetch`, which asserts the
+  URL host equals `api.eu.assemblyai.com` (via `assertAssemblyAIUrl`)
+  and throws `AssemblyAIRegionViolation` otherwise. Templates live in
+  `transcribe_settings_templates` with `config.base_url` pinned to the
+  EU endpoint; geo-routing and `us_base_url` fields have been removed
+  from the schema rows and the admin UI. Deletion lifecycle in
   `cleanup-assemblyai`.
 - **Lovable AI Gateway** — model access for summaries / Q&A / tags /
   speaker identification (no user-supplied API key required).
-- **Paddle** — merchant of record for credit purchases. Webhook signature
-  verification in `paddle-webhook`; pricing model in `mem://features/pricing`.
+- **Paddle** — merchant of record for credit purchases, locked to
+  GB billing. Webhook signature verification + non-GB rejection in
+  `paddle-webhook`; pricing model in `mem://features/pricing`.
+- **Google Search Console** — read by `monitor-search-console` to feed
+  `seo_monitoring_alerts`.
+
 
 ---
 
