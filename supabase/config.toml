@@ -21,3 +21,5 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = false
   [functions.check-login-region]
     verify_jwt = false
+  [functions.record-consent]
+    verify_jwt = true
