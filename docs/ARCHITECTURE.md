@@ -1082,19 +1082,20 @@ share flow.
 Flagged "needs verification":
 
 - AssemblyAI per-feature pricing — which payload flags are paid
-  add-ons under our current plan/region (EU vs US base URL).
+  add-ons under our current plan (region is fixed to EU; see §9 and
+  the `assertAssemblyAIUrl` guard in `_shared/assemblyai.ts`).
 - Lovable AI per-model billing units (token-based vs request-based)
   and whether `gemini-2.5-flash-lite` vs `gemini-3-flash-preview`
   differ materially per call.
 - Whether the Q&A 10-cap was *intended* to count edits/reruns of an
   existing question or only net-new questions.
 - Schedule + frequency of `cleanup-stale-jobs`,
-  `watchdog-stale-jobs`, and the new `cleanup-expired-shares` cron
-  jobs (defaults assumed; verify against `pg_cron`).
+  `watchdog-stale-jobs`, and `cleanup-expired-shares` cron jobs
+  (defaults assumed; verify against `pg_cron`). `process-email-queue`
+  was retuned from 5 s to **30 s** to cut no-op invocation cost.
 - Whether `audio_enhancement` ever changes AssemblyAI billable
   seconds (it changes file size, but AAI is duration-based).
-- Whether `process-email-queue` tick rate matches the documented
-  default for the configured queue.
+
 - `BroadcastChannel` availability on the long tail of older mobile
   Safari (< 15.4). On unsupported browsers `ShareButton` silently
   falls back to the remaining four tiers (in-tab Map →
