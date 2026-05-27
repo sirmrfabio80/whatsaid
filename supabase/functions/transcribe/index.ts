@@ -16,7 +16,7 @@ function stripInlineLanguageTags(text: string): { text: string; stripped: boolea
 }
 import { sanitizeErrorForClient } from "../_shared/sanitize-error.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { ASSEMBLYAI_EU_BASE_URL } from "../_shared/assemblyai.ts";
+import { ASSEMBLYAI_EU_BASE_URL, assemblyAIFetch } from "../_shared/assemblyai.ts";
 
 // Hardcoded fallbacks if no active template row exists. These mirror the
 // "Default" template seeded in the database.
@@ -229,7 +229,7 @@ async function submitAndPollTranscript(
   baseUrl: string,
   supabase: SupabaseClient,
 ): Promise<{ transcript: Record<string, unknown>; transcriptId: string }> {
-  const submitRes = await fetch(`${baseUrl}/transcript`, {
+  const submitRes = await assemblyAIFetch(`${baseUrl}/transcript`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
@@ -293,7 +293,7 @@ async function submitAndPollTranscript(
     const pollIntervalMs = computePollInterval(elapsedMs);
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
-    const pollRes = await fetch(`${baseUrl}/transcript/${transcriptId}`, {
+    const pollRes = await assemblyAIFetch(`${baseUrl}/transcript/${transcriptId}`, {
       headers: { Authorization: apiKey },
     });
 
@@ -738,7 +738,7 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const deleteRes = await fetch(`${ASSEMBLYAI_EU_BASE_URL}/transcript/${transcriptId}`, {
+      const deleteRes = await assemblyAIFetch(`${ASSEMBLYAI_EU_BASE_URL}/transcript/${transcriptId}`, {
         method: "DELETE",
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });

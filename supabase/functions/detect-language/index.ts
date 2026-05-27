@@ -12,7 +12,7 @@
 //     "success" | "skipped" | "failed" so the client never gets stuck.
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
-import { ASSEMBLYAI_EU_BASE_URL } from "../_shared/assemblyai.ts";
+import { ASSEMBLYAI_EU_BASE_URL, assemblyAIFetch } from "../_shared/assemblyai.ts";
 
 const POLL_MS = 1500;
 const MAX_POLLS = 17; // ~25s upstream poll budget — keep under client timeout
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
 
     const baseUrl = ASSEMBLYAI_EU_BASE_URL;
 
-    const submitRes = await fetch(`${baseUrl}/transcript`, {
+    const submitRes = await assemblyAIFetch(`${baseUrl}/transcript`, {
       method: "POST",
       headers: {
         Authorization: ASSEMBLYAI_API_KEY,
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < MAX_POLLS; i++) {
       await new Promise((r) => setTimeout(r, POLL_MS));
-      const pollRes = await fetch(`${baseUrl}/transcript/${transcriptId}`, {
+      const pollRes = await assemblyAIFetch(`${baseUrl}/transcript/${transcriptId}`, {
         headers: { Authorization: ASSEMBLYAI_API_KEY },
       });
       if (!pollRes.ok) {
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
     }
 
     // Best-effort delete the throwaway transcript.
-    fetch(`${baseUrl}/transcript/${transcriptId}`, {
+    assemblyAIFetch(`${baseUrl}/transcript/${transcriptId}`, {
       method: "DELETE",
       headers: { Authorization: ASSEMBLYAI_API_KEY },
     }).catch(() => {});
