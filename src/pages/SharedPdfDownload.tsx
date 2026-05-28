@@ -29,7 +29,6 @@ export default function SharedPdfDownload() {
       setErrorMsg(t("sharedPdf.errorInvalidLink"));
       return;
     }
-    }
 
     if (authLoading) return;
 
