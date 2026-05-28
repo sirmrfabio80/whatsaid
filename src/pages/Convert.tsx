@@ -1506,6 +1506,19 @@ export default function Convert() {
 
                     </div>
 
+                    <ConsentStatusIndicator
+                      status={tosStatus}
+                      recording={recordingTos}
+                      onReaccept={async () => {
+                        const res = await reacceptTos();
+                        if (res.ok) {
+                          toast.success(t("convert.consentStatus.reacceptSuccess", { defaultValue: "Terms acceptance recorded." }));
+                        } else {
+                          toast.error(res.error || t("convert.consentStatus.reacceptError", { defaultValue: "Could not record acceptance. Please try again." }));
+                        }
+                      }}
+                    />
+
                     <p className="text-caption text-muted-foreground flex items-start gap-1.5">
                       <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                       {t("convert.thirdPartyNotice")}{" "}
