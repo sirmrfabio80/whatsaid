@@ -98,12 +98,13 @@ export function useTosConsent() {
       if (error) throw error;
       await load();
       return { ok: true as const };
-
+    } catch (err) {
       const message = err instanceof Error ? err.message : "Could not record acceptance";
       return { ok: false as const, error: message };
     } finally {
       setRecording(false);
     }
+
   }, [user, load]);
 
   return { status, reaccept, recording, refresh: load };
