@@ -809,6 +809,50 @@ export type Database = {
         }
         Relationships: []
       }
+      recipient_notifications: {
+        Row: {
+          channel: string
+          id: string
+          job_id: string
+          message_id: string | null
+          notice_type: string
+          notice_version: string
+          notified_at: string
+          recipient_email_hash: string
+          shared_by: string
+        }
+        Insert: {
+          channel: string
+          id?: string
+          job_id: string
+          message_id?: string | null
+          notice_type: string
+          notice_version: string
+          notified_at?: string
+          recipient_email_hash: string
+          shared_by: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          job_id?: string
+          message_id?: string | null
+          notice_type?: string
+          notice_version?: string
+          notified_at?: string
+          recipient_email_hash?: string
+          shared_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipient_notifications_notice_version_fkey"
+            columns: ["notice_version"]
+            isOneToOne: false
+            referencedRelation: "consent_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
       retention_alerts: {
         Row: {
           alert_kind: string
