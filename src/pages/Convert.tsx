@@ -306,6 +306,7 @@ export default function Convert() {
     duration?: number;
     fileCreationDate?: AudioCreationDateResult | null;
     channelAnalysis?: AudioChannelAnalysis | null;
+    uploadConsentId?: string;
   }
 
   const handleConvert = async (overrides?: ConvertOverrides) => {
