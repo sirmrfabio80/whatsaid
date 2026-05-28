@@ -1,22 +1,22 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { reloadOnceForChunkError } from "@/lib/chunk-recovery";
+import { isChunkLoadError, reloadOnceForChunkError } from "@/lib/chunk-recovery";
 
 type ChunkErrorBoundaryProps = {
   children: ReactNode;
 };
 
 type ChunkErrorBoundaryState = {
-  failed: boolean;
+  error: unknown;
 };
 
 export class ChunkErrorBoundary extends Component<
   ChunkErrorBoundaryProps,
   ChunkErrorBoundaryState
 > {
-  state: ChunkErrorBoundaryState = { failed: false };
+  state: ChunkErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: unknown): ChunkErrorBoundaryState {
-    return { failed: true };
+    return { error };
   }
 
   componentDidCatch(error: unknown, _errorInfo: ErrorInfo) {
@@ -24,7 +24,11 @@ export class ChunkErrorBoundary extends Component<
   }
 
   render() {
-    if (this.state.failed) {
+    if (this.state.error) {
+      if (!isChunkLoadError(this.state.error)) {
+        throw this.state.error;
+      }
+
       return (
         <section className="min-h-[50vh] px-4 py-24">
           <div className="mx-auto max-w-xl rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm">
