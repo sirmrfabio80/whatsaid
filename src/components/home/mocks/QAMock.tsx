@@ -27,7 +27,7 @@ export function QAMock() {
                 key={c}
                 /* Bumped from bg-accent/10 + text-accent to /15 + text-accent-foreground-ish
                    shade so the chip clears WCAG AA (4.5:1) on tinted background. */
-                className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent-foreground border border-accent/30 px-1.5 py-0.5 text-[10px] font-mono tabular-nums"
+                className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-foreground border border-accent/30 px-1.5 py-0.5 text-[10px] font-mono tabular-nums"
               >
                 {c}
               </span>
