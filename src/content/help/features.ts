@@ -182,9 +182,9 @@ export const features: FeatureGroup[] = [
         icon: "download",
         title: { en: "Download as TXT, JSON or DOC", it: "Scarica come TXT, JSON o DOC", fr: "Téléchargez en TXT, JSON ou DOC" },
         body: {
-          en: "Export the transcript and outputs instantly from the Export menu on the job page.",
-          it: "Esporta la trascrizione e gli output istantaneamente dal menu Esporta nella pagina del lavoro.",
-          fr: "Exportez la transcription et les résultats instantanément depuis le menu Exporter de la page du travail.",
+          en: "Export the transcript and outputs straight away from the Export menu on the job page.",
+          it: "Esporta la trascrizione e gli output direttamente dal menu Esporta nella pagina del lavoro.",
+          fr: "Exportez la transcription et les résultats directement depuis le menu Exporter de la page du travail.",
         },
       },
       {
