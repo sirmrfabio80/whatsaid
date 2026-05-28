@@ -1,6 +1,12 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
-import { isChunkLoadError, reloadOnceForChunkError } from "@/lib/chunk-recovery";
+import {
+  CHUNK_RECOVERY_CONFIG,
+  getChunkReloadState,
+  isChunkLoadError,
+  reloadOnceForChunkError,
+  resetChunkReloadState,
+} from "@/lib/chunk-recovery";
 
 type ChunkErrorBoundaryProps = {
   children: ReactNode;
