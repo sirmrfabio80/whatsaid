@@ -40,7 +40,9 @@ export default function Admin() {
             <TabsTrigger value="retention-monitor">Retention monitor</TabsTrigger>
             <TabsTrigger value="dsrs">DSRs</TabsTrigger>
             <TabsTrigger value="security-headers">Security headers</TabsTrigger>
+            <TabsTrigger value="edge-health">Edge health</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
+          </TabsList>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
             <TranscribeTemplatesTab />
