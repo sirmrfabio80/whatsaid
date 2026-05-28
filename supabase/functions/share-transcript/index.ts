@@ -132,6 +132,8 @@ function buildEmailHtml(opts: {
           <h2 style="font-family:'Space Grotesk',Arial,sans-serif;font-size:18px;font-weight:700;color:hsl(220,25%,10%);margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid hsl(220,15%,90%);">Transcript</h2>
           ${formatTranscript(transcript)}
         </div>
+
+        ${noticeHtml}
       </div>
 
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
@@ -152,6 +154,7 @@ function buildPlainText(opts: {
   questions: { prompt: string | null; answer: string }[]
   transcript: string
   downloadUrl: string | null
+  noticeText: string
 }): string {
   const parts: string[] = [opts.title, '']
   if (opts.downloadUrl) {
@@ -167,7 +170,8 @@ function buildPlainText(opts: {
     }
   }
   parts.push('--- Transcript ---', '', opts.transcript, '')
-  parts.push(`—`, `Shared by ${opts.senderLabel} via ${SITE_NAME}`)
+  parts.push(opts.noticeText)
+  parts.push('', `—`, `Shared by ${opts.senderLabel} via ${SITE_NAME}`)
   return parts.join('\n')
 }
 
