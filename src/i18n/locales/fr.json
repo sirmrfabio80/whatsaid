@@ -166,7 +166,9 @@
     "costOneCredit": "1 crédit",
     "costMultipleCredits": "{{count}} crédits",
     "costMultipleCreditsHint": "Fichier de {{minutes}} min — facturé par tranches de 120 min",
-    "consentLabel": "Je confirme avoir le droit de télécharger et de traiter cet enregistrement, et que toutes les exigences de consentement applicables ont été respectées.",
+    "consentLabel": "J'ai le droit de téléverser cet enregistrement.",
+    "consentLabelLearnMore": "En savoir plus",
+
     "thirdPartyNotice": "L'audio est traité par des services IA tiers et supprimé immédiatement après. En convertissant, vous acceptez nos",
     "terms": "Conditions",
     "privacyPolicy": "Politique de confidentialité",
@@ -238,7 +240,8 @@
     "email": "Email",
     "password": "Mot de passe",
     "passwordPlaceholder": "Au moins 6 caractères",
-    "termsAgree": "J'accepte les",
+    "termsAgree": "J'accepte les Conditions de service et la Politique de confidentialité, et je confirme ne téléverser que de l'audio que j'ai le droit de traiter au titre du UK GDPR.",
+
     "termsOfService": "Conditions d'utilisation",
     "and": "et",
     "creating": "Création du compte...",

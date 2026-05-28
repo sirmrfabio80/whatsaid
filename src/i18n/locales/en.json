@@ -166,7 +166,9 @@
     "costOneCredit": "1 credit",
     "costMultipleCredits": "{{count}} credits",
     "costMultipleCreditsHint": "File is {{minutes}} min — charged in 120-min blocks",
-    "consentLabel": "I confirm that I have the right to upload and process this recording, and that all applicable consent requirements have been met.",
+    "consentLabel": "I have the right to upload this recording.",
+    "consentLabelLearnMore": "Learn more",
+
     "thirdPartyNotice": "Audio is processed using third-party AI services and deleted immediately after. By converting, you agree to our",
     "terms": "Terms",
     "privacyPolicy": "Privacy Policy",
@@ -238,7 +240,8 @@
     "email": "Email",
     "password": "Password",
     "passwordPlaceholder": "At least 6 characters",
-    "termsAgree": "I agree to the",
+    "termsAgree": "I agree to the Terms of Service and Privacy Policy, and I confirm I will only upload audio I have the right to process under UK GDPR.",
+
     "termsOfService": "Terms of Service",
     "and": "and",
     "creating": "Creating account...",
