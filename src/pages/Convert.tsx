@@ -375,30 +375,60 @@ export default function Convert() {
       // validates inputs, re-derives credits_charged from duration via the
       // shared pricing module, and inserts the row as service role. A BEFORE
       // UPDATE trigger then locks billing columns from client edits.
-      const { data: created, error: insertError } = await supabase.functions.invoke<{
-        job_id: string;
-        credits_charged: number;
-      }>("create-job", {
-        body: {
-          file_name: effFile.name,
-          file_size_bytes: effFile.size,
-          duration_seconds: Math.round(duration),
-          language_selected: language,
-          audio_channels: resolvedCh ?? null,
-          recorded_at: recordedAt,
-          recorded_at_source: recordedAtSource,
-          metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
-          metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
-          metadata_file_lastmodified: fileLastModifiedIso,
-          metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
-        },
-      });
+      const createJobBody = {
+        file_name: effFile.name,
+        file_size_bytes: effFile.size,
+        duration_seconds: Math.round(duration),
+        language_selected: language,
+        audio_channels: resolvedCh ?? null,
+        recorded_at: recordedAt,
+        recorded_at_source: recordedAtSource,
+        metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
+        metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
+        metadata_file_lastmodified: fileLastModifiedIso,
+        metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
+      };
 
+      const invokeCreateJob = () =>
+        supabase.functions.invoke<{ job_id: string; credits_charged: number }>(
+          "create-job",
+          { body: createJobBody },
+        );
+
+      let { data: created, error: insertError } = await invokeCreateJob();
+
+      // Recover from 409 attestation_required for existing accounts whose
+      // tos_uploader_warranty acceptance hasn't been recorded yet (e.g. the
+      // AuthContext opportunistic write hadn't run, or the user signed up
+      // before this consent type existed). Record acceptance once, retry.
+      if (insertError) {
+        let needsAttestation = false;
+        try {
+          const ctx = (insertError as { context?: Response }).context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.clone().json().catch(() => null);
+            if (body && body.error === "attestation_required") {
+              needsAttestation = true;
+            }
+          }
+        } catch {
+          // fall through
+        }
+        if (needsAttestation) {
+          const { error: ackErr } = await supabase.functions.invoke(
+            "record-tos-acceptance",
+          );
+          if (!ackErr) {
+            ({ data: created, error: insertError } = await invokeCreateJob());
+          }
+        }
+      }
 
       if (insertError || !created?.job_id) {
         throw new Error(insertError?.message || "Could not create job");
       }
       newJobId = created.job_id;
+
       if (created.credits_charged !== credits) {
         // Soft-warn: client UX showed a different cost. Server figure wins.
         console.warn(
