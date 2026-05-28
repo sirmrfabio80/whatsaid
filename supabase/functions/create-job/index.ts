@@ -75,11 +75,6 @@ function bad(message: string, status = 400) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-  if (req.method !== "POST") return bad("Method not allowed", 405);
-
   try {
     const auth = await requireAuth(req.headers.get("Authorization"));
     if (!auth.ok) return auth.response;
@@ -88,6 +83,44 @@ Deno.serve(async (req) => {
     let body: CreateJobBody;
     try {
       body = await req.json();
+    } catch {
+      return bad("Invalid JSON body");
+    }
+
+    // Idempotency: clients pass either an X-Idempotency-Key header or
+    // body.idempotency_key. If a previous request from this user used the
+    // same key we return the prior job instead of inserting a duplicate.
+    const headerKey = req.headers.get("x-idempotency-key");
+    const bodyKey = typeof body.idempotency_key === "string" ? body.idempotency_key : null;
+    const idempotencyKey = (headerKey ?? bodyKey ?? "").trim() || null;
+    if (idempotencyKey && !IDEMPOTENCY_KEY_RE.test(idempotencyKey)) {
+      return bad("idempotency_key must be 8-128 url-safe characters");
+    }
+
+    if (idempotencyKey) {
+      const supabaseLookup = createServiceClient();
+      const { data: existing, error: lookupErr } = await supabaseLookup
+        .from("jobs")
+        .select("id, credits_charged")
+        .eq("user_id", userId)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+      if (lookupErr) {
+        console.error("[create-job] idempotency lookup failed", lookupErr);
+        return bad("Idempotency lookup failed", 500);
+      }
+      if (existing) {
+        return new Response(
+          JSON.stringify({
+            job_id: existing.id,
+            credits_charged: existing.credits_charged,
+            idempotent_replay: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     } catch {
       return bad("Invalid JSON body");
     }
