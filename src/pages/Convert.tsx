@@ -1177,6 +1177,12 @@ export default function Convert() {
           onConfirm={(lang) => languageGate.resolve(lang)}
         />
       )}
+      <UploadAttestationDialog
+        open={attestationOpen}
+        loading={attestationLoading}
+        onCancel={handleAttestationCancel}
+        onConfirm={handleAttestationConfirm}
+      />
       {/* Off-axis decorative orb (desktop only) — matches marketing pages identity */}
       <div
         aria-hidden="true"
