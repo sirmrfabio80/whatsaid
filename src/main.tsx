@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import interVariableUrl from "./assets/fonts/InterVariable.woff2?url";
 import { reloadOnceForChunkError } from "./lib/chunk-recovery";
 import { installUserActionTracker } from "./lib/chunk-diagnostics";
+import { installFrameDiagnostics } from "./lib/frame-diagnostics";
 import "./index.css";
 import "./i18n";
 
@@ -23,6 +24,7 @@ if (typeof document !== "undefined") {
 // imports try to fetch a chunk hash that no longer exists. Reload once.
 if (typeof window !== "undefined") {
   installUserActionTracker();
+  installFrameDiagnostics();
   window.addEventListener("error", (e) =>
     reloadOnceForChunkError(e.error ?? e.message, { source: "error", evt: e }),
   );
