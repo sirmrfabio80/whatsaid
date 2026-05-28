@@ -28,8 +28,6 @@ if (typeof window !== "undefined") {
   window.addEventListener("error", (e) =>
     reloadOnceForChunkError(e.error ?? e.message, { source: "error", evt: e }),
   );
-    reloadOnceForChunkError(e.error ?? e.message, { source: "error", evt: e }),
-  );
   window.addEventListener("unhandledrejection", (e) =>
     reloadOnceForChunkError(e.reason, { source: "unhandledrejection" }),
   );
