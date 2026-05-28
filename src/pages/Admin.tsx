@@ -10,6 +10,7 @@ import UsageTab from "@/components/admin/UsageTab";
 import RetentionTab from "@/components/admin/RetentionTab";
 import RetentionMonitorTab from "@/components/admin/RetentionMonitorTab";
 import DsrTab from "@/components/admin/DsrTab";
+import SecurityHeadersTab from "@/components/admin/SecurityHeadersTab";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Admin() {
@@ -37,6 +38,7 @@ export default function Admin() {
             <TabsTrigger value="retention">Retention</TabsTrigger>
             <TabsTrigger value="retention-monitor">Retention monitor</TabsTrigger>
             <TabsTrigger value="dsrs">DSRs</TabsTrigger>
+            <TabsTrigger value="security-headers">Security headers</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
@@ -65,6 +67,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="dsrs" className="space-y-6">
             <DsrTab />
+          </TabsContent>
+          <TabsContent value="security-headers" className="space-y-6">
+            <SecurityHeadersTab />
           </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
