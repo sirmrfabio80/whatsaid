@@ -144,8 +144,10 @@ function buildReadme(
     "",
     "Contents",
     "--------",
-    "profile.json          Your account profile (display name, language, preferences).",
-    "credits.json          Current credit balance and the full credit ledger.",
+    "notifications.json    In-app notifications (read: 90 days, unread: 365 days).",
+    "dsr_requests.json     Your own data-subject requests (access / rectification / erasure).",
+    "recipient_notifications.json  Art. 14 notices we sent on your behalf when you shared a transcript.",
+
     "consent_history.json  Reg. 37 (CCA 2013) consent events tied to this account.",
     "shares_sent.json      Transcripts you have shared by email.",
     "usage_events.json     Recent usage events used for quota enforcement (last 90 days).",
