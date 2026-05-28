@@ -41,6 +41,7 @@ export default function Footer() {
               <li><Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link></li>
               <li><Link to="/refund-policy" className="hover:text-foreground transition-colors">{t("footer.refundPolicy")}</Link></li>
               <li><Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link></li>
+              <li><Link to="/accessibility" className="hover:text-foreground transition-colors">Accessibility</Link></li>
             </ul>
           </div>
 
