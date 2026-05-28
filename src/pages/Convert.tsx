@@ -1466,8 +1466,10 @@ export default function Convert() {
                         className="mt-0.5"
                       />
                       <label htmlFor="recording-consent" className="text-body-sm text-muted-foreground leading-snug cursor-pointer">
-                        {t("convert.consentLabel")}
+                        {t("convert.consentLabel")}{" "}
+                        <Link to="/privacy#uploader-duties" className="text-primary hover:underline" target="_blank">{t("convert.consentLabelLearnMore")}</Link>
                       </label>
+
                     </div>
 
                     <p className="text-caption text-muted-foreground flex items-start gap-1.5">
