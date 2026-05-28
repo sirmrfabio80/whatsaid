@@ -25,6 +25,7 @@ interface Opts {
  * received both express-consent ticks.
  */
 export async function openCheckoutWithConsent(opts: Opts): Promise<void> {
+  const idempotencyKey = newIdempotencyKey("reg37");
   const { data, error } = await invokeWithRetry<{ ok?: boolean; consent_id?: string }>(
     "record-consent",
     {
@@ -32,13 +33,16 @@ export async function openCheckoutWithConsent(opts: Opts): Promise<void> {
         consent_type: REG37_CONSENT_TYPE,
         version: REG37_CONSENT_VERSION,
         package_id: opts.packageId ?? opts.priceId,
+        idempotency_key: idempotencyKey,
       },
+      headers: { "x-idempotency-key": idempotencyKey },
     },
     {
       onRetry: ({ attempt, reason, status }) =>
         console.warn(`[record-consent] retry ${attempt + 1} (${reason} ${status ?? ""})`),
     },
   );
+
 
   if (error || !data?.ok || !data?.consent_id) {
     throw new Error(
