@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
-import { AlertTriangle, CheckCircle2, Clock, Play, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import JsonBlock from "@/components/admin/JsonBlock";
+import { AlertTriangle, CheckCircle2, Clock, Play, RefreshCw, RotateCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -125,6 +127,8 @@ export default function RetentionMonitorTab() {
   const [rows, setRows] = useState<CleanupLogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [selected, setSelected] = useState<CleanupLogRow | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,22 +148,28 @@ export default function RetentionMonitorTab() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const runDry = useCallback(async () => {
-    setRunning(true);
-    try {
-      const { error } = await supabase.functions.invoke("prune-retention", {
-        body: { dry_run: true },
-      });
-      if (error) throw error;
-      toast.success("Dry-run started — refresh in a few seconds.");
-      // Optimistic refresh; the function writes a row synchronously.
-      setTimeout(() => { void load(); }, 800);
-    } catch (e) {
-      toast.error(`Dry-run failed: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setRunning(false);
-    }
-  }, [load]);
+  const invokePrune = useCallback(
+    async (opts: { dryRun: boolean; datasetKeys?: string[]; sourceId?: string; label: string }) => {
+      if (opts.sourceId) setRetryingId(opts.sourceId);
+      else setRunning(true);
+      try {
+        const body: Record<string, unknown> = { dry_run: opts.dryRun };
+        if (opts.datasetKeys?.length) body.dataset_keys = opts.datasetKeys;
+        const { error } = await supabase.functions.invoke("prune-retention", { body });
+        if (error) throw error;
+        toast.success(`${opts.label} started — refresh in a few seconds.`);
+        setTimeout(() => { void load(); }, 800);
+      } catch (e) {
+        toast.error(`${opts.label} failed: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        if (opts.sourceId) setRetryingId(null);
+        else setRunning(false);
+      }
+    },
+    [load],
+  );
+
+  const runDry = useCallback(() => invokePrune({ dryRun: true, label: "Dry-run" }), [invokePrune]);
 
   const alerts = useMemo(() => deriveAlerts(rows), [rows]);
   const latest = rows[0];
@@ -279,14 +289,20 @@ export default function RetentionMonitorTab() {
                     <th className="py-2 pr-4 text-right">Duration</th>
                     <th className="py-2 pr-4 text-right">Datasets</th>
                     <th className="py-2 pr-4 text-right">Total processed</th>
+                    <th className="py-2 pr-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => {
                     const reports = r.metadata?.reports ?? [];
                     const totalProcessed = reports.reduce((s, x) => s + (x.processed ?? 0), 0);
+                    const errCount = Array.isArray(r.errors) ? (r.errors as unknown[]).length : 0;
                     return (
-                      <tr key={r.id} className="border-b last:border-0">
+                      <tr
+                        key={r.id}
+                        className="border-b last:border-0 cursor-pointer hover:bg-muted/40"
+                        onClick={() => setSelected(r)}
+                      >
                         <td className="py-2 pr-4">
                           <div>{new Date(r.started_at).toLocaleString()}</div>
                           <div className="text-xs text-muted-foreground">{timeAgo(r.started_at)}</div>
@@ -301,7 +317,9 @@ export default function RetentionMonitorTab() {
                         </td>
                         <td className="py-2 pr-4">
                           {r.status === "failed" ? (
-                            <Badge variant="destructive">failed</Badge>
+                            <Badge variant="destructive">
+                              failed{errCount ? ` (${errCount})` : ""}
+                            </Badge>
                           ) : r.status === "completed" ? (
                             <Badge>completed</Badge>
                           ) : (
@@ -315,6 +333,19 @@ export default function RetentionMonitorTab() {
                         <td className="py-2 pr-4 text-right tabular-nums">
                           {totalProcessed.toLocaleString()}
                         </td>
+                        <td
+                          className="py-2 pr-4 text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7"
+                            onClick={() => setSelected(r)}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1.5" /> Details
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -324,7 +355,150 @@ export default function RetentionMonitorTab() {
           )}
         </CardContent>
       </Card>
+
+      <RunDetailsDialog
+        row={selected}
+        onClose={() => setSelected(null)}
+        retryingId={retryingId}
+        onRetry={(row, dryRun) =>
+          invokePrune({
+            dryRun,
+            datasetKeys: (row.metadata?.reports ?? []).map((r) => r.dataset_key),
+            sourceId: row.id,
+            label: dryRun ? "Retry (dry-run)" : "Retry (live)",
+          })
+        }
+      />
     </div>
+  );
+}
+
+function RunDetailsDialog({
+  row,
+  onClose,
+  onRetry,
+  retryingId,
+}: {
+  row: CleanupLogRow | null;
+  onClose: () => void;
+  onRetry: (row: CleanupLogRow, dryRun: boolean) => void;
+  retryingId: string | null;
+}) {
+  const open = row !== null;
+  const reports = row?.metadata?.reports ?? [];
+  const errors = Array.isArray(row?.errors) ? (row?.errors as unknown[]) : [];
+  const isRetrying = !!row && retryingId === row.id;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Run details</DialogTitle>
+          {row && (
+            <DialogDescription>
+              {new Date(row.started_at).toLocaleString()} • {row.metadata?.dry_run ? "dry-run" : "live"} •{" "}
+              {row.status} • {formatDuration(row.duration_ms)}
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        {row && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isRetrying}
+                onClick={() => onRetry(row, true)}
+              >
+                <RotateCw className="h-4 w-4 mr-2" />
+                {isRetrying ? "Running…" : "Retry as dry-run"}
+              </Button>
+              <Button
+                size="sm"
+                disabled={isRetrying}
+                onClick={() => onRetry(row, false)}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {isRetrying ? "Running…" : "Retry as live"}
+              </Button>
+            </div>
+
+            {reports.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Per-dataset reports</h4>
+                <div className="overflow-x-auto rounded-lg border">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-muted-foreground border-b bg-muted/40">
+                        <th className="py-2 px-3">Dataset</th>
+                        <th className="py-2 px-3">Strategy</th>
+                        <th className="py-2 px-3">Cutoff</th>
+                        <th className="py-2 px-3 text-right">Candidates</th>
+                        <th className="py-2 px-3 text-right">Processed</th>
+                        <th className="py-2 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports.map((r) => (
+                        <tr key={r.dataset_key} className="border-b last:border-0">
+                          <td className="py-2 px-3 font-medium">{r.dataset_key}</td>
+                          <td className="py-2 px-3">{r.strategy}</td>
+                          <td className="py-2 px-3 text-muted-foreground">
+                            {new Date(r.cutoff).toLocaleDateString()}
+                          </td>
+                          <td className="py-2 px-3 text-right tabular-nums">
+                            {r.candidates.toLocaleString()}
+                          </td>
+                          <td className="py-2 px-3 text-right tabular-nums">
+                            {r.processed.toLocaleString()}
+                          </td>
+                          <td className="py-2 px-3">
+                            {r.error ? (
+                              <Badge variant="destructive">error</Badge>
+                            ) : r.dry_run ? (
+                              <Badge variant="outline">dry-run</Badge>
+                            ) : (
+                              <Badge>ok</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {reports.some((r) => r.error) && (
+                  <div className="space-y-1">
+                    <h5 className="text-xs font-medium text-muted-foreground">Dataset errors</h5>
+                    {reports.filter((r) => r.error).map((r) => (
+                      <pre
+                        key={r.dataset_key}
+                        className="text-xs p-2 rounded bg-destructive/10 text-destructive overflow-x-auto whitespace-pre-wrap"
+                      >
+                        <span className="font-semibold">{r.dataset_key}:</span> {r.error}
+                      </pre>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <JsonBlock title="Reports (JSON)" data={reports} defaultCollapsed />
+            <JsonBlock
+              title={`Errors${errors.length ? ` (${errors.length})` : ""}`}
+              data={errors}
+              defaultCollapsed={errors.length === 0}
+            />
+            <JsonBlock title="Metadata" data={row.metadata} defaultCollapsed />
+            <JsonBlock
+              title="Raw row"
+              data={row}
+              defaultCollapsed
+            />
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
