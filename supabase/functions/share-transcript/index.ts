@@ -324,6 +324,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    const messageId = crypto.randomUUID()
+    const shortId = messageId.slice(0, 6)
+
+    const notice = await resolveActiveNotice(serviceClient)
+    const noticeCtx = { senderLabel, senderEmail, jobShortId: shortId }
+    const noticeHtml = notice ? buildNoticeHtml(notice, noticeCtx) : ''
+    const noticeText = notice ? buildNoticeText(notice, noticeCtx) : ''
+    if (!notice) {
+      console.warn('[share-transcript] no active share_recipient_notice version found')
+    }
+
     const html = buildEmailHtml({
       title,
       senderLabel,
@@ -331,6 +342,7 @@ Deno.serve(async (req) => {
       questions: transformedQuestions,
       transcript: transformedTranscript,
       downloadUrl,
+      noticeHtml,
     })
 
     const text = buildPlainText({
@@ -340,9 +352,8 @@ Deno.serve(async (req) => {
       questions: transformedQuestions,
       transcript: transformedTranscript,
       downloadUrl,
+      noticeText,
     })
-
-    const messageId = crypto.randomUUID()
 
     const recipientLower = recipient_email.toLowerCase().trim()
     const { data: existingToken } = await serviceClient
@@ -367,7 +378,6 @@ Deno.serve(async (req) => {
       status: 'pending',
     })
 
-    const shortId = messageId.slice(0, 6)
     const subjectLine = `Transcript shared with you: ${title} [${shortId}]`
 
     const { error: enqueueError } = await serviceClient.rpc('enqueue_email', {
@@ -395,6 +405,22 @@ Deno.serve(async (req) => {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    let noticeLogged = false
+    if (notice) {
+      noticeLogged = await recordRecipientNotification(serviceClient, {
+        jobId: job_id,
+        sharedBy: user.id,
+        recipientEmail: recipient_email,
+        channel: 'share_transcript',
+        notice,
+        messageId,
+      })
+      if (!noticeLogged) {
+        console.log('[share-transcript] already_notified', { job_id, version: notice.version })
+      }
+    }
+
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
