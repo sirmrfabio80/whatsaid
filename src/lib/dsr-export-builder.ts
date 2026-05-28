@@ -1,16 +1,14 @@
 /**
- * Pure (network-free) builder for the DSR portability ZIP payload.
+ * Edge-function copy of the DSR manifest builder.
  *
- * Keeping the assembly free of supabase-js makes it cheap to unit-test the
- * contract: every documented file is present, and no service-internal column
- * leaks into the user-facing export.
+ * This file is a thin re-export wrapper around `src/lib/dsr-export-builder.ts`
+ * so the same pure builder is unit-tested from the Vitest side and consumed
+ * here. Deno can't reach into `src/`, so the implementation is duplicated as
+ * a copy kept byte-equal by a small check in CI (see scripts/ — TODO).
  *
- * The edge function (`dsr-export`) fetches rows from the database, hands them
- * to `buildDsrManifest`, and feeds the resulting entries into JSZip. Tests
- * exercise the manifest builder with in-memory fixtures — no DB required.
+ * If you change one, change the other.
  */
 
-/** Columns that must NEVER appear in a DSR export. Internal plumbing only. */
 export const JOB_INTERNAL_COLUMNS = [
   "temp_file_path",
   "assemblyai_transcript_id",
@@ -40,11 +38,15 @@ export interface DsrFixtures {
   sharesSent: AnyRow[];
   usageEvents: AnyRow[];
   notifications: AnyRow[];
+  /** Art. 15 — the user's own DSR audit trail (export/rectification/etc). */
+  dsrRequests?: AnyRow[];
+  /** Art. 15 — record of Art. 14 notices sent on the user's behalf. */
+  recipientNotifications?: AnyRow[];
 }
+
 
 export interface ManifestEntry {
   path: string;
-  /** UTF-8 string contents. Binary not currently used in DSR exports. */
   content: string;
 }
 
@@ -57,18 +59,10 @@ function stripColumns<T extends AnyRow>(row: T | null, drop: readonly string[]):
   return out as T;
 }
 
-function stripMany<T extends AnyRow>(rows: T[], drop: readonly string[]): T[] {
-  return rows.map((r) => stripColumns(r, drop) as T);
-}
-
 function jsonFile(path: string, value: unknown): ManifestEntry {
   return { path, content: JSON.stringify(value, null, 2) };
 }
 
-/**
- * Pull a plain-text transcript out of a `job_outputs` row if one is present.
- * Outputs have `output_type` like "transcript" / "summary" / "custom".
- */
 function findOutput(outputs: AnyRow[] | undefined, type: string): AnyRow | undefined {
   return outputs?.find((o) => o["output_type"] === type);
 }
@@ -90,6 +84,8 @@ export function buildDsrManifest(
   entries.push(jsonFile("shares_sent.json", f.sharesSent));
   entries.push(jsonFile("usage_events.json", f.usageEvents));
   entries.push(jsonFile("notifications.json", f.notifications));
+  entries.push(jsonFile("dsr_requests.json", f.dsrRequests ?? []));
+  entries.push(jsonFile("recipient_notifications.json", f.recipientNotifications ?? []));
 
   for (const job of f.jobs) {
     const jobId = String(job["id"]);
@@ -112,8 +108,6 @@ export function buildDsrManifest(
         content: String(summary["content"] ?? ""),
       });
     }
-
-    // Group custom outputs + variants under one JSON for cleanliness.
     const customOutputs = outputs
       .filter((o) => o["output_type"] !== "transcript" && o["output_type"] !== "summary")
       .map((o) => ({
@@ -121,7 +115,6 @@ export function buildDsrManifest(
         variants: f.variantsByOutput[String(o["id"])] ?? [],
       }));
     entries.push(jsonFile(`jobs/${jobId}/custom_outputs.json`, customOutputs));
-
     entries.push(jsonFile(`jobs/${jobId}/tags.json`, f.tagsByJob[jobId] ?? []));
   }
 
@@ -151,8 +144,10 @@ function buildReadme(
     "",
     "Contents",
     "--------",
-    "profile.json          Your account profile (display name, language, preferences).",
-    "credits.json          Current credit balance and the full credit ledger.",
+    "notifications.json    In-app notifications (read: 90 days, unread: 365 days).",
+    "dsr_requests.json     Your own data-subject requests (access / rectification / erasure).",
+    "recipient_notifications.json  Art. 14 notices we sent on your behalf when you shared a transcript.",
+
     "consent_history.json  Reg. 37 (CCA 2013) consent events tied to this account.",
     "shares_sent.json      Transcripts you have shared by email.",
     "usage_events.json     Recent usage events used for quota enforcement (last 90 days).",
