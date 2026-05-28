@@ -394,9 +394,15 @@ export default function Convert() {
       };
 
       const invokeCreateJob = () =>
-        supabase.functions.invoke<{ job_id: string; credits_charged: number }>(
+        invokeWithRetry<{ job_id: string; credits_charged: number }>(
           "create-job",
           { body: createJobBody },
+          {
+            onRetry: ({ attempt, status, reason }) =>
+              console.warn(
+                `[create-job] transient failure (reason=${reason} status=${status ?? "n/a"}), retrying attempt ${attempt + 1}`,
+              ),
+          },
         );
 
       let { data: created, error: insertError } = await invokeCreateJob();
