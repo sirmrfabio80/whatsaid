@@ -93,7 +93,7 @@ export default function Navbar() {
             size="icon"
             className="rounded-lg"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? t("nav.closeMenu") : t("nav.openMenu")}
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
             aria-controls="primary-mobile-menu"
           >
