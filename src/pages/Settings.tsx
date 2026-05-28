@@ -42,6 +42,7 @@ import {
 } from "@/hooks/use-speech-synthesis";
 import { toast } from "sonner";
 import AdminInviteCard from "@/components/AdminInviteCard";
+import DataRightsCard from "@/components/settings/DataRightsCard";
 
 const ALLOWED_VOICES = ["male", "female"] as const;
 type AllowedVoice = (typeof ALLOWED_VOICES)[number];
@@ -555,6 +556,8 @@ export default function Settings() {
           </Card>
 
           {isAdmin && <AdminInviteCard />}
+
+          <DataRightsCard />
 
           <Card className="rounded-xl border-destructive/30 bg-card shadow-sm">
             <CardContent className="p-5 sm:p-6 space-y-4">
