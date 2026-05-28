@@ -154,12 +154,13 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {blockedParam === "region" && (
+          {regionBlocked && (
             <div className="mb-4">
-              <RegionBlockedNotice reason="region_blocked" />
+              <RegionBlockedNotice reason={regionReason} />
             </div>
           )}
           <form onSubmit={handleLogin} className="space-y-4">
+            <fieldset disabled={regionBlocked} className="space-y-4 contents">
             <div className="space-y-2">
               <Label htmlFor="email">{t("login.email")}</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="rounded-xl h-11" />
