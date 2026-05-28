@@ -1,122 +1,40 @@
-## Revised audit — answers to your 6 points, then the requeued fix list
+## Rip out upload-attestation modal — move consent to ToS
 
-Plan-mode read-only. No edits queued until you approve.
+The migration row (`consent_versions` for `tos_uploader_warranty` v `2026-05-v1`) is already seeded. This plan covers all remaining code work in shipping order.
 
----
+### 1. Legal copy
+- `src/pages/Terms.tsx` — bump `EFFECTIVE_DATE` to "30 May 2026"; add clause `s19` under `s18` ("Your audio uploads"): Art 6 lawful-basis warranty, Art 14(5) duty-to-inform warranty, indemnity. Add EN/IT/FR strings.
+- `src/pages/Privacy.tsx` — extend `#uploader-duties` section to name Lovable Cloud, Supabase, AssemblyAI as processors; state WhatSaid Ltd = controller for service operation, uploader = controller for recording content. EN/IT/FR.
 
-### 1) Severity re-classification
+### 2. Backend
+- New `supabase/functions/record-tos-acceptance/index.ts` — authenticated POST. Resolves currently-effective `tos_uploader_warranty` version from `consent_versions`. Idempotently inserts `consent_events` row keyed on `(user_id, version)`. Returns `{ consent_id, version, created }`.
+- Register in `supabase/config.toml`.
+- `supabase/functions/create-job/index.ts` — remove 30-min `CONSENT_MAX_AGE_MS` window. New guard: select latest `consent_events` row where `user_id = auth.uid()` and `consent_type = 'tos_uploader_warranty'`; if none, return `409 attestation_required`. Pin its id to `jobs.upload_consent_id`. Drop `upload_consent_id` from request body schema. Keep immutability trigger + column intact.
 
-| ID | Surface | Old | **New** | Rationale |
-|----|---------|-----|---------|-----------|
-| A10 | `DataRightsCard.tsx` (UK GDPR Art. 15/16/20 self-service) | Sev 4 (i18n gap) | **Sev 2** | Art. 12(1) requires rights information in "concise, transparent, intelligible and easily accessible form, using clear and plain language". If the user's app language is IT/FR, an EN-only rights surface fails Art. 12 even on a UK-only product. |
-| A9 | `SharedPdfDownload.tsx` (auth gate + download) | Sev 4 | **Sev 2** | Same Art. 12 logic — this is the only touchpoint a share recipient sees, and we already send them an Art. 14 notice in their locale. Inconsistent locale handling between the notice and the landing page weakens the Art. 14 chain. |
+### 3. Client
+- `src/components/ui/checkbox.tsx` — base classes: `peer h-[18px] w-[18px] shrink-0 rounded-[4px] border-2 border-input ring-offset-background data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors`. Inner `<Check>` → `h-3.5 w-3.5`.
+- `src/contexts/AuthContext.tsx` — on `SIGNED_IN`, if no `consent_events` row for current effective `tos_uploader_warranty` version, fire `record-tos-acceptance` once per session (fail-soft).
+- `src/pages/Signup.tsx` — update `signup.termsAgree` in EN/IT/FR to cover upload warranty. After successful `signUp`, invoke `record-tos-acceptance` (log-only on failure).
+- `src/pages/Convert.tsx` — remove `UploadAttestationDialog` import + JSX, state (`attestationOpen`, `attestationLoading`, `pendingConvert`), handlers (`handleAttestationCancel`, `handleAttestationConfirm`), and the `if (!overrides?.uploadConsentId)` branch at L338-351 of `handleConvert`. Drop `upload_consent_id` from `create-job` body (L419). Keep inline `consentChecked` checkbox; update label to "I have the right to upload this recording." with `/privacy#uploader-duties` link. On `409 attestation_required`, call `record-tos-acceptance` then retry `create-job` once.
+- i18n: update `convert.consentLabel` + add `convert.consentLabelLearnMore` ("Learn more") in EN/IT/FR.
 
----
+### 4. Dead code removal
+- Delete `src/components/UploadAttestationDialog.tsx`
+- Delete `src/lib/upload-attestation-strings.ts`
+- Delete `src/test/upload-attestation-strings.test.ts`
+- Delete `supabase/functions/record-upload-attestation/` directory
+- Remove its entry from `supabase/config.toml`
+- Remove all `uploadAttestation.*` keys from EN/IT/FR locale files
 
-### 2) Domain inconsistency (A4) — both occurrences, no fix proposed
+### Guardrails (untouched)
+Pricing, paddle-webhook, transcribe / process-job / post-process pipeline, `useJobHeartbeat`, credit ledger, jobs RLS, retention/cleanup. `consent_events` and `consent_versions` table shapes unchanged.
 
-You decide which is canonical. Surfaces found:
-
-**`whatsaid.app` (production-domain assumption — 40+ occurrences):**
-- `index.html` — `og:url`, `og:image`, `twitter:image`, full Organization + WebSite JSON-LD (`@id`, `url`, `logo.url`, `image`, `publisher`, `potentialAction.urlTemplate`)
-- `public/robots.txt` — `Sitemap:` directive
-- `public/sitemap.xml` — all 7 `<loc>` entries (`/`, `/convert`, `/pricing`, `/help`, `/privacy`, `/terms`, `/refund-policy`, `/accessibility`)
-- `src/hooks/use-page-meta.ts` — `SITE_URL` constant (drives every per-route canonical via Helmet)
-- `src/components/admin/DiagnosticsTab.tsx` — `ORIGIN` constant
-- `src/pages/Accessibility.tsx` — hard-coded canonical
-- `supabase/functions/_shared/constants.ts` — `SITE_URL`, `SENDER_DOMAIN = notify.whatsaid.app`, `FROM_DOMAIN`
-- All `support@whatsaid.app` mailto links (Footer, RegionBlockedNotice, HelpContactCard) and legal copy in `en/it/fr.json` (Privacy §1/§9/§10/§13, Terms §2/§16/§18, Refund §2/§7)
-- `src/lib/export-pdf.ts` line 787 — PDF footer text `"Generated by WhatSaid · whatsaid.app"`
-- `docs/LAUNCH_READINESS.md`
-
-**`whatsaid.lovable.app` (2 occurrences — the inconsistency):**
-- `src/lib/export-pdf.ts:762` — `const WHATSAID_URL = "https://whatsaid.lovable.app";` (used as the clickable header link inside every exported PDF)
-- (System prompt also references this domain as the Lovable preview URL — not in your code, just noting it.)
-
-**Question for you:** is the live production canonical **`whatsaid.app`** (the apex domain — what 40+ surfaces already assume, including SEO, sitemap, emails, legal text) or **`whatsaid.lovable.app`** (the Lovable preview subdomain)? I will not standardise until you pick. If `whatsaid.app` is correct, the fix is a 1-line change at `export-pdf.ts:762`. If `whatsaid.lovable.app` is correct, the fix is a sweeping change across SEO, sitemap, emails, and legal copy.
-
----
-
-### 3) A3 — PricingStudioMock: CURRENTLY CORRECT (latent coupling, low-priority)
-
-Hard-coded values in `src/components/pricing/PricingStudioMock.tsx`:
-- `"5 credits"` → `"£14.99"` ✓ matches `paddle-pricing.ts` base GBP price
-- `"Per credit"` → `"5 audio files · up to 120 min each"` → `"£3.00"` ✓ £14.99/5 = £2.998 ≈ £3.00, and "120 min" matches `MINUTES_PER_CREDIT = 120`
-- `"GBP · VAT at checkout"` ✓ matches Paddle `countryCode: 'GB'` behaviour
-
-**Status:** the mock is accurate today. The risk is **latent coupling** — if pricing changes (price, pack size, or `MINUTES_PER_CREDIT`), the mock won't auto-update and will silently drift. **Recommendation:** lower to Sev 5, fix in a follow-up by sourcing the three literals from `paddle-pricing.ts` + `MINUTES_PER_CREDIT`. Not part of this fix batch.
-
----
-
-### 4) Admin tabs — scanned, not silently excluded
-
-All 11 admin surfaces below were read. Counts are rough hard-coded user-visible string matches (regex over `"Capitalised…"` literals and `>Text<` JSX text — noisy but directionally useful). **All deliberately EN-only (admin audience — sole-trader + future co-admins, no IT/FR admin users in Phase 1):**
-
-| Tab | Strings | Decision |
-|-----|---------|----------|
-| `AdminGuard.tsx` | 0 | Deliberately EN-only (admin audience) |
-| `OthersTab.tsx` | 2 | Deliberately EN-only (admin audience) |
-| `FaqFeedbackTab.tsx` | 9 | Deliberately EN-only (admin audience) |
-| `LogsTab.tsx` | 12 | Deliberately EN-only (admin audience) |
-| `UsageTab.tsx` | 13 | Deliberately EN-only (admin audience) |
-| `WatchdogTab.tsx` | 17 | Deliberately EN-only (admin audience) |
-| `DiagnosticsTab.tsx` | 18 | Deliberately EN-only (admin audience) |
-| `RetentionTab.tsx` | 19 | Deliberately EN-only (admin audience) |
-| `TranscribeTemplatesTab.tsx` | 22 | Deliberately EN-only (admin audience) |
-| `DsrTab.tsx` | 34 | Deliberately EN-only (admin audience) — note: surfaces DSR workflow text to admin, not to data subject |
-| `RetentionMonitorTab.tsx` | 64 | Deliberately EN-only (admin audience) |
-
-**On record:** none of these will be i18n'd in this batch. If a future admin needs IT/FR, revisit.
-
----
-
-### 5) A1 + A2 — verbatim current strings (EN / IT / FR)
-
-**A1 — `pricing.faqCreditA`:**
-
-- **EN** (`en.json:831`):
-  > "One credit processes one audio file and includes a full transcript, AI summary, and follow-up questions — all downloadable and saved in your account. Longer files use more credits in **15-minute** brackets (see the credit table above)."
-- **IT** (`it.json:796`):
-  > "Un credito elabora un file audio e include trascrizione completa, riassunto AI e domande di follow-up — il tutto scaricabile e salvato nel tuo account. I file più lunghi usano più crediti in fasce di **15 minuti** (vedi la tabella qui sopra)."
-- **FR** (`fr.json:796`):
-  > "Un crédit traite un fichier audio et comprend une transcription complète, un résumé IA et des questions de suivi — le tout téléchargeable et sauvegardé dans votre compte. Les fichiers plus longs utilisent plus de crédits par tranches de **15 minutes** (voir le tableau ci-dessus)."
-
-**A2 — `help.mock.demoAnswer`:**
-
-- **EN** (`en.json:951`):
-  > "1 credit transcribes up to **15 minutes** of audio. Credits never expire and apply to summaries, custom questions, and re-runs at no extra cost."
-- **IT** (`it.json:933`):
-  > "1 credito trascrive fino a **15 minuti** di audio. I crediti non scadono mai e includono riassunti, domande personalizzate e rigenerazioni senza costi aggiuntivi."
-- **FR** (`fr.json:933`):
-  > "1 crédit transcrit jusqu'à **15 minutes** d'audio. Les crédits n'expirent jamais et couvrent les résumés, les questions personnalisées et les régénérations sans frais supplémentaires."
-
-**Confirmed:** all 6 strings use the numeric `"15"` — replace target is unambiguous. The agent-mode prompt can do a literal `15-minute` → `120-minute`, `15 minutes` → `120 minutes`, `15 minuti` → `120 minuti` substitution scoped to these two keys only.
-
----
-
-### 6) Re-ordered top-of-queue (rights compliance ahead of refund fallback)
-
-| Order | ID | Surface | Sev | What changes |
-|-------|----|---------|-----|--------------|
-| 1 | **A1 + A2** | `pricing.faqCreditA` + `help.mock.demoAnswer` in en/it/fr | Sev 1 | Replace "15"→"120" minutes across all 6 strings. Pure copy. |
-| 2 | **A10** | `DataRightsCard.tsx` | **Sev 2 ↑** | i18n the entire card (headings, body, dialog labels, toasts). Add keys under a new `settings.dataRights.*` namespace in en/it/fr. |
-| 3 | **#25** (currency/billing mismatch) | Pricing currency toggle vs. Paddle GB lock | Sev 2 | Either remove the USD/EUR toggle, or add a clear "billed in GBP" disclosure adjacent to the toggle. Recommend the disclosure path — less risky, no checkout changes. |
-| 4 | **#10/#11** ("instant" marketing claims) | Home/Pricing copy | Sev 2 | Soft-edit "instant" → "fast" / "ready in minutes" on the marketing surfaces. List of exact strings provided at fix time. |
-| 5 | **A9** | `SharedPdfDownload.tsx` | **Sev 2 ↑** | i18n the page (headings, status text, button labels, error fallback). Add keys under `sharedPdf.*`. |
-| 6 | **#1–3** (Refund page i18n crash) | `refund.*` null in it.json/fr.json | Sev 2 | Two options — A: add proper IT/FR translations (but this is legal copy, Phase 1 = EN-only legal); **B: hard-render Refund in EN regardless of locale** with a top banner "Legal text shown in English". Recommend B to keep Phase 1 legal-translation rule intact. |
-| 7 | **#20** (`<html lang="en">` static) | `index.html` | Sev 3 | Add a small effect in `src/main.tsx` or i18n init to sync `document.documentElement.lang` to the active i18n locale. WCAG 2.2 SC 3.1.1 compliance. |
-
-**Deferred to a later batch (not in this fix prompt):**
-- A3 PricingStudioMock latent coupling (Sev 5, see point 3)
-- All Sev 4–6 typos/consistency findings
-- IT/FR parity sweep of remaining UX copy (out of scope unless you ask)
-
----
-
-### Open questions before I queue the build-mode prompt
-
-1. **Domain canonical**: `whatsaid.app` or `whatsaid.lovable.app`? (Point 2 above.)
-2. **#25 currency toggle**: keep + add GBP disclosure, or remove the toggle entirely?
-3. **#1–3 Refund page**: confirm option **B** (force EN render + banner) is the right call given the Phase 1 legal-translation rule.
-
-Answer those three and I'll write the agent-mode prompt covering items 1–7 in order. No files touched until then.
+### Verification
+1. Fresh signup → `consent_events` row exists for new user.
+2. `/convert` upload: no modal; inline checkbox reads new label with working anchor link.
+3. Convert with box ticked: upload starts; resulting job has `upload_consent_id` set.
+4. Convert with box unticked: button disabled.
+5. `/terms` shows new clause in EN/IT/FR.
+6. `/privacy#uploader-duties` names sub-processors.
+7. All checkboxes app-wide visibly square, distinct from radios.
+8. Listed dead files no longer exist.
