@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
     // (and again on any future ToS bump). create-job pins the latest consent
     // event of this type to jobs.upload_consent_id for audit. If no row
     // exists yet, signal the client to re-accept Terms.
-    const { data: consentRow, error: consentErr } = await supabase
+    let { data: consentRow, error: consentErr } = await supabase
       .from("consent_events")
       .select("id")
       .eq("user_id", userId)
@@ -150,10 +150,50 @@ Deno.serve(async (req) => {
       return bad("Could not verify acceptance", 500);
     }
     if (!consentRow) {
-      return new Response(
-        JSON.stringify({ error: "attestation_required" }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      if (body.uploader_warranty_confirmed !== true) {
+        return new Response(
+          JSON.stringify({ error: "attestation_required" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const now = new Date().toISOString();
+      const { data: versionRow, error: versionErr } = await supabase
+        .from("consent_versions")
+        .select("version")
+        .eq("consent_type", TOS_UPLOADER_CONSENT_TYPE)
+        .lte("effective_from", now)
+        .or(`effective_to.is.null,effective_to.gt.${now}`)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (versionErr) {
+        console.error("[create-job] consent version lookup failed", versionErr);
+        return bad("Could not verify acceptance", 500);
+      }
+      if (!versionRow) return bad("No effective uploader warranty version", 409);
+
+      const ip =
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        req.headers.get("cf-connecting-ip") ||
+        "unknown";
+      const { data: insertedConsent, error: insertConsentErr } = await supabase
+        .from("consent_events")
+        .insert({
+          user_id: userId,
+          consent_type: TOS_UPLOADER_CONSENT_TYPE,
+          version: versionRow.version,
+          ip_hash: await hashIp(ip),
+          user_agent: (req.headers.get("user-agent") ?? "").slice(0, 255) || null,
+          metadata: { source: "create-job" },
+        })
+        .select("id")
+        .single();
+      if (insertConsentErr || !insertedConsent) {
+        console.error("[create-job] consent insert failed", insertConsentErr);
+        return bad("Could not record acceptance", 500);
+      }
+      consentRow = insertedConsent;
     }
     const consentId = consentRow.id;
 
