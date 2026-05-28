@@ -8,7 +8,6 @@ import { requireAuth, createServiceClient } from "../_shared/supabase.ts";
 const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
 interface Body {
-interface Body {
   consent_type?: unknown;
   version?: unknown;
   package_id?: unknown;
@@ -21,7 +20,6 @@ function isString(v: unknown): v is string {
   return typeof v === "string" && v.length > 0 && v.length <= 256;
 }
 
-}
 
 async function hashIp(ip: string): Promise<string> {
   const secret = Deno.env.get("CONSENT_IP_SALT_SECRET") ?? "missing-salt";
