@@ -77,7 +77,7 @@ export default function AudioUploader({ onFileSelected, disabled }: AudioUploade
                 {!detecting && selectedFile && ` · ${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={clear} disabled={disabled}><X className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={clear} disabled={disabled} aria-label={t("audioUploader.removeSelectedFile", { defaultValue: "Remove selected file" })}><X className="w-4 h-4" /></Button>
           </div>
         </div>
       )}

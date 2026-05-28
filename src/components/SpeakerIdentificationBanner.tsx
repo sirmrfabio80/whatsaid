@@ -122,6 +122,7 @@ export default function SpeakerIdentificationBanner({
                     size="icon"
                     className="h-5 w-5 shrink-0"
                     onClick={() => saveEdit(s.speaker_label)}
+                    aria-label={t("common.save")}
                   >
                     <Check className="w-3 h-3" />
                   </Button>
@@ -130,6 +131,7 @@ export default function SpeakerIdentificationBanner({
                     size="icon"
                     className="h-5 w-5 shrink-0"
                     onClick={() => setEditingSpeaker(null)}
+                    aria-label={t("common.cancel")}
                   >
                     <X className="w-3 h-3" />
                   </Button>
