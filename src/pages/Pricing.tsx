@@ -227,8 +227,8 @@ export default function Pricing() {
   const [consentLoading, setConsentLoading] = useState(false);
   const [pendingProductId, setPendingProductId] = useState<PricingProduct["id"] | null>(null);
 
-  const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(undefined);
-  const { prices, loading, currency } = usePaddlePricing(selectedCurrency);
+  // All customers are billed in GBP by Paddle regardless of region.
+  const { prices, loading } = usePaddlePricing(undefined);
 
   useEffect(() => {
     initPaddle();
