@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { invokeWithRetry } from "@/lib/invoke-with-retry";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -394,9 +395,15 @@ export default function Convert() {
       };
 
       const invokeCreateJob = () =>
-        supabase.functions.invoke<{ job_id: string; credits_charged: number }>(
+        invokeWithRetry<{ job_id: string; credits_charged: number }>(
           "create-job",
           { body: createJobBody },
+          {
+            onRetry: ({ attempt, status, reason }) =>
+              console.warn(
+                `[create-job] transient failure (reason=${reason} status=${status ?? "n/a"}), retrying attempt ${attempt + 1}`,
+              ),
+          },
         );
 
       let { data: created, error: insertError } = await invokeCreateJob();
@@ -434,7 +441,7 @@ export default function Convert() {
       }
 
       if (insertError || !created?.job_id) {
-        throw new Error(insertError?.message || "Could not create job");
+        throw new Error((insertError as Error | null)?.message || "Could not create job");
       }
       newJobId = created.job_id;
 
