@@ -45,8 +45,55 @@ Deno.serve(async (req) => {
   const auth = await requireAuth(req.headers.get("Authorization"));
   if (!auth.ok) return auth.response;
 
+  // Optional client-supplied idempotency key. The (user_id, version) check
+  // below already collapses duplicates per ToS version, but the explicit key
+  // also collapses retries that happen before the (user_id, version) row is
+  // committed, and lets the client observe whether the call was a replay.
+  let idempotencyKey: string | null = null;
+  const headerKey = req.headers.get("x-idempotency-key");
+  if (headerKey) {
+    idempotencyKey = headerKey.trim() || null;
+  } else if (req.headers.get("content-length") && req.headers.get("content-length") !== "0") {
+    try {
+      const body = await req.json().catch(() => null) as { idempotency_key?: unknown } | null;
+      if (body && typeof body.idempotency_key === "string") {
+        idempotencyKey = body.idempotency_key.trim() || null;
+      }
+    } catch {
+      // ignore — body is optional
+    }
+  }
+  if (idempotencyKey && !IDEMPOTENCY_KEY_RE.test(idempotencyKey)) {
+    return new Response(
+      JSON.stringify({ error: "idempotency_key must be 8-128 url-safe characters" }),
+      { status: 400, headers: jsonHeaders },
+    );
+  }
+
   const admin = createServiceClient();
   const now = new Date().toISOString();
+
+  if (idempotencyKey) {
+    const { data: replay } = await admin
+      .from("consent_events")
+      .select("id, version")
+      .eq("user_id", auth.userId)
+      .eq("consent_type", CONSENT_TYPE)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+    if (replay) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          consent_id: replay.id,
+          version: replay.version,
+          already: true,
+          idempotent_replay: true,
+        }),
+        { status: 200, headers: jsonHeaders },
+      );
+    }
+  }
 
   // Resolve the current effective version for this consent type.
   const { data: versionRow, error: vErr } = await admin
@@ -110,11 +157,33 @@ Deno.serve(async (req) => {
       version: versionRow.version,
       ip_hash: ipHash,
       user_agent: ua || null,
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
 
   if (insErr || !inserted) {
+    if (idempotencyKey && (insErr as { code?: string } | null)?.code === "23505") {
+      const { data: winner } = await admin
+        .from("consent_events")
+        .select("id, version")
+        .eq("user_id", auth.userId)
+        .eq("consent_type", CONSENT_TYPE)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+      if (winner) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            consent_id: winner.id,
+            version: winner.version,
+            already: true,
+            idempotent_replay: true,
+          }),
+          { status: 200, headers: jsonHeaders },
+        );
+      }
+    }
     console.error("[record-tos-acceptance] insert failed", insErr);
     return new Response(JSON.stringify({ error: "Insert failed" }), {
       status: 500,
@@ -127,3 +196,4 @@ Deno.serve(async (req) => {
     { status: 200, headers: jsonHeaders },
   );
 });
+
