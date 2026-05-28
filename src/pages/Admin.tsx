@@ -73,6 +73,9 @@ export default function Admin() {
           <TabsContent value="security-headers" className="space-y-6">
             <SecurityHeadersTab />
           </TabsContent>
+          <TabsContent value="edge-health" className="space-y-6">
+            <EdgeHealthTab />
+          </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
           </TabsContent>
