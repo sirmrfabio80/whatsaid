@@ -36,6 +36,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Help = lazy(() => import("./pages/Help"));
 const Cookies = lazy(() => import("./pages/Cookies"));
+const Accessibility = lazy(() => import("./pages/Accessibility"));
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/help" element={<Help />} />
               <Route path="/cookies" element={<Cookies />} />
+              <Route path="/accessibility" element={<Accessibility />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>

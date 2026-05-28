@@ -88,7 +88,15 @@ export default function Navbar() {
               <NotificationBell />
             </>
           )}
-          <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setMobileOpen(!mobileOpen)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-lg"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileOpen}
+            aria-controls="primary-mobile-menu"
+          >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
         </div>
