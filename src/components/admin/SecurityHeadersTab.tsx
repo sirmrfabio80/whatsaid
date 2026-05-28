@@ -242,6 +242,64 @@ export default function SecurityHeadersTab() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle className="text-base">CSP &amp; framing events (this session)</CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => clearFrameDiagnostics()}
+            disabled={diagnostics.length === 0}
+          >
+            <Trash2 className="h-4 w-4 mr-1" /> Clear
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {diagnostics.length === 0 ? (
+            <p className="text-body-sm text-muted-foreground">
+              No CSP violations or framing warnings captured in this session. Reload the preview to
+              re-snapshot the framing context.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {diagnostics.map((d) => (
+                <li key={d.id} className="text-body-sm border-l-2 border-border pl-3">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={d.kind === "csp-violation" ? "destructive" : "outline"}
+                      className="font-mono"
+                    >
+                      {d.kind}
+                    </Badge>
+                    <span className="text-caption text-muted-foreground">
+                      {new Date(d.ts).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <p className="mt-1">{d.message}</p>
+                  {d.kind === "csp-violation" && (
+                    <div className="text-caption font-mono text-muted-foreground mt-1 space-y-0.5">
+                      {d.blockedUri && <div className="break-all">blocked: {d.blockedUri}</div>}
+                      {d.sourceFile && (
+                        <div className="break-all">
+                          at: {d.sourceFile}
+                          {d.lineNumber ? `:${d.lineNumber}` : ""}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {d.ancestorOrigins && d.ancestorOrigins.length > 0 && (
+                    <div className="text-caption font-mono text-muted-foreground mt-1 break-all">
+                      ancestors: {d.ancestorOrigins.join(" → ")}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
+  );
   );
 }
