@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { PolicyRichText } from "@/components/policy/PolicyRichText";
+import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBanner";
 
 // Effective date for the current version of the Terms of Service.
 // Update this constant on every material change.
@@ -44,7 +45,9 @@ const SECTIONS: Section[] = [
 ];
 
 export default function Terms() {
-  const { t } = useTranslation();
+  // Force English rendering — see LegalEnglishOnlyBanner for rationale.
+  const { i18n } = useTranslation();
+  const t = i18n.getFixedT("en");
 
   usePageMeta({
     title: "Terms of Service — WhatSaid",
@@ -68,6 +71,8 @@ export default function Terms() {
               {t("common.backToHome")}
             </Link>
           </Button>
+
+          <LegalEnglishOnlyBanner />
 
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">
             {t("terms.title")}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,10 +8,10 @@ import { Download, FileText, CheckCircle2 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { usePageMeta } from "@/hooks/use-page-meta";
-
 type DownloadStatus = "loading" | "needsAuth" | "ready" | "downloading" | "done" | "error";
 
 export default function SharedPdfDownload() {
+  const { t } = useTranslation();
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
   usePageMeta({ title: "Shared PDF — WhatSaid", noindex: true, robots: "noindex,nofollow" });
@@ -25,7 +26,7 @@ export default function SharedPdfDownload() {
   useEffect(() => {
     if (!token || !pdfPath) {
       setStatus("error");
-      setErrorMsg("This PDF link is not valid.");
+      setErrorMsg(t("sharedPdf.errorInvalidLink"));
       return;
     }
 
@@ -62,7 +63,7 @@ export default function SharedPdfDownload() {
       });
 
       if (!response.ok) {
-        let message = "Failed to download PDF.";
+        let message = t("sharedPdf.errorGeneric");
         try {
           const raw = await response.text();
           if (raw) {
@@ -93,7 +94,7 @@ export default function SharedPdfDownload() {
       setStatus("done");
     } catch (error) {
       attemptedRef.current = false;
-      setErrorMsg(error instanceof Error ? error.message : "Failed to download PDF.");
+      setErrorMsg(error instanceof Error ? error.message : t("sharedPdf.errorGeneric"));
       setStatus("error");
     }
   };
@@ -107,7 +108,7 @@ export default function SharedPdfDownload() {
           {status === "loading" && (
             <>
               <InlineSpinner size="lg" tone="primary" className="mx-auto" />
-              <p className="text-body-sm text-muted-foreground">Checking secure download access…</p>
+              <p className="text-body-sm text-muted-foreground">{t("sharedPdf.checking")}</p>
             </>
           )}
 
@@ -117,17 +118,17 @@ export default function SharedPdfDownload() {
                 <FileText className="w-7 h-7 text-primary" />
               </div>
               <div>
-                <h1 className="text-h1">Sign in to download the PDF</h1>
+                <h1 className="text-h1">{t("sharedPdf.signInTitle")}</h1>
                 <p className="text-body-sm text-muted-foreground mt-1">
-                  For security, shared PDFs are only available to logged-in WhatSaid accounts.
+                  {t("sharedPdf.signInDesc")}
                 </p>
               </div>
               <div className="space-y-3">
                 <Button onClick={() => navigate(`/login?redirect=${encodeURIComponent(redirectTarget)}`)} className="w-full rounded-xl">
-                  Sign in
+                  {t("sharedPdf.signInBtn")}
                 </Button>
                 <Button onClick={() => navigate(`/signup?redirect=${encodeURIComponent(redirectTarget)}`)} variant="outline" className="w-full rounded-xl">
-                  Create account
+                  {t("sharedPdf.createAccountBtn")}
                 </Button>
               </div>
             </>
@@ -136,7 +137,7 @@ export default function SharedPdfDownload() {
           {status === "downloading" && (
             <>
               <InlineSpinner size="lg" tone="primary" className="mx-auto" />
-              <p className="text-body-sm text-muted-foreground">Preparing your PDF…</p>
+              <p className="text-body-sm text-muted-foreground">{t("sharedPdf.preparing")}</p>
             </>
           )}
 
@@ -144,12 +145,12 @@ export default function SharedPdfDownload() {
             <>
               <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
               <div>
-                <h1 className="text-h1">Your download has started</h1>
-                <p className="text-body-sm text-muted-foreground mt-1">If it did not start automatically, use the button below.</p>
+                <h1 className="text-h1">{t("sharedPdf.doneTitle")}</h1>
+                <p className="text-body-sm text-muted-foreground mt-1">{t("sharedPdf.doneDesc")}</p>
               </div>
               <Button onClick={() => void handleDownload()} className="w-full rounded-xl gap-2">
                 <Download className="w-4 h-4" />
-                Download again
+                {t("sharedPdf.downloadAgain")}
               </Button>
             </>
           )}
@@ -157,16 +158,16 @@ export default function SharedPdfDownload() {
           {status === "error" && (
             <ErrorState
               variant="plain"
-              title="Something went wrong"
+              title={t("sharedPdf.errorTitle")}
               description={errorMsg}
               action={
                 <div className="space-y-3 w-full">
                   <Button onClick={() => void handleDownload()} className="w-full rounded-xl gap-2" disabled={!token || !pdfPath || !session}>
                     <Download className="w-4 h-4" />
-                    Try again
+                    {t("sharedPdf.tryAgain")}
                   </Button>
                   <Button onClick={() => navigate("/")} variant="outline" className="w-full rounded-xl">
-                    Back to home
+                    {t("sharedPdf.backToHome")}
                   </Button>
                 </div>
               }

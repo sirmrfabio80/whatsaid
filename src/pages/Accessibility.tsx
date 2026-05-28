@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
-
+import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBanner";
 // Effective / last-reviewed date for the current version of this statement.
 // Update on every material change. Format: "DD Month YYYY".
 const LAST_REVIEWED = "28 May 2026";
@@ -31,6 +31,8 @@ export default function Accessibility() {
               Back to home
             </Link>
           </Button>
+
+          <LegalEnglishOnlyBanner />
 
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">
             Accessibility statement for WhatSaid

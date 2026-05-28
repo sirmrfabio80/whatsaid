@@ -358,6 +358,46 @@
       "desc": "Set a password so you can sign in anytime.",
       "setPasswordBtn": "Set password"
     },
+    "dataRights": {
+      "title": "Your data",
+      "subtitle": "UK GDPR rights of access, portability, and rectification.",
+      "downloadTitle": "Download your data",
+      "downloadDesc": "A ZIP containing your profile, credit history, transcripts, and consent log. The download link expires after 7 days.",
+      "downloadBtn": "Download export",
+      "downloadPreparing": "Preparing…",
+      "downloadSuccess": "Your data export is ready. The link expires in 7 days.",
+      "downloadNoLink": "Export completed but no download link was returned.",
+      "downloadFailed": "Export failed",
+      "rectifyTitle": "Request a correction",
+      "rectifyDesc": "For email or country changes, send us a request. We respond within 30 days.",
+      "rectifyBtn": "Request correction",
+      "rectifyPending": "Pending: {{fields}}",
+      "rectifyDialogTitle": "Request a correction",
+      "rectifyDialogDesc": "We'll review and respond within 30 days. You can have one pending request per field at a time.",
+      "rectifyFieldLabel": "Field to correct",
+      "rectifyFieldEmail": "Email",
+      "rectifyFieldCountry": "Country (ISO-2)",
+      "rectifyFieldPendingSuffix": " (pending)",
+      "rectifyValueLabel": "New value",
+      "rectifyReasonLabel": "Reason",
+      "rectifyReasonPlaceholder": "Why does this need correcting?",
+      "rectifyValidation": "Please provide both a new value and a reason (10+ chars).",
+      "rectifySuccess": "Request submitted. We'll respond within 30 days.",
+      "rectifyFailed": "Submission failed",
+      "rectifyCancel": "Cancel",
+      "rectifySubmit": "Submit request",
+      "rectifySubmitting": "Submitting…",
+      "clearTitle": "Clear local app data",
+      "clearDescPrefix": "Removes optional UI preferences and caches saved by this browser. You'll stay signed in. See the ",
+      "clearDescLink": "cookie details",
+      "clearDescSuffix": ".",
+      "clearBtn": "Clear local data",
+      "clearSuccess": "Local app data cleared ({{count}} {{noun}}).",
+      "clearItemSingular": "item",
+      "clearItemPlural": "items",
+      "clearFailed": "Could not clear local data.",
+      "erasureNote": "To erase your account and all associated data, use the Danger zone below. For restriction or objection requests, contact support."
+    },
     "helpLink": "Account help"
   },
   "setPassword": {
@@ -828,7 +868,7 @@
     "faqAccountQ": "Do I need an account before buying?",
     "faqAccountA": "Yes. Your account keeps your transcript, summary, downloads, and history saved and accessible whenever you need them.",
     "faqCreditQ": "What does one credit include?",
-    "faqCreditA": "One credit processes one audio file and includes a full transcript, AI summary, and follow-up questions — all downloadable and saved in your account. Longer files use more credits in 15-minute brackets (see the credit table above).",
+    "faqCreditA": "One credit processes one audio file and includes a full transcript, AI summary, and follow-up questions — all downloadable and saved in your account. Longer files use more credits in 120-minute brackets (see the credit table above).",
     "faqExpireQ": "Do credits expire?",
     "faqExpireA": "Credits remain available in your account based on the product terms.",
     "faqDownloadQ": "Can I download my results later?",
@@ -948,7 +988,7 @@
       "demoQ1": "How does the credit system work?",
       "demoQ2": "What audio formats can I upload?",
       "demoQ3": "Is my audio stored after processing?",
-      "demoAnswer": "1 credit transcribes up to 15 minutes of audio. Credits never expire and apply to summaries, custom questions, and re-runs at no extra cost.",
+      "demoAnswer": "1 credit transcribes up to 120 minutes of audio. Credits never expire and apply to summaries, custom questions, and re-runs at no extra cost.",
       "helpfulQuestion": "Was this helpful?",
       "helpfulVotes": "{{percent}}% · {{count}} votes",
       "statusLive": "Live · {{count}} articles · always free"
@@ -1003,5 +1043,26 @@
       "body": "Can't find an answer? Reach out — we read every message.",
       "accountIssue": "Account issue? Open Settings"
     }
+  },
+  "sharedPdf": {
+    "checking": "Checking secure download access…",
+    "signInTitle": "Sign in to download the PDF",
+    "signInDesc": "For security, shared PDFs are only available to logged-in WhatSaid accounts.",
+    "signInBtn": "Sign in",
+    "createAccountBtn": "Create account",
+    "preparing": "Preparing your PDF…",
+    "doneTitle": "Your download has started",
+    "doneDesc": "If it did not start automatically, use the button below.",
+    "downloadAgain": "Download again",
+    "errorTitle": "Something went wrong",
+    "errorInvalidLink": "This PDF link is not valid.",
+    "errorGeneric": "Failed to download PDF.",
+    "tryAgain": "Try again",
+    "backToHome": "Back to home"
+  },
+  "legalBanner": {
+    "title": "Only available in English",
+    "body": "This document is currently only available in English. The English version is the legally binding one. Reviewed translations are coming soon.",
+    "contact": "Contact support"
   }
 }

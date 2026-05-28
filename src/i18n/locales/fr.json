@@ -358,6 +358,46 @@
       "desc": "Définissez un mot de passe pour pouvoir vous connecter à tout moment.",
       "setPasswordBtn": "Définir le mot de passe"
     },
+    "dataRights": {
+      "title": "Vos données",
+      "subtitle": "Droits UK GDPR d'accès, de portabilité et de rectification.",
+      "downloadTitle": "Télécharger vos données",
+      "downloadDesc": "Un ZIP contenant votre profil, l'historique des crédits, les transcriptions et le journal des consentements. Le lien expire après 7 jours.",
+      "downloadBtn": "Télécharger l'export",
+      "downloadPreparing": "Préparation…",
+      "downloadSuccess": "Votre export est prêt. Le lien expire dans 7 jours.",
+      "downloadNoLink": "Export terminé mais aucun lien de téléchargement n'a été renvoyé.",
+      "downloadFailed": "Échec de l'export",
+      "rectifyTitle": "Demander une correction",
+      "rectifyDesc": "Pour modifier l'e-mail ou le pays, envoyez-nous une demande. Nous répondons sous 30 jours.",
+      "rectifyBtn": "Demander une correction",
+      "rectifyPending": "En attente : {{fields}}",
+      "rectifyDialogTitle": "Demander une correction",
+      "rectifyDialogDesc": "Nous examinerons et répondrons sous 30 jours. Une seule demande en attente par champ.",
+      "rectifyFieldLabel": "Champ à corriger",
+      "rectifyFieldEmail": "E-mail",
+      "rectifyFieldCountry": "Pays (ISO-2)",
+      "rectifyFieldPendingSuffix": " (en attente)",
+      "rectifyValueLabel": "Nouvelle valeur",
+      "rectifyReasonLabel": "Motif",
+      "rectifyReasonPlaceholder": "Pourquoi faut-il corriger cela ?",
+      "rectifyValidation": "Indiquez une nouvelle valeur et un motif (10 caractères minimum).",
+      "rectifySuccess": "Demande envoyée. Nous répondrons sous 30 jours.",
+      "rectifyFailed": "Échec de l'envoi",
+      "rectifyCancel": "Annuler",
+      "rectifySubmit": "Envoyer la demande",
+      "rectifySubmitting": "Envoi…",
+      "clearTitle": "Effacer les données locales de l'application",
+      "clearDescPrefix": "Supprime les préférences UI optionnelles et caches enregistrés par ce navigateur. Vous resterez connecté. Voir les ",
+      "clearDescLink": "détails sur les cookies",
+      "clearDescSuffix": ".",
+      "clearBtn": "Effacer les données locales",
+      "clearSuccess": "Données locales effacées ({{count}} {{noun}}).",
+      "clearItemSingular": "élément",
+      "clearItemPlural": "éléments",
+      "clearFailed": "Impossible d'effacer les données locales.",
+      "erasureNote": "Pour effacer votre compte et toutes les données associées, utilisez la Zone dangereuse ci-dessous. Pour les demandes de limitation ou d'opposition, contactez le support."
+    },
     "helpLink": "Aide compte"
   },
   "setPassword": {
@@ -793,7 +833,7 @@
     "faqAccountQ": "Dois-je créer un compte avant d'acheter ?",
     "faqAccountA": "Oui. Votre compte conserve votre transcription, résumé, téléchargements et historique sauvegardés et accessibles quand vous en avez besoin.",
     "faqCreditQ": "Que comprend un crédit ?",
-    "faqCreditA": "Un crédit traite un fichier audio et comprend une transcription complète, un résumé IA et des questions de suivi — le tout téléchargeable et sauvegardé dans votre compte. Les fichiers plus longs utilisent plus de crédits par tranches de 15 minutes (voir le tableau ci-dessus).",
+    "faqCreditA": "Un crédit traite un fichier audio et comprend une transcription complète, un résumé IA et des questions de suivi — le tout téléchargeable et sauvegardé dans votre compte. Les fichiers plus longs utilisent plus de crédits par tranches de 120 minutes (voir le tableau ci-dessus).",
     "faqExpireQ": "Les crédits expirent-ils ?",
     "faqExpireA": "Les crédits restent disponibles dans votre compte selon les conditions du produit.",
     "faqDownloadQ": "Puis-je télécharger mes résultats plus tard ?",
@@ -930,7 +970,7 @@
       "demoQ1": "Comment fonctionne le système de crédits ?",
       "demoQ2": "Quels formats audio puis-je téléverser ?",
       "demoQ3": "Mes audios sont-ils conservés après traitement ?",
-      "demoAnswer": "1 crédit transcrit jusqu'à 15 minutes d'audio. Les crédits n'expirent jamais et couvrent les résumés, les questions personnalisées et les régénérations sans frais supplémentaires.",
+      "demoAnswer": "1 crédit transcrit jusqu'à 120 minutes d'audio. Les crédits n'expirent jamais et couvrent les résumés, les questions personnalisées et les régénérations sans frais supplémentaires.",
       "helpfulQuestion": "Cette réponse vous a-t-elle aidé ?",
       "helpfulVotes": "{{percent}} % · {{count}} votes",
       "statusLive": "En direct · {{count}} articles · toujours gratuit"
@@ -985,5 +1025,26 @@
       "body": "Pas de réponse trouvée ? Écrivez-nous — nous lisons chaque message.",
       "accountIssue": "Problème de compte ? Ouvrir les paramètres"
     }
+  },
+  "sharedPdf": {
+    "checking": "Vérification de l'accès sécurisé au téléchargement…",
+    "signInTitle": "Connectez-vous pour télécharger le PDF",
+    "signInDesc": "Pour des raisons de sécurité, les PDF partagés ne sont accessibles qu'aux comptes WhatSaid connectés.",
+    "signInBtn": "Se connecter",
+    "createAccountBtn": "Créer un compte",
+    "preparing": "Préparation de votre PDF…",
+    "doneTitle": "Le téléchargement a démarré",
+    "doneDesc": "S'il ne démarre pas automatiquement, utilisez le bouton ci-dessous.",
+    "downloadAgain": "Télécharger à nouveau",
+    "errorTitle": "Une erreur est survenue",
+    "errorInvalidLink": "Ce lien PDF n'est pas valide.",
+    "errorGeneric": "Échec du téléchargement du PDF.",
+    "tryAgain": "Réessayer",
+    "backToHome": "Retour à l'accueil"
+  },
+  "legalBanner": {
+    "title": "Disponible uniquement en anglais",
+    "body": "Ce document est actuellement disponible uniquement en anglais. La version anglaise fait foi sur le plan juridique. Les traductions révisées arriveront prochainement.",
+    "contact": "Contacter le support"
   }
 }

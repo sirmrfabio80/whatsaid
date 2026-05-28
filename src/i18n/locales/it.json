@@ -358,6 +358,46 @@
       "desc": "Imposta una password per poter accedere in qualsiasi momento.",
       "setPasswordBtn": "Imposta password"
     },
+    "dataRights": {
+      "title": "I tuoi dati",
+      "subtitle": "Diritti UK GDPR di accesso, portabilità e rettifica.",
+      "downloadTitle": "Scarica i tuoi dati",
+      "downloadDesc": "Uno ZIP con profilo, cronologia crediti, trascrizioni e registro dei consensi. Il link scade dopo 7 giorni.",
+      "downloadBtn": "Scarica esportazione",
+      "downloadPreparing": "Preparazione…",
+      "downloadSuccess": "La tua esportazione è pronta. Il link scade fra 7 giorni.",
+      "downloadNoLink": "Esportazione completata ma nessun link è stato restituito.",
+      "downloadFailed": "Esportazione fallita",
+      "rectifyTitle": "Richiedi una rettifica",
+      "rectifyDesc": "Per modifiche all'email o al paese, inviaci una richiesta. Rispondiamo entro 30 giorni.",
+      "rectifyBtn": "Richiedi rettifica",
+      "rectifyPending": "In attesa: {{fields}}",
+      "rectifyDialogTitle": "Richiedi una rettifica",
+      "rectifyDialogDesc": "Esamineremo la richiesta e risponderemo entro 30 giorni. Puoi avere una sola richiesta in sospeso per campo.",
+      "rectifyFieldLabel": "Campo da correggere",
+      "rectifyFieldEmail": "Email",
+      "rectifyFieldCountry": "Paese (ISO-2)",
+      "rectifyFieldPendingSuffix": " (in attesa)",
+      "rectifyValueLabel": "Nuovo valore",
+      "rectifyReasonLabel": "Motivo",
+      "rectifyReasonPlaceholder": "Perché va corretto?",
+      "rectifyValidation": "Indica un nuovo valore e un motivo (almeno 10 caratteri).",
+      "rectifySuccess": "Richiesta inviata. Risponderemo entro 30 giorni.",
+      "rectifyFailed": "Invio non riuscito",
+      "rectifyCancel": "Annulla",
+      "rectifySubmit": "Invia richiesta",
+      "rectifySubmitting": "Invio in corso…",
+      "clearTitle": "Cancella dati locali dell'app",
+      "clearDescPrefix": "Rimuove preferenze UI opzionali e cache salvate da questo browser. Resterai connesso. Vedi i ",
+      "clearDescLink": "dettagli sui cookie",
+      "clearDescSuffix": ".",
+      "clearBtn": "Cancella dati locali",
+      "clearSuccess": "Dati locali cancellati ({{count}} {{noun}}).",
+      "clearItemSingular": "elemento",
+      "clearItemPlural": "elementi",
+      "clearFailed": "Impossibile cancellare i dati locali.",
+      "erasureNote": "Per cancellare l'account e tutti i dati associati, usa la Zona pericolo qui sotto. Per richieste di limitazione o opposizione, contatta il supporto."
+    },
     "helpLink": "Guida account"
   },
   "setPassword": {
@@ -793,7 +833,7 @@
     "faqAccountQ": "Devo avere un account prima di acquistare?",
     "faqAccountA": "Sì. Il tuo account mantiene trascrizione, riassunto, download e cronologia salvati e accessibili quando ne hai bisogno.",
     "faqCreditQ": "Cosa include un credito?",
-    "faqCreditA": "Un credito elabora un file audio e include trascrizione completa, riassunto AI e domande di follow-up — il tutto scaricabile e salvato nel tuo account. I file più lunghi usano più crediti in fasce di 15 minuti (vedi la tabella qui sopra).",
+    "faqCreditA": "Un credito elabora un file audio e include trascrizione completa, riassunto AI e domande di follow-up — il tutto scaricabile e salvato nel tuo account. I file più lunghi usano più crediti in fasce di 120 minuti (vedi la tabella qui sopra).",
     "faqExpireQ": "I crediti scadono?",
     "faqExpireA": "I crediti restano disponibili nel tuo account in base ai termini del prodotto.",
     "faqDownloadQ": "Posso scaricare i miei risultati in seguito?",
@@ -930,7 +970,7 @@
       "demoQ1": "Come funziona il sistema di crediti?",
       "demoQ2": "Quali formati audio posso caricare?",
       "demoQ3": "I miei audio vengono conservati dopo l'elaborazione?",
-      "demoAnswer": "1 credito trascrive fino a 15 minuti di audio. I crediti non scadono mai e includono riassunti, domande personalizzate e rigenerazioni senza costi aggiuntivi.",
+      "demoAnswer": "1 credito trascrive fino a 120 minuti di audio. I crediti non scadono mai e includono riassunti, domande personalizzate e rigenerazioni senza costi aggiuntivi.",
       "helpfulQuestion": "È stato utile?",
       "helpfulVotes": "{{percent}}% · {{count}} voti",
       "statusLive": "In diretta · {{count}} articoli · sempre gratis"
@@ -985,5 +1025,26 @@
       "body": "Non trovi una risposta? Scrivici — leggiamo ogni messaggio.",
       "accountIssue": "Problema con l'account? Apri Impostazioni"
     }
+  },
+  "sharedPdf": {
+    "checking": "Verifica dell'accesso sicuro al download…",
+    "signInTitle": "Accedi per scaricare il PDF",
+    "signInDesc": "Per motivi di sicurezza, i PDF condivisi sono accessibili solo agli account WhatSaid autenticati.",
+    "signInBtn": "Accedi",
+    "createAccountBtn": "Crea account",
+    "preparing": "Preparazione del PDF…",
+    "doneTitle": "Il download è iniziato",
+    "doneDesc": "Se non è partito automaticamente, usa il pulsante qui sotto.",
+    "downloadAgain": "Scarica di nuovo",
+    "errorTitle": "Si è verificato un errore",
+    "errorInvalidLink": "Questo link PDF non è valido.",
+    "errorGeneric": "Download del PDF non riuscito.",
+    "tryAgain": "Riprova",
+    "backToHome": "Torna alla home"
+  },
+  "legalBanner": {
+    "title": "Disponibile solo in inglese",
+    "body": "Questo documento è attualmente disponibile solo in inglese. La versione inglese è quella giuridicamente vincolante. Le traduzioni revisionate arriveranno a breve.",
+    "contact": "Contatta il supporto"
   }
 }

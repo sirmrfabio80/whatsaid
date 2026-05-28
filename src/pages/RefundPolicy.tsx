@@ -3,9 +3,11 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
-
+import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBanner";
 export default function RefundPolicy() {
-  const { t } = useTranslation();
+  // Force English rendering — see LegalEnglishOnlyBanner for rationale.
+  const { i18n } = useTranslation();
+  const t = i18n.getFixedT("en");
 
   usePageMeta({
     title: "Refund Policy — WhatSaid",
@@ -19,7 +21,9 @@ export default function RefundPolicy() {
       <div className="container mx-auto px-4 py-8 sm:py-12">
         <div className="max-w-3xl mx-auto">
           <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground mb-6" asChild>
-            <Link to="/"><ArrowLeft className="w-4 h-4" />{t("common.backToHome")}</Link>
+
+          <LegalEnglishOnlyBanner />
+
           </Button>
 
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">{t("refund.title")}</h1>

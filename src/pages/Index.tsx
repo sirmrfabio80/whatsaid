@@ -82,7 +82,7 @@ export default function Index() {
   usePageMeta({
     title: "WhatSaid — AI Audio Transcription with Speaker Labels",
     description:
-      "Upload audio files and get instant transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.",
+      "Upload audio files and get fast, accurate transcriptions with speaker labels, summaries, and custom AI analysis. Supports .m4a, .mp3, .wav. No subscription required.",
     canonical: "https://whatsaid.app/",
   });
 

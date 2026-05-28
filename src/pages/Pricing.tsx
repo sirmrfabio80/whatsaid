@@ -32,7 +32,6 @@ import {
   usePaddlePricing,
   getPriceForProduct,
   PRICING_PRODUCTS,
-  type Currency,
   type PricingProduct,
 } from "@/lib/paddle-pricing";
 import { CreditDurationTable } from "@/components/pricing/CreditDurationTable";
@@ -107,36 +106,10 @@ const BREADCRUMB_SCHEMA = {
 };
 
 // ---------------------------------------------------------------------------
-// Currency toggle
+// (Currency toggle removed — Phase 1 charges all customers in GBP via Paddle
+// regardless of region. The previous USD/EUR toggle was display-only and did
+// not affect the billed amount, so it was misleading.)
 // ---------------------------------------------------------------------------
-
-const CURRENCIES: Currency[] = ["GBP", "USD", "EUR"];
-
-function CurrencySelector({
-  value,
-  onChange,
-}: {
-  value: Currency;
-  onChange: (c: Currency) => void;
-}) {
-  return (
-    <div className="inline-flex items-center rounded-lg border border-border bg-muted/50 p-1 gap-0.5">
-      {CURRENCIES.map((c) => (
-        <button
-          key={c}
-          onClick={() => onChange(c)}
-          className={`px-3.5 py-1.5 text-sm font-medium rounded-md transition-all min-h-[36px] ${
-            value === c
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {c}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Gradient icon badge (shared visual motif w/ homepage)
@@ -254,8 +227,8 @@ export default function Pricing() {
   const [consentLoading, setConsentLoading] = useState(false);
   const [pendingProductId, setPendingProductId] = useState<PricingProduct["id"] | null>(null);
 
-  const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(undefined);
-  const { prices, loading, currency } = usePaddlePricing(selectedCurrency);
+  // All customers are billed in GBP by Paddle regardless of region.
+  const { prices, loading } = usePaddlePricing(undefined);
 
   useEffect(() => {
     initPaddle();
@@ -359,7 +332,7 @@ export default function Pricing() {
     }
   }
 
-  const displayCurrency = selectedCurrency ?? currency;
+  const displayCurrency: "GBP" = "GBP";
 
   const valueTiles = [
     { icon: FileText, title: "pricing.valTranscript", desc: "pricing.valTranscriptDesc" },
@@ -528,7 +501,7 @@ export default function Pricing() {
           <p className="text-body-sm text-muted-foreground max-w-md mx-auto mb-5">
             {t("pricing.cardsSubtitle")}
           </p>
-          <CurrencySelector value={displayCurrency} onChange={(c) => setSelectedCurrency(c)} />
+          {/* Currency selector removed — billing is GBP-only via Paddle. */}
         </div>
 
         {/* Microcopy strip */}
