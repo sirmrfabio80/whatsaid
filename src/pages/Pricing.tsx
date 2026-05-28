@@ -210,6 +210,7 @@ function PricingCard({
           className="w-full h-12 rounded-xl text-base font-medium"
           variant={product.highlighted ? "default" : "outline"}
           onClick={onCta}
+          disabled={disabled}
         >
           {t(product.cta)}
         </Button>
