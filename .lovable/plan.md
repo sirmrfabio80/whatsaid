@@ -1,109 +1,131 @@
 
-# Phase 5 — Uploader lawful-basis attestation (UK GDPR Art. 6 + Art. 14)
+# Phase 6 — Share-recipient Art. 14 notice (UK / English only)
 
-When a user uploads or records third-party voices, we currently process that personal data without recording any lawful basis from the uploader. UK GDPR makes the uploader the controller for that content; WhatSaid needs a per-job, auditable declaration that they have a lawful basis to upload and will handle Art. 14 notice to data subjects.
+Understood: WhatSaid is UK-only, so the Art. 14 notice we send to share recipients is **English only**. Other jurisdictions need their own legally-reviewed wording, not a translation, so the plan drops every IT/FR locale path and the related fallback logic.
+
+UK GDPR Art. 14 still requires the controller (the uploader) to inform identifiable people whose data is processed indirectly. Phase 5 made the uploader attest to that duty. Phase 6 makes WhatSaid actually deliver the told-once notice on their behalf and log that we did so.
 
 ## Current state (audit)
 
 | Concern | Today | Gap |
 |---|---|---|
-| Upload entry points | `src/components/AudioUploader.tsx` (drag/drop + picker) and `DirectRecorder.tsx`, both feed `Convert.tsx` | No attestation gate before upload |
-| Existing privacy copy | One-liner inside `AudioUploader` (`audioUploader.securityNotice`) about deletion only | Doesn't cover third-party voices, consent, or Art. 14 |
-| Reg. 37 dialog | `Reg37ConsentDialog` exists only for paid checkout | Pattern to reuse for per-action attestation |
-| Job creation | `create-job` edge function inserts `jobs` row server-side | Cannot prove the uploader attested anything; no audit row |
-| Consent infra | `consent_versions` + `consent_events` already exist (used by Reg. 37) | Reusable — just need a new `consent_type` value |
-| Privacy policy | `src/pages/Privacy.tsx` | No "Your responsibilities when uploading others' voices" section |
+| `share-transcript` email | Transcript/summary/PDF link with sender name | No Art. 14 information block |
+| `share-transcript-record` email | Claim CTA only | Same gap |
+| Claim page (`/claim/:token`) | Validates token, prompts sign-in/up, auto-claims | No notice surface |
+| Audit trail | `consent_events` covers uploader's attestation only | No proof the recipient was informed |
+| Notice copy | None | Need single English source of truth, versioned |
 
 ## Goal
 
-Before a transcription job is created, the uploader must:
-1. Confirm they have a lawful basis (consent, contract, legitimate interest, or own voice only).
-2. Acknowledge their Art. 14 duty to inform identifiable speakers where required.
-
-The attestation is recorded once per job, linked to the job row, and replayable for audit. Closing the dialog cancels the upload.
+Every share-by-email carries a clear English Art. 14 information block. The act of notifying is logged once per `(job, recipient, notice_version)` so we can prove the recipient was told. The same block appears on the claim page so a recipient who skimmed the email still sees it before taking a copy into their own account.
 
 ## Deliverables
 
-### 1. Consent version row
+### 1. Notice version (English only)
 
-New seed in `consent_versions`:
-- `consent_type = 'upload_lawful_basis'`, `version = '1.0.0'`
-- EN/IT/FR copy stored verbatim so audits can reproduce what the user saw
-- `text_hash` computed from EN text
+Seed `consent_versions` with `consent_type = 'share_recipient_notice'`, `version = '1.0.0'`. `text_en` covers the Art. 14 mandatory items; `text_it` and `text_fr` are left NULL (other-jurisdiction copy is out of scope).
 
-Migration also adds nullable `jobs.upload_consent_id uuid` (no FK to keep deletes cheap; values are immutable via the existing `trg_jobs_lock_billing_columns` pattern extended to this column) and an index on `(user_id, created_at)` for the consents query.
+Mandatory content:
+- Controller identity — uploader's display name + reply-to email; WhatSaid as processor for this send
+- Categories of personal data — voice recording → transcript, summary, anything dictated (names, locations, etc.)
+- Purposes & legal basis — uploader's declared lawful basis from Phase 5
+- Recipients — the named recipient only
+- Retention — transcript stays in uploader's account under WhatSaid's published schedule; recipient's claimed copy follows the recipient's own retention if they accept
+- Source — "audio uploaded by [sender]"
+- Rights — access, rectification, erasure, objection, complaint to ICO, with WhatSaid contact + ICO link
+- Opt-out path — `mailto:` to the sender's reply-to with a pre-filled subject referencing the share short id, plus link to `/privacy#share-recipients`
 
-### 2. Attestation dialog
+`text_hash` computed from `text_en`. Strings live in `src/lib/share-recipient-notice-strings.ts` exporting a single English block consumed by both the email and the claim page.
 
-`src/components/UploadAttestationDialog.tsx`, modelled on `Reg37ConsentDialog`:
-- Two required checkboxes:
-  - "I confirm I have a lawful basis to upload this audio (my own voice, the speakers' consent, a contract, or another lawful ground under UK GDPR Art. 6)."
-  - "Where the recording contains identifiable people other than me, I will inform them their voice is being transcribed, unless an Art. 14(5) exemption applies."
-- Optional radio with the chosen basis (`own_voice` | `consent` | `contract` | `legitimate_interest` | `legal_obligation` | `other`) so we can store it in `consent_events.metadata`. Default unselected — must pick one to continue.
-- Optional free-text "Context (optional)" capped at 280 chars, stored in metadata. Useful for audits, never displayed publicly.
-- Plain-language helper text explains we delete audio immediately after processing and link to `/privacy#uploader-duties`.
-- ESC / outside click / Cancel = no consent recorded, no upload. Same `min-h-[44px]` touch targets and a11y as Reg. 37 dialog.
-- Strings in `src/lib/upload-attestation-strings.ts` with EN/IT/FR and `pickLocale` resolution.
+### 2. Email integration
 
-### 3. Wiring in Convert.tsx
+Both `share-transcript/index.ts` and `share-transcript-record/index.ts`:
+- Resolve the active `share_recipient_notice` version once per request.
+- Render an English `<section>` immediately above the email footer in the HTML build, plus the same wording in the plain-text build.
+- No subject-line change (preserves deliverability).
+- No `recipient_locale` parameter — single English path keeps the surface small.
 
-Flow change in `src/pages/Convert.tsx` (single integration point — covers both `AudioUploader` and `DirectRecorder`):
-1. User selects/records a file → metadata extracted as today.
-2. Instead of going straight to upload, open `UploadAttestationDialog`.
-3. On confirm:
-   - Call new edge function `record-upload-attestation` → returns `consent_id`.
-   - Proceed with existing upload + `create-job` flow, passing `consent_id` in the body.
-4. On cancel: clear the staged file, no upload starts.
+### 3. Audit row: `recipient_notifications`
 
-For re-runs of the same job (regenerate transcript, change language) the existing job already has a `consent_id` — no re-prompt.
+Distinct from `consent_events` because the recipient is not consenting — we are recording that we informed them on the uploader's behalf.
 
-### 4. Edge function: `record-upload-attestation`
+```text
+recipient_notifications
+  id uuid pk
+  job_id uuid not null
+  shared_by uuid not null              -- uploader (controller)
+  recipient_email_hash text not null   -- HMAC-SHA256 with CONSENT_IP_SALT_SECRET + daily salt
+  channel text not null                -- 'share_transcript' | 'share_transcript_record'
+  notice_type text not null            -- 'share_recipient_notice'
+  notice_version text not null
+  message_id text                      -- links to email_send_log when available
+  notified_at timestamptz default now()
+  unique (job_id, recipient_email_hash, notice_version)
+```
 
-New function under `supabase/functions/record-upload-attestation/`:
-- Auth required (uses `requireAuth`).
-- Body: `{ version, basis, contextNote?, acknowledgements: { lawfulBasis: true, art14Notice: true } }`.
-- Validates both acknowledgements are `true`, basis is in the allowed enum, version matches the active row in `consent_versions`.
-- Inserts into `consent_events` with `consent_type='upload_lawful_basis'`, `metadata={ basis, contextNote }`, `ip_hash`, `user_agent`.
-- Rate limited via `enforceQuota` (e.g. 60/day, 1000/lifetime) to stop scripted abuse.
-- Returns `{ consent_id }`.
+Grants: `service_role` ALL; `authenticated` SELECT where `shared_by = auth.uid()`; admins SELECT all via `private.has_role`.
 
-### 5. `create-job` enforcement
+Share endpoints `INSERT ... ON CONFLICT DO NOTHING` so re-sharing the same transcript to the same recipient does not duplicate the row but still satisfies the told-once rule. On conflict, log `already_notified` for observability.
 
-Update `supabase/functions/create-job/index.ts` to:
-- Require `upload_consent_id` in the request body.
-- Verify the consent row exists, belongs to `auth.uid()`, is `consent_type='upload_lawful_basis'`, and was issued within the last 30 minutes (prevents replay of a stale token).
-- Write the id onto `jobs.upload_consent_id`.
-- Existing `trg_jobs_lock_billing_columns` trigger extended to also lock `upload_consent_id` post-insert.
+### 4. Claim-page surface
 
-If the consent check fails, the function returns `409 attestation_required` and the UI re-prompts.
+`src/pages/ClaimShare.tsx`: render the same English Art. 14 block above the "Open your copy" CTA inside `<section aria-label="Privacy information">`. A "Why am I seeing this?" disclosure expands inline with extra detail about WhatSaid's processor role and links to `/privacy#share-recipients`.
 
-### 6. Privacy & docs
+### 5. Uploader UI
 
-- `src/pages/Privacy.tsx`: new "Your responsibilities when uploading others' voices" section in EN/IT/FR with the lawful-basis grounds, an Art. 14 summary, and a pointer to ICO guidance. Add anchor `#uploader-duties`.
-- `docs/ARCHITECTURE.md` §Privacy: paragraph documenting the per-job attestation, the `consent_versions` row, and `jobs.upload_consent_id`.
-- `WhatSaid-Architecture-Privacy-Dossier.md`: clear the "[MISSING] uploader lawful-basis declaration" flag.
+`src/components/ShareButton.tsx` success toast: "Share sent — recipient was given a UK GDPR privacy notice." No new dialog — the uploader already attested in Phase 5.
 
-### 7. Admin visibility
+### 6. Privacy policy
 
-Extend `src/components/admin/JobAuditCard.tsx` to render the linked consent (version, basis, timestamp, optional context note). No new admin tab needed — DSR / audit workflows already open the job audit card.
+`src/pages/Privacy.tsx`: new `#share-recipients` anchor explaining what the recipient receives, WhatSaid's processor role on a share, and the recipient's options. Add a static `/privacy/share-notice` page rendering the active English version verbatim so recipients can read the full notice outside the email.
+
+### 7. Recipient self-service objection (light-touch)
+
+Email and claim page both expose a `mailto:` to the sender's reply-to with a pre-filled subject ("Please remove my voice from the recording shared via WhatSaid — [share short id]") and body referencing the job's short id. DSR self-service from Phase 3 still covers anything richer for account holders.
+
+## Technical details
+
+```text
+share-transcript flow
+  ┌──────────────────────────────────────────────────────┐
+  │ requireAuth + quotas (unchanged)                     │
+  │ load job, outputs (unchanged)                        │
+  │ resolve active share_recipient_notice version (EN)   │
+  │ build HTML/text with English notice above footer     │
+  │ enqueue email (unchanged)                            │
+  │ INSERT INTO recipient_notifications                  │
+  │   ON CONFLICT (job, hash, version) DO NOTHING        │
+  │ return { success: true, notice_logged: bool }        │
+  └──────────────────────────────────────────────────────┘
+```
+
+Shared helper `supabase/functions/_shared/recipient-notice.ts` exposes:
+- `resolveActiveNotice()` — single row lookup, cached per function lifetime
+- `buildNoticeHtml(ctx)` and `buildNoticeText(ctx)` — pure English builders
+- `recordRecipientNotification(serviceClient, …)` — HMACs the email and performs the insert
+
+HMAC: reuses `CONSENT_IP_SALT_SECRET` with domain string `"recipient-email"`, rotated daily by UTC date — same approach as `record-consent`.
 
 ## Regression / test gate
 
-- Vitest `src/test/upload-attestation-strings.test.ts` — locale shape parity + presence of mandatory clauses (keyword grep on EN/IT/FR).
-- Edge tests:
-  - `record-upload-attestation/index.test.ts` — rejects missing acknowledgements, rejects unknown basis, rejects stale version, succeeds on valid input.
-  - `create-job/create-job.test.ts` — extend with cases: missing `upload_consent_id` → 409, foreign-user consent → 403, stale consent (>30 min) → 409, happy path writes id.
-- SQL smoke: after migration, `INSERT` into `jobs` without `upload_consent_id` from a non-service role still succeeds (column nullable for back-compat reads) but `UPDATE` attempt to change `upload_consent_id` post-insert is rejected by the trigger.
+- Vitest `src/test/share-recipient-notice-strings.test.ts` — asserts the English block contains the seven Art. 14 keywords (controller, purpose, basis, retention, rights, complaint, source).
+- Deno tests:
+  - `share-transcript/index.test.ts` (extend) — happy path includes Art. 14 block in HTML + text; second send to same recipient logs `already_notified`.
+  - `share-transcript-record/index.test.ts` (new) — same matrix for the link-only variant.
+  - `_shared/recipient-notice.test.ts` — pure unit tests on builders and HMAC stability across the daily window.
+- SQL smoke: duplicate `INSERT` for the same `(job, hash, version)` does not error or duplicate.
 - Manual checklist:
-  - Drag/drop upload prompts the dialog before bytes leave the browser.
-  - DirectRecorder finalisation also prompts the dialog.
-  - Cancel discards the staged file and shows no toast spam.
-  - Re-running an existing job (regenerate) does NOT re-prompt.
-  - Dialog passes keyboard nav, ≥4.5:1 contrast in light + dark, mobile bottom-sheet layout at ≤640px.
-  - Localised copy renders in EN/IT/FR with no missing-key warnings.
+  - Fresh recipient → HTML and plain-text both show notice; `recipient_notifications` has one row.
+  - Re-send same → no new row, `already_notified` logged.
+  - Bump notice to `1.0.1` (manual seed) → next send creates a fresh row.
+  - Claim page shows the same English notice before sign-in.
+  - Keyboard nav reaches the notice section before the CTA.
+  - Mobile ≤640px: notice section renders without overflow.
 
 ## Out of scope
 
-- Per-speaker takedown workflow (covered by existing DSR rectification path).
-- Storing the attestation against guest jobs (guest flow already removed — only authenticated users upload).
-- Email confirmation of the attestation to the uploader (the audit row + DSR export already cover this).
+- Translations or non-English notice copy (different jurisdictions need their own legal text, not a translation).
+- Multi-recipient bulk shares.
+- Storing the rendered notice HTML per send (version + `text_hash` reproduce it).
+- Recipient-initiated automated deletion (handled via uploader + DSR flows).
+- Subject-line changes.
