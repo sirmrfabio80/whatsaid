@@ -85,6 +85,18 @@ export default function Privacy() {
                 )}
               </section>
             ))}
+
+            <section>
+              <h2 className="text-h2 mb-2">Cookies and similar technologies</h2>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">
+                WhatSaid only uses storage that is strictly necessary to keep
+                you signed in, remember your language, and keep the app
+                working. We do not use analytics, advertising, or session-replay
+                cookies. A full inventory and how to clear each item is
+                available on our <Link to="/cookies" className="underline hover:text-foreground">cookies page</Link>.
+                Lawful bases: PECR regulation 6 and UK GDPR Article 6(1)(f).
+              </p>
+            </section>
           </div>
         </div>
       </div>
