@@ -35,11 +35,22 @@ const loadLocale = async (lng: string) => {
   }
 };
 
+// Keep <html lang> in sync with the active i18n locale (WCAG 2.2 SC 3.1.1).
+const syncHtmlLang = (lng: string) => {
+  if (typeof document === "undefined") return;
+  const short = (lng || "en").split("-")[0];
+  if (document.documentElement.lang !== short) {
+    document.documentElement.lang = short;
+  }
+};
+
 // Initial load for the detected language.
 void loadLocale(i18n.language || "en");
+syncHtmlLang(i18n.language || "en");
 // Load on subsequent language changes.
 i18n.on("languageChanged", (lng) => {
   void loadLocale(lng);
+  syncHtmlLang(lng);
 });
 
 export default i18n;
