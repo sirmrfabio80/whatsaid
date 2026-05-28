@@ -67,7 +67,7 @@ const App = () => (
           <Navbar />
           <main id="main-content">
             <ChunkErrorBoundary>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
