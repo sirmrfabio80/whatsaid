@@ -27,3 +27,5 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = true
   [functions.dsr-rectification-request]
     verify_jwt = true
+  [functions.retention-monitor-watchdog]
+    verify_jwt = true
