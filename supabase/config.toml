@@ -23,3 +23,7 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = false
   [functions.record-consent]
     verify_jwt = true
+  [functions.dsr-export]
+    verify_jwt = true
+  [functions.dsr-rectification-request]
+    verify_jwt = true
