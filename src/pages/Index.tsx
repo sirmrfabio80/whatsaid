@@ -146,18 +146,36 @@ export default function Index() {
                 ))}
               </div>
 
+              {/* Region notice (non-UK visitors) */}
+              {geoBlocked && (
+                <div className="mb-5 max-w-xl mx-auto md:mx-0">
+                  <RegionBlockedNotice reason={geo.reason ?? "region_blocked"} />
+                </div>
+              )}
+
               {/* CTAs */}
               <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-3 md:max-w-[19.5rem] lg:max-w-none">
-                <Button
-                  asChild
-                  size="lg"
-                  className="h-12 px-7 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow w-full"
-                >
-                  <Link to={heroPrimaryHref}>
+                {geoBlocked ? (
+                  <Button
+                    size="lg"
+                    disabled
+                    className="h-12 px-7 text-base font-medium rounded-lg w-full"
+                  >
                     {t("home.ctaPrimary")}
                     <ArrowRight className="w-4 h-4 ml-2" />
-                  </Link>
-                </Button>
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 px-7 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-shadow w-full"
+                  >
+                    <Link to={heroPrimaryHref}>
+                      {t("home.ctaPrimary")}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Link>
+                  </Button>
+                )}
                 <Button
                   asChild
                   size="lg"
