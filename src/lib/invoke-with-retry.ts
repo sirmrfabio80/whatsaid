@@ -64,7 +64,10 @@ function sleep(ms: number): Promise<void> {
 export async function invokeWithRetry<T = unknown>(
   functionName: string,
   options: FunctionInvokeOptions = {},
+  retry: InvokeWithRetryOptions = {},
+): Promise<{ data: T | null; error: unknown }> {
   const maxAttempts = Math.max(1, retry.maxAttempts ?? 3);
+
   const baseDelay = retry.baseDelayMs ?? 300;
   const maxDelay = retry.maxDelayMs ?? 4000;
 
