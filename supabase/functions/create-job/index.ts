@@ -34,17 +34,12 @@ interface CreateJobBody {
   metadata_mvhd_creation?: unknown;
   metadata_file_lastmodified?: unknown;
   metadata_location_iso6709?: unknown;
-  upload_consent_id?: unknown;
 }
 
-// Stale-consent guard: the attestation must have been recorded immediately
-// before job creation. 30 minutes is generous for slow uploads but short
-// enough to prevent replay of an old consent_id across separate uploads.
-const CONSENT_MAX_AGE_MS = 30 * 60 * 1000;
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TOS_UPLOADER_CONSENT_TYPE = "tos_uploader_warranty";
 
 const LANG_RE = /^[a-z]{2,3}(-[A-Z]{2})?$|^auto$/;
+
 
 function bad(message: string, status = 400) {
   return new Response(JSON.stringify({ error: message }), {
