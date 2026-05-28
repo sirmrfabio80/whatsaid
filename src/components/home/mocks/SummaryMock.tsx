@@ -45,7 +45,7 @@ export function SummaryMock() {
         {/* Small status pill — needs to clear AA contrast on the muted card.
             Switched from raw text-accent (light teal on light bg) to the
             stronger foreground tone with a tinted dot for visual continuity. */}
-        <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent-foreground px-1.5 py-0.5 text-[11px]">
+        <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-foreground px-1.5 py-0.5 text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-accent" />
           in sync
         </span>
