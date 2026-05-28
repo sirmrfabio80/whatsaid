@@ -127,20 +127,19 @@ Deno.serve(async (req) => {
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
   // --- auth gate ---------------------------------------------------------
+  // verify_jwt=true is set in supabase/config.toml, so a JWT-less invocation
+  // (cron + service-role via Authorization header) and an admin invocation
+  // are the only two reachable paths. We never trust unverified JWT claims;
+  // admin status is checked against user_roles using the service-role client.
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
+  const serviceKey = SERVICE_KEY;
   let caller: "service" | "admin" | null = null;
-  if (token) {
-    // Decode the JWT payload (no verification needed — the platform has
-    // already verified it; we only read the role claim).
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1] ?? ""));
-      if (payload?.role === "service_role") caller = "service";
-    } catch { /* fall through to user lookup */ }
-    if (!caller) {
-      const { data: { user } } = await admin.auth.getUser(token);
-      if (user && (await isAdmin(admin, user.id))) caller = "admin";
-    }
+  if (token && token === serviceKey) {
+    caller = "service";
+  } else if (token) {
+    const { data: { user } } = await admin.auth.getUser(token);
+    if (user && (await isAdmin(admin, user.id))) caller = "admin";
   }
   if (!caller) {
     return new Response(JSON.stringify({ error: "forbidden" }), {
@@ -148,6 +147,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
 
   // --- input -------------------------------------------------------------
   let body: { dry_run?: boolean; dataset_keys?: string[]; batch_size?: number } = {};

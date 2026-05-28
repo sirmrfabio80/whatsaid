@@ -81,12 +81,13 @@ export default function Signup() {
       email,
       password,
       options: {
-        data: { full_name: displayName, country: "GB" },
+        data: { full_name: displayName, country: country.toUpperCase() },
         emailRedirectTo: redirectParam
           ? `${window.location.origin}${redirectParam}`
           : window.location.origin,
       },
     });
+
 
     if (authError) {
       setError(authError.message);

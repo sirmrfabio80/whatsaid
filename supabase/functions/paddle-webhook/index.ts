@@ -261,10 +261,22 @@ Deno.serve(async (req) => {
       );
     }
     if (consentVersion && consentRow.version !== consentVersion) {
-      console.warn(
-        `[paddle-webhook] Consent version drift tx=${paddleTransactionId} stored=${consentRow.version} claimed=${consentVersion}`,
+      console.error(
+        `[paddle-webhook] Consent version drift tx=${paddleTransactionId} stored=${consentRow.version} claimed=${consentVersion} — refusing credit grant (Art. 7(2) — buyer agreed to a different version)`,
+      );
+      notifyAdminOfPurchase({
+        userEmail: data?.customer?.email ?? null,
+        userId,
+        credits: 0,
+        transactionId: paddleTransactionId,
+        bypassReason: `consent_version_drift:stored=${consentRow.version}:claimed=${consentVersion}`,
+      }).catch(() => {});
+      return new Response(
+        JSON.stringify({ ignored: "consent_version_drift" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
 
     const credits = creditsFromEvent(data);
     if (credits <= 0) {
