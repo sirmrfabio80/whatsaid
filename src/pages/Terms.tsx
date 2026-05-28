@@ -8,7 +8,8 @@ import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBann
 
 // Effective date for the current version of the Terms of Service.
 // Update this constant on every material change.
-const EFFECTIVE_DATE = "28 May 2026";
+const EFFECTIVE_DATE = "30 May 2026";
+
 
 type Section =
   | { key: string; type: "p" }
@@ -42,6 +43,8 @@ const SECTIONS: Section[] = [
   { key: "s16", type: "p" },
   { key: "s17", type: "p" },
   { key: "s18", type: "p" },
+  { key: "s19", type: "p" },
+
 ];
 
 export default function Terms() {
