@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { FunctionInvokeOptions } from "@supabase/functions-js";
+import { recordEdgeAttempt, recordEdgeFinal } from "@/lib/edge-telemetry";
+
 
 /**
  * Retry policy for transient Edge Function failures.
