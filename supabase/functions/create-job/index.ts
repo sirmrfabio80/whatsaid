@@ -35,11 +35,16 @@ interface CreateJobBody {
   metadata_mvhd_creation?: unknown;
   metadata_file_lastmodified?: unknown;
   metadata_location_iso6709?: unknown;
+  idempotency_key?: unknown;
 }
 
 const TOS_UPLOADER_CONSENT_TYPE = "tos_uploader_warranty";
 
 const LANG_RE = /^[a-z]{2,3}(-[A-Z]{2})?$|^auto$/;
+// Idempotency keys are opaque client-generated strings (we recommend UUIDs).
+// Accept up to 128 chars of url-safe characters; reject anything else.
+const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,128}$/;
+
 
 async function hashIp(ip: string): Promise<string> {
   const secret = Deno.env.get("CONSENT_IP_SALT_SECRET") ?? "missing-salt";
