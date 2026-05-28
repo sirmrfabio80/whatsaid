@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { FunctionInvokeOptions } from "@supabase/functions-js";
+import { recordEdgeAttempt, recordEdgeFinal } from "@/lib/edge-telemetry";
+
 
 /**
  * Retry policy for transient Edge Function failures.
@@ -65,22 +67,59 @@ export async function invokeWithRetry<T = unknown>(
   retry: InvokeWithRetryOptions = {},
 ): Promise<{ data: T | null; error: unknown }> {
   const maxAttempts = Math.max(1, retry.maxAttempts ?? 3);
+
   const baseDelay = retry.baseDelayMs ?? 300;
   const maxDelay = retry.maxDelayMs ?? 4000;
 
   let lastResult: { data: T | null; error: unknown } = { data: null, error: null };
+  const startedAt = Date.now();
+  let lastStatus: number | undefined;
+  let lastReason: string | undefined;
+  let attemptsUsed = 0;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    attemptsUsed = attempt;
+    const attemptStart = Date.now();
     const result = await supabase.functions.invoke<T>(functionName, options);
+    const attemptMs = Date.now() - attemptStart;
     lastResult = { data: (result.data ?? null) as T | null, error: result.error };
 
-    if (!result.error) return lastResult;
+    if (!result.error) {
+      recordEdgeAttempt({ functionName, attempt, reason: "ok", durationMs: attemptMs });
+      recordEdgeFinal({
+        functionName,
+        attempts: attempt,
+        outcome: "success",
+        totalMs: Date.now() - startedAt,
+      });
+      return lastResult;
+    }
 
     const status = await extractStatus(result.error);
     const reason = classifyError(result.error);
+    lastStatus = status;
+    lastReason = reason;
     const transient = reason === "network" || reason === "relay" || isTransientStatus(status);
 
-    if (!transient || attempt === maxAttempts) return lastResult;
+    recordEdgeAttempt({
+      functionName,
+      attempt,
+      status,
+      reason: transient ? `${reason}:transient` : reason,
+      durationMs: attemptMs,
+    });
+
+    if (!transient || attempt === maxAttempts) {
+      recordEdgeFinal({
+        functionName,
+        attempts: attempt,
+        outcome: transient ? "transient" : "fatal",
+        status,
+        reason,
+        totalMs: Date.now() - startedAt,
+      });
+      return lastResult;
+    }
 
     const expo = Math.min(maxDelay, baseDelay * 2 ** (attempt - 1));
     const jitter = Math.floor(Math.random() * Math.min(250, expo));
@@ -90,5 +129,14 @@ export async function invokeWithRetry<T = unknown>(
     await sleep(delayMs);
   }
 
+  // Defensive: loop always returns above, but record a final event if not.
+  recordEdgeFinal({
+    functionName,
+    attempts: attemptsUsed,
+    outcome: "fatal",
+    status: lastStatus,
+    reason: lastReason,
+    totalMs: Date.now() - startedAt,
+  });
   return lastResult;
 }

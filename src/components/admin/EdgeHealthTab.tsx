@@ -1,8 +1,16 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import {
+  clearEdgeTelemetry,
+  getEdgeTelemetryEvents,
+  getEdgeTelemetryRollup,
+  subscribeEdgeTelemetry,
+  type EdgeTelemetryEvent,
+} from "@/lib/edge-telemetry";
+
 
 type CheckResult = {
   name: string;
@@ -99,6 +107,8 @@ export default function EdgeHealthTab() {
   }, [results]);
 
   return (
+    <div className="space-y-6">
+
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
@@ -159,6 +169,123 @@ export default function EdgeHealthTab() {
           verify behaviour.
         </p>
       </CardContent>
+      </Card>
+      <EdgeTelemetryCard />
+    </div>
+  );
+}
+
+function EdgeTelemetryCard() {
+  const [, tick] = useState(0);
+
+  useEffect(() => {
+    const unsub = subscribeEdgeTelemetry(() => tick((n) => n + 1));
+    return unsub;
+  }, []);
+
+  const rollup = getEdgeTelemetryRollup();
+  const events = getEdgeTelemetryEvents();
+  const finals = events.filter((e): e is Extract<EdgeTelemetryEvent, { type: "final" }> => e.type === "final");
+  const recent = finals.slice(-15).reverse();
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <div>
+          <CardTitle>Edge invocation telemetry</CardTitle>
+          <p className="text-body-sm text-muted-foreground mt-1">
+            Structured client-side log of every Edge Function call made through{" "}
+            <code className="text-caption">invokeWithRetry</code>. No request or response payloads are stored —
+            only function name, attempts, HTTP status, reason class, and timing.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            clearEdgeTelemetry();
+            tick((n) => n + 1);
+          }}
+          aria-label="Clear telemetry"
+        >
+          <Trash2 className="w-4 h-4 mr-2" /> Clear
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {rollup.length === 0 ? (
+          <p className="text-body-sm text-muted-foreground">
+            No invocations recorded in this browser yet. Trigger a job creation or consent action to populate.
+          </p>
+        ) : (
+          <div className="rounded-md border divide-y">
+            {rollup.map((row) => {
+              const failRate = row.total === 0 ? 0 : Math.round((row.fatal / row.total) * 100);
+              const topReasons = Object.entries(row.reasonCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([k, v]) => `${k} ×${v}`)
+                .join(", ");
+              return (
+                <div key={row.functionName} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {row.fatal === 0 ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-destructive shrink-0" />
+                    )}
+                    <code className="text-body-sm truncate">{row.functionName}</code>
+                  </div>
+                  <div className="flex items-center gap-2 text-caption text-muted-foreground shrink-0 flex-wrap">
+                    <Badge variant="outline">{row.total} calls</Badge>
+                    <Badge variant="outline" className="text-green-600">{row.success} ok</Badge>
+                    {row.fatal > 0 && (
+                      <Badge variant="outline" className="text-destructive">
+                        {row.fatal} fail ({failRate}%)
+                      </Badge>
+                    )}
+                    {row.retried > 0 && <Badge variant="outline">{row.retried} retried</Badge>}
+                    <span>{row.avgMs}ms avg</span>
+                    {topReasons && <span title={topReasons} className="truncate max-w-[260px]">{topReasons}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {recent.length > 0 && (
+          <div>
+            <h4 className="text-body-sm font-medium mb-2">Recent calls</h4>
+            <div className="rounded-md border divide-y text-caption">
+              {recent.map((e, idx) => (
+                <div key={`${e.at}-${idx}`} className="flex items-center justify-between gap-3 px-3 py-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {e.outcome === "success" ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                    )}
+                    <code className="truncate">{e.functionName}</code>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground shrink-0">
+                    <span>{e.attempts === 1 ? "1 attempt" : `${e.attempts} attempts`}</span>
+                    {typeof e.status === "number" && <span>HTTP {e.status}</span>}
+                    {e.reason && e.outcome !== "success" && <span>{e.reason}</span>}
+                    <span>{e.totalMs}ms</span>
+                    <span>{new Date(e.at).toLocaleTimeString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-caption text-muted-foreground">
+          Data is stored in this browser only (localStorage rollup + in-memory ring). Clearing browser storage or
+          using a different device will reset the counts.
+        </p>
+      </CardContent>
     </Card>
   );
 }
+
