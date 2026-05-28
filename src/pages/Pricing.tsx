@@ -332,7 +332,7 @@ export default function Pricing() {
     }
   }
 
-  const displayCurrency = selectedCurrency ?? currency;
+  const displayCurrency: "GBP" = "GBP";
 
   const valueTiles = [
     { icon: FileText, title: "pricing.valTranscript", desc: "pricing.valTranscriptDesc" },
@@ -501,7 +501,7 @@ export default function Pricing() {
           <p className="text-body-sm text-muted-foreground max-w-md mx-auto mb-5">
             {t("pricing.cardsSubtitle")}
           </p>
-          <CurrencySelector value={displayCurrency} onChange={(c) => setSelectedCurrency(c)} />
+          {/* Currency selector removed — billing is GBP-only via Paddle. */}
         </div>
 
         {/* Microcopy strip */}
