@@ -1,13 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import JsonBlock from "@/components/admin/JsonBlock";
-import { AlertTriangle, CheckCircle2, Clock, Play, RefreshCw, RotateCw, Eye } from "lucide-react";
+import { AlertTriangle, CalendarIcon, CheckCircle2, Clock, Play, RefreshCw, RotateCw, Eye, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -130,6 +143,14 @@ export default function RetentionMonitorTab() {
   const [selected, setSelected] = useState<CleanupLogRow | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
+  // Filters
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [modeFilter, setModeFilter] = useState<"all" | "dry-run" | "live">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "failed" | "running">("all");
+  const [datasetFilter, setDatasetFilter] = useState<string>("all");
+
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -174,6 +195,49 @@ export default function RetentionMonitorTab() {
   const alerts = useMemo(() => deriveAlerts(rows), [rows]);
   const latest = rows[0];
   const latestReports = latest?.metadata?.reports ?? [];
+
+  const allDatasetKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      for (const rep of r.metadata?.reports ?? []) {
+        if (rep.dataset_key) set.add(rep.dataset_key);
+      }
+    }
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const fromMs = dateFrom ? new Date(dateFrom).setHours(0, 0, 0, 0) : null;
+    const toMs = dateTo ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
+
+    return rows.filter((r) => {
+      if (modeFilter !== "all") {
+        const isDry = !!r.metadata?.dry_run;
+        if (modeFilter === "dry-run" && !isDry) return false;
+        if (modeFilter === "live" && isDry) return false;
+      }
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (datasetFilter !== "all") {
+        const keys = (r.metadata?.reports ?? []).map((rep) => rep.dataset_key);
+        if (!keys.includes(datasetFilter)) return false;
+      }
+      if (fromMs && new Date(r.started_at).getTime() < fromMs) return false;
+      if (toMs && new Date(r.started_at).getTime() > toMs) return false;
+      if (q) {
+        const hay = [
+          r.job_name,
+          r.status,
+          r.metadata?.caller ?? "",
+          ...(r.metadata?.reports ?? []).map((rep) => rep.dataset_key),
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, search, dateFrom, dateTo, modeFilter, statusFilter, datasetFilter]);
 
   return (
     <div className="space-y-6">
@@ -269,14 +333,131 @@ export default function RetentionMonitorTab() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Run history</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Run history</CardTitle>
+              <CardDescription>
+                {filteredRows.length} of {rows.length} runs shown
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {(search || dateFrom || dateTo || modeFilter !== "all" || statusFilter !== "all" || datasetFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearch("");
+                    setDateFrom(undefined);
+                    setDateTo(undefined);
+                    setModeFilter("all");
+                    setStatusFilter("all");
+                    setDatasetFilter("all");
+                  }}
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" /> Clear
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <Label className="text-xs mb-1.5 block">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search runs, datasets, callers…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1.5 block">From</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-9 w-[140px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, "PP") : "Pick date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1.5 block">To</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-9 w-[140px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, "PP") : "Pick date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1.5 block">Mode</Label>
+              <Select value={modeFilter} onValueChange={(v) => setModeFilter(v as typeof modeFilter)}>
+                <SelectTrigger className="h-9 w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="dry-run">Dry-run</SelectItem>
+                  <SelectItem value="live">Live</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1.5 block">Status</Label>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+                <SelectTrigger className="h-9 w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="running">Running</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1.5 block">Dataset</Label>
+              <Select value={datasetFilter} onValueChange={setDatasetFilter}>
+                <SelectTrigger className="h-9 w-[160px]">
+                  <SelectValue placeholder="All datasets" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All datasets</SelectItem>
+                  {allDatasetKeys.map((k) => (
+                    <SelectItem key={k} value={k}>{k}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {loading ? (
             <LoadingState />
           ) : rows.length === 0 ? (
             <EmptyState icon={Clock} title="No runs yet" description="Trigger a dry-run to seed history." />
+          ) : filteredRows.length === 0 ? (
+            <EmptyState icon={Search} title="No matches" description="Adjust filters to find runs." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -293,7 +474,7 @@ export default function RetentionMonitorTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => {
+                  {filteredRows.map((r) => {
                     const reports = r.metadata?.reports ?? [];
                     const totalProcessed = reports.reduce((s, x) => s + (x.processed ?? 0), 0);
                     const errCount = Array.isArray(r.errors) ? (r.errors as unknown[]).length : 0;
