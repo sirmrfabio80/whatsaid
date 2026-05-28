@@ -196,6 +196,49 @@ export default function RetentionMonitorTab() {
   const latest = rows[0];
   const latestReports = latest?.metadata?.reports ?? [];
 
+  const allDatasetKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      for (const rep of r.metadata?.reports ?? []) {
+        if (rep.dataset_key) set.add(rep.dataset_key);
+      }
+    }
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const fromMs = dateFrom ? new Date(dateFrom).setHours(0, 0, 0, 0) : null;
+    const toMs = dateTo ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
+
+    return rows.filter((r) => {
+      if (modeFilter !== "all") {
+        const isDry = !!r.metadata?.dry_run;
+        if (modeFilter === "dry-run" && !isDry) return false;
+        if (modeFilter === "live" && isDry) return false;
+      }
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (datasetFilter !== "all") {
+        const keys = (r.metadata?.reports ?? []).map((rep) => rep.dataset_key);
+        if (!keys.includes(datasetFilter)) return false;
+      }
+      if (fromMs && new Date(r.started_at).getTime() < fromMs) return false;
+      if (toMs && new Date(r.started_at).getTime() > toMs) return false;
+      if (q) {
+        const hay = [
+          r.job_name,
+          r.status,
+          r.metadata?.caller ?? "",
+          ...(r.metadata?.reports ?? []).map((rep) => rep.dataset_key),
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, search, dateFrom, dateTo, modeFilter, statusFilter, datasetFilter]);
+
   return (
     <div className="space-y-6">
       <Card>
