@@ -8,6 +8,8 @@ import { initPaddle } from "@/lib/paddle-checkout";
 import { openCheckoutWithConsent } from "@/lib/openCheckoutWithConsent";
 import { Reg37ConsentDialog } from "@/components/Reg37ConsentDialog";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { useGeoCheck } from "@/hooks/use-geo-check";
+import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
