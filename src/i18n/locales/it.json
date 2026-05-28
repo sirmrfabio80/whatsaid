@@ -168,6 +168,17 @@
     "costMultipleCreditsHint": "File di {{minutes}} min — addebitato in blocchi da 120 min",
     "consentLabel": "Ho il diritto di caricare questa registrazione.",
     "consentLabelLearnMore": "Scopri di più",
+    "consentStatus": {
+      "current": "Termini accettati (v{{version}}) il {{date}}",
+      "outdated": "Sono disponibili termini aggiornati (v{{version}}). Ti chiediamo di riaccettarli.",
+      "missing": "La tua accettazione dei Termini non risulta ancora registrata.",
+      "error": "Impossibile verificare l'accettazione dei Termini.",
+      "reaccept": "Riaccetta i Termini",
+      "recording": "Registrazione…",
+      "reacceptSuccess": "Accettazione registrata.",
+      "reacceptError": "Impossibile registrare l'accettazione. Riprova.",
+      "reacceptRequired": "Non abbiamo potuto confermare l'accettazione dei Termini. Riaccetta e riprova."
+    },
 
     "thirdPartyNotice": "L'audio viene elaborato utilizzando servizi AI di terze parti ed eliminato immediatamente dopo. Convertendo, accetti i nostri",
     "terms": "Termini",
