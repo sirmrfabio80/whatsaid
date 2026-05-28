@@ -512,6 +512,12 @@ export default function Pricing() {
           {/* Currency selector removed — billing is GBP-only via Paddle. */}
         </div>
 
+        {geoBlocked && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <RegionBlockedNotice reason={geo.reason ?? "region_blocked"} />
+          </div>
+        )}
+
         {/* Microcopy strip */}
         <p className="text-center text-caption text-muted-foreground mb-8">
           {t("pricing.microPayOnce")}
