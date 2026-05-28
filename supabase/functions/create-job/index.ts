@@ -186,6 +186,7 @@ Deno.serve(async (req) => {
         metadata_location_iso6709: typeof body.metadata_location_iso6709 === "string"
           ? body.metadata_location_iso6709
           : null,
+        upload_consent_id: consentId,
       })
       .select("id, credits_charged")
       .single();
