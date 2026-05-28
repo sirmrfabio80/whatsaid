@@ -185,7 +185,7 @@ export default function Signup() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading || !acceptedTerms}>
+            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading || !acceptedTerms || geoBlocked}>
               {loading ? t("signup.creating") : t("signup.createAccount")}
             </Button>
           </form>
