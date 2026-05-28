@@ -27,7 +27,8 @@ describe("planChunkReload", () => {
 
   it("stops reloading once maxAttempts is reached", () => {
     const state = { attempts: CHUNK_RECOVERY_CONFIG.maxAttempts, lastAt: 1_000 };
-    const result = planChunkReload(state, 1_000 + 60 * 60_000);
+    // Stay within resetAfterMs so the counter is not cleared.
+    const result = planChunkReload(state, 1_000 + 30_000);
     expect(result.action).toBe("skip-cap");
   });
 
@@ -41,10 +42,10 @@ describe("planChunkReload", () => {
 
   it("uses the last backoff value for attempts beyond the configured array", () => {
     const config = { maxAttempts: 10, backoffMs: [1_000, 2_000], resetAfterMs: 1_000_000 };
-    const state = { attempts: 5, lastAt: 0 };
-    const tooSoon = planChunkReload(state, 1_500, config);
+    const state = { attempts: 5, lastAt: 10_000 };
+    const tooSoon = planChunkReload(state, 11_500, config);
     expect(tooSoon.action).toBe("skip-cooldown");
-    const ok = planChunkReload(state, 2_500, config);
+    const ok = planChunkReload(state, 12_500, config);
     expect(ok.action).toBe("reload");
   });
 });
