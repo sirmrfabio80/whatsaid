@@ -110,6 +110,7 @@ export default function Convert() {
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uploadHandleRef = useRef<{ abort: () => Promise<void> | void } | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [cancelingUpload, setCancelingUpload] = useState(false);
   const { status: tosStatus, reaccept: reacceptTos, recording: recordingTos } = useTosConsent();
 
 
