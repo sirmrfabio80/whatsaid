@@ -53,6 +53,11 @@ export default function SecurityHeadersTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FetchResult | null>(null);
+  const [diagnostics, setDiagnostics] = useState<FrameDiagnostic[]>(() => getFrameDiagnostics());
+
+  useEffect(() => {
+    return subscribeFrameDiagnostics(() => setDiagnostics(getFrameDiagnostics()));
+  }, []);
 
   const run = useCallback(async (target: string) => {
     setLoading(true);
