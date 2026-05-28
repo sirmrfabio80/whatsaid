@@ -21,7 +21,7 @@ export class ChunkErrorBoundary extends Component<
   }
 
   componentDidCatch(error: unknown, _errorInfo: ErrorInfo) {
-    reloadOnceForChunkError(error);
+    reloadOnceForChunkError(error, { source: "boundary" });
   }
 
   render() {
