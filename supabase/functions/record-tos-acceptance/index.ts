@@ -1,15 +1,10 @@
-/**
- * record-tos-acceptance
- *
- * Records the user's acceptance of the current `tos_uploader_warranty`
- * version. Called once at signup, and again opportunistically at sign-in if
- * the user has not yet accepted the currently-effective version (e.g. after
- * a ToS bump). Idempotent per (user_id, version) — a duplicate call returns
- * the existing consent_event.
- *
- * The body recorded by `consent_versions.text_*` is the controller/processor
- * UK GDPR Art. 6 + Art. 14(5) warranty that replaced the per-upload modal.
- */
+// record-tos-acceptance — idempotent ToS uploader-warranty acceptance.
+//
+// Called by Signup (and opportunistically by AuthContext on sign-in) to
+// record that the user has accepted the current `tos_uploader_warranty`
+// version. Idempotent per (user_id, version): if a row already exists for
+// that pair, returns it instead of inserting a duplicate.
+
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireAuth, createServiceClient } from "../_shared/supabase.ts";
 
@@ -37,9 +32,7 @@ async function hashIp(ip: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -49,17 +42,20 @@ Deno.serve(async (req) => {
 
   const auth = await requireAuth(req.headers.get("Authorization"));
   if (!auth.ok) return auth.response;
-  const { userId } = auth;
 
   const admin = createServiceClient();
-  const now = Date.now();
+  const now = new Date().toISOString();
 
-  // Resolve the currently effective ToS uploader-warranty version.
-  const { data: versions, error: vErr } = await admin
+  // Resolve the current effective version for this consent type.
+  const { data: versionRow, error: vErr } = await admin
     .from("consent_versions")
     .select("version, effective_from, effective_to")
     .eq("consent_type", CONSENT_TYPE)
-    .order("effective_from", { ascending: false });
+    .lte("effective_from", now)
+    .or(`effective_to.is.null,effective_to.gt.${now}`)
+    .order("effective_from", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (vErr) {
     console.error("[record-tos-acceptance] version lookup failed", vErr);
@@ -68,65 +64,50 @@ Deno.serve(async (req) => {
       headers: jsonHeaders,
     });
   }
-
-  const effective = (versions ?? []).find((v) => {
-    const from = v.effective_from ? new Date(v.effective_from).getTime() : 0;
-    const to = v.effective_to ? new Date(v.effective_to).getTime() : Infinity;
-    return from <= now && now <= to;
-  });
-
-  if (!effective) {
+  if (!versionRow) {
     return new Response(
-      JSON.stringify({ error: "No effective ToS uploader-warranty version" }),
+      JSON.stringify({ error: "No effective tos_uploader_warranty version" }),
       { status: 409, headers: jsonHeaders },
     );
   }
 
-  // Idempotent: if a row already exists for (user_id, version), return it.
+  // Idempotent: re-use any existing acceptance for this user + version.
   const { data: existing, error: exErr } = await admin
     .from("consent_events")
     .select("id")
-    .eq("user_id", userId)
+    .eq("user_id", auth.userId)
     .eq("consent_type", CONSENT_TYPE)
-    .eq("version", effective.version)
-    .order("accepted_at", { ascending: false })
-    .limit(1)
+    .eq("version", versionRow.version)
     .maybeSingle();
-
   if (exErr) {
-    console.error("[record-tos-acceptance] existence check failed", exErr);
+    console.error("[record-tos-acceptance] existing lookup failed", exErr);
     return new Response(JSON.stringify({ error: "Lookup failed" }), {
       status: 500,
       headers: jsonHeaders,
     });
   }
-
   if (existing) {
     return new Response(
-      JSON.stringify({
-        consent_id: existing.id,
-        version: effective.version,
-        created: false,
-      }),
+      JSON.stringify({ ok: true, consent_id: existing.id, version: versionRow.version, already: true }),
       { status: 200, headers: jsonHeaders },
     );
   }
 
-  const ipHeader =
+  const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("cf-connecting-ip") ||
-    "";
-  const ipHash = ipHeader ? await hashIp(ipHeader) : null;
-  const userAgent = (req.headers.get("user-agent") ?? "").slice(0, 255) || null;
+    "unknown";
+  const ipHash = await hashIp(ip);
+  const ua = (req.headers.get("user-agent") ?? "").slice(0, 255);
 
   const { data: inserted, error: insErr } = await admin
     .from("consent_events")
     .insert({
-      user_id: userId,
+      user_id: auth.userId,
       consent_type: CONSENT_TYPE,
-      version: effective.version,
+      version: versionRow.version,
       ip_hash: ipHash,
-      user_agent: userAgent,
+      user_agent: ua || null,
     })
     .select("id")
     .single();
@@ -140,11 +121,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({
-      consent_id: inserted.id,
-      version: effective.version,
-      created: true,
-    }),
+    JSON.stringify({ ok: true, consent_id: inserted.id, version: versionRow.version, already: false }),
     { status: 200, headers: jsonHeaders },
   );
 });
