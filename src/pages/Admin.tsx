@@ -43,7 +43,6 @@ export default function Admin() {
             <TabsTrigger value="edge-health">Edge health</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
-          </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
             <TranscribeTemplatesTab />
           </TabsContent>
