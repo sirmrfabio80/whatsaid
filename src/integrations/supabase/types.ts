@@ -136,6 +136,7 @@ export type Database = {
           accepted_at: string
           consent_type: string
           id: string
+          idempotency_key: string | null
           ip_hash: string | null
           metadata: Json | null
           package_id: string | null
@@ -147,6 +148,7 @@ export type Database = {
           accepted_at?: string
           consent_type: string
           id?: string
+          idempotency_key?: string | null
           ip_hash?: string | null
           metadata?: Json | null
           package_id?: string | null
@@ -158,6 +160,7 @@ export type Database = {
           accepted_at?: string
           consent_type?: string
           id?: string
+          idempotency_key?: string | null
           ip_hash?: string | null
           metadata?: Json | null
           package_id?: string | null
@@ -554,6 +557,7 @@ export type Database = {
           guest_email: string | null
           guest_token: string | null
           id: string
+          idempotency_key: string | null
           language_detected: string | null
           language_detected_preview: string | null
           language_detection_diagnostics: Json | null
@@ -601,6 +605,7 @@ export type Database = {
           guest_email?: string | null
           guest_token?: string | null
           id?: string
+          idempotency_key?: string | null
           language_detected?: string | null
           language_detected_preview?: string | null
           language_detection_diagnostics?: Json | null
@@ -648,6 +653,7 @@ export type Database = {
           guest_email?: string | null
           guest_token?: string | null
           id?: string
+          idempotency_key?: string | null
           language_detected?: string | null
           language_detected_preview?: string | null
           language_detection_diagnostics?: Json | null
