@@ -701,7 +701,7 @@
     "s9Item4": "Other rights or anything you cannot self-serve — email support@whatsaid.app.",
     "s10Title": "10. Right to complain to the ICO",
     "s10Body": "If you are unhappy with how we have handled your personal data you can complain to the Information Commissioner's Office at <icoLink>ico.org.uk</icoLink> or on 0303 123 1113. We would appreciate the chance to fix the issue first — please write to support@whatsaid.app.",
-    "s11Title": "11. Cookies and local storage",
+    "s12Body": "When you upload a recording, you are the data controller of any personal data it contains, and WhatSaid Ltd is your processor for that content. Before uploading, you must have a lawful basis under UK GDPR Article 6 — your own voice only, the consent of identifiable speakers, the necessity of a contract, or another lawful ground. Where the recording contains identifiable people other than you, Article 14 requires you to inform them their voice is being transcribed, unless a 14(5) exemption applies. You accept these duties once when you accept our Terms of Service at signup, and they continue to apply to every upload. WhatSaid Ltd is data controller for service operation (account, billing, telemetry). Our sub-processors for that content are: Lovable Cloud (hosting and platform), Supabase (managed Postgres, authentication, object storage; EU region) and AssemblyAI (speech-to-text; EU region — audio deleted immediately after transcription). See the <icoLink>ICO guidance on lawful basis</icoLink> for more.",
     "s11Body": "WhatSaid uses only storage that is strictly necessary to keep you signed in, remember your language, and keep the app working. We do not use analytics, advertising or session-replay cookies. A full inventory and how to clear each item is on our <cookiesLink>cookies page</cookiesLink>. Lawful bases: PECR regulation 6 and UK GDPR Article 6(1)(f).",
     "s12Title": "12. Your responsibilities when uploading others' voices",
     "s12Body": "When you upload a recording you are the controller of any personal data it contains. Before we process the file you must confirm a lawful basis under Article 6 — typically your own voice only, the speakers' consent, the necessity of a contract, or another lawful ground. Where the recording contains identifiable people other than you, Article 14 requires you to inform them their voice is being transcribed, unless a 14(5) exemption applies. We record this attestation per upload and store it against the job for audit. See the <icoLink>ICO guidance on lawful basis</icoLink> for more.",
@@ -757,8 +757,11 @@
     "s15Title": "15. Governing law and jurisdiction",
     "s15Body": "These terms are governed by the laws of England and Wales. Any dispute is subject to the exclusive jurisdiction of the courts of England and Wales.",
     "s16Title": "16. How to complain",
-    "s16Body": "Please raise any concern with us first at support@whatsaid.app — we aim to respond within 5 working days. If your complaint relates to how we handle personal data, you may also complain to the Information Commissioner's Office at <icoLink>ico.org.uk</icoLink>. For consumer disputes you can seek free advice from Citizens Advice (citizensadvice.org.uk).",
-    "s17Title": "17. Severability and entire agreement",
+    "s18Title": "18. Contact",
+    "s18Body": "For any question about these terms, write to support@whatsaid.app.",
+    "s19Title": "19. Your audio uploads",
+    "s19Body": "When you upload a recording to WhatSaid you warrant that (a) you have a lawful basis under UK GDPR Article 6 to process the audio and any personal data it contains, and (b) where the recording contains identifiable people other than yourself you will, where required, inform them that their voice is being transcribed in line with Article 14, unless an Article 14(5) exemption applies. You agree to indemnify WhatSaid against any third-party claim arising from breach of these warranties. This obligation is accepted once when you accept these Terms and continues to apply to every upload. See the Privacy Notice section on uploader duties for full detail."
+  },
     "s17Body": "If any provision of these terms is held unenforceable, the remaining provisions remain in full force. These terms, together with the Privacy Notice and Refund Policy, form the entire agreement between you and WhatSaid in respect of the service.",
     "s18Title": "18. Contact",
     "s18Body": "For any question about these terms, write to support@whatsaid.app."
