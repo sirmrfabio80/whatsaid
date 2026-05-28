@@ -27,6 +27,12 @@ import {
   clampBatchSize,
   type PlannedDataset,
 } from "../_shared/retention-plan.ts";
+import {
+  dispatchAlerts,
+  evaluateAlerts,
+  type HistoricalRun,
+  type RunReport,
+} from "../_shared/retention-alerts.ts";
 
 interface DatasetReport {
   dataset_key: string;
@@ -224,6 +230,52 @@ Deno.serve(async (req) => {
         metadata: { caller, batch_size: batchSize, dry_run: dryRun, reports },
       })
       .eq("id", logRow.id);
+  }
+
+  // --- alerts (best-effort, never blocks the response) -------------------
+  try {
+    const runReport: RunReport = {
+      run_id: logRow?.id ?? null,
+      job_name: dryRun ? "prune-retention:dry-run" : "prune-retention",
+      mode: dryRun ? "dry-run" : "live",
+      status: errors.length ? "failed" : "ok",
+      datasets: reports.map((r) => ({
+        dataset_key: r.dataset_key,
+        status: r.error ? "failed" : "ok",
+        strategy: r.strategy,
+        candidates: r.candidates,
+        processed: r.processed,
+        dry_run: r.dry_run,
+        error: r.error,
+      })),
+    };
+
+    let history: HistoricalRun[] = [];
+    if (!dryRun) {
+      const { data: hist } = await admin
+        .from("cleanup_logs")
+        .select("job_name, metadata")
+        .eq("job_name", "prune-retention")
+        .order("started_at", { ascending: false })
+        .limit(11);
+      // Skip the just-written row (it's the most recent live entry).
+      history = ((hist ?? []) as HistoricalRun[]).slice(1, 11);
+    }
+
+    const alerts = evaluateAlerts(runReport, history);
+    if (alerts.length > 0) {
+      await dispatchAlerts(admin as never, alerts, {
+        runId: logRow?.id ?? null,
+        cleanupLogId: logRow?.id ?? null,
+        jobName: runReport.job_name,
+        mode: runReport.mode,
+        datasetsForEmail: runReport.datasets,
+        serviceKey: SERVICE_KEY,
+        supabaseUrl: SUPABASE_URL,
+      });
+    }
+  } catch (e) {
+    console.error("[prune-retention] alert evaluation failed", e);
   }
 
   return new Response(
