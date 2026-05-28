@@ -392,12 +392,19 @@ export default function Convert() {
         metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
         metadata_file_lastmodified: fileLastModifiedIso,
         metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
+        // Same key reused across all retries of this single user-initiated
+        // attempt → the server returns the original job instead of inserting
+        // a duplicate even if the network blips mid-flight.
+        idempotency_key: newIdempotencyKey("job"),
       };
 
       const invokeCreateJob = () =>
         invokeWithRetry<{ job_id: string; credits_charged: number }>(
           "create-job",
-          { body: createJobBody },
+          {
+            body: createJobBody,
+            headers: { "x-idempotency-key": createJobBody.idempotency_key },
+          },
           {
             onRetry: ({ attempt, status, reason }) =>
               console.warn(
