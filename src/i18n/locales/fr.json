@@ -168,6 +168,17 @@
     "costMultipleCreditsHint": "Fichier de {{minutes}} min — facturé par tranches de 120 min",
     "consentLabel": "J'ai le droit de téléverser cet enregistrement.",
     "consentLabelLearnMore": "En savoir plus",
+    "consentStatus": {
+      "current": "Conditions acceptées (v{{version}}) le {{date}}",
+      "outdated": "De nouvelles conditions (v{{version}}) sont disponibles. Merci de les accepter à nouveau.",
+      "missing": "Votre acceptation des Conditions n'est pas encore enregistrée.",
+      "error": "Impossible de vérifier votre acceptation des Conditions.",
+      "reaccept": "Accepter à nouveau",
+      "recording": "Enregistrement…",
+      "reacceptSuccess": "Acceptation enregistrée.",
+      "reacceptError": "Impossible d'enregistrer l'acceptation. Réessayez.",
+      "reacceptRequired": "Nous n'avons pas pu confirmer votre acceptation des Conditions. Veuillez réaccepter et réessayer."
+    },
 
     "thirdPartyNotice": "L'audio est traité par des services IA tiers et supprimé immédiatement après. En convertissant, vous acceptez nos",
     "terms": "Conditions",
