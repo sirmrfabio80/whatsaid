@@ -32,6 +32,8 @@ export default function Accessibility() {
             </Link>
           </Button>
 
+          <LegalEnglishOnlyBanner />
+
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">
             Accessibility statement for WhatSaid
           </h1>
