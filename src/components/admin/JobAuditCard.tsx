@@ -45,7 +45,20 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
   uploading: "outline",
 };
 
-export default function JobAuditCard({ job }: { job: JobRow }) {
+interface UploadAttestation {
+  id: string;
+  version: string;
+  accepted_at: string;
+  metadata: { basis?: string; contextNote?: string | null } | null;
+}
+
+export default function JobAuditCard({
+  job,
+  uploadAttestation,
+}: {
+  job: JobRow;
+  uploadAttestation?: UploadAttestation | null;
+}) {
   const cfg = (job.transcription_config ?? {}) as Record<string, unknown>;
   const requestedLang = (cfg.language_code as string | undefined) ?? null;
   const detectionRequested = Boolean(cfg.language_detection);
