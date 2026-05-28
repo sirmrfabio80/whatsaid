@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
 import { openCheckout } from "@/lib/paddle-checkout";
+import { invokeWithRetry } from "@/lib/invoke-with-retry";
 import {
   REG37_CONSENT_TYPE,
   REG37_CONSENT_VERSION,
@@ -23,13 +23,20 @@ interface Opts {
  * received both express-consent ticks.
  */
 export async function openCheckoutWithConsent(opts: Opts): Promise<void> {
-  const { data, error } = await supabase.functions.invoke("record-consent", {
-    body: {
-      consent_type: REG37_CONSENT_TYPE,
-      version: REG37_CONSENT_VERSION,
-      package_id: opts.packageId ?? opts.priceId,
+  const { data, error } = await invokeWithRetry<{ ok?: boolean; consent_id?: string }>(
+    "record-consent",
+    {
+      body: {
+        consent_type: REG37_CONSENT_TYPE,
+        version: REG37_CONSENT_VERSION,
+        package_id: opts.packageId ?? opts.priceId,
+      },
     },
-  });
+    {
+      onRetry: ({ attempt, reason, status }) =>
+        console.warn(`[record-consent] retry ${attempt + 1} (${reason} ${status ?? ""})`),
+    },
+  );
 
   if (error || !data?.ok || !data?.consent_id) {
     throw new Error(
