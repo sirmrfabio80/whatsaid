@@ -1,6 +1,6 @@
 # WhatSaid
 
-> AI audio transcription with speaker labels, structured summaries, key actions, and custom Q&A. Upload .m4a, .mp3, or .wav and get instant results. Pay-as-you-go credits — no subscription.
+> AI audio transcription with speaker labels, structured summaries, key actions, and custom Q&A. Upload .m4a, .mp3, or .wav and get fast, accurate results. Pay-as-you-go credits — no subscription.
 
 WhatSaid converts audio recordings into useful text. Each credit processes one audio file and produces a full transcript with speaker labels, a structured summary with key actions, and answers to custom prompts. Audio files are deleted immediately after processing — only the generated text is retained.
 

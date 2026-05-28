@@ -1046,5 +1046,14 @@
     "title": "Disponibile solo in inglese",
     "body": "Questo documento è attualmente disponibile solo in inglese. La versione inglese è quella giuridicamente vincolante. Le traduzioni revisionate arriveranno a breve.",
     "contact": "Contatta il supporto"
+  },
+  "regionBlocked": {
+    "title": "WhatSaid è disponibile solo nel Regno Unito",
+    "detailDeclaredNotGb": "Seleziona Regno Unito per continuare, oppure contattaci se ritieni che si tratti di un errore.",
+    "detailIpNotGb": "La tua connessione sembra trovarsi fuori dal Regno Unito. WhatSaid è attualmente disponibile solo ai residenti nel Regno Unito.",
+    "detailDefault": "Il tuo account è registrato in una regione che non supportiamo ancora. WhatSaid è attualmente disponibile solo ai residenti nel Regno Unito.",
+    "vpnAdvice": "Se ti trovi nel Regno Unito ma stai usando una VPN o una rete che nasconde la tua posizione, disattivala e riprova — oppure contatta il supporto.",
+    "questions": "Domande?"
   }
 }
+

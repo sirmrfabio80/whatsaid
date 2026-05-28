@@ -1064,5 +1064,14 @@
     "title": "Only available in English",
     "body": "This document is currently only available in English. The English version is the legally binding one. Reviewed translations are coming soon.",
     "contact": "Contact support"
+  },
+  "regionBlocked": {
+    "title": "WhatSaid is only available in the United Kingdom",
+    "detailDeclaredNotGb": "Please select United Kingdom to continue, or contact us if you believe this is an error.",
+    "detailIpNotGb": "Your connection appears to be outside the UK. WhatSaid is currently available to UK residents only.",
+    "detailDefault": "Your account is registered to a region we don’t yet support. WhatSaid is currently available to UK residents only.",
+    "vpnAdvice": "If you’re in the UK but using a VPN or a network that hides your location, please disable it and try again — or contact support.",
+    "questions": "Questions?"
   }
 }
+
