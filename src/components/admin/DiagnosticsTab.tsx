@@ -18,8 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Play, Trash2, Activity, Globe } from "lucide-react";
+import { Loader2, Play, Trash2, Activity, Globe, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getChunkFailures,
+  clearChunkFailures,
+  subscribeChunkFailures,
+  type ChunkFailure,
+} from "@/lib/chunk-diagnostics";
 
 type Strategy = "mobile" | "desktop";
 
@@ -81,7 +87,13 @@ export default function DiagnosticsTab() {
   const [strategy, setStrategy] = useState<Strategy>("desktop");
   const [running, setRunning] = useState(false);
   const [runs, setRuns] = useState<PsiRunResult[]>([]);
-  const [liveVitals, setLiveVitals] = useState<LiveVital[]>([]);
+  const [chunkFailures, setChunkFailures] = useState<ChunkFailure[]>(() => getChunkFailures());
+
+  useEffect(() => {
+    return subscribeChunkFailures(() => setChunkFailures(getChunkFailures()));
+  }, []);
+
+
 
   // Capture live Web Vitals from the current admin session
   useEffect(() => {
