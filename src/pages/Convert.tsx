@@ -404,6 +404,7 @@ export default function Convert() {
           metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
           metadata_file_lastmodified: fileLastModifiedIso,
           metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
+          upload_consent_id: overrides!.uploadConsentId,
         },
       });
 
