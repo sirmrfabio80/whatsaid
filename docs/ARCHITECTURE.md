@@ -80,6 +80,11 @@ Defined in `src/App.tsx`. All non-landing routes are lazy-loaded.
 | `/claim/:token` | `pages/ClaimShare` | Recipient claims a shared transcript |
 | `/shared-pdf/:token` | `pages/SharedPdfDownload` | One-shot signed PDF download |
 | `/privacy`, `/terms`, `/refund-policy` | static legal pages | |
+| `/cookies` | `pages/Cookies` | PECR reg. 6 cookie / local-storage inventory rendered from `src/lib/cookie-inventory.ts` |
+| `/accessibility` | `pages/Accessibility` | WCAG 2.2 AA statement and reasonable-adjustment route (Equality Act 2010) |
+
+For the legal / DPO view of these surfaces, see
+**`docs/LAUNCH_READINESS.md`**.
 
 Providers wrap the tree in this order:
 `QueryClientProvider → TooltipProvider → BrowserRouter → AuthProvider →
@@ -296,6 +301,11 @@ some files exceed 120 min and consume multiple credits each).
     `summary_language`, `output_language`
   - results: `title`, `short_summary`, `speaker_names` (jsonb map)
   - billing: `credits_charged`, `stripe_payment_id`
+  - lawful basis: `upload_consent_id uuid` — FK pointer into
+    `consent_events`. `create-job` rejects the request when this row is
+    absent or older than 30 minutes; ties every uploaded audio file to a
+    UK GDPR Art. 6/14 attestation captured in `UploadAttestationDialog`
+    (see §5.9 and Phase 5).
   - regen counters: `regeneration_count`, `summary_regen_count`,
     `question_generation_count`, `summary_needs_regen`
   - provider: `assemblyai_transcript_id`, `assemblyai_delete_status`,
@@ -430,10 +440,74 @@ some files exceed 120 min and consume multiple credits each).
 
 ### 5.8 Storage
 
-Private buckets only. Audio uploads land in a temp-prefixed path
-referenced by `jobs.temp_file_path` and are deleted by `process-job`
-(and by `cleanup-assemblyai` / `cleanup-stale-jobs` watchdogs) after
-transcription. The `avatars` bucket is public for profile images.
+Private buckets only, except `avatars` (public for profile images).
+Audio uploads land in a temp-prefixed path referenced by
+`jobs.temp_file_path` and are deleted by `process-job` (and by
+`cleanup-assemblyai` / `cleanup-stale-jobs` watchdogs) after
+transcription.
+
+| Bucket | Visibility | Purpose | Lifecycle |
+|---|---|---|---|
+| `avatars` | public | Profile images | User-owned |
+| `audio-uploads` | private | Temporary STT inputs | Deleted by `process-job` post-transcription; `audio_deleted_at` is set on the `jobs` row |
+| `shared-pdfs` | private | Shared transcript PDFs minted by `ShareButton` | Swept by `cleanup-expired-shares` after `transcript_shares.expires_at` (+ 24 h grace) |
+| `exports` | private | Async PDF export artefacts | Swept by `cleanup-expired-shares` after 7 days |
+| `dsr-exports` | private | Art. 15 / 20 portability ZIPs | Object path `{user_id}/{request_id}.zip`. Signed URLs minted **only** by the `dsr-export` edge function via the service-role client, TTL 7 days (`SIGNED_URL_TTL_SECONDS` in `supabase/functions/dsr-export/index.ts`). RLS lets the owner `SELECT` their own folder. Cleanup is **opportunistic only**: each `dsr-export` invocation purges the caller's own ZIPs older than 7 days. The matching `retention_config` row (`dataset_key = 'dsr_exports'`, `retention_days = 7`, `enabled = false`) is informational — `prune-retention` does not actively sweep this bucket because the per-invocation purge already covers it. |
+
+### 5.9 Consent, retention and rights ledger (Phases 1–6)
+
+All tables in this section live in the `public` schema. Only one
+Phase 1–8 object lives in `private`: the SECURITY DEFINER function
+`private.anonymise_dsr_requests(uuid)`, scoped to `service_role`
+EXECUTE only (used by the rectification flow). The pre-existing
+`private.has_role` backs every new admin RLS policy below.
+
+- **`consent_versions`** — append-only catalogue of every version of a
+  user-facing consent or notice text (`consent_type`, `version`,
+  `text_en`/`text_it`/`text_fr`, SHA `text_hash`, `effective_from` /
+  `effective_to`). RLS: any authenticated user can read; nobody can
+  write (seeded by migrations). Active versions today:
+  `cca2013.reg37.immediate-supply.2026-05-v1` (Phase 1),
+  `upload_lawful_basis` v1.0.0 (Phase 5),
+  `share_recipient_notice` v1.0.0 (Phase 6).
+- **`consent_events`** — append-only audit of every acceptance
+  (`user_id`, `consent_type`, `version`, `accepted_at`, `ip_hash`,
+  `user_agent`, `metadata`, optional `package_id`). IP is stored as a
+  salted hash via `CONSENT_IP_SALT_SECRET` (never raw). RLS: user
+  reads own rows; admin reads all; writes go through the
+  `record-consent` / `record-upload-attestation` edge functions only.
+- **`retention_config`** — admin-managed retention schedule
+  (`dataset_key`, `retention_days`, `strategy ∈ {delete, anonymize}`,
+  `enabled`, `legal_basis`, `description`, `updated_by`). Live rows:
+  `async_jobs_finished`/30, `cleanup_logs`/30, `consent_events`/2190
+  (anonymise after 6 y), `credit_transactions`/2190 (disabled — kept
+  for contract & tax reference), `dsr_exports`/7 (disabled, see §5.8),
+  `email_send_log`/180, `usage_events`/90.
+- **`retention_config_audit`** — before/after JSON diff for every
+  admin edit to `retention_config`, written by the
+  `admin_update_retention_config` RPC. Admin-readable only.
+- **`retention_alerts`** — throttled alert audit driven by
+  `_shared/retention-alerts.ts → evaluateAlerts / dispatchAlerts`.
+  Records `alert_kind ∈ {run_failed, high_candidates,
+  large_processed_jump, missing_runs}` with `cleanup_log_id`
+  back-pointer and `email_sent` flag. Admin-readable; written by
+  `prune-retention` and `retention-monitor-watchdog`.
+- **`dsr_requests`** — Art. 15 / 16 / 20 audit row. Written by
+  `dsr-export` (`kind = 'portability'`) and `dsr-rectification-request`
+  (`kind = 'rectification'`). Fields cover both flows
+  (`export_storage_path`, `export_expires_at`, `field`,
+  `requested_value`, `reason`, `status`, `fulfilled_at`,
+  `fulfilled_by`). RLS: user sees own; admin sees all.
+- **`recipient_notifications`** — "told-once" Art. 14 audit for shared
+  transcripts. Stores `(job_id, shared_by, recipient_email_hash,
+  channel, notice_type, notice_version, message_id, notified_at)`.
+  Recipient email is HMAC-hashed with a daily-rotated salt by
+  `_shared/recipient-notice.ts` — the raw address is never persisted.
+  RLS: uploader sees rows where `shared_by = auth.uid()`; admin sees
+  all. Written by `share-transcript` and `share-transcript-record`.
+
+Drift guard `scripts/check-architecture-doc-drift.mjs` already requires
+every new `public.*` table to appear backticked in this document.
 
 ---
 
@@ -466,6 +540,12 @@ automatically; default `verify_jwt` policy lives in `supabase/config.toml`.
 | `cleanup-expired-shares` | Three-phase storage sweep plus log retention: (1) `shared-pdfs` blobs past `transcript_shares.expires_at` + 24 h-grace orphan dirs, (2) `exports` blobs for `pdf_export` async jobs older than 7 days (also nulls `resource_url`), (3) `share_pdf_cache` rows past `cleanup_config.share_pdf_cache_ttl_days`. Also prunes `cleanup_logs` and finished `async_jobs` older than 30 days. Supports `?dry_run=1`; batch size + cache TTL come from `cleanup_config`; per-run audit row in `cleanup_logs`. |
 | `monitor-search-console` | Periodically polls Google Search Console and writes anomalies to `seo_monitoring_alerts`. |
 | `admin-get-job-details` | Admin-only deep job inspection |
+| `record-consent` | Records a `consent_events` row (Reg. 37 checkout dialog and any future consent flow). Hashes the source IP with `CONSENT_IP_SALT_SECRET` and validates the supplied version against `consent_versions`. `requireAuth`. |
+| `record-upload-attestation` | Issues a fresh `consent_events` row for the `upload_lawful_basis` v1.0.0 version (Phase 5). Returns the `consent_id` that `create-job` then checks (must be ≤ 30 minutes old). `requireAuth` + quota-gated. |
+| `dsr-export` | UK GDPR Art. 15 / 20 ZIP builder. Reads the caller's data, builds the manifest via `dsr-export/builder.ts`, uploads to private `dsr-exports` bucket at `{user_id}/{request_id}.zip`, writes a `dsr_requests` audit row, returns a 7-day signed URL. Quotas: 2 / user / day, 12 / user lifetime. Opportunistic cleanup of the caller's own stale ZIPs on every invocation. `requireAuth`, own-user only. |
+| `dsr-rectification-request` | UK GDPR Art. 16 intake. Validates the field (`email` / `country`) and writes a `dsr_requests` row plus an admin notification (`admin-dsr-rectification` template). Calls `private.anonymise_dsr_requests` on closed flows. `requireAuth`. |
+| `prune-retention` | Daily sweep that walks every enabled row in `retention_config`, deletes / anonymises stale rows in batches, writes a `cleanup_logs` row, and evaluates alerts via `_shared/retention-alerts.ts`. Supports `?dry_run=1` (no writes; admin-only). Pure planner logic isolated in `_shared/retention-plan.ts` with parity tests. |
+| `retention-monitor-watchdog` | Scheduled every 6 h via `cron.schedule`. Detects "missing run" anomalies (no successful `prune-retention` in the expected window) and dispatches throttled alerts through the same `retention_alerts` ledger. |
 
 `_shared/` holds CORS, Supabase client (`requireAuth`,
 `createServiceClient`), prompts, sanitizers, AI Gateway helper,
@@ -496,6 +576,15 @@ src/
     supabase/        client + auto-generated types (DO NOT EDIT types.ts)
   test/              Vitest suites
 ```
+
+Notable Phase 1–8 components (all under `src/components/`):
+`Reg37ConsentDialog` (checkout gate), `UploadAttestationDialog`
+(pre-upload Art. 6/14 dialog), `CookieNotice` (informational banner),
+`policy/PolicyRichText` (cross-link token renderer for Privacy /
+Terms), `settings/DataRightsCard` (DSR self-service entry-point),
+`admin/RetentionTab` + `admin/RetentionMonitorTab` + `admin/DsrTab`
+(admin surfaces), `ChunkErrorBoundary` + `PageLoadingFallback`
+(stale-chunk resilience — see §7.9).
 
 ### 7.2 State conventions
 
@@ -557,6 +646,30 @@ the same entrypoint.
 When a guard fails, the fix is almost always **update the doc** (the
 code is the source of truth). Only revert the source change if the
 drift was unintentional.
+
+In addition to the four Node guards above, the Phase 1–8 surfaces
+ship with **pure-logic Vitest parity tests** that run under
+`bunx vitest run` and act as drift guards in their own right.
+Touching the corresponding source without updating the test (or vice
+versa) breaks CI:
+
+- `src/test/policy-locale-parity.test.ts` — EN/IT/FR key parity for
+  `privacy.*` and `terms.*`; presence of UK-specific legal markers
+  (UK GDPR, DPA 2018, ICO, AssemblyAI, Paddle, Reg. 37, CRA 2015).
+- `src/test/cookie-inventory.test.ts` — greps the source tree for
+  any storage write not declared in `src/lib/cookie-inventory.ts`.
+- `src/test/chunk-recovery.test.ts` — `planChunkReload` decisions
+  (first reload, per-attempt backoff, cap, reset window).
+- `src/test/dsr-export-builder.test.ts` — manifest shape for
+  Art. 15 / 20 ZIPs.
+- `src/test/upload-attestation-strings.test.ts` — string parity for
+  the Phase 5 attestation dialog.
+- `supabase/functions/_shared/retention-plan.test.ts` — `prune-retention`
+  planner (horizons, batching, anonymisation strategy).
+- `supabase/functions/_shared/retention-alerts.test.ts` — alert
+  evaluation and throttling.
+- `supabase/functions/_shared/recipient-notice.test.ts` — Art. 14
+  notice HTML/text builder and recipient-email HMAC.
 
 ### 7.7 Client-side dedup & concurrency
 
@@ -709,6 +822,21 @@ or other metrics:
   resizing the navbar logo (served 511×512, displayed 36×36), and
   (c) long `Cache-Control: immutable` on `/assets/*` at the CDN —
   none of which are app-code changes the build can make on its own.
+
+### 7.9 Resilience: stale-chunk recovery
+
+Lazy-loaded route chunks can 404 after a redeploy. `src/lib/chunk-recovery.ts`
+detects `ChunkLoadError` / `Failed to fetch dynamically imported module`
+signatures, records the failure to `src/lib/chunk-diagnostics.ts`
+(`sessionStorage` ring buffer including failed URL, route, user agent,
+and last user action), then either reloads the page once or surfaces a
+dedicated retry screen. Backoff is configurable
+(`CHUNK_RECOVERY_CONFIG`: 3 attempts, 10 s → 60 s → 5 min, reset after
+10 min healthy). `ChunkErrorBoundary` wraps `<Routes>` in `App.tsx`
+and `PageLoadingFallback` replaces the previous `Suspense fallback={null}`
+so the UI is never blank during normal chunk fetches. Admin
+`DiagnosticsTab` reads the ring buffer and surfaces a "Chunk load
+failures" card.
 
 ---
 
@@ -1112,18 +1240,71 @@ generalise to AI / STT spend.
 
 ---
 
-_Last updated alongside the UK-only geo-gating (`profiles.country`,
-`trg_profiles_lock_country`, `geo-check`, `validate-signup-country`,
-`check-login-region`, Paddle GB lock), the spend guardrails phase
-(`usage_events`, `check_and_record_usage`, `create-job`,
-`trg_jobs_lock_billing_columns`, `enforceQuota` rollout, Admin Usage
-tab, `process-email-queue` retuned to 30 s, `cleanup-expired-shares`
-extended to `cleanup_logs` / `async_jobs` pruning), the
-AssemblyAI EU-only hardening (`_shared/assemblyai.ts → assemblyAIFetch`
-+ `assertAssemblyAIUrl`, template config sanitisation), admin email
-notifications (`ADMIN_NOTIFY_EMAIL`, `admin-new-signup`,
-`admin-credit-purchase`), and the move of `has_role` into the
-`private` schema. Refresh this document whenever you touch the data
-model, design tokens, edge function surface, high-level flows, or the
-cost drivers enumerated in section 10._
+## 11. UK compliance surface (Phases 1–8)
+
+Engineer-facing map of each compliance phase to the code surface it
+touches. The legal/DPO-facing version lives in
+**`docs/LAUNCH_READINESS.md`** (same phase ledger, plain English, no
+table/function names). Anchors are merge-commit SHAs because no git
+tags exist for the phase boundaries — run `git show <sha> --stat` to
+locate the change set.
+
+| # | Phase | Legal basis | Tables / buckets | Edge functions | Client surface | Drift guard | Anchor |
+|---|---|---|---|---|---|---|---|
+| 1 | Reg. 37 immediate-supply consent at checkout | CCR 2013 reg. 37 | `consent_versions`, `consent_events` | `record-consent`, `paddle-webhook` (verifies `custom_data.consent_id`) | `Reg37ConsentDialog`, `src/lib/reg37-consent.ts`, `src/lib/openCheckoutWithConsent.ts` | `policy-locale-parity` (text presence) | `e982ec4` |
+| 2 | Retention schedule + automated pruning | UK GDPR Art. 5(1)(e) | `retention_config`, `retention_config_audit`, `retention_alerts`, `cleanup_logs` | `prune-retention` (with `dry_run`), `retention-monitor-watchdog`, RPC `admin_update_retention_config` | `admin/RetentionTab`, `admin/RetentionMonitorTab` (+ run-details dialog, filters) | `retention-plan.test.ts`, `retention-alerts.test.ts` | `300bff9`, `6257c7a`, `335567f`, `b211e9c` |
+| 3 | DSR self-service (Art. 15 / 16 / 20) | UK GDPR Art. 15, 16, 20 | `dsr_requests`, bucket `dsr-exports` (TTL 7 d), `private.anonymise_dsr_requests` | `dsr-export`, `dsr-rectification-request`, template `admin-dsr-rectification` | `settings/DataRightsCard`, `admin/DsrTab`, `src/lib/dsr-export-builder.ts` | `dsr-export-builder.test.ts` | `61f8bd6` |
+| 4 | Cookie notice + inventory | PECR reg. 6, UK GDPR Art. 7 | — | — | `CookieNotice`, `pages/Cookies`, `src/lib/cookie-inventory.ts`, `src/lib/consent.ts` (dormant gate API), `DataRightsCard → Clear local data` | `cookie-inventory.test.ts` (greps for undeclared storage writes) | `c60f25d` |
+| 5 | Uploader lawful-basis attestation | UK GDPR Art. 6, 14 | `consent_versions` (`upload_lawful_basis` v1.0.0), `consent_events`, `jobs.upload_consent_id` | `record-upload-attestation`, `create-job` (enforces ≤ 30 min freshness) | `UploadAttestationDialog`, `src/lib/upload-attestation-strings.ts`, `JobAuditCard` extension | `upload-attestation-strings.test.ts`, `record-upload-attestation/index.test.ts` | `76cba4f` |
+| 6 | Share-recipient Art. 14 notice ("told-once") | UK GDPR Art. 14 | `consent_versions` (`share_recipient_notice` v1.0.0), `recipient_notifications` | `share-transcript`, `share-transcript-record`, `_shared/recipient-notice.ts` | Recipient email block in shared-transcript HTML/text emails, notice on `pages/ClaimShare` | `recipient-notice.test.ts` | `18670f1` |
+| 7 | Policy copy refresh (Privacy + Terms) | UK GDPR transparency, CRA 2015 carve-outs | `consent_versions` (referenced by policies) | — | `pages/Privacy`, `pages/Terms`, `components/policy/PolicyRichText`, `src/i18n/locales/{en,it,fr}.json` (`privacy.*`, `terms.*`). Effective date **28 May 2026**. | `policy-locale-parity.test.ts` (UK GDPR, DPA 2018, ICO, Reg. 37, CRA 2015 markers) | `9660e27` |
+| 8 | WCAG 2.2 AA statement + audit | Equality Act 2010 | — | — | `pages/Accessibility`, `Footer` link, `Navbar`/`AudioUploader`/`SpeakerIdentificationBanner` aria fixes | — (manual audit + axe checks; no script) | `7292b89` |
+
+---
+
+## 12. Legal context (historical references)
+
+Single bounded section for residual references to other jurisdictions
+or to historical data flows. **Outside this section the file must
+contain zero occurrences of the literal strings `processed in the US`
+or `United States`** — verified by:
+
+```bash
+awk '/^## 12\. Legal context/{flag=1} /^## /{if($0!~/^## 12\./)flag=0} !flag' \
+    docs/ARCHITECTURE.md \
+  | grep -n -E "processed in the US|United States" && exit 1 || exit 0
+```
+
+If you need to mention another jurisdiction, add the sentence here and
+link to it from the relevant section.
+
+- WhatSaid does **not** transfer personal data outside the UK / EEA
+  under the current configuration. AssemblyAI is locked to its EU
+  region via `_shared/assemblyai.ts → assemblyAIFetch` +
+  `assertAssemblyAIUrl` (host must equal `api.eu.assemblyai.com`).
+  Lovable Cloud (Supabase) and Lovable AI Gateway are EU-hosted.
+  Paddle's billing infrastructure is UK/EU. Any prior reference to
+  audio being processed in the United States is obsolete and was
+  removed from the live Privacy Notice on 28 May 2026.
+
+---
+
+_Last updated alongside the UK compliance programme (Phases 1–8):
+Reg. 37 immediate-supply consent (`consent_versions`, `consent_events`,
+`record-consent`); retention schedule + sweeper + watchdog
+(`retention_config`, `retention_config_audit`, `retention_alerts`,
+`prune-retention`, `retention-monitor-watchdog`); DSR self-service
+(`dsr_requests`, `dsr-exports` bucket, `dsr-export`,
+`dsr-rectification-request`, `private.anonymise_dsr_requests`); cookie
+notice (`/cookies`, `CookieNotice`, `src/lib/cookie-inventory.ts`);
+uploader lawful-basis attestation (`upload_consent_id`,
+`record-upload-attestation`, `UploadAttestationDialog`);
+share-recipient Art. 14 notice (`recipient_notifications`,
+`_shared/recipient-notice.ts`); policy copy refresh
+(`PolicyRichText`, effective **28 May 2026**); WCAG 2.2 AA statement
+(`/accessibility`); and the stale-chunk resilience layer
+(`chunk-recovery`, `chunk-diagnostics`, `ChunkErrorBoundary`).
+Refresh this document whenever you touch the data model, design
+tokens, edge function surface, high-level flows, the cost drivers in
+section 10, or anything in the §11 phase ledger._
 
