@@ -8,13 +8,19 @@ import { requireAuth, createServiceClient } from "../_shared/supabase.ts";
 const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
 interface Body {
+interface Body {
   consent_type?: unknown;
   version?: unknown;
   package_id?: unknown;
+  idempotency_key?: unknown;
 }
+
+const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,128}$/;
 
 function isString(v: unknown): v is string {
   return typeof v === "string" && v.length > 0 && v.length <= 256;
+}
+
 }
 
 async function hashIp(ip: string): Promise<string> {
@@ -75,7 +81,40 @@ Deno.serve(async (req) => {
     });
   }
 
+  const headerKey = req.headers.get("x-idempotency-key");
+  const bodyKey = typeof body.idempotency_key === "string" ? body.idempotency_key : null;
+  const idempotencyKey = (headerKey ?? bodyKey ?? "").trim() || null;
+  if (idempotencyKey && !IDEMPOTENCY_KEY_RE.test(idempotencyKey)) {
+    return new Response(
+      JSON.stringify({ error: "idempotency_key must be 8-128 url-safe characters" }),
+      { status: 400, headers: jsonHeaders },
+    );
+  }
+
   const admin = createServiceClient();
+
+  if (idempotencyKey) {
+    const { data: existing, error: idemErr } = await admin
+      .from("consent_events")
+      .select("id")
+      .eq("user_id", auth.userId)
+      .eq("consent_type", consent_type)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+    if (idemErr) {
+      console.error("[record-consent] idempotency lookup failed", idemErr);
+      return new Response(JSON.stringify({ error: "Lookup failed" }), {
+        status: 500,
+        headers: jsonHeaders,
+      });
+    }
+    if (existing) {
+      return new Response(
+        JSON.stringify({ ok: true, consent_id: existing.id, idempotent_replay: true }),
+        { status: 200, headers: jsonHeaders },
+      );
+    }
+  }
 
   // Verify the version exists, matches consent_type, and is currently effective.
   const { data: versionRow, error: vErr } = await admin
@@ -120,11 +159,28 @@ Deno.serve(async (req) => {
       package_id: (package_id as string | undefined) ?? null,
       ip_hash: ipHash,
       user_agent: ua || null,
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
 
   if (insErr || !inserted) {
+    // Race-loser on the unique index — return the prior row instead of 500.
+    if (idempotencyKey && (insErr as { code?: string } | null)?.code === "23505") {
+      const { data: winner } = await admin
+        .from("consent_events")
+        .select("id")
+        .eq("user_id", auth.userId)
+        .eq("consent_type", consent_type)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+      if (winner) {
+        return new Response(
+          JSON.stringify({ ok: true, consent_id: winner.id, idempotent_replay: true }),
+          { status: 200, headers: jsonHeaders },
+        );
+      }
+    }
     console.error("[record-consent] insert failed", insErr);
     return new Response(JSON.stringify({ error: "Insert failed" }), {
       status: 500,
@@ -137,3 +193,4 @@ Deno.serve(async (req) => {
     { status: 200, headers: jsonHeaders },
   );
 });
+

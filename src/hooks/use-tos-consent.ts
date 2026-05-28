@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithRetry } from "@/lib/invoke-with-retry";
+import { newIdempotencyKey } from "@/lib/idempotency-key";
 import { useAuth } from "@/contexts/AuthContext";
 
 const CONSENT_TYPE = "tos_uploader_warranty";
@@ -78,15 +79,22 @@ export function useTosConsent() {
   useEffect(() => {
     void load();
   }, [load]);
-
   const reaccept = useCallback(async () => {
     if (!user) return { ok: false, error: "Not signed in" };
     setRecording(true);
     try {
-      const { error } = await invokeWithRetry("record-tos-acceptance", {}, {
-        onRetry: ({ attempt, reason, status }) =>
-          console.warn(`[record-tos-acceptance] retry ${attempt + 1} (${reason} ${status ?? ""})`),
-      });
+      const key = newIdempotencyKey("tos");
+      const { error } = await invokeWithRetry(
+        "record-tos-acceptance",
+        {
+          body: { idempotency_key: key },
+          headers: { "x-idempotency-key": key },
+        },
+        {
+          onRetry: ({ attempt, reason, status }) =>
+            console.warn(`[record-tos-acceptance] retry ${attempt + 1} (${reason} ${status ?? ""})`),
+        },
+      );
       if (error) throw error;
       await load();
       return { ok: true as const };
@@ -96,6 +104,7 @@ export function useTosConsent() {
     } finally {
       setRecording(false);
     }
+
   }, [user, load]);
 
   return { status, reaccept, recording, refresh: load };

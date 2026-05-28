@@ -35,11 +35,16 @@ interface CreateJobBody {
   metadata_mvhd_creation?: unknown;
   metadata_file_lastmodified?: unknown;
   metadata_location_iso6709?: unknown;
+  idempotency_key?: unknown;
 }
 
 const TOS_UPLOADER_CONSENT_TYPE = "tos_uploader_warranty";
 
 const LANG_RE = /^[a-z]{2,3}(-[A-Z]{2})?$|^auto$/;
+// Idempotency keys are opaque client-generated strings (we recommend UUIDs).
+// Accept up to 128 chars of url-safe characters; reject anything else.
+const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,128}$/;
+
 
 async function hashIp(ip: string): Promise<string> {
   const secret = Deno.env.get("CONSENT_IP_SALT_SECRET") ?? "missing-salt";
@@ -70,11 +75,6 @@ function bad(message: string, status = 400) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-  if (req.method !== "POST") return bad("Method not allowed", 405);
-
   try {
     const auth = await requireAuth(req.headers.get("Authorization"));
     if (!auth.ok) return auth.response;
@@ -83,6 +83,44 @@ Deno.serve(async (req) => {
     let body: CreateJobBody;
     try {
       body = await req.json();
+    } catch {
+      return bad("Invalid JSON body");
+    }
+
+    // Idempotency: clients pass either an X-Idempotency-Key header or
+    // body.idempotency_key. If a previous request from this user used the
+    // same key we return the prior job instead of inserting a duplicate.
+    const headerKey = req.headers.get("x-idempotency-key");
+    const bodyKey = typeof body.idempotency_key === "string" ? body.idempotency_key : null;
+    const idempotencyKey = (headerKey ?? bodyKey ?? "").trim() || null;
+    if (idempotencyKey && !IDEMPOTENCY_KEY_RE.test(idempotencyKey)) {
+      return bad("idempotency_key must be 8-128 url-safe characters");
+    }
+
+    if (idempotencyKey) {
+      const supabaseLookup = createServiceClient();
+      const { data: existing, error: lookupErr } = await supabaseLookup
+        .from("jobs")
+        .select("id, credits_charged")
+        .eq("user_id", userId)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+      if (lookupErr) {
+        console.error("[create-job] idempotency lookup failed", lookupErr);
+        return bad("Idempotency lookup failed", 500);
+      }
+      if (existing) {
+        return new Response(
+          JSON.stringify({
+            job_id: existing.id,
+            credits_charged: existing.credits_charged,
+            idempotent_replay: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     } catch {
       return bad("Invalid JSON body");
     }
@@ -227,11 +265,33 @@ Deno.serve(async (req) => {
           ? body.metadata_location_iso6709
           : null,
         upload_consent_id: consentId,
+        idempotency_key: idempotencyKey,
       })
       .select("id, credits_charged")
       .single();
 
     if (insertErr || !row) {
+      // Race: a concurrent request with the same idempotency_key won the
+      // unique index. Look up and return the winner instead of erroring.
+      // Postgres unique_violation = 23505.
+      if (idempotencyKey && (insertErr as { code?: string } | null)?.code === "23505") {
+        const { data: winner } = await supabase
+          .from("jobs")
+          .select("id, credits_charged")
+          .eq("user_id", userId)
+          .eq("idempotency_key", idempotencyKey)
+          .maybeSingle();
+        if (winner) {
+          return new Response(
+            JSON.stringify({
+              job_id: winner.id,
+              credits_charged: winner.credits_charged,
+              idempotent_replay: true,
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
       console.error("[create-job] insert failed:", insertErr);
       return bad(insertErr?.message ?? "Could not create job", 500);
     }
@@ -240,6 +300,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ job_id: row.id, credits_charged: row.credits_charged }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (err) {
     console.error("[create-job] error:", err);
     return bad(err instanceof Error ? err.message : "Unknown error", 500);
