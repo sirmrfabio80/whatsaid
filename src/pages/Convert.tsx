@@ -380,6 +380,7 @@ export default function Convert() {
         file_size_bytes: effFile.size,
         duration_seconds: Math.round(duration),
         language_selected: language,
+        uploader_warranty_confirmed: consentChecked,
         audio_channels: resolvedCh ?? null,
         recorded_at: recordedAt,
         recorded_at_source: recordedAtSource,
