@@ -127,6 +127,8 @@ export default function RetentionMonitorTab() {
   const [rows, setRows] = useState<CleanupLogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [selected, setSelected] = useState<CleanupLogRow | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
