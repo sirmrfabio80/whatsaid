@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { COUNTRIES } from "@/lib/countries";
 import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
+import { useGeoCheck } from "@/hooks/use-geo-check";
 
 export default function Signup() {
   const { t } = useTranslation();
