@@ -234,6 +234,8 @@ export default function Pricing() {
 
   // All customers are billed in GBP by Paddle regardless of region.
   const { prices, loading } = usePaddlePricing(undefined);
+  const geo = useGeoCheck();
+  const geoBlocked = !geo.loading && !geo.allowed;
 
   useEffect(() => {
     initPaddle();
