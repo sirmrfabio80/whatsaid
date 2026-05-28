@@ -1,131 +1,101 @@
 
-# Phase 6 — Share-recipient Art. 14 notice (UK / English only)
-
-Understood: WhatSaid is UK-only, so the Art. 14 notice we send to share recipients is **English only**. Other jurisdictions need their own legally-reviewed wording, not a translation, so the plan drops every IT/FR locale path and the related fallback logic.
-
-UK GDPR Art. 14 still requires the controller (the uploader) to inform identifiable people whose data is processed indirectly. Phase 5 made the uploader attest to that duty. Phase 6 makes WhatSaid actually deliver the told-once notice on their behalf and log that we did so.
-
-## Current state (audit)
-
-| Concern | Today | Gap |
-|---|---|---|
-| `share-transcript` email | Transcript/summary/PDF link with sender name | No Art. 14 information block |
-| `share-transcript-record` email | Claim CTA only | Same gap |
-| Claim page (`/claim/:token`) | Validates token, prompts sign-in/up, auto-claims | No notice surface |
-| Audit trail | `consent_events` covers uploader's attestation only | No proof the recipient was informed |
-| Notice copy | None | Need single English source of truth, versioned |
+# Phase 7 — Policy copy refresh (Privacy Notice + Terms, solicitor pass)
 
 ## Goal
+Bring `/privacy` and `/terms` up to a UK-solicitor-grade standard and align every clause with what we actually do after Phases 1–6 (UK-only access, Paddle GB, Reg. 37 consent, retention schedule, DSR self-service, cookie notice, uploader attestation, Art. 14 recipient notice, AssemblyAI EU-only). No new pages; copy + structure only.
 
-Every share-by-email carries a clear English Art. 14 information block. The act of notifying is logged once per `(job, recipient, notice_version)` so we can prove the recipient was told. The same block appears on the claim page so a recipient who skimmed the email still sees it before taking a copy into their own account.
+## How it is now (gaps the rewrite must close)
 
-## Deliverables
+**Privacy (`src/pages/Privacy.tsx` + `privacy.*` i18n keys)**
+- Section 6 says AssemblyAI processes audio "in the US" — contradicts the AssemblyAI EU-only lock.
+- Section 10 says "WhatSaid does not currently use cookies" — contradicts the Cookies page and the in-page Cookies block.
+- No mention of UK-only availability, `profiles.country` GB requirement, or Paddle GB billing-country check.
+- No mention of the Reg. 37 immediate-supply consent recorded at checkout.
+- No mention of the retention schedule (`retention_config`) or automated `prune-retention` runs.
+- Section 9 (rights) does not point users at the self-service DSR tools in Settings (Export / Rectification / Clear local data / Delete).
+- Section 12 still says data "may be processed in the United States" — wrong post-Phase 6.
+- Controller/contact details are tucked inside s13 instead of a proper "Controller and contact" section, and there's no ICO right-to-complain clause.
+- The bottom Cookies and Uploader-duties blocks are hard-coded EN only — IT/FR users see English.
 
-### 1. Notice version (English only)
+**Terms (`src/pages/Terms.tsx` + `terms.*` i18n keys)**
+- No reference to **UK-only eligibility**.
+- Refund clause (s7) does not state the **CCR 2013 Reg. 37 waiver** that the checkout consent dialog now records — solicitor's biggest flag.
+- s9 AI disclaimer does not reference the uploader's Art. 6/14 duties (Phase 5) or the share-recipient notice (Phase 6).
+- s11 limitation of liability has no **CRA 2015 carve-out** for non-excludable consumer rights — solicitor will require it.
+- s12 (termination) does not link the retention horizons.
+- No "How to complain / ADR" clause; no severability / entire-agreement boilerplate.
+- No cross-links to the Cookies page or DSR tools.
 
-Seed `consent_versions` with `consent_type = 'share_recipient_notice'`, `version = '1.0.0'`. `text_en` covers the Art. 14 mandatory items; `text_it` and `text_fr` are left NULL (other-jurisdiction copy is out of scope).
+## What we'll do (scope-bound)
 
-Mandatory content:
-- Controller identity — uploader's display name + reply-to email; WhatSaid as processor for this send
-- Categories of personal data — voice recording → transcript, summary, anything dictated (names, locations, etc.)
-- Purposes & legal basis — uploader's declared lawful basis from Phase 5
-- Recipients — the named recipient only
-- Retention — transcript stays in uploader's account under WhatSaid's published schedule; recipient's claimed copy follows the recipient's own retention if they accept
-- Source — "audio uploaded by [sender]"
-- Rights — access, rectification, erasure, objection, complaint to ICO, with WhatSaid contact + ICO link
-- Opt-out path — `mailto:` to the sender's reply-to with a pre-filled subject referencing the share short id, plus link to `/privacy#share-recipients`
+1. **Rewrite EN copy in `src/i18n/locales/en.json`** for both `privacy.*` and `terms.*`. Keep existing key shape where possible; add new keys only where genuinely needed. Mirror the new keys in `it.json` and `fr.json` (translated, not English fallback).
+2. **Light render-side changes** in `src/pages/Privacy.tsx` and `src/pages/Terms.tsx` to:
+   - replace the two hard-coded EN blocks in `Privacy.tsx` (Cookies, Uploader duties) with i18n keys;
+   - add the few new sections to the `sections` arrays;
+   - extend the existing token approach with `<settingsLink>` and `<cookiesLink>` for inline cross-links.
+3. **No schema, no edge functions, no backend changes.** Pure copy + presentation.
+4. **Stable "Last updated" date** — replace `new Date()` with an `EFFECTIVE_DATE` constant per page so the date reflects the actual revision date, not the current load.
+5. **Postal address**: keep email-only; add the line *"Postal address available on request to support@whatsaid.app"* in the Controller section of the Privacy Notice (and mirror in Terms s2).
 
-`text_hash` computed from `text_en`. Strings live in `src/lib/share-recipient-notice-strings.ts` exporting a single English block consumed by both the email and the claim page.
+## New / revised clause map
 
-### 2. Email integration
+### Privacy (target structure)
+1. **Controller and how to contact us** — Fabio Petito trading as WhatSaid; support@whatsaid.app; "postal address available on request"; no DPO required, no EU/UK Art. 27 representative required (state explicitly)
+2. **Where WhatSaid is available — United Kingdom only** (signup/login restricted to GB; Paddle billing country must be GB)
+3. What personal data we collect (current s2, refined)
+4. How we use your data, with the **lawful basis** for each purpose
+5. **Audio handling** — uploaded to EU-region storage, transmitted to **AssemblyAI's EU region only**, deleted from both Supabase Storage and AssemblyAI immediately after the transcript is produced
+6. **Retention schedule** — short table from `retention_config` (jobs, transcripts, consent events, audit logs, DSR exports, email logs) with horizons; reference automated pruning
+7. **Sub-processors** — AssemblyAI (EU), Paddle (UK/EU), Lovable Cloud (EU); link to each provider's privacy policy
+8. **International transfers** — confirm no transfers outside the UK/EEA under current configuration
+9. **Your rights and how to exercise them** — list all UK GDPR rights and point at the self-service tools in `/settings` (Export, Rectification, Clear local data, Delete); 1-month response SLA
+10. **Right to complain to the ICO** (ico.org.uk, 0303 123 1113) — solicitor-mandated
+11. **Cookies and local storage** — short summary + link to `/cookies`; PECR reg. 6 basis
+12. **Your responsibilities when uploading others' voices** — Art. 6 lawful basis + Art. 14 duty (Phase 5)
+13. **Notices we send on your behalf** — when you email-share a transcript we send the recipient a short Art. 14 notice on your behalf (Phase 6)
+14. Children — minimum age 18 (UK consumer service)
+15. Security
+16. Changes to this policy — material changes notified by email to account holders
+17. Effective date
 
-Both `share-transcript/index.ts` and `share-transcript-record/index.ts`:
-- Resolve the active `share_recipient_notice` version once per request.
-- Render an English `<section>` immediately above the email footer in the HTML build, plus the same wording in the plain-text build.
-- No subject-line change (preserves deliverability).
-- No `recipient_locale` parameter — single English path keeps the surface small.
+### Terms (target structure)
+1. Acceptance
+2. Who operates WhatSaid (sole trader; controller; contact; postal on request)
+3. **Eligibility — UK residents only**; 18+; you confirm your billing country is the United Kingdom
+4. Service description (incl. AI disclaimer pointer)
+5. Acceptable use (current s4, plus: no scraping, no reverse engineering)
+6. **Credits, prices and Paddle as merchant of record** — GBP, VAT-inclusive where shown, Paddle is the seller of record
+7. **Digital delivery and your Reg. 37 right to cancel** — explicit clause matching the checkout dialog:
+   - You normally have 14 days to cancel a digital purchase under the Consumer Contracts Regulations 2013;
+   - By confirming the consent at checkout you ask us to begin supply immediately and acknowledge you lose the right to cancel once supply begins;
+   - We keep a timestamped record of that consent (`consent_events`, version pointer).
+8. Refunds — pointer to `/refund-policy`; Paddle handles the mechanics
+9. AI output disclaimer (current s9, tightened)
+10. Your content and IP — you retain ownership; you grant us a limited licence to process for the purposes set out in the Privacy Notice
+11. Account security & suspension
+12. **Limitation of liability with explicit CRA 2015 carve-out** for non-excludable consumer rights (s.31, s.47, s.57, s.65), death/personal injury caused by negligence, and fraud
+13. Termination & data on termination — points at the retention schedule
+14. Changes to these terms
+15. Governing law & jurisdiction — England & Wales
+16. **How to complain / ADR** — internal route + ICO for data matters + Citizens Advice pointer for consumer disputes
+17. Severability & entire agreement
+18. Contact
 
-### 3. Audit row: `recipient_notifications`
-
-Distinct from `consent_events` because the recipient is not consenting — we are recording that we informed them on the uploader's behalf.
-
-```text
-recipient_notifications
-  id uuid pk
-  job_id uuid not null
-  shared_by uuid not null              -- uploader (controller)
-  recipient_email_hash text not null   -- HMAC-SHA256 with CONSENT_IP_SALT_SECRET + daily salt
-  channel text not null                -- 'share_transcript' | 'share_transcript_record'
-  notice_type text not null            -- 'share_recipient_notice'
-  notice_version text not null
-  message_id text                      -- links to email_send_log when available
-  notified_at timestamptz default now()
-  unique (job_id, recipient_email_hash, notice_version)
-```
-
-Grants: `service_role` ALL; `authenticated` SELECT where `shared_by = auth.uid()`; admins SELECT all via `private.has_role`.
-
-Share endpoints `INSERT ... ON CONFLICT DO NOTHING` so re-sharing the same transcript to the same recipient does not duplicate the row but still satisfies the told-once rule. On conflict, log `already_notified` for observability.
-
-### 4. Claim-page surface
-
-`src/pages/ClaimShare.tsx`: render the same English Art. 14 block above the "Open your copy" CTA inside `<section aria-label="Privacy information">`. A "Why am I seeing this?" disclosure expands inline with extra detail about WhatSaid's processor role and links to `/privacy#share-recipients`.
-
-### 5. Uploader UI
-
-`src/components/ShareButton.tsx` success toast: "Share sent — recipient was given a UK GDPR privacy notice." No new dialog — the uploader already attested in Phase 5.
-
-### 6. Privacy policy
-
-`src/pages/Privacy.tsx`: new `#share-recipients` anchor explaining what the recipient receives, WhatSaid's processor role on a share, and the recipient's options. Add a static `/privacy/share-notice` page rendering the active English version verbatim so recipients can read the full notice outside the email.
-
-### 7. Recipient self-service objection (light-touch)
-
-Email and claim page both expose a `mailto:` to the sender's reply-to with a pre-filled subject ("Please remove my voice from the recording shared via WhatSaid — [share short id]") and body referencing the job's short id. DSR self-service from Phase 3 still covers anything richer for account holders.
-
-## Technical details
-
-```text
-share-transcript flow
-  ┌──────────────────────────────────────────────────────┐
-  │ requireAuth + quotas (unchanged)                     │
-  │ load job, outputs (unchanged)                        │
-  │ resolve active share_recipient_notice version (EN)   │
-  │ build HTML/text with English notice above footer     │
-  │ enqueue email (unchanged)                            │
-  │ INSERT INTO recipient_notifications                  │
-  │   ON CONFLICT (job, hash, version) DO NOTHING        │
-  │ return { success: true, notice_logged: bool }        │
-  └──────────────────────────────────────────────────────┘
-```
-
-Shared helper `supabase/functions/_shared/recipient-notice.ts` exposes:
-- `resolveActiveNotice()` — single row lookup, cached per function lifetime
-- `buildNoticeHtml(ctx)` and `buildNoticeText(ctx)` — pure English builders
-- `recordRecipientNotification(serviceClient, …)` — HMACs the email and performs the insert
-
-HMAC: reuses `CONSENT_IP_SALT_SECRET` with domain string `"recipient-email"`, rotated daily by UTC date — same approach as `record-consent`.
-
-## Regression / test gate
-
-- Vitest `src/test/share-recipient-notice-strings.test.ts` — asserts the English block contains the seven Art. 14 keywords (controller, purpose, basis, retention, rights, complaint, source).
-- Deno tests:
-  - `share-transcript/index.test.ts` (extend) — happy path includes Art. 14 block in HTML + text; second send to same recipient logs `already_notified`.
-  - `share-transcript-record/index.test.ts` (new) — same matrix for the link-only variant.
-  - `_shared/recipient-notice.test.ts` — pure unit tests on builders and HMAC stability across the daily window.
-- SQL smoke: duplicate `INSERT` for the same `(job, hash, version)` does not error or duplicate.
-- Manual checklist:
-  - Fresh recipient → HTML and plain-text both show notice; `recipient_notifications` has one row.
-  - Re-send same → no new row, `already_notified` logged.
-  - Bump notice to `1.0.1` (manual seed) → next send creates a fresh row.
-  - Claim page shows the same English notice before sign-in.
-  - Keyboard nav reaches the notice section before the CTA.
-  - Mobile ≤640px: notice section renders without overflow.
+## Files touched
+- `src/i18n/locales/en.json` — rewrite `privacy` and `terms` blocks
+- `src/i18n/locales/it.json` — mirror keys (translated)
+- `src/i18n/locales/fr.json` — mirror keys (translated)
+- `src/pages/Privacy.tsx` — extend `sections` array, remove hard-coded EN blocks, add `EFFECTIVE_DATE` constant, add `<cookiesLink>` / `<settingsLink>` / `<icoLink>` token handlers
+- `src/pages/Terms.tsx` — extend `sections` array, add `<settingsLink>` / `<cookiesLink>` token handlers, add `EFFECTIVE_DATE` constant
 
 ## Out of scope
+- Refund Policy page — already aligned with Paddle; flag if you want a separate solicitor pass next.
+- Cookie Notice page — refreshed in Phase 4.
+- Any backend, edge function, or schema change.
+- A separate "Sub-processor list" page — handled inside Privacy §7.
 
-- Translations or non-English notice copy (different jurisdictions need their own legal text, not a translation).
-- Multi-recipient bulk shares.
-- Storing the rendered notice HTML per send (version + `text_hash` reproduce it).
-- Recipient-initiated automated deletion (handled via uploader + DSR flows).
-- Subject-line changes.
+## Verification
+- `bun run build` to confirm i18n JSON parses and pages compile.
+- Visual pass at `/privacy` and `/terms` in EN, then IT and FR via the language selector — confirm no raw `privacy.sXX` keys leak.
+- `grep -R "processed in the US\|United States" src/i18n` returns nothing for the AssemblyAI/transfers claims (regression guard).
+- Click each in-policy link (`/settings`, `/cookies`, `/refund-policy`, ICO) and confirm they resolve.
