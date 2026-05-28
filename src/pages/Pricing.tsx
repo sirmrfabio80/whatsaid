@@ -258,6 +258,7 @@ export default function Pricing() {
   const ctaReveal = useScrollReveal();
 
   function handleCta(productId: PricingProduct["id"]) {
+    if (geoBlocked) return;
     if (!user) {
       navigate(`/signup?intent=purchase&product=${productId}`);
       return;
