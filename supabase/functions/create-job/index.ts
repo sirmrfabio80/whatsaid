@@ -27,6 +27,7 @@ interface CreateJobBody {
   file_size_bytes?: unknown;
   duration_seconds?: unknown;
   language_selected?: unknown;
+  uploader_warranty_confirmed?: unknown;
   audio_channels?: unknown;
   recorded_at?: unknown;
   recorded_at_source?: unknown;
@@ -39,6 +40,26 @@ interface CreateJobBody {
 const TOS_UPLOADER_CONSENT_TYPE = "tos_uploader_warranty";
 
 const LANG_RE = /^[a-z]{2,3}(-[A-Z]{2})?$|^auto$/;
+
+async function hashIp(ip: string): Promise<string> {
+  const secret = Deno.env.get("CONSENT_IP_SALT_SECRET") ?? "missing-salt";
+  const day = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${day}|${ip}`),
+  );
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 
 function bad(message: string, status = 400) {
