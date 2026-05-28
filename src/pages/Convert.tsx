@@ -112,7 +112,6 @@ export default function Convert() {
   const [consentChecked, setConsentChecked] = useState(false);
   const { status: tosStatus, reaccept: reacceptTos, recording: recordingTos } = useTosConsent();
 
-  const [consentChecked, setConsentChecked] = useState(false);
 
   const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
   // Surfaced status of the pre-flight language detection so the user always
