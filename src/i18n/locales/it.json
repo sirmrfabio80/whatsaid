@@ -872,6 +872,13 @@
     "faqFailedA": "I crediti vengono detratti all'avvio dell'elaborazione. Se un lavoro fallisce a metà, contatta il supporto e rimborseremo i crediti. I lavori bloccati per troppo tempo vengono rilevati automaticamente e rimborsati dal nostro sistema.",
     "faqFailedRefundLink": "Leggi la politica di rimborso completa"
   },
+  "reg37": {
+    "bindingNotice": "Le dichiarazioni in inglese qui sopra costituiscono il consenso legalmente vincolante. La traduzione qui sotto è fornita per aiutarti a comprenderle.",
+    "translatedTitle": "Sintesi in italiano",
+    "translatedIntro": "I crediti WhatSaid sono contenuti digitali. Una volta effettuato il pagamento, vengono resi disponibili immediatamente sul tuo account così puoi iniziare a trascrivere. Il diritto del consumatore del Regno Unito (regolamento 37 dei Consumer Contracts Regulations 2013) prevede che, chiedendone la fornitura immediata, rinunci al diritto di recesso di 14 giorni per i crediti già utilizzati. Un pacchetto di crediti integro e non utilizzato resta rimborsabile su richiesta entro 14 giorni.",
+    "translatedImmediate": "Desidero che i miei crediti siano resi disponibili immediatamente dopo il pagamento per poter iniziare subito a trascrivere.",
+    "translatedRightLoss": "Comprendo che, richiedendo la fornitura immediata, perderò il diritto legale di recesso di 14 giorni previsto dai Consumer Contracts Regulations 2013 una volta che tali crediti saranno accreditati sul mio account."
+  },
   "footer": {
     "desc": "Trascrizione IA premium con identificazione degli speaker, riassunti e analisi personalizzata. Audio eliminato dopo l'elaborazione.",
     "product": "Prodotto",
