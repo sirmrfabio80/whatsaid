@@ -759,7 +759,7 @@ export async function generatePdfBlob(data: CanonicalExportData): Promise<Blob> 
   // ── Footers ──
   const logoData = await getLogoDataUrl();
   const pageCount = pdf.getNumberOfPages();
-  const WHATSAID_URL = "https://whatsaid.lovable.app";
+  const WHATSAID_URL = "https://whatsaid.app";
 
   for (let p = 1; p <= pageCount; p++) {
     pdf.setPage(p);

@@ -793,7 +793,7 @@
     "faqAccountQ": "Devo avere un account prima di acquistare?",
     "faqAccountA": "Sì. Il tuo account mantiene trascrizione, riassunto, download e cronologia salvati e accessibili quando ne hai bisogno.",
     "faqCreditQ": "Cosa include un credito?",
-    "faqCreditA": "Un credito elabora un file audio e include trascrizione completa, riassunto AI e domande di follow-up — il tutto scaricabile e salvato nel tuo account. I file più lunghi usano più crediti in fasce di 15 minuti (vedi la tabella qui sopra).",
+    "faqCreditA": "Un credito elabora un file audio e include trascrizione completa, riassunto AI e domande di follow-up — il tutto scaricabile e salvato nel tuo account. I file più lunghi usano più crediti in fasce di 120 minuti (vedi la tabella qui sopra).",
     "faqExpireQ": "I crediti scadono?",
     "faqExpireA": "I crediti restano disponibili nel tuo account in base ai termini del prodotto.",
     "faqDownloadQ": "Posso scaricare i miei risultati in seguito?",
@@ -930,7 +930,7 @@
       "demoQ1": "Come funziona il sistema di crediti?",
       "demoQ2": "Quali formati audio posso caricare?",
       "demoQ3": "I miei audio vengono conservati dopo l'elaborazione?",
-      "demoAnswer": "1 credito trascrive fino a 15 minuti di audio. I crediti non scadono mai e includono riassunti, domande personalizzate e rigenerazioni senza costi aggiuntivi.",
+      "demoAnswer": "1 credito trascrive fino a 120 minuti di audio. I crediti non scadono mai e includono riassunti, domande personalizzate e rigenerazioni senza costi aggiuntivi.",
       "helpfulQuestion": "È stato utile?",
       "helpfulVotes": "{{percent}}% · {{count}} voti",
       "statusLive": "In diretta · {{count}} articoli · sempre gratis"

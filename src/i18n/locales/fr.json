@@ -793,7 +793,7 @@
     "faqAccountQ": "Dois-je créer un compte avant d'acheter ?",
     "faqAccountA": "Oui. Votre compte conserve votre transcription, résumé, téléchargements et historique sauvegardés et accessibles quand vous en avez besoin.",
     "faqCreditQ": "Que comprend un crédit ?",
-    "faqCreditA": "Un crédit traite un fichier audio et comprend une transcription complète, un résumé IA et des questions de suivi — le tout téléchargeable et sauvegardé dans votre compte. Les fichiers plus longs utilisent plus de crédits par tranches de 15 minutes (voir le tableau ci-dessus).",
+    "faqCreditA": "Un crédit traite un fichier audio et comprend une transcription complète, un résumé IA et des questions de suivi — le tout téléchargeable et sauvegardé dans votre compte. Les fichiers plus longs utilisent plus de crédits par tranches de 120 minutes (voir le tableau ci-dessus).",
     "faqExpireQ": "Les crédits expirent-ils ?",
     "faqExpireA": "Les crédits restent disponibles dans votre compte selon les conditions du produit.",
     "faqDownloadQ": "Puis-je télécharger mes résultats plus tard ?",
@@ -930,7 +930,7 @@
       "demoQ1": "Comment fonctionne le système de crédits ?",
       "demoQ2": "Quels formats audio puis-je téléverser ?",
       "demoQ3": "Mes audios sont-ils conservés après traitement ?",
-      "demoAnswer": "1 crédit transcrit jusqu'à 15 minutes d'audio. Les crédits n'expirent jamais et couvrent les résumés, les questions personnalisées et les régénérations sans frais supplémentaires.",
+      "demoAnswer": "1 crédit transcrit jusqu'à 120 minutes d'audio. Les crédits n'expirent jamais et couvrent les résumés, les questions personnalisées et les régénérations sans frais supplémentaires.",
       "helpfulQuestion": "Cette réponse vous a-t-elle aidé ?",
       "helpfulVotes": "{{percent}} % · {{count}} votes",
       "statusLive": "En direct · {{count}} articles · toujours gratuit"

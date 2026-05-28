@@ -828,7 +828,7 @@
     "faqAccountQ": "Do I need an account before buying?",
     "faqAccountA": "Yes. Your account keeps your transcript, summary, downloads, and history saved and accessible whenever you need them.",
     "faqCreditQ": "What does one credit include?",
-    "faqCreditA": "One credit processes one audio file and includes a full transcript, AI summary, and follow-up questions — all downloadable and saved in your account. Longer files use more credits in 15-minute brackets (see the credit table above).",
+    "faqCreditA": "One credit processes one audio file and includes a full transcript, AI summary, and follow-up questions — all downloadable and saved in your account. Longer files use more credits in 120-minute brackets (see the credit table above).",
     "faqExpireQ": "Do credits expire?",
     "faqExpireA": "Credits remain available in your account based on the product terms.",
     "faqDownloadQ": "Can I download my results later?",
@@ -948,7 +948,7 @@
       "demoQ1": "How does the credit system work?",
       "demoQ2": "What audio formats can I upload?",
       "demoQ3": "Is my audio stored after processing?",
-      "demoAnswer": "1 credit transcribes up to 15 minutes of audio. Credits never expire and apply to summaries, custom questions, and re-runs at no extra cost.",
+      "demoAnswer": "1 credit transcribes up to 120 minutes of audio. Credits never expire and apply to summaries, custom questions, and re-runs at no extra cost.",
       "helpfulQuestion": "Was this helpful?",
       "helpfulVotes": "{{percent}}% · {{count}} votes",
       "statusLive": "Live · {{count}} articles · always free"
