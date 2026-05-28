@@ -17,6 +17,7 @@ import Index from "./pages/Index";
 // Lazy-load all other routes
 import CookieNotice from "@/components/CookieNotice";
 import { ChunkErrorBoundary } from "@/components/ChunkErrorBoundary";
+import { PageLoadingFallback } from "@/components/PageLoadingFallback";
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Convert = lazy(() => import("./pages/Convert"));
@@ -66,7 +67,7 @@ const App = () => (
           <Navbar />
           <main id="main-content">
             <ChunkErrorBoundary>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
