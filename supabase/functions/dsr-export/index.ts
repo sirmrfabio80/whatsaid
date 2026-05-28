@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
     const [
       profileRes, balanceRes, txRes, consentRes,
       jobsRes, sharesRes, usageRes, notifRes,
+      dsrRes, recipientRes,
     ] = await Promise.all([
       admin.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
       admin.from("credit_balances").select("*").eq("user_id", userId).maybeSingle(),
@@ -79,7 +80,10 @@ Deno.serve(async (req) => {
         .gte("created_at", new Date(Date.now() - 90 * 86_400_000).toISOString())
         .order("created_at", { ascending: false }),
       admin.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      admin.from("dsr_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      admin.from("recipient_notifications").select("*").eq("shared_by", userId).order("notified_at", { ascending: false }),
     ]);
+
 
     const jobs = jobsRes.data ?? [];
     const jobIds = jobs.map((j: { id: string }) => j.id);
@@ -137,7 +141,10 @@ Deno.serve(async (req) => {
       sharesSent: sharesRes.data ?? [],
       usageEvents: usageRes.data ?? [],
       notifications: notifRes.data ?? [],
+      dsrRequests: dsrRes.data ?? [],
+      recipientNotifications: recipientRes.data ?? [],
     };
+
 
     const generatedAt = new Date().toISOString();
     const manifest = buildDsrManifest(fixtures, { generatedAt, userId, userEmail: email });
