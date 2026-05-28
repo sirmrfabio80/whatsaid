@@ -24,8 +24,9 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Download, FileEdit, Loader2 } from "lucide-react";
+import { Download, FileEdit, Loader2, Eraser } from "lucide-react";
 import { toast } from "sonner";
+import { STORAGE_INVENTORY } from "@/lib/cookie-inventory";
 
 type RectField = "email" | "country";
 
@@ -140,6 +141,47 @@ export default function DataRightsCard() {
               </p>
             )}
           </div>
+        </div>
+
+        <div className="rounded-lg border border-border p-4 space-y-2">
+          <h3 className="font-medium text-sm">Clear local app data</h3>
+          <p className="text-xs text-muted-foreground">
+            Removes optional UI preferences and caches saved by this browser. You'll stay signed in.
+            See the <a href="/cookies" className="underline hover:text-foreground">cookie details</a>.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
+            onClick={() => {
+              let cleared = 0;
+              try {
+                for (const entry of STORAGE_INVENTORY) {
+                  if (entry.category !== "functional") continue;
+                  const store = entry.storage === "sessionStorage" ? window.sessionStorage : window.localStorage;
+                  if (entry.match === "exact") {
+                    if (store.getItem(entry.key) !== null) {
+                      store.removeItem(entry.key);
+                      cleared++;
+                    }
+                  } else {
+                    for (let i = store.length - 1; i >= 0; i--) {
+                      const k = store.key(i);
+                      if (k && k.startsWith(entry.key)) {
+                        store.removeItem(k);
+                        cleared++;
+                      }
+                    }
+                  }
+                }
+                toast.success(`Local app data cleared (${cleared} ${cleared === 1 ? "item" : "items"}).`);
+              } catch {
+                toast.error("Could not clear local data.");
+              }
+            }}
+          >
+            <Eraser className="w-4 h-4 mr-1.5" />Clear local data
+          </Button>
         </div>
 
         <p className="text-xs text-muted-foreground">

@@ -15,6 +15,7 @@ import { prefetchLikelyRoutes } from "@/lib/route-prefetch";
 import Index from "./pages/Index";
 
 // Lazy-load all other routes
+import CookieNotice from "@/components/CookieNotice";
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Convert = lazy(() => import("./pages/Convert"));
@@ -34,6 +35,7 @@ const SharedPdfDownload = lazy(() => import("./pages/SharedPdfDownload"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Help = lazy(() => import("./pages/Help"));
+const Cookies = lazy(() => import("./pages/Cookies"));
 
 const queryClient = new QueryClient();
 
@@ -84,11 +86,13 @@ const App = () => (
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/help" element={<Help />} />
+              <Route path="/cookies" element={<Cookies />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
           </main>
           <Footer />
+          <CookieNotice />
           </NotificationsProvider>
         </AuthProvider>
       </BrowserRouter>
