@@ -100,7 +100,7 @@ export function isChunkLoadError(value: unknown): boolean {
 export function planChunkReload(
   state: ReloadState,
   now: number,
-  config: typeof CHUNK_RECOVERY_CONFIG = CHUNK_RECOVERY_CONFIG,
+  config: ChunkRecoveryConfig = CHUNK_RECOVERY_CONFIG,
 ): { action: "reload" | "skip-cooldown" | "skip-cap"; nextState: ReloadState } {
   // Reset counter if the last failure is old enough — the session has been
   // healthy and we can treat new failures as a fresh incident.
