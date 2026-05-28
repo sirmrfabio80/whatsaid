@@ -583,6 +583,7 @@ export type Database = {
           title: string | null
           transcription_config: Json | null
           updated_at: string
+          upload_consent_id: string | null
           user_id: string | null
           watchdog_retry_count: number
         }
@@ -629,6 +630,7 @@ export type Database = {
           title?: string | null
           transcription_config?: Json | null
           updated_at?: string
+          upload_consent_id?: string | null
           user_id?: string | null
           watchdog_retry_count?: number
         }
@@ -675,6 +677,7 @@ export type Database = {
           title?: string | null
           transcription_config?: Json | null
           updated_at?: string
+          upload_consent_id?: string | null
           user_id?: string | null
           watchdog_retry_count?: number
         }

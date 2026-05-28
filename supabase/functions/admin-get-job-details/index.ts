@@ -66,6 +66,20 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: true });
     if (outErr) throw outErr;
 
+    // Fetch upload attestation (Art. 6/14) if recorded.
+    let uploadAttestation:
+      | { id: string; version: string; accepted_at: string; metadata: unknown }
+      | null = null;
+    const consentId = (job as { upload_consent_id?: string } | null)?.upload_consent_id;
+    if (consentId) {
+      const { data: c } = await adminClient
+        .from("consent_events")
+        .select("id, version, accepted_at, metadata")
+        .eq("id", consentId)
+        .maybeSingle();
+      if (c) uploadAttestation = c as typeof uploadAttestation;
+    }
+
     // Fetch edge logs from analytics
     let edgeLogs: Array<{
       timestamp: number;
@@ -124,6 +138,7 @@ Deno.serve(async (req) => {
         outputs: outputs ?? [],
         recent_jobs: recentJobs ?? [],
         edge_logs: edgeLogs,
+        upload_attestation: uploadAttestation,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

@@ -97,6 +97,33 @@ export default function Privacy() {
                 Lawful bases: PECR regulation 6 and UK GDPR Article 6(1)(f).
               </p>
             </section>
+
+            <section id="uploader-duties" className="scroll-mt-24">
+              <h2 className="text-h2 mb-2">Your responsibilities when uploading others’ voices</h2>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">
+                When you upload a recording, you are the controller of any personal
+                data it contains under UK GDPR. Before we process the file you
+                must confirm a lawful basis under Article 6 — typically your own
+                voice only, the speakers’ consent, the necessity of a contract,
+                or another lawful ground. Where the recording contains
+                identifiable people other than you, Article 14 requires you to
+                inform them their voice is being transcribed, unless a
+                14(5) exemption applies. We record this attestation per upload
+                and store it against the job for audit. The audio itself is
+                deleted from our servers and from our transcription provider
+                immediately after the transcript is produced.
+                See the{" "}
+                <a
+                  className="underline hover:text-foreground"
+                  href="https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/lawful-basis/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ICO guidance on lawful basis
+                </a>{" "}
+                for more.
+              </p>
+            </section>
           </div>
         </div>
       </div>
