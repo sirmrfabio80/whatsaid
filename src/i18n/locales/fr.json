@@ -872,6 +872,13 @@
     "faqFailedA": "Les crédits sont déduits au démarrage du traitement. Si un traitement échoue en cours de route, contactez le support et nous rembourserons les crédits. Les traitements bloqués trop longtemps sont détectés automatiquement et remboursés par notre système.",
     "faqFailedRefundLink": "Lire la politique de remboursement complète"
   },
+  "reg37": {
+    "bindingNotice": "Les déclarations en anglais ci-dessus constituent le consentement juridiquement contraignant. La traduction ci-dessous est fournie pour vous aider à les comprendre.",
+    "translatedTitle": "Résumé en français",
+    "translatedIntro": "Les crédits WhatSaid sont du contenu numérique. Dès le paiement, ils sont mis à disposition de votre compte pour que vous puissiez commencer à transcrire immédiatement. Le droit britannique de la consommation (règlement 37 des Consumer Contracts Regulations 2013) prévoit qu'en demandant une fourniture immédiate, vous renoncez au droit de rétractation de 14 jours pour les crédits déjà utilisés. Un pack de crédits intact et non utilisé reste remboursable sur demande dans un délai de 14 jours.",
+    "translatedImmediate": "Je souhaite que mes crédits soient mis à disposition immédiatement après paiement afin de pouvoir commencer à transcrire tout de suite.",
+    "translatedRightLoss": "Je comprends qu'en demandant une fourniture immédiate, je perdrai le droit légal de rétractation de 14 jours prévu par les Consumer Contracts Regulations 2013 dès que ces crédits seront crédités sur mon compte."
+  },
   "footer": {
     "desc": "Transcription IA premium avec identification des intervenants, résumés et analyse personnalisée. Audio supprimé après traitement.",
     "product": "Produit",
