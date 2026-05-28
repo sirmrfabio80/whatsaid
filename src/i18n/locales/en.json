@@ -791,6 +791,13 @@
     "s7Title": "7. Your statutory rights",
     "s7Body": "Nothing in this policy excludes or limits your statutory consumer rights under applicable law. If you have any questions about this Refund Policy or would like to request a refund, contact us at support@whatsaid.app."
   },
+  "reg37": {
+    "bindingNotice": "The English statements above are the legally binding consent. The translation below is provided to help you understand them.",
+    "translatedTitle": "Plain-language summary",
+    "translatedIntro": "WhatSaid credits are digital content. Once you pay, they are made available to your account straight away so you can start transcribing. UK consumer law (regulation 37 of the Consumer Contracts Regulations 2013) means that, by asking for them straight away, you give up the 14-day right to change your mind for credits you have already used. An unused full credit pack remains refundable on request within 14 days.",
+    "translatedImmediate": "I want my credits to be made available immediately after payment so I can start transcribing right away.",
+    "translatedRightLoss": "I understand that, because I am asking for immediate supply, I will lose the statutory 14-day right to cancel under the Consumer Contracts Regulations 2013 once those credits are credited to my account."
+  },
   "footer": {
     "desc": "Premium AI transcription with speaker labels, summaries, and custom analysis. Privacy-first — audio deleted after processing.",
     "product": "Product",
