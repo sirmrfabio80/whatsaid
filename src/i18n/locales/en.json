@@ -168,6 +168,17 @@
     "costMultipleCreditsHint": "File is {{minutes}} min — charged in 120-min blocks",
     "consentLabel": "I have the right to upload this recording.",
     "consentLabelLearnMore": "Learn more",
+    "consentStatus": {
+      "current": "Terms accepted (v{{version}}) on {{date}}",
+      "outdated": "Updated terms (v{{version}}) are available. Please re-accept.",
+      "missing": "Your acceptance of the Terms isn't on file yet.",
+      "error": "Couldn't verify your Terms acceptance.",
+      "reaccept": "Re-accept Terms",
+      "recording": "Recording…",
+      "reacceptSuccess": "Terms acceptance recorded.",
+      "reacceptError": "Could not record acceptance. Please try again.",
+      "reacceptRequired": "We couldn't confirm your Terms acceptance. Please re-accept and try again."
+    },
 
     "thirdPartyNotice": "Audio is processed using third-party AI services and deleted immediately after. By converting, you agree to our",
     "terms": "Terms",
