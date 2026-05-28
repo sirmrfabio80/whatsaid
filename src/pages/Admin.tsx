@@ -9,6 +9,7 @@ import DiagnosticsTab from "@/components/admin/DiagnosticsTab";
 import UsageTab from "@/components/admin/UsageTab";
 import RetentionTab from "@/components/admin/RetentionTab";
 import RetentionMonitorTab from "@/components/admin/RetentionMonitorTab";
+import DsrTab from "@/components/admin/DsrTab";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Admin() {
@@ -35,6 +36,7 @@ export default function Admin() {
             <TabsTrigger value="usage">Usage</TabsTrigger>
             <TabsTrigger value="retention">Retention</TabsTrigger>
             <TabsTrigger value="retention-monitor">Retention monitor</TabsTrigger>
+            <TabsTrigger value="dsrs">DSRs</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
@@ -60,6 +62,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="retention-monitor" className="space-y-6">
             <RetentionMonitorTab />
+          </TabsContent>
+          <TabsContent value="dsrs" className="space-y-6">
+            <DsrTab />
           </TabsContent>
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
