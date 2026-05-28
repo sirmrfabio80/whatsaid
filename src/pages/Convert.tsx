@@ -419,11 +419,16 @@ export default function Convert() {
           // fall through
         }
         if (needsAttestation) {
-          const { error: ackErr } = await supabase.functions.invoke(
-            "record-tos-acceptance",
-          );
-          if (!ackErr) {
+          const ack = await reacceptTos();
+          if (ack.ok) {
+            toast.success(t("convert.consentStatus.reacceptSuccess", { defaultValue: "Terms acceptance recorded." }));
             ({ data: created, error: insertError } = await invokeCreateJob());
+          } else {
+            toast.error(
+              t("convert.consentStatus.reacceptRequired", {
+                defaultValue: "We couldn't confirm your Terms acceptance. Please re-accept and try again.",
+              }),
+            );
           }
         }
       }
