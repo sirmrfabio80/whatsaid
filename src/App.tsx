@@ -16,6 +16,7 @@ import Index from "./pages/Index";
 
 // Lazy-load all other routes
 import CookieNotice from "@/components/CookieNotice";
+import { ChunkErrorBoundary } from "@/components/ChunkErrorBoundary";
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Convert = lazy(() => import("./pages/Convert"));
@@ -64,34 +65,36 @@ const App = () => (
           <RoutePrefetcher />
           <Navbar />
           <main id="main-content">
-            <Suspense fallback={null}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+            <ChunkErrorBoundary>
+              <Suspense fallback={null}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
-              <Route path="/convert" element={<Convert />} />
-              <Route path="/set-password" element={<SetPassword />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
+                <Route path="/convert" element={<Convert />} />
+                <Route path="/set-password" element={<SetPassword />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
 
-              <Route path="/history" element={<History />} />
-              <Route path="/job/:id" element={<JobDetail />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/refund-policy" element={<RefundPolicy />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/claim/:token" element={<ClaimShare />} />
-              <Route path="/shared-pdf/:token" element={<SharedPdfDownload />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/help" element={<Help />} />
-              <Route path="/cookies" element={<Cookies />} />
-              <Route path="/accessibility" element={<Accessibility />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            </Suspense>
+                <Route path="/history" element={<History />} />
+                <Route path="/job/:id" element={<JobDetail />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/claim/:token" element={<ClaimShare />} />
+                <Route path="/shared-pdf/:token" element={<SharedPdfDownload />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/help" element={<Help />} />
+                <Route path="/cookies" element={<Cookies />} />
+                <Route path="/accessibility" element={<Accessibility />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              </Suspense>
+            </ChunkErrorBoundary>
           </main>
           <Footer />
           <CookieNotice />
