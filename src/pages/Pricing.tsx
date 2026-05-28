@@ -165,8 +165,6 @@ function PricingCard({
 }) {
   const { t } = useTranslation();
   return (
-  const { t } = useTranslation();
-  return (
     <Card
       className={`rounded-2xl border transition-all relative ${
         product.highlighted
