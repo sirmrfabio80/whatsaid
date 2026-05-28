@@ -441,7 +441,7 @@ export default function Convert() {
       }
 
       if (insertError || !created?.job_id) {
-        throw new Error(insertError?.message || "Could not create job");
+        throw new Error((insertError as Error | null)?.message || "Could not create job");
       }
       newJobId = created.job_id;
 
