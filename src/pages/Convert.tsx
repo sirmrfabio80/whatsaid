@@ -38,6 +38,8 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { getLanguageLabel } from "@/lib/languages";
 import { useTosConsent } from "@/hooks/use-tos-consent";
 import { ConsentStatusIndicator } from "@/components/convert/ConsentStatusIndicator";
+import { newIdempotencyKey } from "@/lib/idempotency-key";
+
 
 const CONVERT_BREADCRUMB_SCHEMA = {
   "@context": "https://schema.org",
