@@ -55,7 +55,11 @@ const SECTIONS: Section[] = [
 ];
 
 export default function Privacy() {
-  const { t } = useTranslation();
+  // Force English rendering — the IT/FR translations of legal text are not
+  // yet solicitor-reviewed. A LegalEnglishOnlyBanner explains this in the
+  // user's UI language.
+  const { i18n } = useTranslation();
+  const t = i18n.getFixedT("en");
 
   usePageMeta({
     title: "Privacy Notice — WhatSaid",
@@ -79,6 +83,8 @@ export default function Privacy() {
               {t("common.backToHome")}
             </Link>
           </Button>
+
+          <LegalEnglishOnlyBanner />
 
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">
             {t("privacy.title")}

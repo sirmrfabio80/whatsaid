@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBanner";
 export default function RefundPolicy() {
-  const { t } = useTranslation();
+  // Force English rendering — see LegalEnglishOnlyBanner for rationale.
+  const { i18n } = useTranslation();
+  const t = i18n.getFixedT("en");
 
   usePageMeta({
     title: "Refund Policy — WhatSaid",

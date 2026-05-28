@@ -45,7 +45,9 @@ const SECTIONS: Section[] = [
 ];
 
 export default function Terms() {
-  const { t } = useTranslation();
+  // Force English rendering — see LegalEnglishOnlyBanner for rationale.
+  const { i18n } = useTranslation();
+  const t = i18n.getFixedT("en");
 
   usePageMeta({
     title: "Terms of Service — WhatSaid",
@@ -69,6 +71,8 @@ export default function Terms() {
               {t("common.backToHome")}
             </Link>
           </Button>
+
+          <LegalEnglishOnlyBanner />
 
           <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">
             {t("terms.title")}
