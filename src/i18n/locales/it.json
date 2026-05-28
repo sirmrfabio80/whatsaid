@@ -1025,5 +1025,26 @@
       "body": "Non trovi una risposta? Scrivici — leggiamo ogni messaggio.",
       "accountIssue": "Problema con l'account? Apri Impostazioni"
     }
+  },
+  "sharedPdf": {
+    "checking": "Verifica dell'accesso sicuro al download…",
+    "signInTitle": "Accedi per scaricare il PDF",
+    "signInDesc": "Per motivi di sicurezza, i PDF condivisi sono accessibili solo agli account WhatSaid autenticati.",
+    "signInBtn": "Accedi",
+    "createAccountBtn": "Crea account",
+    "preparing": "Preparazione del PDF…",
+    "doneTitle": "Il download è iniziato",
+    "doneDesc": "Se non è partito automaticamente, usa il pulsante qui sotto.",
+    "downloadAgain": "Scarica di nuovo",
+    "errorTitle": "Si è verificato un errore",
+    "errorInvalidLink": "Questo link PDF non è valido.",
+    "errorGeneric": "Download del PDF non riuscito.",
+    "tryAgain": "Riprova",
+    "backToHome": "Torna alla home"
+  },
+  "legalBanner": {
+    "title": "Disponibile solo in inglese",
+    "body": "Questo documento è attualmente disponibile solo in inglese. La versione inglese è quella giuridicamente vincolante. Le traduzioni revisionate arriveranno a breve.",
+    "contact": "Contatta il supporto"
   }
 }

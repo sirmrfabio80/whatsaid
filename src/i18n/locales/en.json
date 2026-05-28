@@ -1043,5 +1043,26 @@
       "body": "Can't find an answer? Reach out — we read every message.",
       "accountIssue": "Account issue? Open Settings"
     }
+  },
+  "sharedPdf": {
+    "checking": "Checking secure download access…",
+    "signInTitle": "Sign in to download the PDF",
+    "signInDesc": "For security, shared PDFs are only available to logged-in WhatSaid accounts.",
+    "signInBtn": "Sign in",
+    "createAccountBtn": "Create account",
+    "preparing": "Preparing your PDF…",
+    "doneTitle": "Your download has started",
+    "doneDesc": "If it did not start automatically, use the button below.",
+    "downloadAgain": "Download again",
+    "errorTitle": "Something went wrong",
+    "errorInvalidLink": "This PDF link is not valid.",
+    "errorGeneric": "Failed to download PDF.",
+    "tryAgain": "Try again",
+    "backToHome": "Back to home"
+  },
+  "legalBanner": {
+    "title": "Only available in English",
+    "body": "This document is currently only available in English. The English version is the legally binding one. Reviewed translations are coming soon.",
+    "contact": "Contact support"
   }
 }
