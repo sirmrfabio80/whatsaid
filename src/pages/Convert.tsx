@@ -883,6 +883,48 @@ export default function Convert() {
     }
   };
 
+  const handleAttestationCancel = useCallback(() => {
+    setAttestationOpen(false);
+    setPendingConvert(null);
+    setAttestationLoading(false);
+  }, []);
+
+  const handleAttestationConfirm = useCallback(
+    async (payload: UploadAttestationPayload) => {
+      if (!pendingConvert) {
+        setAttestationOpen(false);
+        return;
+      }
+      setAttestationLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke<{ consent_id: string }>(
+          "record-upload-attestation",
+          {
+            body: {
+              version: payload.version,
+              basis: payload.basis,
+              contextNote: payload.contextNote,
+              acknowledgements: { lawfulBasis: true, art14Notice: true },
+            },
+          },
+        );
+        if (error || !data?.consent_id) {
+          throw new Error(error?.message || "Could not record attestation");
+        }
+        const intent = pendingConvert;
+        setAttestationOpen(false);
+        setPendingConvert(null);
+        setAttestationLoading(false);
+        void handleConvert({ ...intent, uploadConsentId: data.consent_id });
+      } catch (e) {
+        setAttestationLoading(false);
+        toast.error(e instanceof Error ? e.message : "Could not record attestation");
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pendingConvert],
+  );
+
   const handleReset = () => {
     setFile(null);
     setDuration(0);
