@@ -259,6 +259,60 @@ export type Database = {
         }
         Relationships: []
       }
+      dsr_requests: {
+        Row: {
+          created_at: string
+          export_expires_at: string | null
+          export_storage_path: string | null
+          field: string | null
+          fulfilled_at: string | null
+          fulfilled_by: string | null
+          id: string
+          kind: string
+          notes: string | null
+          reason: string | null
+          requested_value: string | null
+          requested_via: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          export_expires_at?: string | null
+          export_storage_path?: string | null
+          field?: string | null
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+          reason?: string | null
+          requested_value?: string | null
+          requested_via?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          export_expires_at?: string | null
+          export_storage_path?: string | null
+          field?: string | null
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          reason?: string | null
+          requested_value?: string | null
+          requested_via?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1225,6 +1279,32 @@ export type Database = {
           p_user_id: string
         }
         Returns: number
+      }
+      admin_apply_rectification: {
+        Args: { p_new_value: string; p_note: string; p_request_id: string }
+        Returns: {
+          created_at: string
+          export_expires_at: string | null
+          export_storage_path: string | null
+          field: string | null
+          fulfilled_at: string | null
+          fulfilled_by: string | null
+          id: string
+          kind: string
+          notes: string | null
+          reason: string | null
+          requested_value: string | null
+          requested_via: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "dsr_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_update_retention_config: {
         Args: {
