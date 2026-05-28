@@ -1,48 +1,94 @@
-## Goal
+# Phase 4 — Cookie & Local-Storage Notice (PECR Reg. 6 + UK GDPR Art. 7)
 
-When `prune-retention` finishes a run, decide whether it warrants an alert and, if so, email the admin via the existing transactional email pipeline. Also detect "missing runs" (no live run in >36h) from a tiny scheduled poke so we catch silent cron breakage.
+Finalised with your answers: no analytics planned, bottom-right toast banner, full EN/IT/FR from day one (using existing i18next detection — no extra IP work), dismiss label "Got it".
 
-This mirrors what the Retention Monitor admin tab already computes client-side, but moves the detection server-side so admins are notified without having to open the dashboard.
+## Current state (audit)
 
-## Alert conditions
+| Category | Present? | Notes |
+|---|---|---|
+| First-party auth token | Yes | Supabase client persists session in `localStorage` (`sb-…-auth-token`) |
+| Functional `localStorage` | Yes | i18n language (`i18nextLng`), notification sound toggle, browser-notification opt-in, tag-translation cache, tus resumable-upload URLs, ShareButton UI hints |
+| Functional `sessionStorage` | Yes | `useRedeemInvites` dedupe, ShareButton PDF-cache hints |
+| Third-party analytics / marketing / session-replay | **None** | No GA, Plausible, PostHog, Hotjar, Meta Pixel, etc. anywhere in `src/`, `index.html`, or `public/` |
+| Third-party in iframes | Paddle checkout only | Their cookies are governed by their own banner inside their overlay |
 
-Inside each `prune-retention` invocation, after the `cleanup_logs` row is updated, classify the run:
+**Legal posture:** Everything we store today qualifies as strictly necessary or first-party functional under PECR reg. 6(4), so no consent gate is required. ICO guidance still requires a clear notice + maintained inventory + a consent mechanism ready before any future analytics/marketing tooling lands. This phase delivers all three, sized to today's posture.
 
-1. `run_failed` — one or more datasets in `errors[]`, or the run status is `failed`.
-2. `high_candidates` — any dataset report has `candidates > 10_000`. Likely indicates a pruning backlog or misconfigured horizon.
-3. `large_processed_jump` — for live (non-dry-run) runs, any dataset's `processed` is >10× the median `processed` of the last 10 live runs for that dataset. Skipped for the first 10 runs to avoid noise during bootstrap.
+## Deliverables
 
-Dry-run-only runs never trigger `large_processed_jump` (the metric is meaningless) but still trigger `run_failed` and `high_candidates`.
+### 1. Storage inventory (single source of truth)
 
-A separate `retention-monitor-watchdog` edge function (cron, every 6h) covers:
+`src/lib/cookie-inventory.ts` — typed `STORAGE_INVENTORY` array. Each entry: `key`, `storage` (`cookie` | `localStorage` | `sessionStorage`), `category` (`strictly_necessary` | `functional` | `analytics` | `marketing`), `purpose` (localised: `{ en, it, fr }`), `provider`, `retention`, `setBy` (source file path).
 
-4. `missing_runs` — no `cleanup_logs` row for `prune-retention` or `prune-retention:dry-run` in the last 36 hours.
+Seeded from the audit above. Test `src/test/cookie-inventory.test.ts` greps the repo for `localStorage.setItem` / `sessionStorage.setItem` / `document.cookie =` and fails CI if a key appears in code but not in the inventory — prevents silent drift.
 
-## Throttling
+### 2. Public `/cookies` page
 
-To prevent floods (e.g. a misconfigured cron firing hourly with errors), each alert kind is suppressed if an identical alert for the same dataset was already sent in the last 6 hours. Tracked in a small new table.
+`src/pages/Cookies.tsx`:
+- Route added to `App.tsx` (lazy-loaded like the other policy pages).
+- Renders the inventory as a readable table grouped by category, headings + purpose pulled via `pickLocale` from i18n.
+- Plain-English sections (translated EN/IT/FR via `i18n/locales/*.json`):
+  - Why strictly necessary items don't need consent
+  - How to clear them (browser instructions + link to the "Clear local app data" Settings action)
+  - Explicit statement that we use **no** analytics, advertising, or session-replay tools
+  - Note on Paddle's checkout iframe and its own cookie controls
+- Footer link added next to Privacy / Terms.
+- `usePageMeta` for canonical + meta description.
 
-## Implementation steps
+### 3. First-visit notice banner
 
-1. **Migration — `retention_alerts` audit/throttle table** with `alert_kind`, `dataset_key` (nullable, for run-level kinds), `cleanup_log_id`, `sent_at`, plus admin-only RLS and standard GRANTs. Index on `(alert_kind, dataset_key, sent_at desc)`.
+`src/components/CookieNotice.tsx`, mounted at App root:
+- Bottom-right toast-style card on ≥640 px; bottom sheet on mobile (respects `safe-area-inset-bottom`).
+- Liquid-glass surface consistent with the rest of the app (subtle translucency, refined border, ≥4.5:1 text contrast in light + dark).
+- Copy is informational, not a consent request:
+  - EN: "WhatSaid only uses storage that's strictly necessary to keep you signed in, remember your language, and keep the app working. We don't use analytics, advertising, or tracking cookies."
+  - IT and FR equivalents added to the locale files.
+- Two actions: **Got it** (primary, dismisses) and **Cookie details** (link to `/cookies`).
+- Language follows i18next's existing detection (localStorage → navigator). No new IP-based language code — keeps it simple as you asked.
+- Dismissal flag: `localStorage` key `ws.cookie_notice_ack_v1` (itself listed in the inventory as strictly necessary preference).
+- A11y: `role="region"` + `aria-label`, focus reachable via Tab, Esc dismisses, both buttons ≥44 px touch targets, no focus trap (non-modal).
+- Hidden on `/cookies`, `/privacy`, `/terms` to avoid visual stacking when the user is already reading the policy.
 
-2. **New email template** `admin-retention-alert.tsx` in `_shared/transactional-email-templates/`. Props: `alertKind`, `runId`, `mode` (live/dry-run), `datasets[]` (key + status + candidates + processed + error), `dashboardUrl`. Register in `registry.ts`.
+### 4. Consent infrastructure (dormant)
 
-3. **Shared helper** `supabase/functions/_shared/retention-alerts.ts` exporting `evaluateAlerts(report, history)` (pure, unit-testable) and `dispatchAlerts(admin, alerts, runId)` (writes throttle rows + invokes `send-transactional-email` with an idempotency key derived from `cleanup_log_id + alertKind + datasetKey`).
+`src/lib/consent.ts`:
+- `ConsentCategory` type and `getConsent()` / `setConsent(cat, granted)` reading/writing one `localStorage` row (`ws.consent_v1` = JSON `{ analytics, marketing, ts, version }`).
+- `useConsent()` hook re-renders on the `storage` event so multi-tab stays consistent.
+- `<ConsentGate category="analytics">` wrapper component.
+- `requiresConsent()` helper that scans the inventory; the banner copy + buttons automatically switch from informational to a true consent dialog the day an `analytics`/`marketing` entry is added. **No behaviour change today** — it's a 5-line flip later, not a re-architecture.
 
-4. **Wire into `prune-retention/index.ts`** at the end of the run, after `cleanup_logs` is updated. Failures here are logged and never block the response.
+### 5. "Clear local app data" self-service
 
-5. **New edge function `retention-monitor-watchdog`** (verify_jwt true, service-role caller via cron). Queries last `cleanup_logs` row for `prune-retention*` and emits a `missing_runs` alert if older than 36h. Register in `supabase/config.toml`.
+Add a small button to the existing "Your data" card in `src/pages/Settings.tsx`:
+- Clears all `localStorage` + `sessionStorage` keys whose inventory entry is `functional` (preserves `strictly_necessary` auth session — signing out is separate).
+- Sonner toast confirms what was cleared.
+- Useful for users exercising local Art. 17 erasure intent without losing their session.
 
-6. **Cron job** scheduled every 6h calling `retention-monitor-watchdog` with the service-role auth header (via Vault, same pattern as `process-email-queue`).
+### 6. Privacy policy update
 
-7. **Tests**:
-   - `retention-alerts.test.ts` — pure unit tests for `evaluateAlerts` covering: clean run → no alert; failed dataset → `run_failed`; 12k candidates → `high_candidates`; 15× processed spike → `large_processed_jump`; dry-run + spike → no spike alert; thin history → no spike alert.
-   - Smoke test for the watchdog (auth gate + missing-runs detection against a stub client).
+Append a short **"Cookies and similar technologies"** section to `src/pages/Privacy.tsx` (EN/IT/FR) pointing to `/cookies`, citing PECR reg. 6 + UK GDPR Art. 6(1)(f) as bases, and confirming no third-party trackers.
 
-## Technical notes
+### 7. Dossier update
 
-- Email send uses the existing `send-transactional-email` edge function — no direct Mailgun calls. Idempotency key prevents duplicate sends on retry.
-- The throttle check is a single `select 1 from retention_alerts where … and sent_at > now() - interval '6 hours' limit 1` per candidate alert; the row is inserted before invoking the email, so a race during a cron storm still collapses to one send (the second insert wins or loses but only one email is queued).
-- All new SQL follows the GRANT-then-RLS order; only admins read the table, service_role writes.
-- No changes to the existing Retention Monitor UI in this plan — the surface there already reflects the same conditions and remains the canonical drill-down. We can add a "recent alerts" sub-card in a follow-up if desired.
+- `docs/ARCHITECTURE.md` §Privacy: one paragraph + pointer to `cookie-inventory.ts` as the canonical list.
+- `WhatSaid-Architecture-Privacy-Dossier.md` Storage section: reference the new inventory and `/cookies` page; clear the "[MISSING] cookie inventory" flag from the solicitor-ready list.
+
+## Regression / test gate
+
+- `cookie-inventory.test.ts` — fails on undeclared storage keys.
+- Vitest snapshot of the `/cookies` table render to catch accidental copy regressions.
+- Manual checklist:
+  - Banner appears in a clean browser (incognito).
+  - "Got it" dismissal persists across reload; Esc also dismisses.
+  - Banner hidden on `/cookies`, `/privacy`, `/terms`.
+  - Reachable from footer link in all three languages.
+  - "Clear local app data" preserves the auth session.
+  - Banner copy renders correctly in EN / IT / FR (verify i18n keys present, no fallback warnings in console).
+  - Light + dark mode contrast OK; keyboard tab order reaches both buttons.
+  - Mobile (≤640 px) renders as bottom sheet with safe-area inset.
+
+## Out of scope
+
+- Server-side consent ledger (overkill while no consent is required).
+- Granular per-category toggles UI — lands the day the first analytics/marketing entry enters the inventory.
+- IP-based language switching for the banner — using i18next's existing detection as you requested.
