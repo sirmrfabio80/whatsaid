@@ -83,7 +83,10 @@ export function useTosConsent() {
     if (!user) return { ok: false, error: "Not signed in" };
     setRecording(true);
     try {
-      const { error } = await supabase.functions.invoke("record-tos-acceptance");
+      const { error } = await invokeWithRetry("record-tos-acceptance", {}, {
+        onRetry: ({ attempt, reason, status }) =>
+          console.warn(`[record-tos-acceptance] retry ${attempt + 1} (${reason} ${status ?? ""})`),
+      });
       if (error) throw error;
       await load();
       return { ok: true as const };
