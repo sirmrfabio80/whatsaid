@@ -110,6 +110,17 @@ export default function Convert() {
   const [cancelingUpload, setCancelingUpload] = useState(false);
 
   const [consentChecked, setConsentChecked] = useState(false);
+  // Uploader lawful-basis attestation (UK GDPR Art. 6/14). Captured per-upload
+  // immediately before we hit create-job; the returned consent_id is pinned
+  // onto jobs.upload_consent_id for audit.
+  const [attestationOpen, setAttestationOpen] = useState(false);
+  const [attestationLoading, setAttestationLoading] = useState(false);
+  const [pendingConvert, setPendingConvert] = useState<{
+    file: File;
+    duration: number;
+    fileCreationDate: AudioCreationDateResult | null;
+    channelAnalysis: AudioChannelAnalysis | null;
+  } | null>(null);
   const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
   // Surfaced status of the pre-flight language detection so the user always
   // knows what happened (success / skipped / failed). Null = not run yet.
