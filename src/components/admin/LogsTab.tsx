@@ -197,7 +197,7 @@ export default function LogsTab() {
       </div>
 
       {/* Header + audit */}
-      <JobAuditCard job={data.job} />
+      <JobAuditCard job={data.job} uploadAttestation={data.upload_attestation ?? null} />
 
       {/* AAI request */}
       <Card>
