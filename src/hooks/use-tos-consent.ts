@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithRetry } from "@/lib/invoke-with-retry";
 import { useAuth } from "@/contexts/AuthContext";
 
 const CONSENT_TYPE = "tos_uploader_warranty";
