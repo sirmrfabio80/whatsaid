@@ -148,6 +148,15 @@ Deno.serve(async (req) => {
     const claimUrl = `${SITE_URL}/claim/${share.token}`
 
     const messageId = crypto.randomUUID()
+    const shortId = messageId.slice(0, 6)
+
+    const notice = await resolveActiveNotice(serviceClient)
+    const noticeCtx = { senderLabel, senderEmail, jobShortId: shortId }
+    const noticeHtml = notice ? buildNoticeHtml(notice, noticeCtx) : ''
+    const noticeText = notice ? buildNoticeText(notice, noticeCtx) : ''
+    if (!notice) {
+      console.warn('[share-transcript-record] no active share_recipient_notice version found')
+    }
 
     const { data: existingToken } = await serviceClient
       .from('email_unsubscribe_tokens')
@@ -171,7 +180,6 @@ Deno.serve(async (req) => {
       status: 'pending',
     })
 
-    const shortId = messageId.slice(0, 6)
     const subjectLine = `Transcript shared with you: ${title} [${shortId}]`
     const textParts = [
       `${senderLabel} shared a transcript with you on ${SITE_NAME}.`,
@@ -182,6 +190,7 @@ Deno.serve(async (req) => {
       '',
       'Sign in or create a free WhatSaid account first to access this share.',
       'This link expires in 2 days.',
+      noticeText,
     ]
 
     await serviceClient.rpc('enqueue_email', {
@@ -194,7 +203,7 @@ Deno.serve(async (req) => {
         reply_to: senderEmail,
         sender_domain: SENDER_DOMAIN,
         subject: subjectLine,
-      html: buildShareRecordEmail({ title, senderLabel, claimUrl }),
+        html: buildShareRecordEmail({ title, senderLabel, claimUrl, noticeHtml }),
         text: textParts.join('\n'),
         purpose: 'transactional',
         label: 'share-transcript-record',
@@ -203,7 +212,22 @@ Deno.serve(async (req) => {
       },
     })
 
-    return new Response(JSON.stringify({ success: true }), {
+    let noticeLogged = false
+    if (notice) {
+      noticeLogged = await recordRecipientNotification(serviceClient, {
+        jobId: job_id,
+        sharedBy: user.id,
+        recipientEmail: recipient_email,
+        channel: 'share_transcript_record',
+        notice,
+        messageId,
+      })
+      if (!noticeLogged) {
+        console.log('[share-transcript-record] already_notified', { job_id, version: notice.version })
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true, notice_logged: noticeLogged }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
