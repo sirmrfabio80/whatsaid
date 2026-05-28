@@ -781,15 +781,22 @@
     "s2Title": "2. How to request a refund",
     "s2Body": "To request a refund, contact us at support@whatsaid.app with your account email and a brief description of the issue. We aim to respond within 2 business days.",
     "s3Title": "3. When refunds apply",
-    "s3Body": "Refunds may be issued if processing fails due to a service error and credits are not automatically restored, if a duplicate purchase is made by mistake, or if a technical issue prevents you from accessing your purchased outputs. Since WhatSaid is a digital service with immediate delivery, refunds are generally not available once processing has been completed successfully and outputs are delivered to your account.",
+    "s3Body": "Refunds may be issued if processing fails due to a service error and credits are not automatically restored, if a duplicate purchase is made by mistake, or if a technical issue prevents you from accessing your purchased outputs. As confirmed at checkout under regulation 37 of the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013, the 14-day right to cancel does not apply to digital content once supply has begun with your express consent. However, as a goodwill measure, an unused full credit pack remains refundable on request within 14 days of purchase — provided no credit from the pack has been consumed for a transcription.",
     "s4Title": "4. When refunds may not apply",
-    "s4Body": "Refunds are generally not available for successfully processed files where outputs have been delivered, dissatisfaction with AI-generated output quality (as noted in our Terms, AI outputs may contain errors), voluntary account deletion with unused credits, or purchases where the service performed as described.",
+    "s4Body": "Refunds are generally not available for successfully processed files where outputs have been delivered, dissatisfaction with AI-generated output quality (as noted in our Terms, AI outputs may contain errors), credit packs from which at least one credit has been used (per the Reg. 37 waiver you confirmed at checkout), voluntary account deletion with unused credits where the 14-day goodwill window has elapsed, or purchases where the service performed as described.",
     "s5Title": "5. Duplicate purchases and technical failures",
     "s5Body": "If you are charged twice for the same purchase or experience a payment error, contact us and we will investigate and resolve it promptly. In cases of obvious billing errors, we will issue a correction or refund.",
     "s6Title": "6. Payment processing",
     "s6Body": "Payments are processed securely by Paddle, our merchant of record. Paddle handles billing, tax, receipts, and the refund transaction process on our behalf. Approved refunds are processed through Paddle and returned to the original payment method.",
     "s7Title": "7. Your statutory rights",
     "s7Body": "Nothing in this policy excludes or limits your statutory consumer rights under applicable law. If you have any questions about this Refund Policy or would like to request a refund, contact us at support@whatsaid.app."
+  },
+  "reg37": {
+    "bindingNotice": "The English statements above are the legally binding consent. The translation below is provided to help you understand them.",
+    "translatedTitle": "Plain-language summary",
+    "translatedIntro": "WhatSaid credits are digital content. Once you pay, they are made available to your account straight away so you can start transcribing. UK consumer law (regulation 37 of the Consumer Contracts Regulations 2013) means that, by asking for them straight away, you give up the 14-day right to change your mind for credits you have already used. An unused full credit pack remains refundable on request within 14 days.",
+    "translatedImmediate": "I want my credits to be made available immediately after payment so I can start transcribing right away.",
+    "translatedRightLoss": "I understand that, because I am asking for immediate supply, I will lose the statutory 14-day right to cancel under the Consumer Contracts Regulations 2013 once those credits are credited to my account."
   },
   "footer": {
     "desc": "Premium AI transcription with speaker labels, summaries, and custom analysis. Privacy-first — audio deleted after processing.",

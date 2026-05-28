@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,9 @@ export function Reg37ConsentDialog({
   const [immediateSupply, setImmediateSupply] = useState(false);
   const [rightLoss, setRightLoss] = useState(false);
   const descId = useId();
+  const { t, i18n } = useTranslation();
+  const lang = (i18n.resolvedLanguage || i18n.language || "en").slice(0, 2);
+  const showTranslation = lang !== "en";
 
   useEffect(() => {
     if (!open) {
@@ -92,6 +96,23 @@ export function Reg37ConsentDialog({
               {REG37_CHECKBOX_RIGHT_LOSS}
             </span>
           </label>
+
+          {showTranslation && (
+            <div
+              lang={lang}
+              className="rounded-md border border-border bg-muted/40 p-3 space-y-2"
+            >
+              <p className="text-xs font-medium text-muted-foreground">
+                {t("reg37.bindingNotice")}
+              </p>
+              <p className="text-xs font-semibold">{t("reg37.translatedTitle")}</p>
+              <p className="text-xs leading-relaxed">{t("reg37.translatedIntro")}</p>
+              <ul className="text-xs leading-relaxed list-disc pl-4 space-y-1">
+                <li>{t("reg37.translatedImmediate")}</li>
+                <li>{t("reg37.translatedRightLoss")}</li>
+              </ul>
+            </div>
+          )}
 
           <p className="text-xs text-muted-foreground">
             See our{" "}
