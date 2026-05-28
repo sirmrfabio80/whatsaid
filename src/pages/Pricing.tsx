@@ -542,6 +542,7 @@ export default function Pricing() {
                 formattedPrice={lp?.formatted ?? `£${product.basePriceGBP.toFixed(2)}`}
                 loading={loading}
                 onCta={() => handleCta(product.id)}
+                disabled={geoBlocked}
               />
             );
           })}
