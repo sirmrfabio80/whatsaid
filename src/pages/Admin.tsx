@@ -11,6 +11,7 @@ import RetentionTab from "@/components/admin/RetentionTab";
 import RetentionMonitorTab from "@/components/admin/RetentionMonitorTab";
 import DsrTab from "@/components/admin/DsrTab";
 import SecurityHeadersTab from "@/components/admin/SecurityHeadersTab";
+import EdgeHealthTab from "@/components/admin/EdgeHealthTab";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Admin() {
