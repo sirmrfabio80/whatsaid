@@ -100,9 +100,9 @@ export const workflow: WorkflowStep[] = [
       fr: "6. Exportez et partagez",
     },
     body: {
-      en: "Download the transcript and outputs as TXT, JSON, or DOC instantly, or request a PDF — it's prepared in the background, watch the notification bell. Share by email with a 2-day single-claim link; recipients can also download a one-off PDF without an account.",
-      it: "Scarica la trascrizione e gli output come TXT, JSON o DOC istantaneamente, oppure richiedi un PDF — viene preparato in background, guarda la campanella delle notifiche. Condividi via email con un link a singolo riscatto valido 2 giorni; i destinatari possono anche scaricare un PDF una tantum senza account.",
-      fr: "Téléchargez la transcription et les résultats au format TXT, JSON ou DOC instantanément, ou demandez un PDF — il est préparé en arrière-plan, surveillez la cloche de notification. Partagez par e-mail avec un lien à usage unique valable 2 jours ; les destinataires peuvent également télécharger un PDF ponctuel sans compte.",
+      en: "Download the transcript and outputs as TXT, JSON, or DOC straight away, or request a PDF — it's prepared in the background, watch the notification bell. Share by email with a 2-day single-claim link; recipients can also download a one-off PDF without an account.",
+      it: "Scarica la trascrizione e gli output come TXT, JSON o DOC direttamente, oppure richiedi un PDF — viene preparato in background, guarda la campanella delle notifiche. Condividi via email con un link a singolo riscatto valido 2 giorni; i destinatari possono anche scaricare un PDF una tantum senza account.",
+      fr: "Téléchargez la transcription et les résultats au format TXT, JSON ou DOC directement, ou demandez un PDF — il est préparé en arrière-plan, surveillez la cloche de notification. Partagez par e-mail avec un lien à usage unique valable 2 jours ; les destinataires peuvent également télécharger un PDF ponctuel sans compte.",
     },
   },
   {
