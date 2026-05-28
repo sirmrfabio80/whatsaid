@@ -97,7 +97,6 @@ export default function DataRightsCard() {
       setSubmitting(false);
     }
   }
-  }
 
   return (
     <Card className="rounded-xl border-border bg-card shadow-sm">
