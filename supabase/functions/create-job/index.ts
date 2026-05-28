@@ -113,9 +113,51 @@ Deno.serve(async (req) => {
       return bad("recorded_at must be ISO date");
     }
 
+    const consentId = typeof body.upload_consent_id === "string"
+      ? body.upload_consent_id
+      : "";
+    if (!UUID_RE.test(consentId)) {
+      return new Response(
+        JSON.stringify({ error: "attestation_required" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const credits = creditsForDuration(Math.round(duration));
 
     const supabase = createServiceClient();
+
+    // Verify the attestation belongs to this user, is the right type, and is
+    // fresh. Replay of a stale or foreign consent id is rejected.
+    const { data: consentRow, error: consentErr } = await supabase
+      .from("consent_events")
+      .select("id, user_id, consent_type, accepted_at")
+      .eq("id", consentId)
+      .maybeSingle();
+    if (consentErr) {
+      console.error("[create-job] consent lookup failed", consentErr);
+      return bad("Could not verify attestation", 500);
+    }
+    if (!consentRow || consentRow.consent_type !== "upload_lawful_basis") {
+      return new Response(
+        JSON.stringify({ error: "attestation_required" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if (consentRow.user_id !== userId) {
+      return new Response(
+        JSON.stringify({ error: "forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const acceptedAt = consentRow.accepted_at ? new Date(consentRow.accepted_at).getTime() : 0;
+    if (!acceptedAt || Date.now() - acceptedAt > CONSENT_MAX_AGE_MS) {
+      return new Response(
+        JSON.stringify({ error: "attestation_required" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: row, error: insertErr } = await supabase
       .from("jobs")
       .insert({
