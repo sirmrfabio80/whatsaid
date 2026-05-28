@@ -39,8 +39,10 @@ export default function Signup() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const purchaseIntent = searchParams.get("intent") === "purchase";
   const redirectParam = searchParams.get("redirect");
+  const geo = useGeoCheck();
+  const geoBlocked = !geo.loading && !geo.allowed;
+  const effectiveReason = regionBlockReason ?? (geoBlocked ? (geo.reason ?? "region_blocked") : null);
 
   /**
    * Server-side region gate. Returns true if the caller may proceed with signup.
