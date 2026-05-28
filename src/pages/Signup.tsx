@@ -126,9 +126,9 @@ export default function Signup() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {regionBlockReason && (
+          {effectiveReason && (
             <div className="mb-4">
-              <RegionBlockedNotice reason={regionBlockReason} />
+              <RegionBlockedNotice reason={effectiveReason} />
             </div>
           )}
           <form onSubmit={handleSignup} className="space-y-4">
