@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
-
+import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBanner";
 export default function RefundPolicy() {
   const { t } = useTranslation();
 

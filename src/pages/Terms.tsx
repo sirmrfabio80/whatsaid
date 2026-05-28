@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { PolicyRichText } from "@/components/policy/PolicyRichText";
+import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBanner";
 
 // Effective date for the current version of the Terms of Service.
 // Update this constant on every material change.

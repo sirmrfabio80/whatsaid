@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
-
+import { LegalEnglishOnlyBanner } from "@/components/policy/LegalEnglishOnlyBanner";
 // Effective / last-reviewed date for the current version of this statement.
 // Update on every material change. Format: "DD Month YYYY".
 const LAST_REVIEWED = "28 May 2026";
