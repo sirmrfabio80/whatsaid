@@ -51,6 +51,12 @@ interface JobDetailsResponse {
     level: string | null;
     event_message: string;
   }>;
+  upload_attestation?: {
+    id: string;
+    version: string;
+    accepted_at: string;
+    metadata: { basis?: string; contextNote?: string | null } | null;
+  } | null;
 }
 
 export default function LogsTab() {
