@@ -323,6 +323,21 @@ export default function Convert() {
 
     if (!effFile || !user) return;
 
+    // UK GDPR Art. 6/14 gate. handleConvert MUST be invoked with a fresh
+    // upload_consent_id; the per-upload attestation is recorded by
+    // `record-upload-attestation` before this function runs. If a caller
+    // forgets to pass one, open the dialog instead of silently uploading.
+    if (!overrides?.uploadConsentId) {
+      setPendingConvert({
+        file: effFile,
+        duration: effDuration,
+        fileCreationDate: effFileCreationDate,
+        channelAnalysis: effChannelAnalysis,
+      });
+      setAttestationOpen(true);
+      return;
+    }
+
     // Quietly request browser notification permission so we can alert the user
     // if they navigate away or background the tab. Skip if the user has muted
     // browser notifications in Settings. Failures are non-blocking.
