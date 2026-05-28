@@ -1,8 +1,16 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import {
+  clearEdgeTelemetry,
+  getEdgeTelemetryEvents,
+  getEdgeTelemetryRollup,
+  subscribeEdgeTelemetry,
+  type EdgeTelemetryEvent,
+} from "@/lib/edge-telemetry";
+
 
 type CheckResult = {
   name: string;
