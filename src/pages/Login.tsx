@@ -12,6 +12,7 @@ import logoImg from "@/assets/logo.webp";
 import { lovable } from "@/integrations/lovable/index";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
+import { useGeoCheck } from "@/hooks/use-geo-check";
 
 export default function Login() {
   const { t } = useTranslation();
