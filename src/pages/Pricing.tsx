@@ -8,6 +8,8 @@ import { initPaddle } from "@/lib/paddle-checkout";
 import { openCheckoutWithConsent } from "@/lib/openCheckoutWithConsent";
 import { Reg37ConsentDialog } from "@/components/Reg37ConsentDialog";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { useGeoCheck } from "@/hooks/use-geo-check";
+import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -152,12 +154,14 @@ function PricingCard({
   formattedPrice,
   loading,
   onCta,
+  disabled,
 }: {
   product: PricingProduct;
   localized: ReturnType<typeof getPriceForProduct>;
   formattedPrice: string;
   loading: boolean;
   onCta: () => void;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -206,6 +210,7 @@ function PricingCard({
           className="w-full h-12 rounded-xl text-base font-medium"
           variant={product.highlighted ? "default" : "outline"}
           onClick={onCta}
+          disabled={disabled}
         >
           {t(product.cta)}
         </Button>
@@ -229,6 +234,8 @@ export default function Pricing() {
 
   // All customers are billed in GBP by Paddle regardless of region.
   const { prices, loading } = usePaddlePricing(undefined);
+  const geo = useGeoCheck();
+  const geoBlocked = !geo.loading && !geo.allowed;
 
   useEffect(() => {
     initPaddle();
@@ -251,6 +258,7 @@ export default function Pricing() {
   const ctaReveal = useScrollReveal();
 
   function handleCta(productId: PricingProduct["id"]) {
+    if (geoBlocked) return;
     if (!user) {
       navigate(`/signup?intent=purchase&product=${productId}`);
       return;
@@ -504,6 +512,12 @@ export default function Pricing() {
           {/* Currency selector removed — billing is GBP-only via Paddle. */}
         </div>
 
+        {geoBlocked && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <RegionBlockedNotice reason={geo.reason ?? "region_blocked"} />
+          </div>
+        )}
+
         {/* Microcopy strip */}
         <p className="text-center text-caption text-muted-foreground mb-8">
           {t("pricing.microPayOnce")}
@@ -528,6 +542,7 @@ export default function Pricing() {
                 formattedPrice={lp?.formatted ?? `£${product.basePriceGBP.toFixed(2)}`}
                 loading={loading}
                 onCta={() => handleCta(product.id)}
+                disabled={geoBlocked}
               />
             );
           })}

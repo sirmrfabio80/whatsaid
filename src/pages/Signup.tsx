@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { COUNTRIES } from "@/lib/countries";
 import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
+import { useGeoCheck } from "@/hooks/use-geo-check";
 
 export default function Signup() {
   const { t } = useTranslation();
@@ -40,6 +41,9 @@ export default function Signup() {
   const [searchParams] = useSearchParams();
   const purchaseIntent = searchParams.get("intent") === "purchase";
   const redirectParam = searchParams.get("redirect");
+  const geo = useGeoCheck();
+  const geoBlocked = !geo.loading && !geo.allowed;
+  const effectiveReason = regionBlockReason ?? (geoBlocked ? (geo.reason ?? "region_blocked") : null);
 
   /**
    * Server-side region gate. Returns true if the caller may proceed with signup.
@@ -122,9 +126,9 @@ export default function Signup() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {regionBlockReason && (
+          {effectiveReason && (
             <div className="mb-4">
-              <RegionBlockedNotice reason={regionBlockReason} />
+              <RegionBlockedNotice reason={effectiveReason} />
             </div>
           )}
           <form onSubmit={handleSignup} className="space-y-4">
@@ -181,7 +185,7 @@ export default function Signup() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading || !acceptedTerms}>
+            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading || !acceptedTerms || geoBlocked}>
               {loading ? t("signup.creating") : t("signup.createAccount")}
             </Button>
           </form>
