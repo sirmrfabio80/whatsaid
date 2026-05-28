@@ -1,6 +1,12 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
-import { isChunkLoadError, reloadOnceForChunkError } from "@/lib/chunk-recovery";
+import {
+  CHUNK_RECOVERY_CONFIG,
+  getChunkReloadState,
+  isChunkLoadError,
+  reloadOnceForChunkError,
+  resetChunkReloadState,
+} from "@/lib/chunk-recovery";
 
 type ChunkErrorBoundaryProps = {
   children: ReactNode;
@@ -49,14 +55,20 @@ export class ChunkErrorBoundary extends Component<
               </h1>
 
               <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">
-                The latest app files could not be loaded. This usually happens
-                after an update. Try refreshing, or go back home.
+                {getChunkReloadState().attempts >= CHUNK_RECOVERY_CONFIG.maxAttempts
+                  ? "We tried reloading automatically a few times without success. Please retry manually, or come back shortly."
+                  : "The latest app files could not be loaded. This usually happens after an update. Try refreshing, or go back home."}
               </p>
 
               <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
                 <button
                   type="button"
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    // Manual retry — reset the auto-reload counter so the
+                    // user always gets a fresh attempt budget.
+                    resetChunkReloadState();
+                    window.location.reload();
+                  }}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden="true" />
