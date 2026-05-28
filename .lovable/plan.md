@@ -1,94 +1,109 @@
-# Phase 4 — Cookie & Local-Storage Notice (PECR Reg. 6 + UK GDPR Art. 7)
 
-Finalised with your answers: no analytics planned, bottom-right toast banner, full EN/IT/FR from day one (using existing i18next detection — no extra IP work), dismiss label "Got it".
+# Phase 5 — Uploader lawful-basis attestation (UK GDPR Art. 6 + Art. 14)
+
+When a user uploads or records third-party voices, we currently process that personal data without recording any lawful basis from the uploader. UK GDPR makes the uploader the controller for that content; WhatSaid needs a per-job, auditable declaration that they have a lawful basis to upload and will handle Art. 14 notice to data subjects.
 
 ## Current state (audit)
 
-| Category | Present? | Notes |
+| Concern | Today | Gap |
 |---|---|---|
-| First-party auth token | Yes | Supabase client persists session in `localStorage` (`sb-…-auth-token`) |
-| Functional `localStorage` | Yes | i18n language (`i18nextLng`), notification sound toggle, browser-notification opt-in, tag-translation cache, tus resumable-upload URLs, ShareButton UI hints |
-| Functional `sessionStorage` | Yes | `useRedeemInvites` dedupe, ShareButton PDF-cache hints |
-| Third-party analytics / marketing / session-replay | **None** | No GA, Plausible, PostHog, Hotjar, Meta Pixel, etc. anywhere in `src/`, `index.html`, or `public/` |
-| Third-party in iframes | Paddle checkout only | Their cookies are governed by their own banner inside their overlay |
+| Upload entry points | `src/components/AudioUploader.tsx` (drag/drop + picker) and `DirectRecorder.tsx`, both feed `Convert.tsx` | No attestation gate before upload |
+| Existing privacy copy | One-liner inside `AudioUploader` (`audioUploader.securityNotice`) about deletion only | Doesn't cover third-party voices, consent, or Art. 14 |
+| Reg. 37 dialog | `Reg37ConsentDialog` exists only for paid checkout | Pattern to reuse for per-action attestation |
+| Job creation | `create-job` edge function inserts `jobs` row server-side | Cannot prove the uploader attested anything; no audit row |
+| Consent infra | `consent_versions` + `consent_events` already exist (used by Reg. 37) | Reusable — just need a new `consent_type` value |
+| Privacy policy | `src/pages/Privacy.tsx` | No "Your responsibilities when uploading others' voices" section |
 
-**Legal posture:** Everything we store today qualifies as strictly necessary or first-party functional under PECR reg. 6(4), so no consent gate is required. ICO guidance still requires a clear notice + maintained inventory + a consent mechanism ready before any future analytics/marketing tooling lands. This phase delivers all three, sized to today's posture.
+## Goal
+
+Before a transcription job is created, the uploader must:
+1. Confirm they have a lawful basis (consent, contract, legitimate interest, or own voice only).
+2. Acknowledge their Art. 14 duty to inform identifiable speakers where required.
+
+The attestation is recorded once per job, linked to the job row, and replayable for audit. Closing the dialog cancels the upload.
 
 ## Deliverables
 
-### 1. Storage inventory (single source of truth)
+### 1. Consent version row
 
-`src/lib/cookie-inventory.ts` — typed `STORAGE_INVENTORY` array. Each entry: `key`, `storage` (`cookie` | `localStorage` | `sessionStorage`), `category` (`strictly_necessary` | `functional` | `analytics` | `marketing`), `purpose` (localised: `{ en, it, fr }`), `provider`, `retention`, `setBy` (source file path).
+New seed in `consent_versions`:
+- `consent_type = 'upload_lawful_basis'`, `version = '1.0.0'`
+- EN/IT/FR copy stored verbatim so audits can reproduce what the user saw
+- `text_hash` computed from EN text
 
-Seeded from the audit above. Test `src/test/cookie-inventory.test.ts` greps the repo for `localStorage.setItem` / `sessionStorage.setItem` / `document.cookie =` and fails CI if a key appears in code but not in the inventory — prevents silent drift.
+Migration also adds nullable `jobs.upload_consent_id uuid` (no FK to keep deletes cheap; values are immutable via the existing `trg_jobs_lock_billing_columns` pattern extended to this column) and an index on `(user_id, created_at)` for the consents query.
 
-### 2. Public `/cookies` page
+### 2. Attestation dialog
 
-`src/pages/Cookies.tsx`:
-- Route added to `App.tsx` (lazy-loaded like the other policy pages).
-- Renders the inventory as a readable table grouped by category, headings + purpose pulled via `pickLocale` from i18n.
-- Plain-English sections (translated EN/IT/FR via `i18n/locales/*.json`):
-  - Why strictly necessary items don't need consent
-  - How to clear them (browser instructions + link to the "Clear local app data" Settings action)
-  - Explicit statement that we use **no** analytics, advertising, or session-replay tools
-  - Note on Paddle's checkout iframe and its own cookie controls
-- Footer link added next to Privacy / Terms.
-- `usePageMeta` for canonical + meta description.
+`src/components/UploadAttestationDialog.tsx`, modelled on `Reg37ConsentDialog`:
+- Two required checkboxes:
+  - "I confirm I have a lawful basis to upload this audio (my own voice, the speakers' consent, a contract, or another lawful ground under UK GDPR Art. 6)."
+  - "Where the recording contains identifiable people other than me, I will inform them their voice is being transcribed, unless an Art. 14(5) exemption applies."
+- Optional radio with the chosen basis (`own_voice` | `consent` | `contract` | `legitimate_interest` | `legal_obligation` | `other`) so we can store it in `consent_events.metadata`. Default unselected — must pick one to continue.
+- Optional free-text "Context (optional)" capped at 280 chars, stored in metadata. Useful for audits, never displayed publicly.
+- Plain-language helper text explains we delete audio immediately after processing and link to `/privacy#uploader-duties`.
+- ESC / outside click / Cancel = no consent recorded, no upload. Same `min-h-[44px]` touch targets and a11y as Reg. 37 dialog.
+- Strings in `src/lib/upload-attestation-strings.ts` with EN/IT/FR and `pickLocale` resolution.
 
-### 3. First-visit notice banner
+### 3. Wiring in Convert.tsx
 
-`src/components/CookieNotice.tsx`, mounted at App root:
-- Bottom-right toast-style card on ≥640 px; bottom sheet on mobile (respects `safe-area-inset-bottom`).
-- Liquid-glass surface consistent with the rest of the app (subtle translucency, refined border, ≥4.5:1 text contrast in light + dark).
-- Copy is informational, not a consent request:
-  - EN: "WhatSaid only uses storage that's strictly necessary to keep you signed in, remember your language, and keep the app working. We don't use analytics, advertising, or tracking cookies."
-  - IT and FR equivalents added to the locale files.
-- Two actions: **Got it** (primary, dismisses) and **Cookie details** (link to `/cookies`).
-- Language follows i18next's existing detection (localStorage → navigator). No new IP-based language code — keeps it simple as you asked.
-- Dismissal flag: `localStorage` key `ws.cookie_notice_ack_v1` (itself listed in the inventory as strictly necessary preference).
-- A11y: `role="region"` + `aria-label`, focus reachable via Tab, Esc dismisses, both buttons ≥44 px touch targets, no focus trap (non-modal).
-- Hidden on `/cookies`, `/privacy`, `/terms` to avoid visual stacking when the user is already reading the policy.
+Flow change in `src/pages/Convert.tsx` (single integration point — covers both `AudioUploader` and `DirectRecorder`):
+1. User selects/records a file → metadata extracted as today.
+2. Instead of going straight to upload, open `UploadAttestationDialog`.
+3. On confirm:
+   - Call new edge function `record-upload-attestation` → returns `consent_id`.
+   - Proceed with existing upload + `create-job` flow, passing `consent_id` in the body.
+4. On cancel: clear the staged file, no upload starts.
 
-### 4. Consent infrastructure (dormant)
+For re-runs of the same job (regenerate transcript, change language) the existing job already has a `consent_id` — no re-prompt.
 
-`src/lib/consent.ts`:
-- `ConsentCategory` type and `getConsent()` / `setConsent(cat, granted)` reading/writing one `localStorage` row (`ws.consent_v1` = JSON `{ analytics, marketing, ts, version }`).
-- `useConsent()` hook re-renders on the `storage` event so multi-tab stays consistent.
-- `<ConsentGate category="analytics">` wrapper component.
-- `requiresConsent()` helper that scans the inventory; the banner copy + buttons automatically switch from informational to a true consent dialog the day an `analytics`/`marketing` entry is added. **No behaviour change today** — it's a 5-line flip later, not a re-architecture.
+### 4. Edge function: `record-upload-attestation`
 
-### 5. "Clear local app data" self-service
+New function under `supabase/functions/record-upload-attestation/`:
+- Auth required (uses `requireAuth`).
+- Body: `{ version, basis, contextNote?, acknowledgements: { lawfulBasis: true, art14Notice: true } }`.
+- Validates both acknowledgements are `true`, basis is in the allowed enum, version matches the active row in `consent_versions`.
+- Inserts into `consent_events` with `consent_type='upload_lawful_basis'`, `metadata={ basis, contextNote }`, `ip_hash`, `user_agent`.
+- Rate limited via `enforceQuota` (e.g. 60/day, 1000/lifetime) to stop scripted abuse.
+- Returns `{ consent_id }`.
 
-Add a small button to the existing "Your data" card in `src/pages/Settings.tsx`:
-- Clears all `localStorage` + `sessionStorage` keys whose inventory entry is `functional` (preserves `strictly_necessary` auth session — signing out is separate).
-- Sonner toast confirms what was cleared.
-- Useful for users exercising local Art. 17 erasure intent without losing their session.
+### 5. `create-job` enforcement
 
-### 6. Privacy policy update
+Update `supabase/functions/create-job/index.ts` to:
+- Require `upload_consent_id` in the request body.
+- Verify the consent row exists, belongs to `auth.uid()`, is `consent_type='upload_lawful_basis'`, and was issued within the last 30 minutes (prevents replay of a stale token).
+- Write the id onto `jobs.upload_consent_id`.
+- Existing `trg_jobs_lock_billing_columns` trigger extended to also lock `upload_consent_id` post-insert.
 
-Append a short **"Cookies and similar technologies"** section to `src/pages/Privacy.tsx` (EN/IT/FR) pointing to `/cookies`, citing PECR reg. 6 + UK GDPR Art. 6(1)(f) as bases, and confirming no third-party trackers.
+If the consent check fails, the function returns `409 attestation_required` and the UI re-prompts.
 
-### 7. Dossier update
+### 6. Privacy & docs
 
-- `docs/ARCHITECTURE.md` §Privacy: one paragraph + pointer to `cookie-inventory.ts` as the canonical list.
-- `WhatSaid-Architecture-Privacy-Dossier.md` Storage section: reference the new inventory and `/cookies` page; clear the "[MISSING] cookie inventory" flag from the solicitor-ready list.
+- `src/pages/Privacy.tsx`: new "Your responsibilities when uploading others' voices" section in EN/IT/FR with the lawful-basis grounds, an Art. 14 summary, and a pointer to ICO guidance. Add anchor `#uploader-duties`.
+- `docs/ARCHITECTURE.md` §Privacy: paragraph documenting the per-job attestation, the `consent_versions` row, and `jobs.upload_consent_id`.
+- `WhatSaid-Architecture-Privacy-Dossier.md`: clear the "[MISSING] uploader lawful-basis declaration" flag.
+
+### 7. Admin visibility
+
+Extend `src/components/admin/JobAuditCard.tsx` to render the linked consent (version, basis, timestamp, optional context note). No new admin tab needed — DSR / audit workflows already open the job audit card.
 
 ## Regression / test gate
 
-- `cookie-inventory.test.ts` — fails on undeclared storage keys.
-- Vitest snapshot of the `/cookies` table render to catch accidental copy regressions.
+- Vitest `src/test/upload-attestation-strings.test.ts` — locale shape parity + presence of mandatory clauses (keyword grep on EN/IT/FR).
+- Edge tests:
+  - `record-upload-attestation/index.test.ts` — rejects missing acknowledgements, rejects unknown basis, rejects stale version, succeeds on valid input.
+  - `create-job/create-job.test.ts` — extend with cases: missing `upload_consent_id` → 409, foreign-user consent → 403, stale consent (>30 min) → 409, happy path writes id.
+- SQL smoke: after migration, `INSERT` into `jobs` without `upload_consent_id` from a non-service role still succeeds (column nullable for back-compat reads) but `UPDATE` attempt to change `upload_consent_id` post-insert is rejected by the trigger.
 - Manual checklist:
-  - Banner appears in a clean browser (incognito).
-  - "Got it" dismissal persists across reload; Esc also dismisses.
-  - Banner hidden on `/cookies`, `/privacy`, `/terms`.
-  - Reachable from footer link in all three languages.
-  - "Clear local app data" preserves the auth session.
-  - Banner copy renders correctly in EN / IT / FR (verify i18n keys present, no fallback warnings in console).
-  - Light + dark mode contrast OK; keyboard tab order reaches both buttons.
-  - Mobile (≤640 px) renders as bottom sheet with safe-area inset.
+  - Drag/drop upload prompts the dialog before bytes leave the browser.
+  - DirectRecorder finalisation also prompts the dialog.
+  - Cancel discards the staged file and shows no toast spam.
+  - Re-running an existing job (regenerate) does NOT re-prompt.
+  - Dialog passes keyboard nav, ≥4.5:1 contrast in light + dark, mobile bottom-sheet layout at ≤640px.
+  - Localised copy renders in EN/IT/FR with no missing-key warnings.
 
 ## Out of scope
 
-- Server-side consent ledger (overkill while no consent is required).
-- Granular per-category toggles UI — lands the day the first analytics/marketing entry enters the inventory.
-- IP-based language switching for the banner — using i18next's existing detection as you requested.
+- Per-speaker takedown workflow (covered by existing DSR rectification path).
+- Storing the attestation against guest jobs (guest flow already removed — only authenticated users upload).
+- Email confirmation of the attestation to the uploader (the audit row + DSR export already cover this).
