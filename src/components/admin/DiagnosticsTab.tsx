@@ -18,8 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Play, Trash2, Activity, Globe } from "lucide-react";
+import { Loader2, Play, Trash2, Activity, Globe, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getChunkFailures,
+  clearChunkFailures,
+  subscribeChunkFailures,
+  type ChunkFailure,
+} from "@/lib/chunk-diagnostics";
 
 type Strategy = "mobile" | "desktop";
 
@@ -82,6 +88,15 @@ export default function DiagnosticsTab() {
   const [running, setRunning] = useState(false);
   const [runs, setRuns] = useState<PsiRunResult[]>([]);
   const [liveVitals, setLiveVitals] = useState<LiveVital[]>([]);
+  const [chunkFailures, setChunkFailures] = useState<ChunkFailure[]>(() => getChunkFailures());
+
+  useEffect(() => {
+    return subscribeChunkFailures(() => setChunkFailures(getChunkFailures()));
+  }, []);
+
+
+
+
 
   // Capture live Web Vitals from the current admin session
   useEffect(() => {
@@ -186,6 +201,76 @@ export default function DiagnosticsTab() {
   return (
     <div className="space-y-6">
       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between gap-2 text-h3">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" /> Chunk load failures
+              {chunkFailures.length > 0 && (
+                <Badge variant="secondary" className="bg-destructive/15 text-destructive">
+                  {chunkFailures.length}
+                </Badge>
+              )}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => clearChunkFailures()}
+              disabled={chunkFailures.length === 0}
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Clear
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {chunkFailures.length === 0 ? (
+            <p className="text-body-sm text-muted-foreground">
+              No dynamic-import failures recorded in this browser session. Captured automatically from
+              <code className="mx-1 px-1 rounded bg-muted">window.error</code>,
+              <code className="mx-1 px-1 rounded bg-muted">unhandledrejection</code>, and the route error boundary.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>When</TableHead>
+                    <TableHead>Route</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Failed URL</TableHead>
+                    <TableHead>Last user action</TableHead>
+                    <TableHead>Error</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {chunkFailures.map((f) => (
+                    <TableRow key={f.id}>
+                      <TableCell className="text-body-xs whitespace-nowrap tabular-nums">
+                        {new Date(f.ts).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-mono text-body-xs">{f.route}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{f.source}</Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-body-xs max-w-[320px] break-all">
+                        {f.url ?? <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-body-xs max-w-[260px] break-words">
+                        {f.userAction ?? <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-body-xs max-w-[280px] break-words">
+                        <span className="font-medium">{f.name}:</span> {f.message}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-h3">
             <Activity className="h-4 w-4" /> Live Web Vitals (this session)

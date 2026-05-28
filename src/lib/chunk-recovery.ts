@@ -1,3 +1,5 @@
+import { recordChunkFailure } from "./chunk-diagnostics";
+
 const CHUNK_RELOAD_KEY = "__ws_chunk_reload_at";
 const CHUNK_RELOAD_COOLDOWN_MS = 10_000;
 
@@ -27,8 +29,18 @@ export function isChunkLoadError(value: unknown): boolean {
   );
 }
 
-export function reloadOnceForChunkError(value: unknown): boolean {
+export function reloadOnceForChunkError(
+  value: unknown,
+  options?: { source?: "error" | "unhandledrejection" | "boundary"; evt?: Event },
+): boolean {
   if (typeof window === "undefined" || !isChunkLoadError(value)) return false;
+
+  // Log the failure to the in-app diagnostics ring buffer before reloading.
+  recordChunkFailure({
+    value,
+    source: options?.source ?? "boundary",
+    evt: options?.evt,
+  });
 
   const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || "0");
   if (Date.now() - last < CHUNK_RELOAD_COOLDOWN_MS) return false;
