@@ -148,8 +148,44 @@ export default function JobAuditCard({
 
         {/* Upload audit */}
         <UploadAudit cfg={cfg} />
+
+        {/* Uploader attestation (UK GDPR Art. 6 / Art. 14) */}
+        <AttestationAudit attestation={uploadAttestation ?? null} />
       </CardContent>
     </Card>
+  );
+}
+
+function AttestationAudit({ attestation }: { attestation: UploadAttestation | null }) {
+  if (!attestation) {
+    return (
+      <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+        <h4 className="text-h3">Uploader attestation</h4>
+        <p className="text-xs text-muted-foreground mt-1">
+          No lawful-basis attestation recorded for this job (legacy job created before Phase 5).
+        </p>
+      </div>
+    );
+  }
+  const basis = attestation.metadata?.basis ?? "—";
+  const note = attestation.metadata?.contextNote ?? null;
+  return (
+    <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
+      <h4 className="text-h3">Uploader attestation</h4>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <LangPill label="basis" value={basis} />
+        <LangPill label="version" value={attestation.version} />
+        <LangPill label="accepted" value={new Date(attestation.accepted_at).toLocaleString()} />
+      </div>
+      {note && (
+        <p className="text-xs text-muted-foreground">
+          <span className="uppercase tracking-wide">Note:</span> {note}
+        </p>
+      )}
+      <p className="text-micro text-muted-foreground font-mono break-all">
+        consent_id: {attestation.id}
+      </p>
+    </div>
   );
 }
 
