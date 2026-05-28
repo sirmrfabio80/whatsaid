@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import en from "@/i18n/locales/en.json";
-import it from "@/i18n/locales/it.json";
+import itLocale from "@/i18n/locales/it.json";
 import fr from "@/i18n/locales/fr.json";
 
 type Dict = Record<string, unknown>;
@@ -22,7 +22,7 @@ describe("Policy locale parity (Phase 7)", () => {
   for (const ns of ["privacy", "terms"] as const) {
     it(`it.${ns} has the same key shape as en.${ns}`, () => {
       const a = collectKeys((en as Dict)[ns] as Dict);
-      const b = collectKeys((it as Dict)[ns] as Dict);
+      const b = collectKeys((itLocale as Dict)[ns] as Dict);
       expect(b).toEqual(a);
     });
 
