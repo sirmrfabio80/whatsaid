@@ -806,6 +806,39 @@ export type Database = {
         }
         Relationships: []
       }
+      retention_alerts: {
+        Row: {
+          alert_kind: string
+          cleanup_log_id: string | null
+          dataset_key: string | null
+          details: Json
+          email_error: string | null
+          email_sent: boolean
+          id: string
+          sent_at: string
+        }
+        Insert: {
+          alert_kind: string
+          cleanup_log_id?: string | null
+          dataset_key?: string | null
+          details?: Json
+          email_error?: string | null
+          email_sent?: boolean
+          id?: string
+          sent_at?: string
+        }
+        Update: {
+          alert_kind?: string
+          cleanup_log_id?: string | null
+          dataset_key?: string | null
+          details?: Json
+          email_error?: string | null
+          email_sent?: boolean
+          id?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       retention_config: {
         Row: {
           created_at: string

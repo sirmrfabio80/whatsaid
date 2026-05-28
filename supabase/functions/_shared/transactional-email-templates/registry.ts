@@ -12,9 +12,11 @@ export interface TemplateEntry {
 import { template as adminNewSignup } from './admin-new-signup.tsx'
 import { template as adminCreditPurchase } from './admin-credit-purchase.tsx'
 import { template as adminDsrRectification } from './admin-dsr-rectification.tsx'
+import { template as adminRetentionAlert } from './admin-retention-alert.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'admin-new-signup': adminNewSignup,
   'admin-credit-purchase': adminCreditPurchase,
   'admin-dsr-rectification': adminDsrRectification,
+  'admin-retention-alert': adminRetentionAlert,
 }
