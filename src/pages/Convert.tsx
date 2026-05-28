@@ -10,6 +10,7 @@ import DirectRecorder from "@/components/DirectRecorder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, Upload as UploadIcon } from "lucide-react";
 import JobResults from "@/components/JobResults";
+import { UploadAttestationDialog, type UploadAttestationPayload } from "@/components/UploadAttestationDialog";
 
 import LanguageSelector from "@/components/LanguageSelector";
 import LanguageGate from "@/components/LanguageGate";
