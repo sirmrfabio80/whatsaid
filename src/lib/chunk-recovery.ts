@@ -14,11 +14,17 @@ const CHUNK_RELOAD_STATE_KEY = "__ws_chunk_reload_state";
  * - `resetAfterMs`: if no chunk failure has been observed for this long,
  *   the attempt counter resets (a successful long-lived session is healthy).
  */
-export const CHUNK_RECOVERY_CONFIG = {
+export type ChunkRecoveryConfig = {
+  maxAttempts: number;
+  backoffMs: readonly number[];
+  resetAfterMs: number;
+};
+
+export const CHUNK_RECOVERY_CONFIG: ChunkRecoveryConfig = {
   maxAttempts: 3,
   backoffMs: [10_000, 60_000, 300_000],
   resetAfterMs: 10 * 60_000,
-} as const;
+};
 
 type ReloadState = {
   attempts: number;
