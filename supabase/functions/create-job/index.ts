@@ -265,11 +265,33 @@ Deno.serve(async (req) => {
           ? body.metadata_location_iso6709
           : null,
         upload_consent_id: consentId,
+        idempotency_key: idempotencyKey,
       })
       .select("id, credits_charged")
       .single();
 
     if (insertErr || !row) {
+      // Race: a concurrent request with the same idempotency_key won the
+      // unique index. Look up and return the winner instead of erroring.
+      // Postgres unique_violation = 23505.
+      if (idempotencyKey && (insertErr as { code?: string } | null)?.code === "23505") {
+        const { data: winner } = await supabase
+          .from("jobs")
+          .select("id, credits_charged")
+          .eq("user_id", userId)
+          .eq("idempotency_key", idempotencyKey)
+          .maybeSingle();
+        if (winner) {
+          return new Response(
+            JSON.stringify({
+              job_id: winner.id,
+              credits_charged: winner.credits_charged,
+              idempotent_replay: true,
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
       console.error("[create-job] insert failed:", insertErr);
       return bad(insertErr?.message ?? "Could not create job", 500);
     }
@@ -278,6 +300,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ job_id: row.id, credits_charged: row.credits_charged }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (err) {
     console.error("[create-job] error:", err);
     return bad(err instanceof Error ? err.message : "Unknown error", 500);
