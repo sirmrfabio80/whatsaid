@@ -107,6 +107,8 @@ export default function EdgeHealthTab() {
   }, [results]);
 
   return (
+    <div className="space-y-6">
+
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
