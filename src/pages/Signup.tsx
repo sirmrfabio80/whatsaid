@@ -94,9 +94,19 @@ export default function Signup() {
       return;
     }
 
+    // Record the user's ToS uploader-warranty acceptance. Fail-soft: if the
+    // session isn't established yet (email-confirm flow) or the call errors,
+    // AuthContext re-attempts on the next signed-in event.
+    try {
+      await supabase.functions.invoke("record-tos-acceptance");
+    } catch (e) {
+      console.warn("[signup] record-tos-acceptance failed (will retry on next sign-in)", e);
+    }
+
     setSuccess(true);
     setLoading(false);
   };
+
 
   if (success) {
     return (
@@ -173,10 +183,11 @@ export default function Signup() {
               <label htmlFor="terms" className="text-body-sm text-muted-foreground leading-snug cursor-pointer">
                 {t("signup.termsAgree")}{" "}
                 <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank">{t("signup.termsOfService")}</Link>
-                {" "}{t("signup.and")}{" "}
+                {" · "}
                 <Link to="/privacy" className="text-primary hover:underline font-medium" target="_blank">{t("footer.privacy")}</Link>
               </label>
             </div>
+
 
             {error && (
               <div className="flex items-center gap-2 text-destructive text-body-sm">
