@@ -3,127 +3,135 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { PolicyRichText } from "@/components/policy/PolicyRichText";
+
+// Effective date for the current version of the Privacy Notice.
+// Update this constant on every material change.
+const EFFECTIVE_DATE = "28 May 2026";
+
+type Section =
+  | { key: string; type: "p" }
+  | { key: string; type: "multi"; paragraphs: string[] }
+  | { key: string; type: "intro-ul"; items: string[]; outro?: string };
+
+const SECTIONS: Section[] = [
+  { key: "s1", type: "p" },
+  { key: "s2", type: "p" },
+  {
+    key: "s3",
+    type: "intro-ul",
+    items: ["s3Item1", "s3Item2", "s3Item3", "s3Item4", "s3Item5", "s3Item6"],
+  },
+  {
+    key: "s4",
+    type: "intro-ul",
+    items: ["s4Item1", "s4Item2", "s4Item3", "s4Item4", "s4Item5"],
+  },
+  { key: "s5", type: "multi", paragraphs: ["s5Body1", "s5Body2"] },
+  {
+    key: "s6",
+    type: "intro-ul",
+    items: ["s6Item1", "s6Item2", "s6Item3", "s6Item4", "s6Item5", "s6Item6"],
+  },
+  {
+    key: "s7",
+    type: "intro-ul",
+    items: ["s7Item1", "s7Item2", "s7Item3"],
+  },
+  { key: "s8", type: "p" },
+  {
+    key: "s9",
+    type: "intro-ul",
+    items: ["s9Item1", "s9Item2", "s9Item3", "s9Item4"],
+  },
+  { key: "s10", type: "p" },
+  { key: "s11", type: "p" },
+  { key: "s12", type: "p" },
+  { key: "s13", type: "p" },
+  { key: "s14", type: "p" },
+  { key: "s15", type: "p" },
+  { key: "s16", type: "p" },
+];
 
 export default function Privacy() {
   const { t } = useTranslation();
 
   usePageMeta({
-    title: "Privacy Policy — WhatSaid",
+    title: "Privacy Notice — WhatSaid",
     description:
-      "How WhatSaid handles your audio, transcripts, and personal data. Audio is deleted after processing — only the generated text is retained.",
+      "How WhatSaid handles your audio, transcripts and personal data under UK GDPR — EU-region processing, audio deleted after transcription, full DSR self-service.",
     canonical: "https://whatsaid.app/privacy",
   });
-
-  const sections = [
-    { title: "privacy.s1Title", type: "p", content: "privacy.s1Body" },
-    {
-      title: "privacy.s2Title", type: "ul", items: [
-        "privacy.s2AccountData", "privacy.s2AudioFiles", "privacy.s2Transcripts",
-        "privacy.s2PaymentMeta", "privacy.s2UsageData", "privacy.s2TechnicalData",
-      ],
-    },
-    {
-      title: "privacy.s3Title", type: "ul", items: [
-        "privacy.s3Item1", "privacy.s3Item2", "privacy.s3Item3",
-      ],
-    },
-    {
-      title: "privacy.s4Title", type: "ul", items: [
-        "privacy.s4Item1", "privacy.s4Item2", "privacy.s4Item3", "privacy.s4Item4",
-      ],
-    },
-    { title: "privacy.s5Title", type: "multi", paragraphs: ["privacy.s5Body1", "privacy.s5Body2", "privacy.s5Body3"] },
-    {
-      title: "privacy.s6Title", type: "intro-ul",
-      intro: "privacy.s6Intro",
-      items: ["privacy.s6AssemblyAI", "privacy.s6Paddle", "privacy.s6Cloud"],
-      outro: "privacy.s6Transfer",
-    },
-    { title: "privacy.s7Title", type: "p", content: "privacy.s7Body" },
-    { title: "privacy.s8Title", type: "p", content: "privacy.s8Body" },
-    { title: "privacy.s9Title", type: "p", content: "privacy.s9Body" },
-    { title: "privacy.s10Title", type: "p", content: "privacy.s10Body" },
-    { title: "privacy.s11Title", type: "p", content: "privacy.s11Body" },
-    { title: "privacy.s12Title", type: "p", content: "privacy.s12Body" },
-    { title: "privacy.s13Title", type: "p", content: "privacy.s13Body" },
-  ];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] animate-page-enter-flat">
       <div className="container mx-auto px-4 py-8 sm:py-12">
         <div className="max-w-3xl mx-auto">
-          <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground mb-6" asChild>
-            <Link to="/"><ArrowLeft className="w-4 h-4" />{t("common.backToHome")}</Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-2 gap-1.5 text-muted-foreground mb-6"
+            asChild
+          >
+            <Link to="/">
+              <ArrowLeft className="w-4 h-4" />
+              {t("common.backToHome")}
+            </Link>
           </Button>
 
-          <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">{t("privacy.title")}</h1>
-          <p className="text-body-sm text-muted-foreground mb-8">{t("privacy.lastUpdated", { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) })}</p>
+          <h1 className="text-h1 sm:text-[1.875rem] tracking-tight mb-2">
+            {t("privacy.title")}
+          </h1>
+          <p className="text-body-sm text-muted-foreground mb-8">
+            {t("privacy.lastUpdated", { date: EFFECTIVE_DATE })}
+          </p>
 
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
-            {sections.map((s, i) => (
-              <section key={i}>
-                <h2 className="text-h2 mb-2">{t(s.title)}</h2>
+            {SECTIONS.map((s) => (
+              <section
+                key={s.key}
+                id={s.key === "s12" ? "uploader-duties" : undefined}
+                className={s.key === "s12" ? "scroll-mt-24" : undefined}
+              >
+                <h2 className="text-h2 mb-2">{t(`privacy.${s.key}Title`)}</h2>
+
                 {s.type === "p" && (
-                  <p className="text-body-sm text-muted-foreground leading-relaxed">{t(s.content!)}</p>
+                  <p className="text-body-sm text-muted-foreground leading-relaxed">
+                    <PolicyRichText text={t(`privacy.${s.key}Body`)} />
+                  </p>
                 )}
-                {s.type === "ul" && (
-                  <ul className="text-body-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
-                    {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
-                  </ul>
-                )}
-                {s.type === "multi" && s.paragraphs!.map((p) => (
-                  <p key={p} className="text-body-sm text-muted-foreground leading-relaxed">{t(p)}</p>
-                ))}
+
+                {s.type === "multi" &&
+                  s.paragraphs.map((p) => (
+                    <p
+                      key={p}
+                      className="text-body-sm text-muted-foreground leading-relaxed"
+                    >
+                      <PolicyRichText text={t(`privacy.${p}`)} />
+                    </p>
+                  ))}
+
                 {s.type === "intro-ul" && (
                   <>
-                    <p className="text-body-sm text-muted-foreground leading-relaxed">{t(s.intro!)}</p>
-                    <ul className="text-body-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
-                      {s.items!.map((item) => <li key={item}><strong>{t(item)}</strong></li>)}
+                    <p className="text-body-sm text-muted-foreground leading-relaxed">
+                      <PolicyRichText text={t(`privacy.${s.key}Intro`)} />
+                    </p>
+                    <ul className="text-body-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1 mt-2">
+                      {s.items.map((item) => (
+                        <li key={item}>
+                          <PolicyRichText text={t(`privacy.${item}`)} />
+                        </li>
+                      ))}
                     </ul>
-                    {s.outro && <p className="text-body-sm text-muted-foreground leading-relaxed mt-2">{t(s.outro)}</p>}
+                    {s.outro && (
+                      <p className="text-body-sm text-muted-foreground leading-relaxed mt-2">
+                        <PolicyRichText text={t(`privacy.${s.outro}`)} />
+                      </p>
+                    )}
                   </>
                 )}
               </section>
             ))}
-
-            <section>
-              <h2 className="text-h2 mb-2">Cookies and similar technologies</h2>
-              <p className="text-body-sm text-muted-foreground leading-relaxed">
-                WhatSaid only uses storage that is strictly necessary to keep
-                you signed in, remember your language, and keep the app
-                working. We do not use analytics, advertising, or session-replay
-                cookies. A full inventory and how to clear each item is
-                available on our <Link to="/cookies" className="underline hover:text-foreground">cookies page</Link>.
-                Lawful bases: PECR regulation 6 and UK GDPR Article 6(1)(f).
-              </p>
-            </section>
-
-            <section id="uploader-duties" className="scroll-mt-24">
-              <h2 className="text-h2 mb-2">Your responsibilities when uploading others’ voices</h2>
-              <p className="text-body-sm text-muted-foreground leading-relaxed">
-                When you upload a recording, you are the controller of any personal
-                data it contains under UK GDPR. Before we process the file you
-                must confirm a lawful basis under Article 6 — typically your own
-                voice only, the speakers’ consent, the necessity of a contract,
-                or another lawful ground. Where the recording contains
-                identifiable people other than you, Article 14 requires you to
-                inform them their voice is being transcribed, unless a
-                14(5) exemption applies. We record this attestation per upload
-                and store it against the job for audit. The audio itself is
-                deleted from our servers and from our transcription provider
-                immediately after the transcript is produced.
-                See the{" "}
-                <a
-                  className="underline hover:text-foreground"
-                  href="https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/lawful-basis/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  ICO guidance on lawful basis
-                </a>{" "}
-                for more.
-              </p>
-            </section>
           </div>
         </div>
       </div>
