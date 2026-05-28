@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
-import { AlertTriangle, CheckCircle2, Clock, Play, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import JsonBlock from "@/components/admin/JsonBlock";
+import { AlertTriangle, CheckCircle2, Clock, Play, RefreshCw, RotateCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 /**
