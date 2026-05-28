@@ -109,7 +109,8 @@ export default function Convert() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uploadHandleRef = useRef<{ abort: () => Promise<void> | void } | null>(null);
-  const [cancelingUpload, setCancelingUpload] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const { status: tosStatus, reaccept: reacceptTos, recording: recordingTos } = useTosConsent();
 
   const [consentChecked, setConsentChecked] = useState(false);
 
