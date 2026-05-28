@@ -143,6 +143,14 @@ export default function RetentionMonitorTab() {
   const [selected, setSelected] = useState<CleanupLogRow | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
+  // Filters
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [modeFilter, setModeFilter] = useState<"all" | "dry-run" | "live">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "failed" | "running">("all");
+  const [datasetFilter, setDatasetFilter] = useState<string>("all");
+
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
