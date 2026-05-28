@@ -21,8 +21,9 @@ function buildShareRecordEmail(opts: {
   title: string
   senderLabel: string
   claimUrl: string
+  noticeHtml: string
 }): string {
-  const { title, senderLabel, claimUrl } = opts
+  const { title, senderLabel, claimUrl, noticeHtml } = opts
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -36,12 +37,13 @@ function buildShareRecordEmail(opts: {
         <p style="font-size:15px;color:hsl(220,10%,40%);margin:0 0 8px;line-height:1.5;"><strong>${escapeHtml(senderLabel)}</strong> shared a transcript with you:</p>
         <p style="font-size:16px;font-weight:600;color:hsl(220,25%,15%);margin:16px 0 24px;padding:12px 20px;background:hsl(220,20%,97%);border-radius:10px;display:inline-block;">${escapeHtml(title)}</p>
       </div>
-      <div style="padding:0 28px 32px;text-align:center;">
+      <div style="padding:0 28px 24px;text-align:center;">
         <a href="${claimUrl}" style="display:inline-block;padding:14px 40px;background:hsl(245,50%,48%);color:#fff;font-size:15px;font-weight:600;border-radius:12px;text-decoration:none;letter-spacing:0.01em;margin:0 8px 12px;">Open your copy</a>
         <p style="font-size:13px;color:hsl(220,10%,55%);margin:20px 0 0;line-height:1.5;">
           Sign in or create a free WhatSaid account first to access this share. This link expires in 2 days.
         </p>
       </div>
+      <div style="padding:0 28px 28px;text-align:left;">${noticeHtml}</div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
         <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;text-align:center;">
           <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a> — AI audio transcription
