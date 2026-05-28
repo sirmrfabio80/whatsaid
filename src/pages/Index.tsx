@@ -3,6 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { useGeoCheck } from "@/hooks/use-geo-check";
+import { RegionBlockedNotice } from "@/components/RegionBlockedNotice";
 
 import {
   ArrowRight, Shield, Globe, Trash2, Users, Languages, Upload, Cpu, Download,
