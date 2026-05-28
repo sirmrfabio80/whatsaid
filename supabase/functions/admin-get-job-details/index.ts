@@ -138,6 +138,7 @@ Deno.serve(async (req) => {
         outputs: outputs ?? [],
         recent_jobs: recentJobs ?? [],
         edge_logs: edgeLogs,
+        upload_attestation: uploadAttestation,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
