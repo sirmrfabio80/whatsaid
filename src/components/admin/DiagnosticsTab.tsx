@@ -87,11 +87,14 @@ export default function DiagnosticsTab() {
   const [strategy, setStrategy] = useState<Strategy>("desktop");
   const [running, setRunning] = useState(false);
   const [runs, setRuns] = useState<PsiRunResult[]>([]);
+  const [liveVitals, setLiveVitals] = useState<LiveVital[]>([]);
   const [chunkFailures, setChunkFailures] = useState<ChunkFailure[]>(() => getChunkFailures());
 
   useEffect(() => {
     return subscribeChunkFailures(() => setChunkFailures(getChunkFailures()));
   }, []);
+
+
 
 
 
