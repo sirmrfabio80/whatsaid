@@ -154,13 +154,17 @@ function PricingCard({
   formattedPrice,
   loading,
   onCta,
+  disabled,
 }: {
   product: PricingProduct;
   localized: ReturnType<typeof getPriceForProduct>;
   formattedPrice: string;
   loading: boolean;
   onCta: () => void;
+  disabled?: boolean;
 }) {
+  const { t } = useTranslation();
+  return (
   const { t } = useTranslation();
   return (
     <Card
