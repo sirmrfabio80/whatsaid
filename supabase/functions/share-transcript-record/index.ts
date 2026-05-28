@@ -2,6 +2,12 @@ import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/cons
 import { corsHeaders } from '../_shared/cors.ts'
 import { enforceQuota } from '../_shared/quota.ts'
 import { createServiceClient, requireAuth } from '../_shared/supabase.ts'
+import {
+  buildNoticeHtml,
+  buildNoticeText,
+  recordRecipientNotification,
+  resolveActiveNotice,
+} from '../_shared/recipient-notice.ts'
 
 function escapeHtml(str: string): string {
   return str
