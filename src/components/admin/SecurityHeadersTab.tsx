@@ -301,5 +301,4 @@ export default function SecurityHeadersTab() {
       </Card>
     </div>
   );
-  );
 }
