@@ -148,22 +148,28 @@ export default function RetentionMonitorTab() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const runDry = useCallback(async () => {
-    setRunning(true);
-    try {
-      const { error } = await supabase.functions.invoke("prune-retention", {
-        body: { dry_run: true },
-      });
-      if (error) throw error;
-      toast.success("Dry-run started — refresh in a few seconds.");
-      // Optimistic refresh; the function writes a row synchronously.
-      setTimeout(() => { void load(); }, 800);
-    } catch (e) {
-      toast.error(`Dry-run failed: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setRunning(false);
-    }
-  }, [load]);
+  const invokePrune = useCallback(
+    async (opts: { dryRun: boolean; datasetKeys?: string[]; sourceId?: string; label: string }) => {
+      if (opts.sourceId) setRetryingId(opts.sourceId);
+      else setRunning(true);
+      try {
+        const body: Record<string, unknown> = { dry_run: opts.dryRun };
+        if (opts.datasetKeys?.length) body.dataset_keys = opts.datasetKeys;
+        const { error } = await supabase.functions.invoke("prune-retention", { body });
+        if (error) throw error;
+        toast.success(`${opts.label} started — refresh in a few seconds.`);
+        setTimeout(() => { void load(); }, 800);
+      } catch (e) {
+        toast.error(`${opts.label} failed: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        if (opts.sourceId) setRetryingId(null);
+        else setRunning(false);
+      }
+    },
+    [load],
+  );
+
+  const runDry = useCallback(() => invokePrune({ dryRun: true, label: "Dry-run" }), [invokePrune]);
 
   const alerts = useMemo(() => deriveAlerts(rows), [rows]);
   const latest = rows[0];
