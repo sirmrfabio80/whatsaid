@@ -31,3 +31,7 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = true
   [functions.retention-monitor-watchdog]
     verify_jwt = true
+  [functions.paddle-webhook]
+    verify_jwt = false
+  [functions.prune-retention]
+    verify_jwt = true

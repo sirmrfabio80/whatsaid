@@ -121,9 +121,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    } catch {
-      return bad("Invalid JSON body");
-    }
+
 
     const fileName = typeof body.file_name === "string" ? body.file_name.trim() : "";
     if (!fileName || fileName.length > 512) {

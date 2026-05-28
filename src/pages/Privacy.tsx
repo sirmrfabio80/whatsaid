@@ -140,9 +140,72 @@ export default function Privacy() {
                 )}
               </section>
             ))}
+
+            {/* Hardcoded English. Added per Art. 13(1)(e) / Art. 14(1)(e) — recipients
+                and sub-processors disclosure. Kept outside the locale bundles
+                because legal copy is currently English-only (see LegalEnglishOnlyBanner). */}
+            <section id="recipients" className="scroll-mt-24">
+              <h2 className="text-h2 mb-2">17. Recipients and sub-processors</h2>
+              <p className="text-body-sm text-muted-foreground leading-relaxed">
+                We share personal data only with the processors listed below.
+                Each is bound by a written contract under UK GDPR Article 28.
+                Audio is sent only to AssemblyAI for speech-to-text and is deleted
+                from both WhatSaid storage and AssemblyAI immediately after the
+                transcript is returned.
+              </p>
+              <div className="overflow-x-auto mt-3">
+                <table className="w-full text-body-sm border border-border/60 rounded-lg">
+                  <thead className="bg-muted/30">
+                    <tr className="text-left">
+                      <th className="p-2 font-medium">Processor</th>
+                      <th className="p-2 font-medium">Role</th>
+                      <th className="p-2 font-medium">Region</th>
+                      <th className="p-2 font-medium">Chapter V mechanism</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr className="border-t border-border/60">
+                      <td className="p-2">Lovable Cloud / Supabase</td>
+                      <td className="p-2">Database, auth, storage, edge functions</td>
+                      <td className="p-2">EU (Ireland)</td>
+                      <td className="p-2">No transfer (UK ↔ EU adequacy)</td>
+                    </tr>
+                    <tr className="border-t border-border/60">
+                      <td className="p-2">AssemblyAI</td>
+                      <td className="p-2">Speech-to-text (audio is deleted after transcription)</td>
+                      <td className="p-2">EU endpoint pinned (Ireland)</td>
+                      <td className="p-2">No transfer (UK ↔ EU adequacy)</td>
+                    </tr>
+                    <tr className="border-t border-border/60">
+                      <td className="p-2">Lovable AI Gateway → OpenAI</td>
+                      <td className="p-2">Summaries and custom outputs (text only)</td>
+                      <td className="p-2">United States</td>
+                      <td className="p-2">UK Extension to the EU–US Data Privacy Framework</td>
+                    </tr>
+                    <tr className="border-t border-border/60">
+                      <td className="p-2">Lovable AI Gateway → Google</td>
+                      <td className="p-2">Summaries and custom outputs (text only)</td>
+                      <td className="p-2">United States</td>
+                      <td className="p-2">UK Extension to the EU–US Data Privacy Framework</td>
+                    </tr>
+                    <tr className="border-t border-border/60">
+                      <td className="p-2">Paddle.com Market Ltd</td>
+                      <td className="p-2">Merchant of record, billing, payment processing</td>
+                      <td className="p-2">United Kingdom (with US sub-processors)</td>
+                      <td className="p-2">UK IDTA / DPF where applicable</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-body-sm text-muted-foreground leading-relaxed mt-3">
+                We do not sell personal data. We do not share data with advertisers.
+                We may disclose data to public authorities where required by law.
+              </p>
+            </section>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
