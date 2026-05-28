@@ -166,7 +166,9 @@
     "costOneCredit": "1 credito",
     "costMultipleCredits": "{{count}} crediti",
     "costMultipleCreditsHint": "File di {{minutes}} min — addebitato in blocchi da 120 min",
-    "consentLabel": "Confermo di avere il diritto di caricare ed elaborare questa registrazione e che tutti i requisiti di consenso applicabili sono stati soddisfatti.",
+    "consentLabel": "Ho il diritto di caricare questa registrazione.",
+    "consentLabelLearnMore": "Scopri di più",
+
     "thirdPartyNotice": "L'audio viene elaborato utilizzando servizi AI di terze parti ed eliminato immediatamente dopo. Convertendo, accetti i nostri",
     "terms": "Termini",
     "privacyPolicy": "Informativa sulla privacy",
@@ -238,7 +240,8 @@
     "email": "Email",
     "password": "Password",
     "passwordPlaceholder": "Almeno 6 caratteri",
-    "termsAgree": "Accetto i",
+    "termsAgree": "Accetto i Termini di servizio e l'Informativa sulla privacy e confermo che caricherò solo audio che ho il diritto di trattare ai sensi del UK GDPR.",
+
     "termsOfService": "Termini di servizio",
     "and": "e",
     "creating": "Creazione account...",
@@ -698,7 +701,7 @@
     "s9Item4": "Altri diritti o cose che non puoi gestire in autonomia — scrivi a support@whatsaid.app.",
     "s10Title": "10. Diritto di reclamo all'ICO",
     "s10Body": "Se non sei soddisfatto di come abbiamo gestito i tuoi dati personali, puoi presentare reclamo all'Information Commissioner's Office su <icoLink>ico.org.uk</icoLink> o al numero 0303 123 1113. Apprezzeremmo la possibilità di risolvere prima il problema — scrivici a support@whatsaid.app.",
-    "s11Title": "11. Cookie e archiviazione locale",
+    "s12Body": "Quando carichi una registrazione sei tu il titolare del trattamento dei dati personali in essa contenuti e WhatSaid Ltd agisce come responsabile del trattamento per tale contenuto. Prima del caricamento devi avere una base giuridica ex articolo 6 UK GDPR — solo la tua voce, il consenso degli interlocutori identificabili, l'esecuzione di un contratto o un'altra base giuridica. Se la registrazione contiene persone identificabili diverse da te, l'articolo 14 ti impone di informarle che la loro voce sarà trascritta, salvo eccezioni ex 14(5). Accetti questi doveri una sola volta al momento dell'accettazione dei Termini di servizio e continuano ad applicarsi a ogni caricamento. WhatSaid Ltd è titolare del trattamento per le operazioni del servizio (account, fatturazione, telemetria). I nostri sub-responsabili per il contenuto sono: Lovable Cloud (hosting e piattaforma), Supabase (Postgres gestito, autenticazione, object storage; regione UE) e AssemblyAI (speech-to-text; regione UE — audio eliminato immediatamente dopo la trascrizione). Vedi la <icoLink>guida ICO sulle basi giuridiche</icoLink> per approfondire.",
     "s11Body": "WhatSaid utilizza solo l'archiviazione strettamente necessaria per mantenere l'accesso, ricordare la tua lingua e far funzionare l'app. Non utilizziamo cookie di analisi, pubblicitari o di session replay. Inventario completo e istruzioni per la cancellazione sono nella nostra <cookiesLink>pagina cookie</cookiesLink>. Basi giuridiche: regolamento 6 PECR e articolo 6(1)(f) UK GDPR.",
     "s12Title": "12. Le tue responsabilità quando carichi voci di terzi",
     "s12Body": "Quando carichi una registrazione sei tu il titolare del trattamento dei dati personali in essa contenuti. Prima di elaborare il file devi confermare una base giuridica ex articolo 6 — tipicamente solo la tua voce, il consenso degli interlocutori, l'esecuzione di un contratto o un'altra base giuridica. Se la registrazione contiene persone identificabili diverse da te, l'articolo 14 ti impone di informarle che la loro voce sarà trascritta, salvo eccezioni ex 14(5). Registriamo questa attestazione per ogni caricamento e la conserviamo collegata al lavoro a fini di audit. Vedi la <icoLink>guida ICO sulle basi giuridiche</icoLink> per approfondire.",
@@ -754,11 +757,10 @@
     "s15Title": "15. Legge applicabile e foro competente",
     "s15Body": "Questi termini sono regolati dalle leggi di Inghilterra e Galles. Ogni controversia è soggetta alla giurisdizione esclusiva dei tribunali di Inghilterra e Galles.",
     "s16Title": "16. Come presentare un reclamo",
-    "s16Body": "Ti invitiamo a contattarci prima a support@whatsaid.app — rispondiamo entro 5 giorni lavorativi. Se il reclamo riguarda il trattamento dei dati personali, puoi anche rivolgerti all'Information Commissioner's Office su <icoLink>ico.org.uk</icoLink>. Per controversie consumeristiche puoi ottenere assistenza gratuita da Citizens Advice (citizensadvice.org.uk).",
-    "s17Title": "17. Clausola di salvaguardia e intero accordo",
-    "s17Body": "Se una qualsiasi clausola dei presenti termini fosse ritenuta inapplicabile, le restanti restano pienamente efficaci. Questi termini, insieme all'Informativa sulla privacy e alla Refund Policy, costituiscono l'intero accordo fra te e WhatSaid in relazione al servizio.",
     "s18Title": "18. Contatto",
-    "s18Body": "Per qualsiasi domanda su questi termini, scrivi a support@whatsaid.app."
+    "s18Body": "Per qualsiasi domanda su questi termini, scrivi a support@whatsaid.app.",
+    "s19Title": "19. I tuoi caricamenti audio",
+    "s19Body": "Quando carichi una registrazione su WhatSaid garantisci che (a) hai una base giuridica ex articolo 6 UK GDPR per trattare l'audio e i dati personali in esso contenuti e (b) se la registrazione contiene persone identificabili diverse da te, ove richiesto, le informerai che la loro voce viene trascritta ai sensi dell'articolo 14, salvo eccezioni ex articolo 14(5). Accetti di tenere indenne WhatSaid da qualsiasi pretesa di terzi derivante dalla violazione di queste garanzie. L'obbligo è accettato una sola volta al momento dell'accettazione di questi Termini e continua ad applicarsi a ogni caricamento. Vedi la sezione dell'Informativa sulla privacy dedicata ai doveri dell'utente caricatore per il dettaglio completo."
   },
   "pricing": {
     "heroEyebrow": "Pagamento singolo. Niente abbonamento.",

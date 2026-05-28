@@ -196,6 +196,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, regionBlocked, regionChecking, refreshCredits, refreshProfile, refreshAdminStatus]);
 
+  // Opportunistically record the user's acceptance of the current
+  // tos_uploader_warranty version. Fires at most once per (user.id) per
+  // mount of this provider — the edge function is idempotent per
+  // (user, version), so a second hit is cheap. Fail-soft on network errors.
+  const tosAckRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!user || regionBlocked || regionChecking) return;
+    if (tosAckRef.current.has(user.id)) return;
+    tosAckRef.current.add(user.id);
+    void supabase.functions
+      .invoke("record-tos-acceptance")
+      .catch((e) => console.warn("[auth] record-tos-acceptance failed", e));
+  }, [user, regionBlocked, regionChecking]);
+
+
   // Redirect to /set-password if the flag is set
   useEffect(() => {
     if (!loading && user && !regionBlocked && !regionChecking && needsPasswordSetup && location.pathname !== "/set-password") {

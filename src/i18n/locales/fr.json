@@ -166,7 +166,9 @@
     "costOneCredit": "1 crédit",
     "costMultipleCredits": "{{count}} crédits",
     "costMultipleCreditsHint": "Fichier de {{minutes}} min — facturé par tranches de 120 min",
-    "consentLabel": "Je confirme avoir le droit de télécharger et de traiter cet enregistrement, et que toutes les exigences de consentement applicables ont été respectées.",
+    "consentLabel": "J'ai le droit de téléverser cet enregistrement.",
+    "consentLabelLearnMore": "En savoir plus",
+
     "thirdPartyNotice": "L'audio est traité par des services IA tiers et supprimé immédiatement après. En convertissant, vous acceptez nos",
     "terms": "Conditions",
     "privacyPolicy": "Politique de confidentialité",
@@ -238,7 +240,8 @@
     "email": "Email",
     "password": "Mot de passe",
     "passwordPlaceholder": "Au moins 6 caractères",
-    "termsAgree": "J'accepte les",
+    "termsAgree": "J'accepte les Conditions de service et la Politique de confidentialité, et je confirme ne téléverser que de l'audio que j'ai le droit de traiter au titre du UK GDPR.",
+
     "termsOfService": "Conditions d'utilisation",
     "and": "et",
     "creating": "Création du compte...",
@@ -698,7 +701,7 @@
     "s9Item4": "Autres droits ou demandes non libre-service — écrivez à support@whatsaid.app.",
     "s10Title": "10. Droit de réclamation auprès de l'ICO",
     "s10Body": "Si vous n'êtes pas satisfait de la façon dont nous avons géré vos données personnelles, vous pouvez saisir l'Information Commissioner's Office sur <icoLink>ico.org.uk</icoLink> ou au 0303 123 1113. Nous apprécierions de pouvoir résoudre le problème d'abord — écrivez-nous à support@whatsaid.app.",
-    "s11Title": "11. Cookies et stockage local",
+    "s12Body": "Lorsque vous téléversez un enregistrement, vous êtes responsable de traitement des données personnelles qu'il contient et WhatSaid Ltd agit en qualité de sous-traitant pour ce contenu. Avant le téléversement, vous devez disposer d'une base légale au titre de l'article 6 UK GDPR — votre propre voix, le consentement des intervenants identifiables, la nécessité d'un contrat ou une autre base légale. Si l'enregistrement contient des personnes identifiables autres que vous-même, l'article 14 vous impose de les informer que leur voix est transcrite, sauf exception du 14(5). Vous acceptez ces obligations une seule fois en acceptant les Conditions de service et elles continuent de s'appliquer à chaque téléversement. WhatSaid Ltd est responsable de traitement pour l'exploitation du service (compte, facturation, télémétrie). Nos sous-traitants pour ce contenu sont : Lovable Cloud (hébergement et plateforme), Supabase (Postgres managé, authentification, stockage objet ; région UE) et AssemblyAI (reconnaissance vocale ; région UE — audio supprimé immédiatement après transcription). Voir le <icoLink>guide ICO sur la base légale</icoLink> pour en savoir plus.",
     "s11Body": "WhatSaid n'utilise que le stockage strictement nécessaire pour vous maintenir connecté, mémoriser votre langue et faire fonctionner l'application. Nous n'utilisons pas de cookies d'analyse, publicitaires ou de session replay. L'inventaire complet et la procédure de suppression figurent sur notre <cookiesLink>page cookies</cookiesLink>. Bases légales : règlement 6 PECR et article 6(1)(f) UK GDPR.",
     "s12Title": "12. Vos responsabilités lors du téléversement de voix de tiers",
     "s12Body": "Lorsque vous téléversez un enregistrement, vous êtes responsable de traitement des données personnelles qu'il contient. Avant traitement, vous devez confirmer une base légale au titre de l'article 6 — généralement votre propre voix, le consentement des intervenants, la nécessité d'un contrat ou une autre base légale. Si l'enregistrement contient des personnes identifiables autres que vous-même, l'article 14 vous impose de les informer que leur voix est transcrite, sauf exception du 14(5). Nous enregistrons cette attestation pour chaque téléversement et la conservons rattachée à la tâche à des fins d'audit. Voir le <icoLink>guide ICO sur la base légale</icoLink> pour en savoir plus.",
@@ -754,11 +757,10 @@
     "s15Title": "15. Loi applicable et juridiction",
     "s15Body": "Ces conditions sont régies par les lois d'Angleterre et du pays de Galles. Tout litige relève de la compétence exclusive des tribunaux d'Angleterre et du pays de Galles.",
     "s16Title": "16. Comment réclamer",
-    "s16Body": "Veuillez d'abord nous contacter à support@whatsaid.app — nous répondons sous 5 jours ouvrés. Si votre réclamation concerne le traitement de données personnelles, vous pouvez également saisir l'Information Commissioner's Office sur <icoLink>ico.org.uk</icoLink>. Pour un litige consommateur, vous pouvez obtenir des conseils gratuits auprès de Citizens Advice (citizensadvice.org.uk).",
-    "s17Title": "17. Clause de divisibilité et intégralité de l'accord",
-    "s17Body": "Si une clause de ces conditions est jugée inapplicable, les autres restent pleinement en vigueur. Ces conditions, avec l'Avis de confidentialité et la Politique de remboursement, constituent l'intégralité de l'accord entre vous et WhatSaid concernant le service.",
     "s18Title": "18. Contact",
-    "s18Body": "Pour toute question sur ces conditions, écrivez à support@whatsaid.app."
+    "s18Body": "Pour toute question sur ces conditions, écrivez à support@whatsaid.app.",
+    "s19Title": "19. Vos téléversements audio",
+    "s19Body": "Lorsque vous téléversez un enregistrement sur WhatSaid, vous garantissez (a) disposer d'une base légale au titre de l'article 6 UK GDPR pour traiter l'audio et les données personnelles qu'il contient et (b) lorsque l'enregistrement contient des personnes identifiables autres que vous-même, les informer, lorsque cela est requis, que leur voix est transcrite conformément à l'article 14, sauf exception de l'article 14(5). Vous acceptez d'indemniser WhatSaid contre toute réclamation de tiers découlant de la violation de ces garanties. Cette obligation est acceptée une seule fois lors de l'acceptation de ces Conditions et continue de s'appliquer à chaque téléversement. Voir la section de l'Avis de confidentialité sur les obligations de l'utilisateur téléverseur pour les détails complets."
   },
   "pricing": {
     "heroEyebrow": "Paiement unique. Sans abonnement.",

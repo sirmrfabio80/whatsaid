@@ -10,7 +10,7 @@ import DirectRecorder from "@/components/DirectRecorder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, Upload as UploadIcon } from "lucide-react";
 import JobResults from "@/components/JobResults";
-import { UploadAttestationDialog, type UploadAttestationPayload } from "@/components/UploadAttestationDialog";
+
 
 import LanguageSelector from "@/components/LanguageSelector";
 import LanguageGate from "@/components/LanguageGate";
@@ -110,17 +110,7 @@ export default function Convert() {
   const [cancelingUpload, setCancelingUpload] = useState(false);
 
   const [consentChecked, setConsentChecked] = useState(false);
-  // Uploader lawful-basis attestation (UK GDPR Art. 6/14). Captured per-upload
-  // immediately before we hit create-job; the returned consent_id is pinned
-  // onto jobs.upload_consent_id for audit.
-  const [attestationOpen, setAttestationOpen] = useState(false);
-  const [attestationLoading, setAttestationLoading] = useState(false);
-  const [pendingConvert, setPendingConvert] = useState<{
-    file: File;
-    duration: number;
-    fileCreationDate: AudioCreationDateResult | null;
-    channelAnalysis: AudioChannelAnalysis | null;
-  } | null>(null);
+
   const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
   // Surfaced status of the pre-flight language detection so the user always
   // knows what happened (success / skipped / failed). Null = not run yet.
@@ -318,7 +308,6 @@ export default function Convert() {
     duration?: number;
     fileCreationDate?: AudioCreationDateResult | null;
     channelAnalysis?: AudioChannelAnalysis | null;
-    uploadConsentId?: string;
   }
 
   const handleConvert = async (overrides?: ConvertOverrides) => {
@@ -335,20 +324,6 @@ export default function Convert() {
 
     if (!effFile || !user) return;
 
-    // UK GDPR Art. 6/14 gate. handleConvert MUST be invoked with a fresh
-    // upload_consent_id; the per-upload attestation is recorded by
-    // `record-upload-attestation` before this function runs. If a caller
-    // forgets to pass one, open the dialog instead of silently uploading.
-    if (!overrides?.uploadConsentId) {
-      setPendingConvert({
-        file: effFile,
-        duration: effDuration,
-        fileCreationDate: effFileCreationDate,
-        channelAnalysis: effChannelAnalysis,
-      });
-      setAttestationOpen(true);
-      return;
-    }
 
     // Quietly request browser notification permission so we can alert the user
     // if they navigate away or background the tab. Skip if the user has muted
@@ -416,9 +391,9 @@ export default function Convert() {
           metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
           metadata_file_lastmodified: fileLastModifiedIso,
           metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
-          upload_consent_id: overrides!.uploadConsentId,
         },
       });
+
 
       if (insertError || !created?.job_id) {
         throw new Error(insertError?.message || "Could not create job");
@@ -883,47 +858,6 @@ export default function Convert() {
     }
   };
 
-  const handleAttestationCancel = useCallback(() => {
-    setAttestationOpen(false);
-    setPendingConvert(null);
-    setAttestationLoading(false);
-  }, []);
-
-  const handleAttestationConfirm = useCallback(
-    async (payload: UploadAttestationPayload) => {
-      if (!pendingConvert) {
-        setAttestationOpen(false);
-        return;
-      }
-      setAttestationLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke<{ consent_id: string }>(
-          "record-upload-attestation",
-          {
-            body: {
-              version: payload.version,
-              basis: payload.basis,
-              contextNote: payload.contextNote,
-              acknowledgements: { lawfulBasis: true, art14Notice: true },
-            },
-          },
-        );
-        if (error || !data?.consent_id) {
-          throw new Error(error?.message || "Could not record attestation");
-        }
-        const intent = pendingConvert;
-        setAttestationOpen(false);
-        setPendingConvert(null);
-        setAttestationLoading(false);
-        void handleConvert({ ...intent, uploadConsentId: data.consent_id });
-      } catch (e) {
-        setAttestationLoading(false);
-        toast.error(e instanceof Error ? e.message : "Could not record attestation");
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pendingConvert],
-  );
 
   const handleReset = () => {
     setFile(null);
@@ -1177,12 +1111,6 @@ export default function Convert() {
           onConfirm={(lang) => languageGate.resolve(lang)}
         />
       )}
-      <UploadAttestationDialog
-        open={attestationOpen}
-        loading={attestationLoading}
-        onCancel={handleAttestationCancel}
-        onConfirm={handleAttestationConfirm}
-      />
       {/* Off-axis decorative orb (desktop only) — matches marketing pages identity */}
       <div
         aria-hidden="true"
@@ -1538,8 +1466,10 @@ export default function Convert() {
                         className="mt-0.5"
                       />
                       <label htmlFor="recording-consent" className="text-body-sm text-muted-foreground leading-snug cursor-pointer">
-                        {t("convert.consentLabel")}
+                        {t("convert.consentLabel")}{" "}
+                        <Link to="/privacy#uploader-duties" className="text-primary hover:underline" target="_blank">{t("convert.consentLabelLearnMore")}</Link>
                       </label>
+
                     </div>
 
                     <p className="text-caption text-muted-foreground flex items-start gap-1.5">
