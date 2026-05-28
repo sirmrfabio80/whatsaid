@@ -35,6 +35,8 @@ import { useJobHeartbeat } from "@/hooks/use-job-heartbeat";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getLanguageLabel } from "@/lib/languages";
+import { useTosConsent } from "@/hooks/use-tos-consent";
+import { ConsentStatusIndicator } from "@/components/convert/ConsentStatusIndicator";
 
 const CONVERT_BREADCRUMB_SCHEMA = {
   "@context": "https://schema.org",
@@ -107,9 +109,10 @@ export default function Convert() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longFileToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uploadHandleRef = useRef<{ abort: () => Promise<void> | void } | null>(null);
-  const [cancelingUpload, setCancelingUpload] = useState(false);
-
   const [consentChecked, setConsentChecked] = useState(false);
+  const [cancelingUpload, setCancelingUpload] = useState(false);
+  const { status: tosStatus, reaccept: reacceptTos, recording: recordingTos } = useTosConsent();
+
 
   const [languageGate, setLanguageGate] = useState<LanguageGateState | null>(null);
   // Surfaced status of the pre-flight language detection so the user always
@@ -416,11 +419,16 @@ export default function Convert() {
           // fall through
         }
         if (needsAttestation) {
-          const { error: ackErr } = await supabase.functions.invoke(
-            "record-tos-acceptance",
-          );
-          if (!ackErr) {
+          const ack = await reacceptTos();
+          if (ack.ok) {
+            toast.success(t("convert.consentStatus.reacceptSuccess", { defaultValue: "Terms acceptance recorded." }));
             ({ data: created, error: insertError } = await invokeCreateJob());
+          } else {
+            toast.error(
+              t("convert.consentStatus.reacceptRequired", {
+                defaultValue: "We couldn't confirm your Terms acceptance. Please re-accept and try again.",
+              }),
+            );
           }
         }
       }
@@ -1502,6 +1510,19 @@ export default function Convert() {
                       </label>
 
                     </div>
+
+                    <ConsentStatusIndicator
+                      status={tosStatus}
+                      recording={recordingTos}
+                      onReaccept={async () => {
+                        const res = await reacceptTos();
+                        if (res.ok) {
+                          toast.success(t("convert.consentStatus.reacceptSuccess", { defaultValue: "Terms acceptance recorded." }));
+                        } else {
+                          toast.error(res.error || t("convert.consentStatus.reacceptError", { defaultValue: "Could not record acceptance. Please try again." }));
+                        }
+                      }}
+                    />
 
                     <p className="text-caption text-muted-foreground flex items-start gap-1.5">
                       <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
