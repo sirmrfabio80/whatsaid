@@ -35,10 +35,10 @@ export function useTosConsent() {
           .maybeSingle(),
         supabase
           .from("consent_events")
-          .select("version, created_at")
+          .select("version, accepted_at")
           .eq("user_id", user.id)
           .eq("consent_type", CONSENT_TYPE)
-          .order("created_at", { ascending: false })
+          .order("accepted_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
       ]);
@@ -56,14 +56,14 @@ export function useTosConsent() {
         setStatus({
           state: "current",
           acceptedVersion: accepted.version,
-          acceptedAt: accepted.created_at,
+          acceptedAt: accepted.accepted_at,
         });
       } else {
         setStatus({
           state: "outdated",
           latestVersion: latest.version,
           acceptedVersion: accepted.version,
-          acceptedAt: accepted.created_at,
+          acceptedAt: accepted.accepted_at,
         });
       }
     } catch (err) {
