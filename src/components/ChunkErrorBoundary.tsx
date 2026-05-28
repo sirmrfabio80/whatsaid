@@ -16,7 +16,7 @@ export class ChunkErrorBoundary extends Component<
   state: ChunkErrorBoundaryState = { failed: false };
 
   static getDerivedStateFromError(error: unknown): ChunkErrorBoundaryState {
-    return { failed: !reloadOnceForChunkError(error) };
+    return { failed: true };
   }
 
   componentDidCatch(error: unknown, _errorInfo: ErrorInfo) {
