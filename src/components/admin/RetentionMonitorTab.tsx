@@ -1,13 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import JsonBlock from "@/components/admin/JsonBlock";
-import { AlertTriangle, CheckCircle2, Clock, Play, RefreshCw, RotateCw, Eye } from "lucide-react";
+import { AlertTriangle, CalendarIcon, CheckCircle2, Clock, Play, RefreshCw, RotateCw, Eye, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 /**
