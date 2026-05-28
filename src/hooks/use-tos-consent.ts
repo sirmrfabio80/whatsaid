@@ -79,19 +79,26 @@ export function useTosConsent() {
   useEffect(() => {
     void load();
   }, [load]);
-
   const reaccept = useCallback(async () => {
     if (!user) return { ok: false, error: "Not signed in" };
     setRecording(true);
     try {
-      const { error } = await invokeWithRetry("record-tos-acceptance", {}, {
-        onRetry: ({ attempt, reason, status }) =>
-          console.warn(`[record-tos-acceptance] retry ${attempt + 1} (${reason} ${status ?? ""})`),
-      });
+      const key = newIdempotencyKey("tos");
+      const { error } = await invokeWithRetry(
+        "record-tos-acceptance",
+        {
+          body: { idempotency_key: key },
+          headers: { "x-idempotency-key": key },
+        },
+        {
+          onRetry: ({ attempt, reason, status }) =>
+            console.warn(`[record-tos-acceptance] retry ${attempt + 1} (${reason} ${status ?? ""})`),
+        },
+      );
       if (error) throw error;
       await load();
       return { ok: true as const };
-    } catch (err) {
+
       const message = err instanceof Error ? err.message : "Could not record acceptance";
       return { ok: false as const, error: message };
     } finally {
