@@ -2,6 +2,12 @@ import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/cons
 import { corsHeaders } from '../_shared/cors.ts'
 import { enforceQuota } from '../_shared/quota.ts'
 import { createServiceClient, requireAuth } from '../_shared/supabase.ts'
+import {
+  buildNoticeHtml,
+  buildNoticeText,
+  recordRecipientNotification,
+  resolveActiveNotice,
+} from '../_shared/recipient-notice.ts'
 
 function escapeHtml(str: string): string {
   return str
@@ -83,8 +89,9 @@ function buildEmailHtml(opts: {
   questions: { prompt: string | null; answer: string }[]
   transcript: string
   downloadUrl: string | null
+  noticeHtml: string
 }): string {
-  const { title, senderLabel, summary, questions, transcript, downloadUrl } = opts
+  const { title, senderLabel, summary, questions, transcript, downloadUrl, noticeHtml } = opts
 
   const summarySection = summary
     ? `<div style="margin-bottom:32px;">
@@ -125,6 +132,8 @@ function buildEmailHtml(opts: {
           <h2 style="font-family:'Space Grotesk',Arial,sans-serif;font-size:18px;font-weight:700;color:hsl(220,25%,10%);margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid hsl(220,15%,90%);">Transcript</h2>
           ${formatTranscript(transcript)}
         </div>
+
+        ${noticeHtml}
       </div>
 
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
@@ -145,6 +154,7 @@ function buildPlainText(opts: {
   questions: { prompt: string | null; answer: string }[]
   transcript: string
   downloadUrl: string | null
+  noticeText: string
 }): string {
   const parts: string[] = [opts.title, '']
   if (opts.downloadUrl) {
@@ -160,7 +170,8 @@ function buildPlainText(opts: {
     }
   }
   parts.push('--- Transcript ---', '', opts.transcript, '')
-  parts.push(`—`, `Shared by ${opts.senderLabel} via ${SITE_NAME}`)
+  parts.push(opts.noticeText)
+  parts.push('', `—`, `Shared by ${opts.senderLabel} via ${SITE_NAME}`)
   return parts.join('\n')
 }
 
@@ -313,6 +324,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    const messageId = crypto.randomUUID()
+    const shortId = messageId.slice(0, 6)
+
+    const notice = await resolveActiveNotice(serviceClient)
+    const noticeCtx = { senderLabel, senderEmail, jobShortId: shortId }
+    const noticeHtml = notice ? buildNoticeHtml(notice, noticeCtx) : ''
+    const noticeText = notice ? buildNoticeText(notice, noticeCtx) : ''
+    if (!notice) {
+      console.warn('[share-transcript] no active share_recipient_notice version found')
+    }
+
     const html = buildEmailHtml({
       title,
       senderLabel,
@@ -320,6 +342,7 @@ Deno.serve(async (req) => {
       questions: transformedQuestions,
       transcript: transformedTranscript,
       downloadUrl,
+      noticeHtml,
     })
 
     const text = buildPlainText({
@@ -329,9 +352,8 @@ Deno.serve(async (req) => {
       questions: transformedQuestions,
       transcript: transformedTranscript,
       downloadUrl,
+      noticeText,
     })
-
-    const messageId = crypto.randomUUID()
 
     const recipientLower = recipient_email.toLowerCase().trim()
     const { data: existingToken } = await serviceClient
@@ -356,7 +378,6 @@ Deno.serve(async (req) => {
       status: 'pending',
     })
 
-    const shortId = messageId.slice(0, 6)
     const subjectLine = `Transcript shared with you: ${title} [${shortId}]`
 
     const { error: enqueueError } = await serviceClient.rpc('enqueue_email', {
@@ -385,7 +406,23 @@ Deno.serve(async (req) => {
       })
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    let noticeLogged = false
+    if (notice) {
+      noticeLogged = await recordRecipientNotification(serviceClient, {
+        jobId: job_id,
+        sharedBy: user.id,
+        recipientEmail: recipient_email,
+        channel: 'share_transcript',
+        notice,
+        messageId,
+      })
+      if (!noticeLogged) {
+        console.log('[share-transcript] already_notified', { job_id, version: notice.version })
+      }
+    }
+
+
+    return new Response(JSON.stringify({ success: true, notice_logged: noticeLogged }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
