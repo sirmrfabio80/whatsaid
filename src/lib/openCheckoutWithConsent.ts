@@ -1,9 +1,11 @@
 import { openCheckout } from "@/lib/paddle-checkout";
 import { invokeWithRetry } from "@/lib/invoke-with-retry";
+import { newIdempotencyKey } from "@/lib/idempotency-key";
 import {
   REG37_CONSENT_TYPE,
   REG37_CONSENT_VERSION,
 } from "@/lib/reg37-consent";
+
 
 interface Opts {
   priceId: string;
