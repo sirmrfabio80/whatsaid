@@ -9,7 +9,9 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { requireAuth, createServiceClient } from "../_shared/supabase.ts";
 
 const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 const CONSENT_TYPE = "tos_uploader_warranty";
+const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,128}$/;
 
 async function hashIp(ip: string): Promise<string> {
   const secret = Deno.env.get("CONSENT_IP_SALT_SECRET") ?? "missing-salt";
