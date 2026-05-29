@@ -450,7 +450,37 @@ export default function Convert() {
       }
 
       if (insertError || !created?.job_id) {
-        throw new Error((insertError as Error | null)?.message || "Could not create job");
+        // Try to extract the server-side error reason from the FunctionsHttpError
+        // response body so the user sees a meaningful message instead of a
+        // generic "non-2xx status code".
+        let serverReason: string | null = null;
+        let serverStatus: number | null = null;
+        try {
+          const ctx = (insertError as { context?: Response } | null)?.context;
+          if (ctx) {
+            serverStatus = typeof ctx.status === "number" ? ctx.status : null;
+            if (typeof ctx.clone === "function" && typeof ctx.json === "function") {
+              const body = await ctx.clone().json().catch(() => null);
+              if (body && typeof body === "object") {
+                if (typeof (body as { error?: unknown }).error === "string") {
+                  serverReason = (body as { error: string }).error;
+                } else if (typeof (body as { message?: unknown }).message === "string") {
+                  serverReason = (body as { message: string }).message;
+                }
+              }
+            }
+          }
+        } catch {
+          // best-effort surfacing only
+        }
+        const baseMsg = (insertError as Error | null)?.message || "Could not create job";
+        const detail = serverReason
+          ? `${baseMsg} — ${serverReason}${serverStatus ? ` (HTTP ${serverStatus})` : ""}`
+          : serverStatus
+            ? `${baseMsg} (HTTP ${serverStatus})`
+            : baseMsg;
+        console.error("[convert] create-job failed", { status: serverStatus, reason: serverReason, error: insertError });
+        throw new Error(detail);
       }
       newJobId = created.job_id;
 
