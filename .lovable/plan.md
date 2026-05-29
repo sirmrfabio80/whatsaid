@@ -1,41 +1,33 @@
-# Fix: Record-now conversion broken by `record-tos-acceptance` boot failure
+# Fix: "Record now" → create-job 400 (duration_seconds must be a positive number)
 
 ## Root cause
 
-`supabase/functions/record-tos-acceptance/index.ts` declares `const jsonHeaders` twice in a row (lines 10 and 11). Deno refuses to boot the worker:
+In `src/pages/Convert.tsx`, `handleRecordingReady` calls `setDuration(dur)` and immediately invokes `handleConvert({ file, duration: dur, fileCreationDate })` in the same tick. `handleConvert` already resolves overrides into local variables:
 
-```
-Uncaught SyntaxError: Identifier 'jsonHeaders' has already been declared
-```
+- `effDuration = overrides?.duration ?? duration`
+- `effFileCreationDate = overrides?.fileCreationDate !== undefined ? overrides.fileCreationDate : fileCreationDate`
 
-Every request to `record-tos-acceptance` therefore returns **503** on the CORS preflight, which is exactly what the browser console shows.
+…but the `createJobBody` object (around line 384) still reads the **raw React state** for four fields. On a fresh recording the state hasn't flushed yet, so `duration` is `0` and `fileCreationDate` is `null` — the server rejects with `duration_seconds must be a positive number`. Uploads work because the user clicks Convert later, after state has settled.
 
-## Why `create-job` also fails with 401
+## Change (single file: `src/pages/Convert.tsx`)
 
-`Convert.tsx` calls `record-tos-acceptance` (either up-front via `useTosConsent`, or as the automatic retry after `create-job` returns `409 attestation_required`). When the ToS call 503s:
+Inside the `createJobBody` object only, swap stale state reads for the already-resolved variables:
 
-- The consent row is never recorded.
-- `create-job` is then invoked, but because the failed retry path short-circuits before a fresh JWT/refresh cycle completes, the preflight is rejected as **401**.
+| Line | Before | After |
+|------|--------|-------|
+| 387 | `duration_seconds: Math.round(duration)` | `duration_seconds: Math.round(effDuration)` |
+| 393 | `metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null` | `metadata_apple_creationdate: effFileCreationDate?.allSources.apple_metadata ?? null` |
+| 394 | `metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null` | `metadata_mvhd_creation: effFileCreationDate?.allSources.mvhd_creation ?? null` |
+| 396 | `metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null` | `metadata_location_iso6709: effFileCreationDate?.locationISO6709 ?? null` |
 
-So the 401s on `create-job` are a downstream symptom, not a separate bug. Once `record-tos-acceptance` boots again, the existing 409→record→retry flow in `Convert.tsx` will succeed.
+No other lines change. Payload shape, headers, and idempotency handling are untouched.
 
-The trailing `400` on `/jobs` is the client falling back to a direct insert path after the edge call fails, which is correctly blocked by the `lock_jobs_billing_columns` trigger / RLS — expected behaviour, no change needed.
+## Out of scope (guardrails)
 
-## Fix
-
-Single-line edit in `supabase/functions/record-tos-acceptance/index.ts`: remove the duplicate `const jsonHeaders = ...` declaration so only one remains.
-
-Then redeploy `record-tos-acceptance` so the boot error clears.
+- No changes to `use-audio-recorder.ts`, the `create-job` edge function, auth, billing, or RLS.
+- No new dependencies, no token changes.
 
 ## Verification
 
-1. `supabase--deploy_edge_functions` for `record-tos-acceptance`.
-2. `supabase--edge_function_logs` to confirm a clean `booted` line with no `BootFailure`.
-3. `supabase--curl_edge_functions` OPTIONS preflight → expect `200`, not `503`.
-4. Ask the user to retry "Record now" → Convert; the 409 auto-retry path in `Convert.tsx` should now record consent and create the job.
-
-## Files touched
-
-- `supabase/functions/record-tos-acceptance/index.ts` — delete the duplicate `const jsonHeaders` line.
-
-No client, schema, or config changes required.
+1. Record a short clip via "Record now" → Stop → transcription auto-starts; create-job returns 2xx; `jobs.duration_seconds` equals the recorded length.
+2. Upload an `.m4a`/`.mp3`/`.wav` and Convert — still works, metadata fields populated as before.

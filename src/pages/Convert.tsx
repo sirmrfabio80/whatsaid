@@ -384,16 +384,16 @@ export default function Convert() {
       const createJobBody = {
         file_name: effFile.name,
         file_size_bytes: effFile.size,
-        duration_seconds: Math.round(duration),
+        duration_seconds: Math.round(effDuration),
         language_selected: language,
         uploader_warranty_confirmed: consentChecked,
         audio_channels: resolvedCh ?? null,
         recorded_at: recordedAt,
         recorded_at_source: recordedAtSource,
-        metadata_apple_creationdate: fileCreationDate?.allSources.apple_metadata ?? null,
-        metadata_mvhd_creation: fileCreationDate?.allSources.mvhd_creation ?? null,
+        metadata_apple_creationdate: effFileCreationDate?.allSources.apple_metadata ?? null,
+        metadata_mvhd_creation: effFileCreationDate?.allSources.mvhd_creation ?? null,
         metadata_file_lastmodified: fileLastModifiedIso,
-        metadata_location_iso6709: fileCreationDate?.locationISO6709 ?? null,
+        metadata_location_iso6709: effFileCreationDate?.locationISO6709 ?? null,
         // Same key reused across all retries of this single user-initiated
         // attempt → the server returns the original job instead of inserting
         // a duplicate even if the network blips mid-flight.
