@@ -25,6 +25,8 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = true
   [functions.record-tos-acceptance]
     verify_jwt = false
+  [functions.create-job]
+    verify_jwt = false
   [functions.dsr-export]
     verify_jwt = true
   [functions.dsr-rectification-request]
