@@ -16,6 +16,7 @@ const ALLOWED_HEADERS = [
   "x-client-info",
   "apikey",
   "content-type",
+  "x-idempotency-key",
   "x-supabase-client-platform",
   "x-supabase-client-platform-version",
   "x-supabase-client-runtime",
@@ -24,6 +25,7 @@ const ALLOWED_HEADERS = [
 
 export const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": ALLOWED_HEADERS.join(", "),
 };
 
@@ -37,6 +39,7 @@ export function withExtraAllowedHeaders(
 ): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": [...ALLOWED_HEADERS, ...extra].join(", "),
   };
 }

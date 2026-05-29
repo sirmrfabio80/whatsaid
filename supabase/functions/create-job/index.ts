@@ -14,7 +14,7 @@
  * vector. process-job remains the only path that deducts credits, and the
  * row it reads is now trusted server-derived.
  */
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders, handleCorsPreflight } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
 import {
   MAX_DURATION,
@@ -76,6 +76,9 @@ function bad(message: string, status = 400) {
 
 Deno.serve(async (req) => {
   try {
+    const preflight = handleCorsPreflight(req);
+    if (preflight) return preflight;
+
     const auth = await requireAuth(req.headers.get("Authorization"));
     if (!auth.ok) return auth.response;
     const { userId } = auth;
