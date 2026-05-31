@@ -294,7 +294,7 @@ export default function SharedView() {
         <Card><CardContent className="p-8 text-center space-y-3">
           <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
           <h1 className="text-xl font-semibold">Share not found</h1>
-          <p className="text-sm text-muted-foreground">This link may be incorrect or has been revoked.</p>
+          <p className="text-sm text-muted-foreground">This link may be incorrect or no longer exists.</p>
         </CardContent></Card>
       </div>
     );
