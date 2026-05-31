@@ -5,6 +5,7 @@ import { corsHeaders, handleCorsPreflight, jsonResponse } from '../_shared/cors.
 import { createServiceClient } from '../_shared/supabase.ts'
 import { SITE_NAME, SITE_URL, SENDER_DOMAIN, FROM_DOMAIN } from '../_shared/constants.ts'
 import { hashOtpCode } from '../_shared/share-view-session.ts'
+import { buildRevokedPayload } from '../_shared/share-revoked-payload.ts'
 
 const OTP_TTL_SECONDS = 10 * 60 // 10 min
 const RESEND_COOLDOWN_SECONDS = 30
