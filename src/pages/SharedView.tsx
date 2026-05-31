@@ -195,7 +195,7 @@ export default function SharedView() {
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_code") {
-        const rem = res.data?.attempts_remaining;
+        const rem = res.raw?.attempts_remaining;
         setAttemptsRemaining(typeof rem === "number" ? rem : null);
         setStage("awaitingCode");
         toast.error(typeof rem === "number" ? `Incorrect code. ${rem} attempts left.` : "Incorrect code.");
