@@ -143,6 +143,11 @@ export default function SharedView() {
   const [content, setContent] = useState<FetchedContent | null>(null);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [noticeAcking, setNoticeAcking] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestReason, setRequestReason] = useState("");
+  const [requestEmail, setRequestEmail] = useState("");
+  const [requestSending, setRequestSending] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
   const sessionKey = useMemo(() => `${SESSION_STORAGE_PREFIX}${token}`, [token]);
   const noticeAckKey = useMemo(() => `${NOTICE_ACK_PREFIX}${token}`, [token]);
   const attemptedAutoFetch = useRef(false);
