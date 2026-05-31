@@ -304,19 +304,65 @@ export default function SharedView() {
   }
 
   if (stage === "revoked") {
+    const { revokedAt, revokeReason, revokedByLabel, senderLabel, senderEmail } = revokedInfo;
     const revokedDate = revokedAt ? new Date(revokedAt) : null;
+    const contactName = senderLabel || senderEmail || "the sender";
+    const mailtoSubject = encodeURIComponent("Request access to a shared transcript");
+    const mailtoBody = encodeURIComponent(
+      `Hi ${senderLabel || ""},\n\nThe transcript link you shared with me has been revoked. Could you please re-share it or let me know more?\n\nThanks.`
+    );
+    const mailtoHref = senderEmail
+      ? `mailto:${senderEmail}?subject=${mailtoSubject}&body=${mailtoBody}`
+      : null;
     return (
       <div className="container mx-auto max-w-xl py-12 px-4">
-        <Card><CardContent className="p-8 text-center space-y-3">
-          <Ban className="h-10 w-10 text-destructive mx-auto" />
-          <h1 className="text-xl font-semibold">This share has been revoked</h1>
-          <p className="text-sm text-muted-foreground">The sender has removed access to this transcript. If you think this was a mistake, contact the person who shared it with you.</p>
-          {revokedDate && !isNaN(revokedDate.getTime()) && (
-            <p className="text-xs text-muted-foreground">
-              Access was removed on <span className="font-medium">{revokedDate.toLocaleString()}</span>.
+        <Card><CardContent className="p-8 space-y-5">
+          <div className="text-center space-y-3">
+            <Ban className="h-10 w-10 text-destructive mx-auto" />
+            <h1 className="text-xl font-semibold">This share has been revoked</h1>
+            <p className="text-sm text-muted-foreground">
+              {revokedByLabel
+                ? <>Access was withdrawn by <span className="font-medium text-foreground">{revokedByLabel}</span>. If you think this was a mistake, contact them directly.</>
+                : <>The sender has removed access to this transcript. If you think this was a mistake, contact the person who shared it with you.</>}
             </p>
-          )}
-          <Button asChild variant="outline"><Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link></Button>
+          </div>
+
+          {(revokedDate && !isNaN(revokedDate.getTime())) || revokeReason ? (
+            <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2 text-left">
+              {revokedDate && !isNaN(revokedDate.getTime()) && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Revoked at:</span> {revokedDate.toLocaleString()}
+                </p>
+              )}
+              {revokeReason && (
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Reason from sender</p>
+                  <p className="whitespace-pre-wrap break-words text-foreground/80">{revokeReason}</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <Button asChild variant="outline" className="flex-1">
+              <Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link>
+            </Button>
+            {mailtoHref ? (
+              <Button asChild className="flex-1">
+                <a href={mailtoHref}>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Request access from {contactName}
+                </a>
+              </Button>
+            ) : (
+              <Button asChild className="flex-1" variant="secondary">
+                <a href="mailto:support@whatsaid.app?subject=Revoked%20share%20link">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Contact support
+                </a>
+              </Button>
+            )}
+          </div>
         </CardContent></Card>
       </div>
     );
