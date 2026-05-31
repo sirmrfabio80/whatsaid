@@ -24,12 +24,12 @@ Deno.serve(async (req) => {
 
     const { data: share } = await svc
       .from('transcript_shares')
-      .select('token, recipient_email, expires_at, revoked_at')
+      .select('id, token, recipient_email, expires_at, revoked_at, revoke_reason, revoked_by_label, shared_by')
       .eq('token', token)
       .maybeSingle()
 
     if (!share) return jsonResponse({ error: 'not_found' }, 404)
-    if (share.revoked_at) return jsonResponse({ error: 'revoked', revoked_at: share.revoked_at }, 410)
+    if (share.revoked_at) return jsonResponse(await buildRevokedPayload(svc, share), 410)
     const expiresAtMs = new Date(share.expires_at).getTime()
     if (expiresAtMs < Date.now()) return jsonResponse({ error: 'expired' }, 410)
 
