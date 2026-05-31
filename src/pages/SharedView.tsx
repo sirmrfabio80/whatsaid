@@ -122,7 +122,10 @@ export default function SharedView() {
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [content, setContent] = useState<FetchedContent | null>(null);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [noticeAcking, setNoticeAcking] = useState(false);
   const sessionKey = useMemo(() => `${SESSION_STORAGE_PREFIX}${token}`, [token]);
+  const noticeAckKey = useMemo(() => `${NOTICE_ACK_PREFIX}${token}`, [token]);
   const attemptedAutoFetch = useRef(false);
 
   // Cooldown ticker
