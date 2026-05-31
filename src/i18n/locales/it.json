@@ -179,7 +179,6 @@
       "reacceptError": "Impossibile registrare l'accettazione. Riprova.",
       "reacceptRequired": "Non abbiamo potuto confermare l'accettazione dei Termini. Riaccetta e riprova."
     },
-
     "thirdPartyNotice": "L'audio viene elaborato utilizzando servizi AI di terze parti ed eliminato immediatamente dopo. Convertendo, accetti i nostri",
     "terms": "Termini",
     "privacyPolicy": "Informativa sulla privacy",
@@ -252,7 +251,6 @@
     "password": "Password",
     "passwordPlaceholder": "Almeno 6 caratteri",
     "termsAgree": "Accetto i Termini di servizio e l'Informativa sulla privacy e confermo che caricherò solo audio che ho il diritto di trattare ai sensi del UK GDPR.",
-
     "termsOfService": "Termini di servizio",
     "and": "e",
     "creating": "Creazione account...",
@@ -575,13 +573,22 @@
     "spaceToAcceptHint": "Premi spazio per accettare",
     "arrowRightToAcceptHint": "Premi → per accettare",
     "sendEmailLabel": "Invia trascrizione via email",
-    "sendEmailDesc": "Invia un'email leggibile con titolo, riepilogo, domande e risposte, e trascrizione completa.",
     "shareRecordLabel": "Condividi come record",
     "shareRecordDesc": "Permette al destinatario di aprire la propria copia di questa trascrizione in WhatSaid.",
     "comingSoon": "In arrivo",
     "sent": "Email inviata",
     "sentSuccess": "Trascrizione condivisa con successo",
-    "sendFailed": "Impossibile inviare l'email. Riprova."
+    "sendFailed": "Impossibile inviare l'email. Riprova.",
+    "includeInBodyLabel": "Includi la trascrizione nel corpo dell'email",
+    "includeInBodyDesc": "Meno riservato. Per impostazione predefinita inviamo un link sicuro che il destinatario verifica con un codice monouso.",
+    "attestationHeader": "Dichiarazione del mittente richiesta",
+    "attestationShow": "Mostra dichiarazione completa",
+    "attestationHide": "Nascondi dichiarazione completa",
+    "attestationCheckbox": "Confermo di avere una base giuridica ai sensi degli articoli 6 e (ove applicabile) 9 del GDPR UK per condividere questo contenuto con il destinatario indicato.",
+    "attestationRequired": "Conferma la dichiarazione per includere la trascrizione nel corpo dell'email.",
+    "attestationFailed": "Impossibile registrare la dichiarazione. Riprova.",
+    "sendEmailDescLinkOnly": "Invia un link sicuro. Il destinatario verifica l'email con un codice monouso prima di visualizzare.",
+    "sendEmailDescInBody": "Invia titolo, riepilogo, domande/risposte e trascrizione completa nel corpo dell'email."
   },
   "claim": {
     "validating": "Convalida del link di condivisione…",
@@ -712,10 +719,9 @@
     "s9Item4": "Altri diritti o cose che non puoi gestire in autonomia — scrivi a support@whatsaid.app.",
     "s10Title": "10. Diritto di reclamo all'ICO",
     "s10Body": "Se non sei soddisfatto di come abbiamo gestito i tuoi dati personali, puoi presentare reclamo all'Information Commissioner's Office su <icoLink>ico.org.uk</icoLink> o al numero 0303 123 1113. Apprezzeremmo la possibilità di risolvere prima il problema — scrivici a support@whatsaid.app.",
-    "s12Body": "Quando carichi una registrazione sei tu il titolare del trattamento dei dati personali in essa contenuti e WhatSaid Ltd agisce come responsabile del trattamento per tale contenuto. Prima del caricamento devi avere una base giuridica ex articolo 6 UK GDPR — solo la tua voce, il consenso degli interlocutori identificabili, l'esecuzione di un contratto o un'altra base giuridica. Se la registrazione contiene persone identificabili diverse da te, l'articolo 14 ti impone di informarle che la loro voce sarà trascritta, salvo eccezioni ex 14(5). Accetti questi doveri una sola volta al momento dell'accettazione dei Termini di servizio e continuano ad applicarsi a ogni caricamento. WhatSaid Ltd è titolare del trattamento per le operazioni del servizio (account, fatturazione, telemetria). I nostri sub-responsabili per il contenuto sono: Lovable Cloud (hosting e piattaforma), Supabase (Postgres gestito, autenticazione, object storage; regione UE) e AssemblyAI (speech-to-text; regione UE — audio eliminato immediatamente dopo la trascrizione). Vedi la <icoLink>guida ICO sulle basi giuridiche</icoLink> per approfondire.",
+    "s12Body": "Quando carichi una registrazione sei tu il titolare del trattamento dei dati personali in essa contenuti. Prima di elaborare il file devi confermare una base giuridica ex articolo 6 — tipicamente solo la tua voce, il consenso degli interlocutori, l'esecuzione di un contratto o un'altra base giuridica. Se la registrazione contiene persone identificabili diverse da te, l'articolo 14 ti impone di informarle che la loro voce sarà trascritta, salvo eccezioni ex 14(5). Registriamo questa attestazione per ogni caricamento e la conserviamo collegata al lavoro a fini di audit. Vedi la <icoLink>guida ICO sulle basi giuridiche</icoLink> per approfondire.",
     "s11Body": "WhatSaid utilizza solo l'archiviazione strettamente necessaria per mantenere l'accesso, ricordare la tua lingua e far funzionare l'app. Non utilizziamo cookie di analisi, pubblicitari o di session replay. Inventario completo e istruzioni per la cancellazione sono nella nostra <cookiesLink>pagina cookie</cookiesLink>. Basi giuridiche: regolamento 6 PECR e articolo 6(1)(f) UK GDPR.",
     "s12Title": "12. Le tue responsabilità quando carichi voci di terzi",
-    "s12Body": "Quando carichi una registrazione sei tu il titolare del trattamento dei dati personali in essa contenuti. Prima di elaborare il file devi confermare una base giuridica ex articolo 6 — tipicamente solo la tua voce, il consenso degli interlocutori, l'esecuzione di un contratto o un'altra base giuridica. Se la registrazione contiene persone identificabili diverse da te, l'articolo 14 ti impone di informarle che la loro voce sarà trascritta, salvo eccezioni ex 14(5). Registriamo questa attestazione per ogni caricamento e la conserviamo collegata al lavoro a fini di audit. Vedi la <icoLink>guida ICO sulle basi giuridiche</icoLink> per approfondire.",
     "s13Title": "13. Avvisi che inviamo per tuo conto",
     "s13Body": "Quando condividi una trascrizione via email, inviamo al destinatario una breve informativa ex articolo 14 per tuo conto, affinché sappia che i suoi dati personali sono stati trattati da WhatSaid in qualità di responsabile del trattamento. Il destinatario può contattarci a support@whatsaid.app per opporsi o richiedere la cancellazione. Conserviamo un registro con identificativi hashati per garantire che ciascun destinatario riceva l'informativa una sola volta per lavoro.",
     "s14Title": "14. Minori",
@@ -1076,4 +1082,3 @@
     "questions": "Domande?"
   }
 }
-

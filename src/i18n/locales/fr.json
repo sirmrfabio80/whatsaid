@@ -179,7 +179,6 @@
       "reacceptError": "Impossible d'enregistrer l'acceptation. Réessayez.",
       "reacceptRequired": "Nous n'avons pas pu confirmer votre acceptation des Conditions. Veuillez réaccepter et réessayer."
     },
-
     "thirdPartyNotice": "L'audio est traité par des services IA tiers et supprimé immédiatement après. En convertissant, vous acceptez nos",
     "terms": "Conditions",
     "privacyPolicy": "Politique de confidentialité",
@@ -252,7 +251,6 @@
     "password": "Mot de passe",
     "passwordPlaceholder": "Au moins 6 caractères",
     "termsAgree": "J'accepte les Conditions de service et la Politique de confidentialité, et je confirme ne téléverser que de l'audio que j'ai le droit de traiter au titre du UK GDPR.",
-
     "termsOfService": "Conditions d'utilisation",
     "and": "et",
     "creating": "Création du compte...",
@@ -575,13 +573,22 @@
     "spaceToAcceptHint": "Appuyez sur espace pour accepter",
     "arrowRightToAcceptHint": "Appuyez sur → pour accepter",
     "sendEmailLabel": "Envoyer par email",
-    "sendEmailDesc": "Envoie un email lisible avec le titre, le résumé, les questions-réponses et la transcription complète.",
     "shareRecordLabel": "Partager comme enregistrement",
     "shareRecordDesc": "Permet au destinataire d'ouvrir sa propre copie de cette transcription dans WhatSaid.",
     "comingSoon": "Bientôt",
     "sent": "Email envoyé",
     "sentSuccess": "Transcription partagée avec succès",
-    "sendFailed": "Impossible d'envoyer l'email. Veuillez réessayer."
+    "sendFailed": "Impossible d'envoyer l'email. Veuillez réessayer.",
+    "includeInBodyLabel": "Inclure la transcription dans le corps de l'e-mail",
+    "includeInBodyDesc": "Moins privé. Par défaut, nous envoyons un lien sécurisé que le destinataire vérifie avec un code à usage unique.",
+    "attestationHeader": "Attestation de l'expéditeur requise",
+    "attestationShow": "Afficher l'attestation complète",
+    "attestationHide": "Masquer l'attestation complète",
+    "attestationCheckbox": "Je confirme disposer d'une base légale au titre des articles 6 et (le cas échéant) 9 du RGPD UK pour partager ce contenu avec le destinataire indiqué.",
+    "attestationRequired": "Veuillez confirmer l'attestation pour inclure la transcription dans le corps de l'e-mail.",
+    "attestationFailed": "Impossible d'enregistrer votre attestation. Veuillez réessayer.",
+    "sendEmailDescLinkOnly": "Envoie un lien sécurisé. Le destinataire vérifie son e-mail avec un code à usage unique avant de consulter.",
+    "sendEmailDescInBody": "Envoie le titre, le résumé, les questions/réponses et la transcription complète dans le corps de l'e-mail."
   },
   "claim": {
     "validating": "Validation du lien de partage…",
@@ -712,10 +719,9 @@
     "s9Item4": "Autres droits ou demandes non libre-service — écrivez à support@whatsaid.app.",
     "s10Title": "10. Droit de réclamation auprès de l'ICO",
     "s10Body": "Si vous n'êtes pas satisfait de la façon dont nous avons géré vos données personnelles, vous pouvez saisir l'Information Commissioner's Office sur <icoLink>ico.org.uk</icoLink> ou au 0303 123 1113. Nous apprécierions de pouvoir résoudre le problème d'abord — écrivez-nous à support@whatsaid.app.",
-    "s12Body": "Lorsque vous téléversez un enregistrement, vous êtes responsable de traitement des données personnelles qu'il contient et WhatSaid Ltd agit en qualité de sous-traitant pour ce contenu. Avant le téléversement, vous devez disposer d'une base légale au titre de l'article 6 UK GDPR — votre propre voix, le consentement des intervenants identifiables, la nécessité d'un contrat ou une autre base légale. Si l'enregistrement contient des personnes identifiables autres que vous-même, l'article 14 vous impose de les informer que leur voix est transcrite, sauf exception du 14(5). Vous acceptez ces obligations une seule fois en acceptant les Conditions de service et elles continuent de s'appliquer à chaque téléversement. WhatSaid Ltd est responsable de traitement pour l'exploitation du service (compte, facturation, télémétrie). Nos sous-traitants pour ce contenu sont : Lovable Cloud (hébergement et plateforme), Supabase (Postgres managé, authentification, stockage objet ; région UE) et AssemblyAI (reconnaissance vocale ; région UE — audio supprimé immédiatement après transcription). Voir le <icoLink>guide ICO sur la base légale</icoLink> pour en savoir plus.",
+    "s12Body": "Lorsque vous téléversez un enregistrement, vous êtes responsable de traitement des données personnelles qu'il contient. Avant traitement, vous devez confirmer une base légale au titre de l'article 6 — généralement votre propre voix, le consentement des intervenants, la nécessité d'un contrat ou une autre base légale. Si l'enregistrement contient des personnes identifiables autres que vous-même, l'article 14 vous impose de les informer que leur voix est transcrite, sauf exception du 14(5). Nous enregistrons cette attestation pour chaque téléversement et la conservons rattachée à la tâche à des fins d'audit. Voir le <icoLink>guide ICO sur la base légale</icoLink> pour en savoir plus.",
     "s11Body": "WhatSaid n'utilise que le stockage strictement nécessaire pour vous maintenir connecté, mémoriser votre langue et faire fonctionner l'application. Nous n'utilisons pas de cookies d'analyse, publicitaires ou de session replay. L'inventaire complet et la procédure de suppression figurent sur notre <cookiesLink>page cookies</cookiesLink>. Bases légales : règlement 6 PECR et article 6(1)(f) UK GDPR.",
     "s12Title": "12. Vos responsabilités lors du téléversement de voix de tiers",
-    "s12Body": "Lorsque vous téléversez un enregistrement, vous êtes responsable de traitement des données personnelles qu'il contient. Avant traitement, vous devez confirmer une base légale au titre de l'article 6 — généralement votre propre voix, le consentement des intervenants, la nécessité d'un contrat ou une autre base légale. Si l'enregistrement contient des personnes identifiables autres que vous-même, l'article 14 vous impose de les informer que leur voix est transcrite, sauf exception du 14(5). Nous enregistrons cette attestation pour chaque téléversement et la conservons rattachée à la tâche à des fins d'audit. Voir le <icoLink>guide ICO sur la base légale</icoLink> pour en savoir plus.",
     "s13Title": "13. Notifications envoyées pour votre compte",
     "s13Body": "Lorsque vous partagez une transcription par e-mail, nous envoyons au destinataire une courte information article 14 pour votre compte, afin qu'il sache que ses données personnelles ont été traitées par WhatSaid en qualité de sous-traitant. Le destinataire peut nous contacter à support@whatsaid.app pour s'opposer ou demander la suppression. Nous conservons un registre avec des identifiants hachés afin que chaque destinataire ne reçoive l'information qu'une seule fois par tâche.",
     "s14Title": "14. Mineurs",
@@ -1076,4 +1082,3 @@
     "questions": "Des questions ?"
   }
 }
-

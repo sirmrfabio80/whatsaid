@@ -179,7 +179,6 @@
       "reacceptError": "Could not record acceptance. Please try again.",
       "reacceptRequired": "We couldn't confirm your Terms acceptance. Please re-accept and try again."
     },
-
     "thirdPartyNotice": "Audio is processed using third-party AI services and deleted immediately after. By converting, you agree to our",
     "terms": "Terms",
     "privacyPolicy": "Privacy Policy",
@@ -252,7 +251,6 @@
     "password": "Password",
     "passwordPlaceholder": "At least 6 characters",
     "termsAgree": "I agree to the Terms of Service and Privacy Policy, and I confirm I will only upload audio I have the right to process under UK GDPR.",
-
     "termsOfService": "Terms of Service",
     "and": "and",
     "creating": "Creating account...",
@@ -575,13 +573,22 @@
     "spaceToAcceptHint": "Press space to accept",
     "arrowRightToAcceptHint": "Press → to accept",
     "sendEmailLabel": "Send transcript by email",
-    "sendEmailDesc": "Sends a readable email with the title, summary, questions and answers, and full transcript.",
     "shareRecordLabel": "Share as transcript record",
     "shareRecordDesc": "Lets the recipient open their own copy of this transcript in WhatSaid.",
     "sent": "Email sent",
     "sentSuccess": "Transcript shared successfully",
     "recordSentSuccess": "Share link sent successfully",
-    "sendFailed": "Could not send email. Please try again."
+    "sendFailed": "Could not send email. Please try again.",
+    "includeInBodyLabel": "Include transcript in email body",
+    "includeInBodyDesc": "Less private. By default, we send a secure link the recipient verifies with a one-time code.",
+    "attestationHeader": "Uploader attestation required",
+    "attestationShow": "Show full attestation",
+    "attestationHide": "Hide full attestation",
+    "attestationCheckbox": "I confirm I have a lawful basis under UK GDPR Articles 6 and (where applicable) 9 to share this transcript content with the named recipient.",
+    "attestationRequired": "Please confirm the uploader attestation to include the transcript in the email body.",
+    "attestationFailed": "Could not record your attestation. Please try again.",
+    "sendEmailDescLinkOnly": "Sends a secure link. The recipient verifies their email with a one-time code before viewing.",
+    "sendEmailDescInBody": "Sends the title, summary, Q&A and full transcript inside the email body."
   },
   "claim": {
     "validating": "Validating share link…",
@@ -712,10 +719,9 @@
     "s9Item4": "Other rights or anything you cannot self-serve — email support@whatsaid.app.",
     "s10Title": "10. Right to complain to the ICO",
     "s10Body": "If you are unhappy with how we have handled your personal data you can complain to the Information Commissioner's Office at <icoLink>ico.org.uk</icoLink> or on 0303 123 1113. We would appreciate the chance to fix the issue first — please write to support@whatsaid.app.",
-    "s12Body": "When you upload a recording, you are the data controller of any personal data it contains, and WhatSaid Ltd is your processor for that content. Before uploading, you must have a lawful basis under UK GDPR Article 6 — your own voice only, the consent of identifiable speakers, the necessity of a contract, or another lawful ground. Where the recording contains identifiable people other than you, Article 14 requires you to inform them their voice is being transcribed, unless a 14(5) exemption applies. You accept these duties once when you accept our Terms of Service at signup, and they continue to apply to every upload. WhatSaid Ltd is data controller for service operation (account, billing, telemetry). Our sub-processors for that content are: Lovable Cloud (hosting and platform), Supabase (managed Postgres, authentication, object storage; EU region) and AssemblyAI (speech-to-text; EU region — audio deleted immediately after transcription). See the <icoLink>ICO guidance on lawful basis</icoLink> for more.",
+    "s12Body": "When you upload a recording you are the controller of any personal data it contains. Before we process the file you must confirm a lawful basis under Article 6 — typically your own voice only, the speakers' consent, the necessity of a contract, or another lawful ground. Where the recording contains identifiable people other than you, Article 14 requires you to inform them their voice is being transcribed, unless a 14(5) exemption applies. We record this attestation per upload and store it against the job for audit. See the <icoLink>ICO guidance on lawful basis</icoLink> for more.",
     "s11Body": "WhatSaid uses only storage that is strictly necessary to keep you signed in, remember your language, and keep the app working. We do not use analytics, advertising or session-replay cookies. A full inventory and how to clear each item is on our <cookiesLink>cookies page</cookiesLink>. Lawful bases: PECR regulation 6 and UK GDPR Article 6(1)(f).",
     "s12Title": "12. Your responsibilities when uploading others' voices",
-    "s12Body": "When you upload a recording you are the controller of any personal data it contains. Before we process the file you must confirm a lawful basis under Article 6 — typically your own voice only, the speakers' consent, the necessity of a contract, or another lawful ground. Where the recording contains identifiable people other than you, Article 14 requires you to inform them their voice is being transcribed, unless a 14(5) exemption applies. We record this attestation per upload and store it against the job for audit. See the <icoLink>ICO guidance on lawful basis</icoLink> for more.",
     "s13Title": "13. Notices we send on your behalf",
     "s13Body": "When you email-share a transcript with someone, we send the recipient a short Article 14 notice on your behalf so they know their personal data has been processed by WhatSaid as your processor. The recipient can contact us at support@whatsaid.app to object or request deletion. We keep a privacy-preserving record (a hashed recipient identifier) to ensure each recipient is notified only once per job.",
     "s14Title": "14. Children",
@@ -1094,4 +1100,3 @@
     "questions": "Questions?"
   }
 }
-

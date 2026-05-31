@@ -255,6 +255,10 @@ Deno.serve(async (req) => {
     // only embedded in the email body when the sender explicitly opted in via
     // the (Phase 2) attestation flow.
     const email_in_body = body?.email_in_body === true
+    const attestation_consent_event_id =
+      typeof body?.attestation_consent_event_id === 'string' && body.attestation_consent_event_id.trim()
+        ? body.attestation_consent_event_id.trim()
+        : null
 
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
@@ -268,8 +272,69 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (email_in_body && !attestation_consent_event_id) {
+      return new Response(
+        JSON.stringify({
+          error: 'attestation_required',
+          message: 'An uploader attestation is required to include the transcript in the email body.',
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
 
     const serviceClient = createServiceClient()
+
+    // Phase 2: validate uploader attestation when transcript content will be
+    // embedded in the email body. The consent_events row must belong to the
+    // authenticated sender, be of type `share_uploader_attestation`, and
+    // reference a currently-effective consent version.
+    let verifiedAttestationId: string | null = null
+    if (email_in_body && attestation_consent_event_id) {
+      const { data: consentRow, error: consentErr } = await serviceClient
+        .from('consent_events')
+        .select('id, user_id, consent_type, version')
+        .eq('id', attestation_consent_event_id)
+        .maybeSingle()
+
+      if (consentErr) {
+        console.error('[share-transcript] consent lookup failed', consentErr)
+        return new Response(JSON.stringify({ error: 'Consent lookup failed' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      if (
+        !consentRow ||
+        consentRow.user_id !== user.id ||
+        consentRow.consent_type !== 'share_uploader_attestation'
+      ) {
+        return new Response(
+          JSON.stringify({ error: 'invalid_attestation' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      const now = Date.now()
+      const { data: versionRow } = await serviceClient
+        .from('consent_versions')
+        .select('version, consent_type, effective_from, effective_to')
+        .eq('version', consentRow.version)
+        .maybeSingle()
+      if (
+        !versionRow ||
+        versionRow.consent_type !== 'share_uploader_attestation' ||
+        (versionRow.effective_from && new Date(versionRow.effective_from).getTime() > now) ||
+        (versionRow.effective_to && new Date(versionRow.effective_to).getTime() < now)
+      ) {
+        return new Response(
+          JSON.stringify({ error: 'expired_attestation' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+      verifiedAttestationId = consentRow.id
+    }
+
+
 
     // Quotas: prevent email-bombing a single recipient and cap per-user daily
     // share volume. These run before any heavy work so abuse is cheap to reject.
@@ -380,6 +445,7 @@ Deno.serve(async (req) => {
         recipient_email: recipient_email.toLowerCase().trim(),
         shared_by: user.id,
         email_in_body,
+        attestation_consent_event_id: verifiedAttestationId,
       })
       .select('token')
       .single()

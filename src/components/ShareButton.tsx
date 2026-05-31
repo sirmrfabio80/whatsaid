@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Share2, Mail, Link2, Loader2, Check } from "lucide-react";
+import { Share2, Mail, Link2, Loader2, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +13,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useDelayedCallback } from "@/hooks/use-delayed-callback";
 import type { CanonicalExportData } from "@/lib/export-types";
 import { generatePdfBlob } from "@/lib/export-pdf";
+import { newIdempotencyKey } from "@/lib/idempotency-key";
+import {
+  SHARE_ATTESTATION_TYPE,
+  SHARE_ATTESTATION_VERSION,
+  SHARE_ATTESTATION_TEXT,
+} from "@/lib/share-attestation";
 
 interface ShareButtonProps {
   jobId: string;
@@ -578,6 +586,7 @@ function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
   handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
   showAcceptHint, onAcceptSuggestion, showArrowHint, onAcceptArrowSuggestion, isMobile,
+  emailInBody, setEmailInBody, attested, setAttested,
 }: {
   email: string; setEmail: (v: string) => void; isValid: boolean;
   sending: boolean; sent: boolean; sendingRecord: boolean; sentRecord: boolean;
@@ -585,8 +594,11 @@ function ShareContent({
   t: (k: string) => string; autoFocusInput?: boolean; recentRecipients: string[];
   showAcceptHint: boolean; onAcceptSuggestion: () => void;
   showArrowHint: boolean; onAcceptArrowSuggestion: () => void; isMobile: boolean;
+  emailInBody: boolean; setEmailInBody: (v: boolean) => void;
+  attested: boolean; setAttested: (v: boolean) => void;
 }) {
   const [focused, setFocused] = useState(false);
+  const [attestExpanded, setAttestExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const suggestion = useMemo(() => {
@@ -736,10 +748,72 @@ function ShareContent({
         )}
       </div>
 
+      {/* Include-in-body toggle + uploader attestation (Phase 2) */}
+      <div className="px-4 py-3 border-t border-border/40 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <label htmlFor="share-include-body" className="flex-1 min-w-0 cursor-pointer">
+            <p className="text-sm font-medium text-foreground">{t("share.includeInBodyLabel")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              {t("share.includeInBodyDesc")}
+            </p>
+          </label>
+          <Switch
+            id="share-include-body"
+            checked={emailInBody}
+            onCheckedChange={(v) => {
+              setEmailInBody(v);
+              if (!v) setAttested(false);
+            }}
+            disabled={sending || sent || sendingRecord || sentRecord}
+            aria-label={t("share.includeInBodyLabel")}
+          />
+        </div>
+
+        {emailInBody && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+              {t("share.attestationHeader")}
+            </p>
+            <button
+              type="button"
+              onClick={() => setAttestExpanded((v) => !v)}
+              className="flex items-center gap-1 text-xs text-amber-900 dark:text-amber-100 underline underline-offset-2"
+              aria-expanded={attestExpanded}
+            >
+              {attestExpanded ? t("share.attestationHide") : t("share.attestationShow")}
+              {attestExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            {attestExpanded && (
+              <p
+                lang="en"
+                className="text-xs leading-relaxed text-amber-950 dark:text-amber-50 max-h-48 overflow-y-auto"
+              >
+                {SHARE_ATTESTATION_TEXT}
+              </p>
+            )}
+            <label className="flex items-start gap-2 cursor-pointer pt-1">
+              <Checkbox
+                checked={attested}
+                onCheckedChange={(v) => setAttested(v === true)}
+                disabled={sending || sent}
+                aria-label={t("share.attestationCheckbox")}
+                className="mt-0.5"
+              />
+              <span lang="en" className="text-xs leading-relaxed text-foreground">
+                {t("share.attestationCheckbox")}
+              </span>
+            </label>
+          </div>
+        )}
+      </div>
+
       {/* Action: Send by email */}
       <button
         onClick={handleSendEmail}
-        disabled={!isValid || sending || sent || sendingRecord || sentRecord}
+        disabled={
+          !isValid || sending || sent || sendingRecord || sentRecord ||
+          (emailInBody && !attested)
+        }
         className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:pointer-events-none min-h-[56px] cursor-pointer"
       >
         <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
@@ -747,9 +821,12 @@ function ShareContent({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-foreground">{sent ? t("share.sent") : t("share.sendEmailLabel")}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("share.sendEmailDesc")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+            {emailInBody ? t("share.sendEmailDescInBody") : t("share.sendEmailDescLinkOnly")}
+          </p>
         </div>
       </button>
+
 
       {/* Action: Share as record */}
       <div className="border-t border-border/40">
@@ -780,6 +857,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const [sent, setSent] = useState(false);
   const [sendingRecord, setSendingRecord] = useState(false);
   const [sentRecord, setSentRecord] = useState(false);
+  const [emailInBody, setEmailInBody] = useState(false);
+  const [attested, setAttested] = useState(false);
   const [recentRecipients, setRecentRecipients] = useState<string[]>([]);
   const [hasDismissedAcceptHint, setHasDismissedAcceptHint] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -826,6 +905,10 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
 
   const handleSendEmail = async () => {
     if (!isValid || sending) return;
+    if (emailInBody && !attested) {
+      toast.error(t("share.attestationRequired"));
+      return;
+    }
     setSending(true);
     try {
       // Generate and upload PDF if export data is available
@@ -834,8 +917,42 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         pdfPath = await uploadPdfForShare(jobId, exportData);
       }
 
+      // Phase 2: record uploader attestation before invoking the share function
+      // so the edge function can verify a real consent_events row exists.
+      let attestationId: string | null = null;
+      if (emailInBody) {
+        const idem = newIdempotencyKey("share_attest");
+        const { data: consentData, error: consentErr } = await supabase.functions.invoke(
+          "record-consent",
+          {
+            body: {
+              consent_type: SHARE_ATTESTATION_TYPE,
+              version: SHARE_ATTESTATION_VERSION,
+              accepted: true,
+              metadata: { surface: "share_dialog", job_id: jobId, recipient_email: email.trim() },
+              idempotency_key: idem,
+            },
+          },
+        );
+        const recordedId =
+          (consentData as { consent_id?: string; id?: string } | null)?.consent_id ??
+          (consentData as { consent_id?: string; id?: string } | null)?.id ??
+          null;
+        if (consentErr || !recordedId) {
+          toast.error(t("share.attestationFailed"));
+          return;
+        }
+        attestationId = recordedId;
+      }
+
       const { data, error } = await supabase.functions.invoke("share-transcript", {
-        body: { job_id: jobId, recipient_email: email.trim(), pdf_storage_path: pdfPath },
+        body: {
+          job_id: jobId,
+          recipient_email: email.trim(),
+          pdf_storage_path: pdfPath,
+          email_in_body: emailInBody,
+          attestation_consent_event_id: attestationId,
+        },
       });
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSent(true);
@@ -845,6 +962,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         setOpen(false);
         setSent(false);
         setEmail("");
+        setEmailInBody(false);
+        setAttested(false);
       }, 1500);
     } catch { toast.error(t("share.sendFailed")); } finally { setSending(false); }
   };
@@ -879,6 +998,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         setSent(false);
         setSentRecord(false);
         setRecentRecipients([]);
+        setEmailInBody(false);
+        setAttested(false);
       }, 200);
     }
   };
@@ -918,6 +1039,7 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     showArrowHint: !hasDismissedArrowHint && open,
     onAcceptArrowSuggestion: handleAcceptArrowSuggestion,
     isMobile,
+    emailInBody, setEmailInBody, attested, setAttested,
   };
 
   if (isMobile) {
