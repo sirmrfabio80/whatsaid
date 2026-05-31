@@ -146,11 +146,12 @@ export default function SharedView() {
     }
   }, [token, sessionKey]);
 
-  const fetchContent = async (session: string) => {
+    const fetchContent = async (session: string) => {
     setStage("loading");
     const res = await callFn<FetchedContent>("share-view-fetch", { token, session });
     if (!res.ok) {
       sessionStorage.removeItem(sessionKey);
+      if (res.error === "revoked") { setStage("revoked"); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found" || res.error === "job_not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_session") { setStage("init"); return; }
@@ -189,6 +190,7 @@ export default function SharedView() {
     setErrorMsg("");
     const res = await callFn<{ recipient_hint: string; expires_in: number }>("share-view-request-otp", { token });
     if (!res.ok) {
+      if (res.error === "revoked") { setStage("revoked"); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "cooldown") {
@@ -219,6 +221,7 @@ export default function SharedView() {
       code,
     });
     if (!res.ok) {
+      if (res.error === "revoked") { setStage("revoked"); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_code") {
