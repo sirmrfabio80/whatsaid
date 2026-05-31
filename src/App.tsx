@@ -88,6 +88,7 @@ const App = () => (
                 <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/claim/:token" element={<ClaimShare />} />
+                <Route path="/share/revoke" element={<ShareRevoke />} />
                 <Route path="/share/:token" element={<SharedView />} />
                 <Route path="/shared-pdf/:token" element={<SharedPdfDownload />} />
                 <Route path="/notifications" element={<Notifications />} />
