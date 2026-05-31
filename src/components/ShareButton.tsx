@@ -935,8 +935,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
           },
         );
         const recordedId =
-          (consentData as { id?: string; consent_event_id?: string } | null)?.id ??
-          (consentData as { consent_event_id?: string } | null)?.consent_event_id ??
+          (consentData as { consent_id?: string; id?: string } | null)?.consent_id ??
+          (consentData as { consent_id?: string; id?: string } | null)?.id ??
           null;
         if (consentErr || !recordedId) {
           toast.error(t("share.attestationFailed"));
