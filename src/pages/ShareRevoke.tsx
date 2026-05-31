@@ -17,6 +17,7 @@ export default function ShareRevoke() {
   const [params] = useSearchParams();
   const token = (params.get("token") ?? "").trim();
   const [stage, setStage] = useState<Stage>("confirm");
+  const [reason, setReason] = useState("");
 
   usePageMeta({
     title: "Revoke shared transcript · WhatSaid",
@@ -31,8 +32,9 @@ export default function ShareRevoke() {
   const revoke = async () => {
     setStage("working");
     try {
+      const trimmed = reason.trim().slice(0, MAX_REASON_LENGTH);
       const { data, error } = await supabase.functions.invoke("share-revoke", {
-        body: { token },
+        body: { token, reason: trimmed || undefined },
       });
       if (error) {
         const status = (error as { context?: { status?: number } }).context?.status;
