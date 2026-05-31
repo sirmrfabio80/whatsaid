@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Shield, Mail, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/use-page-meta";
