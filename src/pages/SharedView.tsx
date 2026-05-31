@@ -298,7 +298,8 @@ export default function SharedView() {
 
   if (stage === "viewing" && content) {
     return (
-      <div className="container mx-auto max-w-3xl py-8 px-4 space-y-6">
+      <>
+      <div className="container mx-auto max-w-3xl py-8 px-4 space-y-6" aria-hidden={noticeOpen ? "true" : undefined}>
         <header className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Shared with you</p>
           <h1 className="text-2xl font-bold text-foreground">{content.title}</h1>
