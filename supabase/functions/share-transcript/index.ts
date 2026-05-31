@@ -445,6 +445,7 @@ Deno.serve(async (req) => {
         recipient_email: recipient_email.toLowerCase().trim(),
         shared_by: user.id,
         email_in_body,
+        attestation_consent_event_id: verifiedAttestationId,
       })
       .select('token')
       .single()
