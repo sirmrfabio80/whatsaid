@@ -35,6 +35,7 @@ interface FetchedContent {
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const SESSION_STORAGE_PREFIX = "share-view-session:";
+const NOTICE_ACK_PREFIX = "share-view-notice-ack:";
 
 interface FnResult<T> {
   ok: boolean;
