@@ -17,6 +17,18 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
 }
 
+// RFC 5322 display-name hygiene: strip CR/LF/quotes/backslashes and trim.
+// We then always quote the result so commas, dots, etc. are safe.
+function sanitizeDisplayName(raw: string): string {
+  return raw.replace(/[\r\n"\\]/g, '').trim().slice(0, 80)
+}
+
+// Basic RFC-5322-ish email syntax check. We only use Reply-To when valid;
+// otherwise we omit the header entirely so providers don't reject the send.
+function isValidEmail(addr: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)
+}
+
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -90,8 +102,9 @@ function buildEmailHtml(opts: {
   transcript: string
   downloadUrl: string | null
   noticeHtml: string
+  replyToEmail: string | null
 }): string {
-  const { title, senderLabel, summary, questions, transcript, downloadUrl, noticeHtml } = opts
+  const { title, senderLabel, summary, questions, transcript, downloadUrl, noticeHtml, replyToEmail } = opts
 
   const summarySection = summary
     ? `<div style="margin-bottom:32px;">
@@ -138,7 +151,11 @@ function buildEmailHtml(opts: {
 
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
         <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
-          Shared by ${escapeHtml(senderLabel)} via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>
+          Shared by ${escapeHtml(senderLabel)} via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>${
+            replyToEmail
+              ? `<br/><span style="color:hsl(220,10%,55%);">Replies to this email go to <a href="mailto:${escapeHtml(replyToEmail)}" style="color:hsl(245,50%,48%);text-decoration:none;">${escapeHtml(replyToEmail)}</a>, not to ${SITE_NAME}.</span>`
+              : ''
+          }
         </p>
       </div>
     </div>
@@ -155,6 +172,7 @@ function buildPlainText(opts: {
   transcript: string
   downloadUrl: string | null
   noticeText: string
+  replyToEmail: string | null
 }): string {
   const parts: string[] = [opts.title, '']
   if (opts.downloadUrl) {
@@ -172,6 +190,9 @@ function buildPlainText(opts: {
   parts.push('--- Transcript ---', '', opts.transcript, '')
   parts.push(opts.noticeText)
   parts.push('', `—`, `Shared by ${opts.senderLabel} via ${SITE_NAME}`)
+  if (opts.replyToEmail) {
+    parts.push(`Replies to this email go to ${opts.replyToEmail}, not to ${SITE_NAME}.`)
+  }
   return parts.join('\n')
 }
 
@@ -181,8 +202,9 @@ function buildLinkOnlyHtml(opts: {
   viewUrl: string
   downloadUrl: string | null
   noticeHtml: string
+  replyToEmail: string | null
 }): string {
-  const { title, senderLabel, viewUrl, downloadUrl, noticeHtml } = opts
+  const { title, senderLabel, viewUrl, downloadUrl, noticeHtml, replyToEmail } = opts
   return `<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
@@ -202,7 +224,11 @@ function buildLinkOnlyHtml(opts: {
         ${noticeHtml}
       </div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
-        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">Shared via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a></p>
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">Shared via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>${
+          replyToEmail
+            ? `<br/><span style="color:hsl(220,10%,55%);">Replies to this email go to <a href="mailto:${escapeHtml(replyToEmail)}" style="color:hsl(245,50%,48%);text-decoration:none;">${escapeHtml(replyToEmail)}</a>, not to ${SITE_NAME}.</span>`
+            : ''
+        }</p>
       </div>
     </div>
   </div>
@@ -216,6 +242,7 @@ function buildLinkOnlyText(opts: {
   viewUrl: string
   downloadUrl: string | null
   noticeText: string
+  replyToEmail: string | null
 }): string {
   const parts: string[] = [
     `${opts.senderLabel} shared a transcript with you: ${opts.title}`,
@@ -231,6 +258,9 @@ function buildLinkOnlyText(opts: {
   }
   parts.push('', opts.noticeText)
   parts.push('', `— Shared via ${SITE_NAME}`)
+  if (opts.replyToEmail) {
+    parts.push(`Replies to this email go to ${opts.replyToEmail}, not to ${SITE_NAME}.`)
+  }
   return parts.join('\n')
 }
 
@@ -473,6 +503,8 @@ Deno.serve(async (req) => {
       console.warn('[share-transcript] no active share_recipient_notice version found')
     }
 
+    const replyToEmail = isValidEmail(senderEmail) ? senderEmail : null
+
     const html = email_in_body
       ? buildEmailHtml({
           title,
@@ -482,6 +514,7 @@ Deno.serve(async (req) => {
           transcript: transformedTranscript,
           downloadUrl,
           noticeHtml,
+          replyToEmail,
         })
       : buildLinkOnlyHtml({
           title,
@@ -489,6 +522,7 @@ Deno.serve(async (req) => {
           viewUrl,
           downloadUrl,
           noticeHtml,
+          replyToEmail,
         })
 
     const text = email_in_body
@@ -500,6 +534,7 @@ Deno.serve(async (req) => {
           transcript: transformedTranscript,
           downloadUrl,
           noticeText,
+          replyToEmail,
         })
       : buildLinkOnlyText({
           title,
@@ -507,6 +542,7 @@ Deno.serve(async (req) => {
           viewUrl,
           downloadUrl,
           noticeText,
+          replyToEmail,
         })
 
 
@@ -535,23 +571,35 @@ Deno.serve(async (req) => {
 
     const subjectLine = `Transcript shared with you: ${title} [${shortId}]`
 
+    // Phase 4 — email hygiene:
+    // - From: keep our sending domain (DMARC alignment) but expose the human
+    //   sender's name: `"<Sender> via WhatSaid" <noreply@FROM_DOMAIN>`.
+    // - Reply-To: only set when the sender's email parses as valid; otherwise
+    //   omit so providers don't reject the message.
+    const safeSenderName = sanitizeDisplayName(senderLabel) || SITE_NAME
+    const fromDisplay = `${safeSenderName} via ${SITE_NAME}`
+    const fromHeader = `"${fromDisplay}" <noreply@${FROM_DOMAIN}>`
+    const replyToValid = replyToEmail !== null
+
+    const payload: Record<string, unknown> = {
+      message_id: messageId,
+      idempotency_key: `share-transcript-${messageId}`,
+      to: recipient_email,
+      from: fromHeader,
+      sender_domain: SENDER_DOMAIN,
+      subject: subjectLine,
+      html,
+      text,
+      purpose: 'transactional',
+      label: 'share-transcript',
+      unsubscribe_token: unsubscribeToken,
+      queued_at: new Date().toISOString(),
+    }
+    if (replyToValid) payload.reply_to = senderEmail
+
     const { error: enqueueError } = await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
-      payload: {
-        message_id: messageId,
-        idempotency_key: `share-transcript-${messageId}`,
-        to: recipient_email,
-        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-        reply_to: senderEmail,
-        sender_domain: SENDER_DOMAIN,
-        subject: subjectLine,
-        html,
-        text,
-        purpose: 'transactional',
-        label: 'share-transcript',
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-      },
+      payload,
     })
 
     if (enqueueError) {
