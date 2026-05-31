@@ -586,6 +586,7 @@ function ShareContent({
   email, setEmail, isValid, sending, sent, sendingRecord, sentRecord,
   handleSendEmail, handleShareRecord, t, autoFocusInput = true, recentRecipients,
   showAcceptHint, onAcceptSuggestion, showArrowHint, onAcceptArrowSuggestion, isMobile,
+  emailInBody, setEmailInBody, attested, setAttested,
 }: {
   email: string; setEmail: (v: string) => void; isValid: boolean;
   sending: boolean; sent: boolean; sendingRecord: boolean; sentRecord: boolean;
@@ -593,8 +594,11 @@ function ShareContent({
   t: (k: string) => string; autoFocusInput?: boolean; recentRecipients: string[];
   showAcceptHint: boolean; onAcceptSuggestion: () => void;
   showArrowHint: boolean; onAcceptArrowSuggestion: () => void; isMobile: boolean;
+  emailInBody: boolean; setEmailInBody: (v: boolean) => void;
+  attested: boolean; setAttested: (v: boolean) => void;
 }) {
   const [focused, setFocused] = useState(false);
+  const [attestExpanded, setAttestExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const suggestion = useMemo(() => {
