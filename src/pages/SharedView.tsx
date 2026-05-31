@@ -163,12 +163,23 @@ export default function SharedView() {
     }
   }, [token, sessionKey]);
 
+  const handleRevoked = (raw: any) => {
+    setRevokedInfo({
+      revokedAt: raw?.revoked_at ?? null,
+      revokeReason: raw?.revoke_reason ?? null,
+      revokedByLabel: raw?.revoked_by_label ?? null,
+      senderLabel: raw?.sender_label ?? null,
+      senderEmail: raw?.sender_email ?? null,
+    });
+    setStage("revoked");
+  };
+
     const fetchContent = async (session: string) => {
     setStage("loading");
     const res = await callFn<FetchedContent>("share-view-fetch", { token, session });
     if (!res.ok) {
       sessionStorage.removeItem(sessionKey);
-      if (res.error === "revoked") { setRevokedAt(res.raw?.revoked_at || null); setStage("revoked"); return; }
+      if (res.error === "revoked") { handleRevoked(res.raw); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found" || res.error === "job_not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_session") { setStage("init"); return; }
