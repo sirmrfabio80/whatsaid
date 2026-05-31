@@ -7,6 +7,7 @@ import { handleCorsPreflight, jsonResponse } from '../_shared/cors.ts'
 import { createServiceClient } from '../_shared/supabase.ts'
 import { verifyShareViewSession } from '../_shared/share-view-session.ts'
 import { resolveActiveNotice, recordRecipientNotification } from '../_shared/recipient-notice.ts'
+import { buildRevokedPayload } from '../_shared/share-revoked-payload.ts'
 
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflight(req)
