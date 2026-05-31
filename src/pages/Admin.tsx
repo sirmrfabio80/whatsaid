@@ -43,7 +43,9 @@ export default function Admin() {
             <TabsTrigger value="dsrs">DSRs</TabsTrigger>
             <TabsTrigger value="security-headers">Security headers</TabsTrigger>
             <TabsTrigger value="edge-health">Edge health</TabsTrigger>
+            <TabsTrigger value="revoke-previews">Revoke emails</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
+
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
             <TranscribeTemplatesTab />
