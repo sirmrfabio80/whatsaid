@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Shield, Mail, AlertTriangle, Clock, ArrowLeft, Ban } from "lucide-react";
+import { Shield, Mail, AlertTriangle, Clock, ArrowLeft, Ban, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
@@ -25,12 +25,22 @@ type Stage =
 interface FetchedContent {
   title: string;
   sender_label: string;
+  sender_email: string | null;
   transcript: string;
   summary: string | null;
   questions: { prompt: string | null; answer: string }[];
   language: string;
   expires_at: string;
+  last_viewed_at: string | null;
   notice: { version: string; text_en: string } | null;
+}
+
+interface RevokedInfo {
+  revokedAt: string | null;
+  revokeReason: string | null;
+  revokedByLabel: string | null;
+  senderLabel: string | null;
+  senderEmail: string | null;
 }
 
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
