@@ -477,7 +477,7 @@ Deno.serve(async (req) => {
         email_in_body,
         attestation_consent_event_id: verifiedAttestationId,
       })
-      .select('token')
+      .select('token, revocation_token')
       .single()
 
     if (shareError || !share) {
@@ -491,6 +491,7 @@ Deno.serve(async (req) => {
     const downloadUrl: string | null = pdf_storage_path
       ? `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
       : null
+    const revokeUrl = `${SITE_URL}/share/revoke?token=${share.revocation_token}`
 
     const messageId = crypto.randomUUID()
     const shortId = messageId.slice(0, 6)
