@@ -285,6 +285,41 @@ export default function SharedView() {
     await fetchContent(res.data.session);
   };
 
+  const submitAccessRequest = async () => {
+    if (!token) return;
+    const reason = requestReason.trim();
+    if (reason.length < 5) {
+      toast.error("Please add a short message (at least 5 characters).");
+      return;
+    }
+    const email = requestEmail.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("That email doesn't look valid.");
+      return;
+    }
+    setRequestSending(true);
+    const res = await callFn<{ ok: boolean }>("share-request-access", {
+      token,
+      reason,
+      requester_email: email || undefined,
+    });
+    setRequestSending(false);
+    if (!res.ok) {
+      if (res.error === "rate_limited") {
+        const secs = res.raw?.retry_after_seconds;
+        const mins = secs ? Math.ceil(secs / 60) : null;
+        toast.error(mins ? `A request was just sent. Please wait ~${mins} min before trying again.` : "Please wait a few minutes before sending another request.");
+        return;
+      }
+      if (res.error === "not_found") { toast.error("This share no longer exists."); return; }
+      if (res.error === "reason_too_short") { toast.error("Please add a longer message."); return; }
+      toast.error("Couldn't send your request. Please try again shortly.");
+      return;
+    }
+    setRequestSent(true);
+    toast.success("Request sent to the sender.");
+  };
+
   if (!token) {
     return (
       <div className="container mx-auto max-w-xl py-12 px-4">
