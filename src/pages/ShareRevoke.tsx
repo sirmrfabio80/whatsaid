@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Shield, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageMeta } from "@/hooks/use-page-meta";
+
+const MAX_REASON_LENGTH = 500;
 
 type Stage = "confirm" | "working" | "revoked" | "already" | "notFound" | "invalid" | "error";
 
