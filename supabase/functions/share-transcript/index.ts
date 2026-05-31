@@ -579,7 +579,7 @@ Deno.serve(async (req) => {
     const safeSenderName = sanitizeDisplayName(senderLabel) || SITE_NAME
     const fromDisplay = `${safeSenderName} via ${SITE_NAME}`
     const fromHeader = `"${fromDisplay}" <noreply@${FROM_DOMAIN}>`
-    const replyToValid = isValidEmail(senderEmail)
+    const replyToValid = replyToEmail !== null
 
     const payload: Record<string, unknown> = {
       message_id: messageId,
