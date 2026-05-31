@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Shield, Mail, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
+import { Shield, Mail, AlertTriangle, Clock, ArrowLeft, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
@@ -18,6 +18,7 @@ type Stage =
   | "loading"
   | "viewing"
   | "expired"
+  | "revoked"
   | "notFound"
   | "error";
 
@@ -145,11 +146,12 @@ export default function SharedView() {
     }
   }, [token, sessionKey]);
 
-  const fetchContent = async (session: string) => {
+    const fetchContent = async (session: string) => {
     setStage("loading");
     const res = await callFn<FetchedContent>("share-view-fetch", { token, session });
     if (!res.ok) {
       sessionStorage.removeItem(sessionKey);
+      if (res.error === "revoked") { setStage("revoked"); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found" || res.error === "job_not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_session") { setStage("init"); return; }
@@ -188,6 +190,7 @@ export default function SharedView() {
     setErrorMsg("");
     const res = await callFn<{ recipient_hint: string; expires_in: number }>("share-view-request-otp", { token });
     if (!res.ok) {
+      if (res.error === "revoked") { setStage("revoked"); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "cooldown") {
@@ -218,6 +221,7 @@ export default function SharedView() {
       code,
     });
     if (!res.ok) {
+      if (res.error === "revoked") { setStage("revoked"); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_code") {
@@ -271,13 +275,26 @@ export default function SharedView() {
     );
   }
 
+  if (stage === "revoked") {
+    return (
+      <div className="container mx-auto max-w-xl py-12 px-4">
+        <Card><CardContent className="p-8 text-center space-y-3">
+          <Ban className="h-10 w-10 text-destructive mx-auto" />
+          <h1 className="text-xl font-semibold">This share has been revoked</h1>
+          <p className="text-sm text-muted-foreground">The sender has removed access to this transcript. If you think this was a mistake, contact the person who shared it with you.</p>
+          <Button asChild variant="outline"><Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link></Button>
+        </CardContent></Card>
+      </div>
+    );
+  }
+
   if (stage === "notFound") {
     return (
       <div className="container mx-auto max-w-xl py-12 px-4">
         <Card><CardContent className="p-8 text-center space-y-3">
           <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
           <h1 className="text-xl font-semibold">Share not found</h1>
-          <p className="text-sm text-muted-foreground">This link may be incorrect or has been revoked.</p>
+          <p className="text-sm text-muted-foreground">This link may be incorrect or no longer exists.</p>
         </CardContent></Card>
       </div>
     );
