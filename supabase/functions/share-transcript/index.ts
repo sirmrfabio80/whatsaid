@@ -175,6 +175,65 @@ function buildPlainText(opts: {
   return parts.join('\n')
 }
 
+function buildLinkOnlyHtml(opts: {
+  title: string
+  senderLabel: string
+  viewUrl: string
+  downloadUrl: string | null
+  noticeHtml: string
+}): string {
+  const { title, senderLabel, viewUrl, downloadUrl, noticeHtml } = opts
+  return `<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+    <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+      <div style="padding:28px 28px 20px;">
+        <p style="font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:hsl(245,50%,48%);margin:0 0 8px;">${SITE_NAME}</p>
+        <h1 style="font-family:'Space Grotesk',Arial,sans-serif;font-size:22px;font-weight:700;color:hsl(220,25%,10%);margin:0 0 12px;line-height:1.3;">${escapeHtml(senderLabel)} shared a transcript with you</h1>
+        <p style="font-size:15px;color:hsl(220,10%,30%);line-height:1.55;margin:0 0 20px;"><strong>${escapeHtml(title)}</strong></p>
+        <p style="font-size:14px;color:hsl(220,10%,30%);line-height:1.55;margin:0 0 20px;">For your privacy, the transcript isn't included in this email. Open the secure link below and we'll send a one-time code to this email address to verify it's you.</p>
+        <div style="margin:0 0 12px;">
+          <a href="${viewUrl}" style="display:inline-block;padding:12px 28px;background:hsl(245,50%,48%);color:#fff;font-size:14px;font-weight:600;border-radius:10px;text-decoration:none;letter-spacing:0.01em;">View transcript</a>
+        </div>
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0 0 16px;">Link expires in 2 days. Only the address this email was sent to can verify and view it.</p>
+        ${downloadUrl ? `<p style="font-size:13px;color:hsl(220,10%,40%);margin:16px 0 0;">Prefer a PDF? <a href="${downloadUrl}" style="color:hsl(245,50%,48%);">Download (sign-in required)</a>.</p>` : ''}
+        ${noticeHtml}
+      </div>
+      <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">Shared via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+function buildLinkOnlyText(opts: {
+  title: string
+  senderLabel: string
+  viewUrl: string
+  downloadUrl: string | null
+  noticeText: string
+}): string {
+  const parts: string[] = [
+    `${opts.senderLabel} shared a transcript with you: ${opts.title}`,
+    '',
+    `For your privacy, the transcript isn't included in this email.`,
+    `Open the secure link and we'll send a one-time code to this email address to verify it's you.`,
+    '',
+    `View transcript: ${opts.viewUrl}`,
+    `Link expires in 2 days.`,
+  ]
+  if (opts.downloadUrl) {
+    parts.push('', `Download PDF (sign-in required): ${opts.downloadUrl}`)
+  }
+  parts.push('', opts.noticeText)
+  parts.push('', `— Shared via ${SITE_NAME}`)
+  return parts.join('\n')
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -192,6 +251,10 @@ Deno.serve(async (req) => {
     const pdf_storage_path = typeof body?.pdf_storage_path === 'string' && body.pdf_storage_path.trim()
       ? body.pdf_storage_path.trim()
       : null
+    // Phase 1: link-only is the default. The full transcript / summary / Q&A is
+    // only embedded in the email body when the sender explicitly opted in via
+    // the (Phase 2) attestation flow.
+    const email_in_body = body?.email_in_body === true
 
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
@@ -204,6 +267,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
 
     const serviceClient = createServiceClient()
 
@@ -306,23 +370,31 @@ Deno.serve(async (req) => {
 
     const title = job.title || job.file_name?.replace(/\.[^.]+$/, '') || 'Transcript'
 
-    // Create a share record for the PDF download link if we have a PDF
-    let downloadUrl: string | null = null
-    if (pdf_storage_path) {
-      const { data: share, error: shareError } = await serviceClient
-        .from('transcript_shares')
-        .insert({
-          job_id,
-          recipient_email: recipient_email.toLowerCase().trim(),
-          shared_by: user.id,
-        })
-        .select('token')
-        .single()
+    // Phase 1: always create a transcript_shares record so the recipient gets
+    // a gated view link (OTP-protected). PDF download URL is appended only
+    // when a PDF artifact was uploaded.
+    const { data: share, error: shareError } = await serviceClient
+      .from('transcript_shares')
+      .insert({
+        job_id,
+        recipient_email: recipient_email.toLowerCase().trim(),
+        shared_by: user.id,
+        email_in_body,
+      })
+      .select('token')
+      .single()
 
-      if (!shareError && share) {
-        downloadUrl = `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
-      }
+    if (shareError || !share) {
+      console.error('[share-transcript] failed to create share record', shareError)
+      return new Response(JSON.stringify({ error: 'Failed to create share link' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
+
+    const viewUrl = `${SITE_URL}/share/${share.token}`
+    const downloadUrl: string | null = pdf_storage_path
+      ? `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
+      : null
 
     const messageId = crypto.randomUUID()
     const shortId = messageId.slice(0, 6)
@@ -335,25 +407,42 @@ Deno.serve(async (req) => {
       console.warn('[share-transcript] no active share_recipient_notice version found')
     }
 
-    const html = buildEmailHtml({
-      title,
-      senderLabel,
-      summary: transformedSummary,
-      questions: transformedQuestions,
-      transcript: transformedTranscript,
-      downloadUrl,
-      noticeHtml,
-    })
+    const html = email_in_body
+      ? buildEmailHtml({
+          title,
+          senderLabel,
+          summary: transformedSummary,
+          questions: transformedQuestions,
+          transcript: transformedTranscript,
+          downloadUrl,
+          noticeHtml,
+        })
+      : buildLinkOnlyHtml({
+          title,
+          senderLabel,
+          viewUrl,
+          downloadUrl,
+          noticeHtml,
+        })
 
-    const text = buildPlainText({
-      title,
-      senderLabel,
-      summary: transformedSummary,
-      questions: transformedQuestions,
-      transcript: transformedTranscript,
-      downloadUrl,
-      noticeText,
-    })
+    const text = email_in_body
+      ? buildPlainText({
+          title,
+          senderLabel,
+          summary: transformedSummary,
+          questions: transformedQuestions,
+          transcript: transformedTranscript,
+          downloadUrl,
+          noticeText,
+        })
+      : buildLinkOnlyText({
+          title,
+          senderLabel,
+          viewUrl,
+          downloadUrl,
+          noticeText,
+        })
+
 
     const recipientLower = recipient_email.toLowerCase().trim()
     const { data: existingToken } = await serviceClient

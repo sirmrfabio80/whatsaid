@@ -1104,6 +1104,39 @@ export type Database = {
           },
         ]
       }
+      share_view_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          recipient_email_lower: string
+          share_token: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          recipient_email_lower: string
+          share_token: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          recipient_email_lower?: string
+          share_token?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1268,6 +1301,7 @@ export type Database = {
           expires_at: string
           id: string
           job_id: string
+          last_view_otp_sent_at: string | null
           recipient_email: string
           shared_by: string
           token: string
@@ -1283,6 +1317,7 @@ export type Database = {
           expires_at?: string
           id?: string
           job_id: string
+          last_view_otp_sent_at?: string | null
           recipient_email: string
           shared_by: string
           token?: string
@@ -1298,6 +1333,7 @@ export type Database = {
           expires_at?: string
           id?: string
           job_id?: string
+          last_view_otp_sent_at?: string | null
           recipient_email?: string
           shared_by?: string
           token?: string

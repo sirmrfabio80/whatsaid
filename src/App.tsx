@@ -33,6 +33,7 @@ const Terms = lazy(() => import("./pages/Terms"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ClaimShare = lazy(() => import("./pages/ClaimShare"));
+const SharedView = lazy(() => import("./pages/SharedView"));
 const SharedPdfDownload = lazy(() => import("./pages/SharedPdfDownload"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -86,6 +87,7 @@ const App = () => (
                 <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/claim/:token" element={<ClaimShare />} />
+                <Route path="/share/:token" element={<SharedView />} />
                 <Route path="/shared-pdf/:token" element={<SharedPdfDownload />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/admin" element={<Admin />} />

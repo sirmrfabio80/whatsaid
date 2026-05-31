@@ -126,36 +126,54 @@ export interface RecordNotificationParams {
   jobId: string;
   sharedBy: string;
   recipientEmail: string;
-  channel: "share_transcript" | "share_transcript_record";
+  channel: "share_transcript" | "share_transcript_record" | "view" | "in_app_modal";
   notice: ResolvedNotice;
   messageId?: string;
 }
 
 /**
- * Inserts an audit row. Returns true when a new row was created (first
- * notification for this job/recipient/version) and false when the
- * `(job, hash, version)` unique constraint short-circuits the insert
- * because we already told this person on a previous send.
+ * Inserts an audit row.
+ *
+ * For dedup-eligible channels (email-style "share_transcript*" and
+ * "in_app_modal") this upserts on the partial unique index covering
+ * (job_id, recipient_email_hash, channel, notice_version) and returns true
+ * only on first insert.
+ *
+ * For the "view" channel every successful viewing is recorded as a fresh
+ * audit row (no dedup), so this returns true whenever the insert succeeds.
  */
 export async function recordRecipientNotification(
   serviceClient: { from: (t: string) => any },
   params: RecordNotificationParams,
 ): Promise<boolean> {
   const hash = await hashRecipientEmail(params.recipientEmail);
+  const row = {
+    job_id: params.jobId,
+    shared_by: params.sharedBy,
+    recipient_email_hash: hash,
+    channel: params.channel,
+    notice_type: SHARE_RECIPIENT_NOTICE_TYPE,
+    notice_version: params.notice.version,
+    message_id: params.messageId ?? null,
+  };
+
+  if (params.channel === "view") {
+    const { error } = await serviceClient
+      .from("recipient_notifications")
+      .insert(row);
+    if (error) {
+      console.error("[recipient-notice] view insert failed", error);
+      return false;
+    }
+    return true;
+  }
+
   const { data, error } = await serviceClient
     .from("recipient_notifications")
-    .upsert(
-      {
-        job_id: params.jobId,
-        shared_by: params.sharedBy,
-        recipient_email_hash: hash,
-        channel: params.channel,
-        notice_type: SHARE_RECIPIENT_NOTICE_TYPE,
-        notice_version: params.notice.version,
-        message_id: params.messageId ?? null,
-      },
-      { onConflict: "job_id,recipient_email_hash,notice_version", ignoreDuplicates: true },
-    )
+    .upsert(row, {
+      onConflict: "job_id,recipient_email_hash,channel,notice_version",
+      ignoreDuplicates: true,
+    })
     .select("id");
   if (error) {
     console.error("[recipient-notice] insert failed", error);
@@ -163,3 +181,4 @@ export async function recordRecipientNotification(
   }
   return Array.isArray(data) && data.length > 0;
 }
+
