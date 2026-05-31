@@ -528,6 +528,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeHtml,
           replyToEmail,
+          revokeUrl,
         })
       : buildLinkOnlyHtml({
           title,
@@ -536,6 +537,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeHtml,
           replyToEmail,
+          revokeUrl,
         })
 
     const text = email_in_body
@@ -548,6 +550,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeText,
           replyToEmail,
+          revokeUrl,
         })
       : buildLinkOnlyText({
           title,
@@ -556,6 +559,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeText,
           replyToEmail,
+          revokeUrl,
         })
 
 
