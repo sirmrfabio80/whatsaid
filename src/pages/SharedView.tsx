@@ -152,7 +152,7 @@ export default function SharedView() {
     const res = await callFn<FetchedContent>("share-view-fetch", { token, session });
     if (!res.ok) {
       sessionStorage.removeItem(sessionKey);
-      if (res.error === "revoked") { setStage("revoked"); return; }
+      if (res.error === "revoked") { setRevokedAt(res.raw?.revoked_at || null); setStage("revoked"); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found" || res.error === "job_not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_session") { setStage("init"); return; }
