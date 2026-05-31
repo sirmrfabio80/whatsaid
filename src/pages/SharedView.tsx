@@ -165,7 +165,7 @@ export default function SharedView() {
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "cooldown") {
-        const secs = res.data?.retry_after_seconds ?? 30;
+        const secs = res.raw?.retry_after_seconds ?? 30;
         setResendCooldown(secs);
         setStage("awaitingCode");
         toast.error(`Please wait ${secs}s before requesting another code.`);
