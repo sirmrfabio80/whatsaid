@@ -242,6 +242,7 @@ function buildLinkOnlyText(opts: {
   viewUrl: string
   downloadUrl: string | null
   noticeText: string
+  replyToEmail: string | null
 }): string {
   const parts: string[] = [
     `${opts.senderLabel} shared a transcript with you: ${opts.title}`,
@@ -257,6 +258,9 @@ function buildLinkOnlyText(opts: {
   }
   parts.push('', opts.noticeText)
   parts.push('', `— Shared via ${SITE_NAME}`)
+  if (opts.replyToEmail) {
+    parts.push(`Replies to this email go to ${opts.replyToEmail}, not to ${SITE_NAME}.`)
+  }
   return parts.join('\n')
 }
 
