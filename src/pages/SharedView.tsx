@@ -35,7 +35,15 @@ const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const SESSION_STORAGE_PREFIX = "share-view-session:";
 
-async function callFn<T>(name: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; status: number; error: string; data?: any }> {
+interface FnResult<T> {
+  ok: boolean;
+  status: number;
+  data: T | null;
+  error: string | null;
+  raw: any;
+}
+
+async function callFn<T>(name: string, body: unknown): Promise<FnResult<T>> {
   try {
     const res = await fetch(`${FN_BASE}/${name}`, {
       method: "POST",
@@ -48,13 +56,14 @@ async function callFn<T>(name: string, body: unknown): Promise<{ ok: true; data:
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { ok: false, status: res.status, error: json?.error || `http_${res.status}`, data: json };
+      return { ok: false, status: res.status, data: null, error: json?.error || `http_${res.status}`, raw: json };
     }
-    return { ok: true, data: json as T };
+    return { ok: true, status: res.status, data: json as T, error: null, raw: json };
   } catch (e) {
-    return { ok: false, status: 0, error: "network_error" };
+    return { ok: false, status: 0, data: null, error: "network_error", raw: null };
   }
 }
+
 
 function formatSection(content: string): JSX.Element[] {
   // Lightweight renderer for transcript lines like "Speaker: text"
