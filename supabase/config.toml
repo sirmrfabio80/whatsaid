@@ -37,3 +37,9 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = false
   [functions.prune-retention]
     verify_jwt = true
+  [functions.share-view-request-otp]
+    verify_jwt = false
+  [functions.share-view-verify-otp]
+    verify_jwt = false
+  [functions.share-view-fetch]
+    verify_jwt = false
