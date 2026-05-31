@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       .eq('token', token)
       .maybeSingle()
     if (!share) return jsonResponse({ error: 'not_found' }, 404)
-    if (share.revoked_at) return jsonResponse({ error: 'revoked' }, 410)
+    if (share.revoked_at) return jsonResponse({ error: 'revoked', revoked_at: share.revoked_at }, 410)
     if (new Date(share.expires_at).getTime() < Date.now()) {
       return jsonResponse({ error: 'expired' }, 410)
     }
