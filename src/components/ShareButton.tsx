@@ -1039,6 +1039,7 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
     showArrowHint: !hasDismissedArrowHint && open,
     onAcceptArrowSuggestion: handleAcceptArrowSuggestion,
     isMobile,
+    emailInBody, setEmailInBody, attested, setAttested,
   };
 
   if (isMobile) {
