@@ -202,8 +202,9 @@ function buildLinkOnlyHtml(opts: {
   viewUrl: string
   downloadUrl: string | null
   noticeHtml: string
+  replyToEmail: string | null
 }): string {
-  const { title, senderLabel, viewUrl, downloadUrl, noticeHtml } = opts
+  const { title, senderLabel, viewUrl, downloadUrl, noticeHtml, replyToEmail } = opts
   return `<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
