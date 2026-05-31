@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Shield, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageMeta } from "@/hooks/use-page-meta";
+
+const MAX_REASON_LENGTH = 500;
 
 type Stage = "confirm" | "working" | "revoked" | "already" | "notFound" | "invalid" | "error";
 
@@ -13,6 +17,7 @@ export default function ShareRevoke() {
   const [params] = useSearchParams();
   const token = (params.get("token") ?? "").trim();
   const [stage, setStage] = useState<Stage>("confirm");
+  const [reason, setReason] = useState("");
 
   usePageMeta({
     title: "Revoke shared transcript · WhatSaid",
@@ -27,8 +32,9 @@ export default function ShareRevoke() {
   const revoke = async () => {
     setStage("working");
     try {
+      const trimmed = reason.trim().slice(0, MAX_REASON_LENGTH);
       const { data, error } = await supabase.functions.invoke("share-revoke", {
-        body: { token },
+        body: { token, reason: trimmed || undefined },
       });
       if (error) {
         const status = (error as { context?: { status?: number } }).context?.status;
@@ -67,11 +73,28 @@ export default function ShareRevoke() {
           {stage === "confirm" && (
             <>
               <p className="text-sm text-muted-foreground">
-                Revoking will immediately stop this transcript from being viewable. The link will return an "expired" page to anyone who tries to open it. This cannot be undone.
+                Revoking will immediately stop this transcript from being viewable. The link will return a "revoked" page to anyone who tries to open it. This cannot be undone.
               </p>
+              <div className="space-y-2">
+                <Label htmlFor="revoke-reason" className="text-sm">
+                  Reason <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  id="revoke-reason"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value.slice(0, MAX_REASON_LENGTH))}
+                  placeholder="e.g. Sent to the wrong person, contains outdated info…"
+                  maxLength={MAX_REASON_LENGTH}
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {reason.length}/{MAX_REASON_LENGTH}
+                </p>
+              </div>
               <Button onClick={revoke} className="w-full">Revoke access now</Button>
               <p className="text-xs text-muted-foreground">
-                You don't need an account to do this — knowing this link is enough.
+                You don't need an account to do this — knowing this link is enough. Your reason will be shown to anyone who opens the revoked link.
               </p>
             </>
           )}

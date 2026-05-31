@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Shield, Mail, AlertTriangle, Clock, ArrowLeft, Ban } from "lucide-react";
+import { Shield, Mail, AlertTriangle, Clock, ArrowLeft, Ban, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
@@ -25,12 +25,22 @@ type Stage =
 interface FetchedContent {
   title: string;
   sender_label: string;
+  sender_email: string | null;
   transcript: string;
   summary: string | null;
   questions: { prompt: string | null; answer: string }[];
   language: string;
   expires_at: string;
+  last_viewed_at: string | null;
   notice: { version: string; text_en: string } | null;
+}
+
+interface RevokedInfo {
+  revokedAt: string | null;
+  revokeReason: string | null;
+  revokedByLabel: string | null;
+  senderLabel: string | null;
+  senderEmail: string | null;
 }
 
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -122,7 +132,13 @@ export default function SharedView() {
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
-  const [revokedAt, setRevokedAt] = useState<string | null>(null);
+  const [revokedInfo, setRevokedInfo] = useState<RevokedInfo>({
+    revokedAt: null,
+    revokeReason: null,
+    revokedByLabel: null,
+    senderLabel: null,
+    senderEmail: null,
+  });
   const [content, setContent] = useState<FetchedContent | null>(null);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [noticeAcking, setNoticeAcking] = useState(false);
@@ -147,12 +163,23 @@ export default function SharedView() {
     }
   }, [token, sessionKey]);
 
+  const handleRevoked = (raw: any) => {
+    setRevokedInfo({
+      revokedAt: raw?.revoked_at ?? null,
+      revokeReason: raw?.revoke_reason ?? null,
+      revokedByLabel: raw?.revoked_by_label ?? null,
+      senderLabel: raw?.sender_label ?? null,
+      senderEmail: raw?.sender_email ?? null,
+    });
+    setStage("revoked");
+  };
+
     const fetchContent = async (session: string) => {
     setStage("loading");
     const res = await callFn<FetchedContent>("share-view-fetch", { token, session });
     if (!res.ok) {
       sessionStorage.removeItem(sessionKey);
-      if (res.error === "revoked") { setRevokedAt(res.raw?.revoked_at || null); setStage("revoked"); return; }
+      if (res.error === "revoked") { handleRevoked(res.raw); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found" || res.error === "job_not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_session") { setStage("init"); return; }
@@ -191,7 +218,7 @@ export default function SharedView() {
     setErrorMsg("");
     const res = await callFn<{ recipient_hint: string; expires_in: number }>("share-view-request-otp", { token });
     if (!res.ok) {
-      if (res.error === "revoked") { setRevokedAt(res.raw?.revoked_at || null); setStage("revoked"); return; }
+      if (res.error === "revoked") { handleRevoked(res.raw); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "cooldown") {
@@ -222,7 +249,7 @@ export default function SharedView() {
       code,
     });
     if (!res.ok) {
-      if (res.error === "revoked") { setRevokedAt(res.raw?.revoked_at || null); setStage("revoked"); return; }
+      if (res.error === "revoked") { handleRevoked(res.raw); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_code") {
@@ -277,19 +304,65 @@ export default function SharedView() {
   }
 
   if (stage === "revoked") {
+    const { revokedAt, revokeReason, revokedByLabel, senderLabel, senderEmail } = revokedInfo;
     const revokedDate = revokedAt ? new Date(revokedAt) : null;
+    const contactName = senderLabel || senderEmail || "the sender";
+    const mailtoSubject = encodeURIComponent("Request access to a shared transcript");
+    const mailtoBody = encodeURIComponent(
+      `Hi ${senderLabel || ""},\n\nThe transcript link you shared with me has been revoked. Could you please re-share it or let me know more?\n\nThanks.`
+    );
+    const mailtoHref = senderEmail
+      ? `mailto:${senderEmail}?subject=${mailtoSubject}&body=${mailtoBody}`
+      : null;
     return (
       <div className="container mx-auto max-w-xl py-12 px-4">
-        <Card><CardContent className="p-8 text-center space-y-3">
-          <Ban className="h-10 w-10 text-destructive mx-auto" />
-          <h1 className="text-xl font-semibold">This share has been revoked</h1>
-          <p className="text-sm text-muted-foreground">The sender has removed access to this transcript. If you think this was a mistake, contact the person who shared it with you.</p>
-          {revokedDate && !isNaN(revokedDate.getTime()) && (
-            <p className="text-xs text-muted-foreground">
-              Access was removed on <span className="font-medium">{revokedDate.toLocaleString()}</span>.
+        <Card><CardContent className="p-8 space-y-5">
+          <div className="text-center space-y-3">
+            <Ban className="h-10 w-10 text-destructive mx-auto" />
+            <h1 className="text-xl font-semibold">This share has been revoked</h1>
+            <p className="text-sm text-muted-foreground">
+              {revokedByLabel
+                ? <>Access was withdrawn by <span className="font-medium text-foreground">{revokedByLabel}</span>. If you think this was a mistake, contact them directly.</>
+                : <>The sender has removed access to this transcript. If you think this was a mistake, contact the person who shared it with you.</>}
             </p>
-          )}
-          <Button asChild variant="outline"><Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link></Button>
+          </div>
+
+          {(revokedDate && !isNaN(revokedDate.getTime())) || revokeReason ? (
+            <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2 text-left">
+              {revokedDate && !isNaN(revokedDate.getTime()) && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Revoked at:</span> {revokedDate.toLocaleString()}
+                </p>
+              )}
+              {revokeReason && (
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Reason from sender</p>
+                  <p className="whitespace-pre-wrap break-words text-foreground/80">{revokeReason}</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <Button asChild variant="outline" className="flex-1">
+              <Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link>
+            </Button>
+            {mailtoHref ? (
+              <Button asChild className="flex-1">
+                <a href={mailtoHref}>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Request access from {contactName}
+                </a>
+              </Button>
+            ) : (
+              <Button asChild className="flex-1" variant="secondary">
+                <a href="mailto:support@whatsaid.app?subject=Revoked%20share%20link">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Contact support
+                </a>
+              </Button>
+            )}
+          </div>
         </CardContent></Card>
       </div>
     );
@@ -371,9 +444,19 @@ export default function SharedView() {
           </Card>
         )}
 
-        <p className="text-xs text-muted-foreground text-center">
-          Link expires {new Date(content.expires_at).toLocaleString()}.
-        </p>
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">Share details</p>
+          <p>
+            <span className="text-foreground/80">Link expires:</span>{" "}
+            {new Date(content.expires_at).toLocaleString()}
+          </p>
+          <p>
+            <span className="text-foreground/80">Last viewed:</span>{" "}
+            {content.last_viewed_at
+              ? new Date(content.last_viewed_at).toLocaleString()
+              : "This is the first time this link has been opened."}
+          </p>
+        </div>
       </div>
 
       <Dialog
