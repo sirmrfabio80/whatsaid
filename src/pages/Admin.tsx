@@ -12,6 +12,8 @@ import RetentionMonitorTab from "@/components/admin/RetentionMonitorTab";
 import DsrTab from "@/components/admin/DsrTab";
 import SecurityHeadersTab from "@/components/admin/SecurityHeadersTab";
 import EdgeHealthTab from "@/components/admin/EdgeHealthTab";
+import RevokeEmailPreviewsTab from "@/components/admin/RevokeEmailPreviewsTab";
+
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function Admin() {
@@ -41,7 +43,9 @@ export default function Admin() {
             <TabsTrigger value="dsrs">DSRs</TabsTrigger>
             <TabsTrigger value="security-headers">Security headers</TabsTrigger>
             <TabsTrigger value="edge-health">Edge health</TabsTrigger>
+            <TabsTrigger value="revoke-previews">Revoke emails</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
+
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
             <TranscribeTemplatesTab />
@@ -76,6 +80,10 @@ export default function Admin() {
           <TabsContent value="edge-health" className="space-y-6">
             <EdgeHealthTab />
           </TabsContent>
+          <TabsContent value="revoke-previews" className="space-y-6">
+            <RevokeEmailPreviewsTab />
+          </TabsContent>
+
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
           </TabsContent>

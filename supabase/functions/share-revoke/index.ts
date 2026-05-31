@@ -14,76 +14,13 @@
 // After a fresh revocation we enqueue a transactional email to the recipient
 // so they know access was withdrawn and why.
 
-import { FROM_DOMAIN, SENDER_DOMAIN, SITE_NAME, SITE_URL } from '../_shared/constants.ts'
+import { FROM_DOMAIN, SENDER_DOMAIN, SITE_NAME } from '../_shared/constants.ts'
 import { handleCorsPreflight, jsonResponse } from '../_shared/cors.ts'
 import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
+import { renderRevocationEmail } from '../_shared/share-revoke-email.ts'
 
 const MAX_REASON_LENGTH = 500
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function buildRevocationHtml(opts: {
-  title: string
-  reason: string | null
-  revokerLabel: string | null
-}): string {
-  const { title, reason, revokerLabel } = opts
-  const reasonBlock = reason
-    ? `<p style="font-size:14px;color:hsl(220,10%,30%);line-height:1.6;margin:0 0 12px;"><strong>Reason given:</strong> ${escapeHtml(reason)}</p>`
-    : ''
-  const revokerBlock = revokerLabel
-    ? `<p style="font-size:14px;color:hsl(220,10%,30%);line-height:1.6;margin:0 0 12px;"><strong>Revoked by:</strong> ${escapeHtml(revokerLabel)}</p>`
-    : ''
-
-  return `<!DOCTYPE html>
-<html lang="en" dir="ltr">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Inter',Arial,sans-serif;">
-  <div style="max-width:560px;margin:0 auto;padding:32px 16px;">
-    <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <div style="padding:28px 28px 20px;">
-        <p style="font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:hsl(245,50%,48%);margin:0 0 8px;">${SITE_NAME}</p>
-        <h1 style="font-family:'Space Grotesk',Arial,sans-serif;font-size:20px;font-weight:700;color:hsl(220,25%,10%);margin:0 0 12px;line-height:1.3;">Transcript access revoked</h1>
-        <p style="font-size:15px;color:hsl(220,10%,30%);line-height:1.55;margin:0 0 20px;">Access to <strong>${escapeHtml(title)}</strong> has been revoked. The secure link no longer works and no further views are possible.</p>
-        ${reasonBlock}
-        ${revokerBlock}
-        <p style="font-size:13px;color:hsl(220,10%,55%);margin:16px 0 0;line-height:1.5;">If you think this was a mistake, contact the person who shared the transcript with you.</p>
-      </div>
-      <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
-        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">Sent by <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a></p>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`
-}
-
-function buildRevocationText(opts: {
-  title: string
-  reason: string | null
-  revokerLabel: string | null
-}): string {
-  const parts: string[] = [
-    `Transcript access revoked · ${SITE_NAME}`,
-    '',
-    `Access to "${opts.title}" has been revoked. The secure link no longer works.`,
-  ]
-  if (opts.reason) {
-    parts.push('', `Reason given: ${opts.reason}`)
-  }
-  if (opts.revokerLabel) {
-    parts.push('', `Revoked by: ${opts.revokerLabel}`)
-  }
-  parts.push('', 'If you think this was a mistake, contact the person who shared the transcript with you.')
-  parts.push('', `— ${SITE_NAME}`)
-  return parts.join('\n')
-}
 
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflight(req)
@@ -191,8 +128,11 @@ Deno.serve(async (req) => {
       }
 
       const messageId = crypto.randomUUID()
-      const html = buildRevocationHtml({ title, reason, revokerLabel: revokedByLabel })
-      const text = buildRevocationText({ title, reason, revokerLabel: revokedByLabel })
+      const { subject, html, text } = renderRevocationEmail({
+        title,
+        reason,
+        revokerLabel: revokedByLabel,
+      })
 
       const payload: Record<string, unknown> = {
         message_id: messageId,
@@ -200,7 +140,7 @@ Deno.serve(async (req) => {
         to: share.recipient_email,
         from: `"${SITE_NAME}" <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
-        subject: `Transcript access revoked: ${title}`,
+        subject,
         html,
         text,
         purpose: 'transactional',
@@ -208,6 +148,7 @@ Deno.serve(async (req) => {
         unsubscribe_token: unsubscribeToken,
         queued_at: nowIso,
       }
+
 
       const { error: enqueueErr } = await svc.rpc('enqueue_email', {
         queue_name: 'transactional_emails',
