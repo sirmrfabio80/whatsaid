@@ -130,15 +130,26 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Snapshot the prior view time before bumping it, so the audit panel can
+    // show "last viewed before this session" rather than "now".
+    const previousLastViewedAt = share.last_viewed_at ?? null
+    // Best-effort update; failure here must not block returning the content.
+    svc.from('transcript_shares')
+      .update({ last_viewed_at: new Date().toISOString() })
+      .eq('id', share.id)
+      .then(({ error }) => { if (error) console.warn('[share-view-fetch] last_viewed_at update failed', error) })
+
     return jsonResponse({
       ok: true,
       title,
       sender_label: senderLabel,
+      sender_email: senderProfile?.email ?? null,
       transcript,
       summary,
       questions,
       language: activeOutputLang,
       expires_at: share.expires_at,
+      last_viewed_at: previousLastViewedAt,
       notice: notice
         ? { version: notice.version, text_en: notice.text_en }
         : null,
