@@ -23,11 +23,12 @@ Deno.serve(async (req) => {
 
     const { data: share } = await svc
       .from('transcript_shares')
-      .select('token, recipient_email, expires_at')
+      .select('token, recipient_email, expires_at, revoked_at')
       .eq('token', token)
       .maybeSingle()
 
     if (!share) return jsonResponse({ error: 'not_found' }, 404)
+    if (share.revoked_at) return jsonResponse({ error: 'revoked' }, 410)
     const expiresAtMs = new Date(share.expires_at).getTime()
     if (expiresAtMs < Date.now()) return jsonResponse({ error: 'expired' }, 410)
 
