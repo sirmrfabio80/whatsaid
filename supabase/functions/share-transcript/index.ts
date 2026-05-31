@@ -192,6 +192,10 @@ Deno.serve(async (req) => {
     const pdf_storage_path = typeof body?.pdf_storage_path === 'string' && body.pdf_storage_path.trim()
       ? body.pdf_storage_path.trim()
       : null
+    // Phase 1: link-only is the default. The full transcript / summary / Q&A is
+    // only embedded in the email body when the sender explicitly opted in via
+    // the (Phase 2) attestation flow.
+    const email_in_body = body?.email_in_body === true
 
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
@@ -204,6 +208,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
 
     const serviceClient = createServiceClient()
 
