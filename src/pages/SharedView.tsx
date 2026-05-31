@@ -159,6 +159,27 @@ export default function SharedView() {
     }
     setContent(res.data);
     setStage("viewing");
+    if (res.data?.notice && !sessionStorage.getItem(noticeAckKey)) {
+      setNoticeOpen(true);
+    }
+  };
+
+  const ackNotice = async () => {
+    const sess = sessionStorage.getItem(sessionKey);
+    if (!token || !sess) {
+      setNoticeOpen(false);
+      return;
+    }
+    setNoticeAcking(true);
+    try {
+      const res = await callFn<{ ok: boolean }>("share-view-ack-notice", { token, session: sess });
+      if (res.ok) {
+        sessionStorage.setItem(noticeAckKey, "1");
+      }
+    } finally {
+      setNoticeAcking(false);
+      setNoticeOpen(false);
+    }
   };
 
   const requestCode = async () => {
