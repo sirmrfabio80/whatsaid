@@ -998,6 +998,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         setSent(false);
         setSentRecord(false);
         setRecentRecipients([]);
+        setEmailInBody(false);
+        setAttested(false);
       }, 200);
     }
   };
