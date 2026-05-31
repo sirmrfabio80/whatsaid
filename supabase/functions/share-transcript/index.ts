@@ -503,6 +503,8 @@ Deno.serve(async (req) => {
       console.warn('[share-transcript] no active share_recipient_notice version found')
     }
 
+    const replyToEmail = isValidEmail(senderEmail) ? senderEmail : null
+
     const html = email_in_body
       ? buildEmailHtml({
           title,
@@ -512,6 +514,7 @@ Deno.serve(async (req) => {
           transcript: transformedTranscript,
           downloadUrl,
           noticeHtml,
+          replyToEmail,
         })
       : buildLinkOnlyHtml({
           title,
@@ -519,6 +522,7 @@ Deno.serve(async (req) => {
           viewUrl,
           downloadUrl,
           noticeHtml,
+          replyToEmail,
         })
 
     const text = email_in_body
@@ -530,6 +534,7 @@ Deno.serve(async (req) => {
           transcript: transformedTranscript,
           downloadUrl,
           noticeText,
+          replyToEmail,
         })
       : buildLinkOnlyText({
           title,
@@ -537,6 +542,7 @@ Deno.serve(async (req) => {
           viewUrl,
           downloadUrl,
           noticeText,
+          replyToEmail,
         })
 
 
