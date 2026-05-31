@@ -348,13 +348,6 @@ export default function SharedView() {
     const { revokedAt, revokeReason, revokedByLabel, senderLabel, senderEmail } = revokedInfo;
     const revokedDate = revokedAt ? new Date(revokedAt) : null;
     const contactName = senderLabel || senderEmail || "the sender";
-    const mailtoSubject = encodeURIComponent("Request access to a shared transcript");
-    const mailtoBody = encodeURIComponent(
-      `Hi ${senderLabel || ""},\n\nThe transcript link you shared with me has been revoked. Could you please re-share it or let me know more?\n\nThanks.`
-    );
-    const mailtoHref = senderEmail
-      ? `mailto:${senderEmail}?subject=${mailtoSubject}&body=${mailtoBody}`
-      : null;
     return (
       <div className="container mx-auto max-w-xl py-12 px-4">
         <Card><CardContent className="p-8 space-y-5">
@@ -363,8 +356,8 @@ export default function SharedView() {
             <h1 className="text-xl font-semibold">This share has been revoked</h1>
             <p className="text-sm text-muted-foreground">
               {revokedByLabel
-                ? <>Access was withdrawn by <span className="font-medium text-foreground">{revokedByLabel}</span>. If you think this was a mistake, contact them directly.</>
-                : <>The sender has removed access to this transcript. If you think this was a mistake, contact the person who shared it with you.</>}
+                ? <>Access was withdrawn by <span className="font-medium text-foreground">{revokedByLabel}</span>. If you think this was a mistake, you can request access below.</>
+                : <>The sender has removed access to this transcript. If you think this was a mistake, you can request access below.</>}
             </p>
           </div>
 
@@ -388,23 +381,80 @@ export default function SharedView() {
             <Button asChild variant="outline" className="flex-1">
               <Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link>
             </Button>
-            {mailtoHref ? (
-              <Button asChild className="flex-1">
-                <a href={mailtoHref}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Request access from {contactName}
-                </a>
-              </Button>
-            ) : (
-              <Button asChild className="flex-1" variant="secondary">
-                <a href="mailto:support@whatsaid.app?subject=Revoked%20share%20link">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Contact support
-                </a>
-              </Button>
-            )}
+            <Button
+              className="flex-1"
+              onClick={() => { setRequestSent(false); setRequestOpen(true); }}
+              disabled={requestSent}
+            >
+              {requestSent ? (
+                <><Check className="h-4 w-4 mr-2" />Request sent</>
+              ) : (
+                <><MessageSquare className="h-4 w-4 mr-2" />Request access</>
+              )}
+            </Button>
           </div>
         </CardContent></Card>
+
+        <Dialog open={requestOpen} onOpenChange={(open) => { if (!requestSending) setRequestOpen(open); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Request access from {contactName}</DialogTitle>
+              <DialogDescription>
+                We'll email the sender with your message so they can decide whether to re-share. Your message and email will only be used for this request.
+              </DialogDescription>
+            </DialogHeader>
+
+            {requestSent ? (
+              <div className="py-4 text-sm text-muted-foreground space-y-2">
+                <div className="flex items-center gap-2 text-foreground">
+                  <Check className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Your request has been sent.</span>
+                </div>
+                <p>The sender will receive an email with your message and can reply directly to you.</p>
+              </div>
+            ) : (
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="req-reason">Your message <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    id="req-reason"
+                    rows={4}
+                    maxLength={1000}
+                    placeholder="Briefly explain why you need access again…"
+                    value={requestReason}
+                    onChange={(e) => setRequestReason(e.target.value)}
+                    disabled={requestSending}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{requestReason.length}/1000</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="req-email">Your email <span className="text-muted-foreground font-normal">(optional, so the sender can reply)</span></Label>
+                  <Input
+                    id="req-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={requestEmail}
+                    onChange={(e) => setRequestEmail(e.target.value)}
+                    disabled={requestSending}
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              {requestSent ? (
+                <Button onClick={() => setRequestOpen(false)}>Close</Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => setRequestOpen(false)} disabled={requestSending}>Cancel</Button>
+                  <Button onClick={submitAccessRequest} disabled={requestSending || requestReason.trim().length < 5}>
+                    {requestSending ? <><InlineSpinner className="mr-2" />Sending…</> : <><Send className="h-4 w-4 mr-2" />Send request</>}
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
