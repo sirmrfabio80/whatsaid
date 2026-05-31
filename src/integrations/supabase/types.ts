@@ -1301,6 +1301,7 @@ export type Database = {
           expires_at: string
           id: string
           job_id: string
+          last_access_request_at: string | null
           last_view_otp_sent_at: string | null
           last_viewed_at: string | null
           recipient_email: string
@@ -1323,6 +1324,7 @@ export type Database = {
           expires_at?: string
           id?: string
           job_id: string
+          last_access_request_at?: string | null
           last_view_otp_sent_at?: string | null
           last_viewed_at?: string | null
           recipient_email: string
@@ -1345,6 +1347,7 @@ export type Database = {
           expires_at?: string
           id?: string
           job_id?: string
+          last_access_request_at?: string | null
           last_view_otp_sent_at?: string | null
           last_viewed_at?: string | null
           recipient_email?: string
