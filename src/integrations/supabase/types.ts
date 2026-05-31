@@ -1303,6 +1303,8 @@ export type Database = {
           job_id: string
           last_view_otp_sent_at: string | null
           recipient_email: string
+          revocation_token: string
+          revoked_at: string | null
           shared_by: string
           token: string
         }
@@ -1319,6 +1321,8 @@ export type Database = {
           job_id: string
           last_view_otp_sent_at?: string | null
           recipient_email: string
+          revocation_token?: string
+          revoked_at?: string | null
           shared_by: string
           token?: string
         }
@@ -1335,6 +1339,8 @@ export type Database = {
           job_id?: string
           last_view_otp_sent_at?: string | null
           recipient_email?: string
+          revocation_token?: string
+          revoked_at?: string | null
           shared_by?: string
           token?: string
         }
