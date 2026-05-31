@@ -224,7 +224,11 @@ function buildLinkOnlyHtml(opts: {
         ${noticeHtml}
       </div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
-        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">Shared via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a></p>
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">Shared via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>${
+          replyToEmail
+            ? `<br/><span style="color:hsl(220,10%,55%);">Replies to this email go to <a href="mailto:${escapeHtml(replyToEmail)}" style="color:hsl(245,50%,48%);text-decoration:none;">${escapeHtml(replyToEmail)}</a>, not to ${SITE_NAME}.</span>`
+            : ''
+        }</p>
       </div>
     </div>
   </div>
