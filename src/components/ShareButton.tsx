@@ -905,6 +905,10 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
 
   const handleSendEmail = async () => {
     if (!isValid || sending) return;
+    if (emailInBody && !attested) {
+      toast.error(t("share.attestationRequired"));
+      return;
+    }
     setSending(true);
     try {
       // Generate and upload PDF if export data is available
@@ -913,8 +917,42 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         pdfPath = await uploadPdfForShare(jobId, exportData);
       }
 
+      // Phase 2: record uploader attestation before invoking the share function
+      // so the edge function can verify a real consent_events row exists.
+      let attestationId: string | null = null;
+      if (emailInBody) {
+        const idem = newIdempotencyKey("share_attest");
+        const { data: consentData, error: consentErr } = await supabase.functions.invoke(
+          "record-consent",
+          {
+            body: {
+              consent_type: SHARE_ATTESTATION_TYPE,
+              version: SHARE_ATTESTATION_VERSION,
+              accepted: true,
+              metadata: { surface: "share_dialog", job_id: jobId, recipient_email: email.trim() },
+              idempotency_key: idem,
+            },
+          },
+        );
+        const recordedId =
+          (consentData as { id?: string; consent_event_id?: string } | null)?.id ??
+          (consentData as { consent_event_id?: string } | null)?.consent_event_id ??
+          null;
+        if (consentErr || !recordedId) {
+          toast.error(t("share.attestationFailed"));
+          return;
+        }
+        attestationId = recordedId;
+      }
+
       const { data, error } = await supabase.functions.invoke("share-transcript", {
-        body: { job_id: jobId, recipient_email: email.trim(), pdf_storage_path: pdfPath },
+        body: {
+          job_id: jobId,
+          recipient_email: email.trim(),
+          pdf_storage_path: pdfPath,
+          email_in_body: emailInBody,
+          attestation_consent_event_id: attestationId,
+        },
       });
       if (error || data?.error) { toast.error(data?.error || t("share.sendFailed")); return; }
       setSent(true);
@@ -924,6 +962,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
         setOpen(false);
         setSent(false);
         setEmail("");
+        setEmailInBody(false);
+        setAttested(false);
       }, 1500);
     } catch { toast.error(t("share.sendFailed")); } finally { setSending(false); }
   };
