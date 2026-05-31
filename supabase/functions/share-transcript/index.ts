@@ -172,6 +172,7 @@ function buildPlainText(opts: {
   transcript: string
   downloadUrl: string | null
   noticeText: string
+  replyToEmail: string | null
 }): string {
   const parts: string[] = [opts.title, '']
   if (opts.downloadUrl) {
@@ -189,6 +190,9 @@ function buildPlainText(opts: {
   parts.push('--- Transcript ---', '', opts.transcript, '')
   parts.push(opts.noticeText)
   parts.push('', `—`, `Shared by ${opts.senderLabel} via ${SITE_NAME}`)
+  if (opts.replyToEmail) {
+    parts.push(`Replies to this email go to ${opts.replyToEmail}, not to ${SITE_NAME}.`)
+  }
   return parts.join('\n')
 }
 
