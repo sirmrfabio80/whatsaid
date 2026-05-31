@@ -43,3 +43,5 @@ project_id = "gidjkdtmagxuzhlntlbt"
     verify_jwt = false
   [functions.share-view-fetch]
     verify_jwt = false
+  [functions.share-view-ack-notice]
+    verify_jwt = false

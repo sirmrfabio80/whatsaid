@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineSpinner } from "@/components/ui/inline-spinner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Shield, Mail, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/use-page-meta";
@@ -34,6 +35,7 @@ interface FetchedContent {
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const SESSION_STORAGE_PREFIX = "share-view-session:";
+const NOTICE_ACK_PREFIX = "share-view-notice-ack:";
 
 interface FnResult<T> {
   ok: boolean;
@@ -120,7 +122,10 @@ export default function SharedView() {
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [content, setContent] = useState<FetchedContent | null>(null);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [noticeAcking, setNoticeAcking] = useState(false);
   const sessionKey = useMemo(() => `${SESSION_STORAGE_PREFIX}${token}`, [token]);
+  const noticeAckKey = useMemo(() => `${NOTICE_ACK_PREFIX}${token}`, [token]);
   const attemptedAutoFetch = useRef(false);
 
   // Cooldown ticker
@@ -154,6 +159,27 @@ export default function SharedView() {
     }
     setContent(res.data);
     setStage("viewing");
+    if (res.data?.notice && !sessionStorage.getItem(noticeAckKey)) {
+      setNoticeOpen(true);
+    }
+  };
+
+  const ackNotice = async () => {
+    const sess = sessionStorage.getItem(sessionKey);
+    if (!token || !sess) {
+      setNoticeOpen(false);
+      return;
+    }
+    setNoticeAcking(true);
+    try {
+      const res = await callFn<{ ok: boolean }>("share-view-ack-notice", { token, session: sess });
+      if (res.ok) {
+        sessionStorage.setItem(noticeAckKey, "1");
+      }
+    } finally {
+      setNoticeAcking(false);
+      setNoticeOpen(false);
+    }
   };
 
   const requestCode = async () => {
@@ -272,7 +298,8 @@ export default function SharedView() {
 
   if (stage === "viewing" && content) {
     return (
-      <div className="container mx-auto max-w-3xl py-8 px-4 space-y-6">
+      <>
+      <div className="container mx-auto max-w-3xl py-8 px-4 space-y-6" aria-hidden={noticeOpen ? "true" : undefined}>
         <header className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Shared with you</p>
           <h1 className="text-2xl font-bold text-foreground">{content.title}</h1>
@@ -324,8 +351,40 @@ export default function SharedView() {
           Link expires {new Date(content.expires_at).toLocaleString()}.
         </p>
       </div>
+
+      <Dialog
+        open={noticeOpen}
+        onOpenChange={(open) => {
+          // Block dismissal until acknowledged; the only exit is the button below.
+          if (!open && !noticeAcking) ackNotice();
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-lg"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>UK GDPR privacy notice</DialogTitle>
+            <DialogDescription className="sr-only">
+              Information about how your personal data in this shared transcript is handled.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-3 text-sm text-foreground/80 whitespace-pre-line">
+            {content.notice?.text_en ?? ""}
+          </div>
+          <DialogFooter>
+            <Button onClick={ackNotice} disabled={noticeAcking} className="w-full sm:w-auto">
+              {noticeAcking ? <InlineSpinner className="h-4 w-4 mr-2" /> : null}
+              I understand
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </>
     );
   }
+
 
   // init / requesting / awaitingCode / verifying / loading — gate UI
   const busy = stage === "requesting" || stage === "verifying" || stage === "loading";
