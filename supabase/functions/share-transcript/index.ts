@@ -547,23 +547,35 @@ Deno.serve(async (req) => {
 
     const subjectLine = `Transcript shared with you: ${title} [${shortId}]`
 
+    // Phase 4 — email hygiene:
+    // - From: keep our sending domain (DMARC alignment) but expose the human
+    //   sender's name: `"<Sender> via WhatSaid" <noreply@FROM_DOMAIN>`.
+    // - Reply-To: only set when the sender's email parses as valid; otherwise
+    //   omit so providers don't reject the message.
+    const safeSenderName = sanitizeDisplayName(senderLabel) || SITE_NAME
+    const fromDisplay = `${safeSenderName} via ${SITE_NAME}`
+    const fromHeader = `"${fromDisplay}" <noreply@${FROM_DOMAIN}>`
+    const replyToValid = isValidEmail(senderEmail)
+
+    const payload: Record<string, unknown> = {
+      message_id: messageId,
+      idempotency_key: `share-transcript-${messageId}`,
+      to: recipient_email,
+      from: fromHeader,
+      sender_domain: SENDER_DOMAIN,
+      subject: subjectLine,
+      html,
+      text,
+      purpose: 'transactional',
+      label: 'share-transcript',
+      unsubscribe_token: unsubscribeToken,
+      queued_at: new Date().toISOString(),
+    }
+    if (replyToValid) payload.reply_to = senderEmail
+
     const { error: enqueueError } = await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
-      payload: {
-        message_id: messageId,
-        idempotency_key: `share-transcript-${messageId}`,
-        to: recipient_email,
-        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-        reply_to: senderEmail,
-        sender_domain: SENDER_DOMAIN,
-        subject: subjectLine,
-        html,
-        text,
-        purpose: 'transactional',
-        label: 'share-transcript',
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-      },
+      payload,
     })
 
     if (enqueueError) {
