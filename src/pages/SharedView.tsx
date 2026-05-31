@@ -444,9 +444,19 @@ export default function SharedView() {
           </Card>
         )}
 
-        <p className="text-xs text-muted-foreground text-center">
-          Link expires {new Date(content.expires_at).toLocaleString()}.
-        </p>
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">Share details</p>
+          <p>
+            <span className="text-foreground/80">Link expires:</span>{" "}
+            {new Date(content.expires_at).toLocaleString()}
+          </p>
+          <p>
+            <span className="text-foreground/80">Last viewed:</span>{" "}
+            {content.last_viewed_at
+              ? new Date(content.last_viewed_at).toLocaleString()
+              : "This is the first time this link has been opened."}
+          </p>
+        </div>
       </div>
 
       <Dialog
