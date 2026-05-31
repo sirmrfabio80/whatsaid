@@ -255,6 +255,10 @@ Deno.serve(async (req) => {
     // only embedded in the email body when the sender explicitly opted in via
     // the (Phase 2) attestation flow.
     const email_in_body = body?.email_in_body === true
+    const attestation_consent_event_id =
+      typeof body?.attestation_consent_event_id === 'string' && body.attestation_consent_event_id.trim()
+        ? body.attestation_consent_event_id.trim()
+        : null
 
     if (!job_id || !recipient_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
@@ -266,6 +270,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Invalid PDF path' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    if (email_in_body && !attestation_consent_event_id) {
+      return new Response(
+        JSON.stringify({
+          error: 'attestation_required',
+          message: 'An uploader attestation is required to include the transcript in the email body.',
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
     }
 
 
