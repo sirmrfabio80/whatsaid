@@ -249,7 +249,7 @@ export default function SharedView() {
       code,
     });
     if (!res.ok) {
-      if (res.error === "revoked") { setRevokedAt(res.raw?.revoked_at || null); setStage("revoked"); return; }
+      if (res.error === "revoked") { handleRevoked(res.raw); return; }
       if (res.error === "expired") { setStage("expired"); return; }
       if (res.error === "not_found") { setStage("notFound"); return; }
       if (res.error === "invalid_code") {
