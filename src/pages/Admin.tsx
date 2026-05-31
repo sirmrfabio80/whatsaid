@@ -80,6 +80,10 @@ export default function Admin() {
           <TabsContent value="edge-health" className="space-y-6">
             <EdgeHealthTab />
           </TabsContent>
+          <TabsContent value="revoke-previews" className="space-y-6">
+            <RevokeEmailPreviewsTab />
+          </TabsContent>
+
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
           </TabsContent>
