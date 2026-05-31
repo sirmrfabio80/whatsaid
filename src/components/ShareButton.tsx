@@ -857,6 +857,8 @@ export default function ShareButton({ jobId, disabled, exportData }: ShareButton
   const [sent, setSent] = useState(false);
   const [sendingRecord, setSendingRecord] = useState(false);
   const [sentRecord, setSentRecord] = useState(false);
+  const [emailInBody, setEmailInBody] = useState(false);
+  const [attested, setAttested] = useState(false);
   const [recentRecipients, setRecentRecipients] = useState<string[]>([]);
   const [hasDismissedAcceptHint, setHasDismissedAcceptHint] = useState(() => {
     if (typeof window === "undefined") return false;
