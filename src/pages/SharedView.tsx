@@ -122,6 +122,7 @@ export default function SharedView() {
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [revokedAt, setRevokedAt] = useState<string | null>(null);
   const [content, setContent] = useState<FetchedContent | null>(null);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [noticeAcking, setNoticeAcking] = useState(false);
