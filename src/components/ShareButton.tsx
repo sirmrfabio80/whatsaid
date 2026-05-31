@@ -748,10 +748,72 @@ function ShareContent({
         )}
       </div>
 
+      {/* Include-in-body toggle + uploader attestation (Phase 2) */}
+      <div className="px-4 py-3 border-t border-border/40 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <label htmlFor="share-include-body" className="flex-1 min-w-0 cursor-pointer">
+            <p className="text-sm font-medium text-foreground">{t("share.includeInBodyLabel")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              {t("share.includeInBodyDesc")}
+            </p>
+          </label>
+          <Switch
+            id="share-include-body"
+            checked={emailInBody}
+            onCheckedChange={(v) => {
+              setEmailInBody(v);
+              if (!v) setAttested(false);
+            }}
+            disabled={sending || sent || sendingRecord || sentRecord}
+            aria-label={t("share.includeInBodyLabel")}
+          />
+        </div>
+
+        {emailInBody && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+              {t("share.attestationHeader")}
+            </p>
+            <button
+              type="button"
+              onClick={() => setAttestExpanded((v) => !v)}
+              className="flex items-center gap-1 text-xs text-amber-900 dark:text-amber-100 underline underline-offset-2"
+              aria-expanded={attestExpanded}
+            >
+              {attestExpanded ? t("share.attestationHide") : t("share.attestationShow")}
+              {attestExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            {attestExpanded && (
+              <p
+                lang="en"
+                className="text-xs leading-relaxed text-amber-950 dark:text-amber-50 max-h-48 overflow-y-auto"
+              >
+                {SHARE_ATTESTATION_TEXT}
+              </p>
+            )}
+            <label className="flex items-start gap-2 cursor-pointer pt-1">
+              <Checkbox
+                checked={attested}
+                onCheckedChange={(v) => setAttested(v === true)}
+                disabled={sending || sent}
+                aria-label={t("share.attestationCheckbox")}
+                className="mt-0.5"
+              />
+              <span lang="en" className="text-xs leading-relaxed text-foreground">
+                {t("share.attestationCheckbox")}
+              </span>
+            </label>
+          </div>
+        )}
+      </div>
+
       {/* Action: Send by email */}
       <button
         onClick={handleSendEmail}
-        disabled={!isValid || sending || sent || sendingRecord || sentRecord}
+        disabled={
+          !isValid || sending || sent || sendingRecord || sentRecord ||
+          (emailInBody && !attested)
+        }
         className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:pointer-events-none min-h-[56px] cursor-pointer"
       >
         <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
@@ -759,9 +821,12 @@ function ShareContent({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-foreground">{sent ? t("share.sent") : t("share.sendEmailLabel")}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("share.sendEmailDesc")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+            {emailInBody ? t("share.sendEmailDescInBody") : t("share.sendEmailDescLinkOnly")}
+          </p>
         </div>
       </button>
+
 
       {/* Action: Share as record */}
       <div className="border-t border-border/40">
