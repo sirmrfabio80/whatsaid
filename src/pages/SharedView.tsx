@@ -348,6 +348,9 @@ export default function SharedView() {
     const { revokedAt, revokeReason, revokedByLabel, senderLabel, senderEmail } = revokedInfo;
     const revokedDate = revokedAt ? new Date(revokedAt) : null;
     const contactName = senderLabel || senderEmail || "the sender";
+    const revokerName = revokedByLabel || contactName;
+    const hasSenderEmail = !!senderEmail;
+
     return (
       <div className="container mx-auto max-w-xl py-12 px-4">
         <Card><CardContent className="p-8 space-y-5">
@@ -361,28 +364,36 @@ export default function SharedView() {
             </p>
           </div>
 
-          {(revokedDate && !isNaN(revokedDate.getTime())) || revokeReason ? (
-            <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2 text-left">
-              {revokedDate && !isNaN(revokedDate.getTime()) && (
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Revoked at:</span> {revokedDate.toLocaleString()}
-                </p>
-              )}
-              {revokeReason && (
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground mb-1">Reason from sender</p>
-                  <p className="whitespace-pre-wrap break-words text-foreground/80">{revokeReason}</p>
-                </div>
-              )}
+          {/* Revoker identity card */}
+          <div className="rounded-md border border-border bg-muted/40 p-4 space-y-3 text-left">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Shield className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{revokerName}</p>
+                {senderEmail && (
+                  <p className="text-xs text-muted-foreground truncate">{senderEmail}</p>
+                )}
+              </div>
             </div>
-          ) : null}
 
-          <div className="flex flex-col sm:flex-row gap-2 pt-1">
-            <Button asChild variant="outline" className="flex-1">
-              <Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link>
-            </Button>
+            {(revokedDate && !isNaN(revokedDate.getTime())) && (
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Revoked at:</span> {revokedDate.toLocaleString()}
+              </p>
+            )}
+            {revokeReason && (
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Reason</p>
+                <p className="whitespace-pre-wrap break-words text-foreground/80">{revokeReason}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 pt-1">
             <Button
-              className="flex-1"
+              className="w-full"
               onClick={() => { setRequestSent(false); setRequestOpen(true); }}
               disabled={requestSent}
             >
@@ -391,6 +402,19 @@ export default function SharedView() {
               ) : (
                 <><MessageSquare className="h-4 w-4 mr-2" />Request access</>
               )}
+            </Button>
+
+            {hasSenderEmail && (
+              <Button asChild variant="outline" className="w-full">
+                <a href={`mailto:${senderEmail}?subject=Re: Revoked transcript share`}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Contact {contactName}
+                </a>
+              </Button>
+            )}
+
+            <Button asChild variant="ghost" className="w-full">
+              <Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link>
             </Button>
           </div>
         </CardContent></Card>
