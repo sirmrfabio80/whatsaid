@@ -311,23 +311,31 @@ Deno.serve(async (req) => {
 
     const title = job.title || job.file_name?.replace(/\.[^.]+$/, '') || 'Transcript'
 
-    // Create a share record for the PDF download link if we have a PDF
-    let downloadUrl: string | null = null
-    if (pdf_storage_path) {
-      const { data: share, error: shareError } = await serviceClient
-        .from('transcript_shares')
-        .insert({
-          job_id,
-          recipient_email: recipient_email.toLowerCase().trim(),
-          shared_by: user.id,
-        })
-        .select('token')
-        .single()
+    // Phase 1: always create a transcript_shares record so the recipient gets
+    // a gated view link (OTP-protected). PDF download URL is appended only
+    // when a PDF artifact was uploaded.
+    const { data: share, error: shareError } = await serviceClient
+      .from('transcript_shares')
+      .insert({
+        job_id,
+        recipient_email: recipient_email.toLowerCase().trim(),
+        shared_by: user.id,
+        email_in_body,
+      })
+      .select('token')
+      .single()
 
-      if (!shareError && share) {
-        downloadUrl = `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
-      }
+    if (shareError || !share) {
+      console.error('[share-transcript] failed to create share record', shareError)
+      return new Response(JSON.stringify({ error: 'Failed to create share link' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
+
+    const viewUrl = `${SITE_URL}/share/${share.token}`
+    const downloadUrl: string | null = pdf_storage_path
+      ? `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
+      : null
 
     const messageId = crypto.randomUUID()
     const shortId = messageId.slice(0, 6)
@@ -340,25 +348,42 @@ Deno.serve(async (req) => {
       console.warn('[share-transcript] no active share_recipient_notice version found')
     }
 
-    const html = buildEmailHtml({
-      title,
-      senderLabel,
-      summary: transformedSummary,
-      questions: transformedQuestions,
-      transcript: transformedTranscript,
-      downloadUrl,
-      noticeHtml,
-    })
+    const html = email_in_body
+      ? buildEmailHtml({
+          title,
+          senderLabel,
+          summary: transformedSummary,
+          questions: transformedQuestions,
+          transcript: transformedTranscript,
+          downloadUrl,
+          noticeHtml,
+        })
+      : buildLinkOnlyHtml({
+          title,
+          senderLabel,
+          viewUrl,
+          downloadUrl,
+          noticeHtml,
+        })
 
-    const text = buildPlainText({
-      title,
-      senderLabel,
-      summary: transformedSummary,
-      questions: transformedQuestions,
-      transcript: transformedTranscript,
-      downloadUrl,
-      noticeText,
-    })
+    const text = email_in_body
+      ? buildPlainText({
+          title,
+          senderLabel,
+          summary: transformedSummary,
+          questions: transformedQuestions,
+          transcript: transformedTranscript,
+          downloadUrl,
+          noticeText,
+        })
+      : buildLinkOnlyText({
+          title,
+          senderLabel,
+          viewUrl,
+          downloadUrl,
+          noticeText,
+        })
+
 
     const recipientLower = recipient_email.toLowerCase().trim()
     const { data: existingToken } = await serviceClient
