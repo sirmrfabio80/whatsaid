@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Share2, Mail, Link2, Loader2, Check } from "lucide-react";
+import { Share2, Mail, Link2, Loader2, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +13,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useDelayedCallback } from "@/hooks/use-delayed-callback";
 import type { CanonicalExportData } from "@/lib/export-types";
 import { generatePdfBlob } from "@/lib/export-pdf";
+import { newIdempotencyKey } from "@/lib/idempotency-key";
+import {
+  SHARE_ATTESTATION_TYPE,
+  SHARE_ATTESTATION_VERSION,
+  SHARE_ATTESTATION_TEXT,
+} from "@/lib/share-attestation";
 
 interface ShareButtonProps {
   jobId: string;
