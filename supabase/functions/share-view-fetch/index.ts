@@ -138,8 +138,9 @@ Deno.serve(async (req) => {
       language: activeOutputLang,
       expires_at: share.expires_at,
       notice: notice
-        ? { version: notice.version, text_en: notice.text_en ?? null, text_it: notice.text_it ?? null, text_fr: notice.text_fr ?? null }
+        ? { version: notice.version, text_en: notice.text_en }
         : null,
+
     })
   } catch (e) {
     console.error('[share-view-fetch] error', e)
