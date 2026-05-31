@@ -1,0 +1,1 @@
+ALTER TABLE public.transcript_shares ADD COLUMN IF NOT EXISTS last_access_request_at TIMESTAMPTZ;
