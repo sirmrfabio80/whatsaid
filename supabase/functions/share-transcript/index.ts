@@ -103,8 +103,9 @@ function buildEmailHtml(opts: {
   downloadUrl: string | null
   noticeHtml: string
   replyToEmail: string | null
+  revokeUrl: string
 }): string {
-  const { title, senderLabel, summary, questions, transcript, downloadUrl, noticeHtml, replyToEmail } = opts
+  const { title, senderLabel, summary, questions, transcript, downloadUrl, noticeHtml, replyToEmail, revokeUrl } = opts
 
   const summarySection = summary
     ? `<div style="margin-bottom:32px;">
@@ -150,12 +151,15 @@ function buildEmailHtml(opts: {
       </div>
 
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
-        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0 0 6px;line-height:1.5;">
           Shared by ${escapeHtml(senderLabel)} via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>${
             replyToEmail
               ? `<br/><span style="color:hsl(220,10%,55%);">Replies to this email go to <a href="mailto:${escapeHtml(replyToEmail)}" style="color:hsl(245,50%,48%);text-decoration:none;">${escapeHtml(replyToEmail)}</a>, not to ${SITE_NAME}.</span>`
               : ''
           }
+        </p>
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
+          Don't want this transcript? <a href="${revokeUrl}" style="color:hsl(245,50%,48%);text-decoration:underline;">Revoke access</a> — the link will stop working immediately.
         </p>
       </div>
     </div>
@@ -173,6 +177,7 @@ function buildPlainText(opts: {
   downloadUrl: string | null
   noticeText: string
   replyToEmail: string | null
+  revokeUrl: string
 }): string {
   const parts: string[] = [opts.title, '']
   if (opts.downloadUrl) {
@@ -193,6 +198,7 @@ function buildPlainText(opts: {
   if (opts.replyToEmail) {
     parts.push(`Replies to this email go to ${opts.replyToEmail}, not to ${SITE_NAME}.`)
   }
+  parts.push(`Don't want this transcript? Revoke access: ${opts.revokeUrl}`)
   return parts.join('\n')
 }
 
@@ -203,8 +209,9 @@ function buildLinkOnlyHtml(opts: {
   downloadUrl: string | null
   noticeHtml: string
   replyToEmail: string | null
+  revokeUrl: string
 }): string {
-  const { title, senderLabel, viewUrl, downloadUrl, noticeHtml, replyToEmail } = opts
+  const { title, senderLabel, viewUrl, downloadUrl, noticeHtml, replyToEmail, revokeUrl } = opts
   return `<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
@@ -224,11 +231,14 @@ function buildLinkOnlyHtml(opts: {
         ${noticeHtml}
       </div>
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
-        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">Shared via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>${
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0 0 6px;line-height:1.5;">Shared via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>${
           replyToEmail
             ? `<br/><span style="color:hsl(220,10%,55%);">Replies to this email go to <a href="mailto:${escapeHtml(replyToEmail)}" style="color:hsl(245,50%,48%);text-decoration:none;">${escapeHtml(replyToEmail)}</a>, not to ${SITE_NAME}.</span>`
             : ''
         }</p>
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
+          Don't want this transcript? <a href="${revokeUrl}" style="color:hsl(245,50%,48%);text-decoration:underline;">Revoke access</a> — the link will stop working immediately.
+        </p>
       </div>
     </div>
   </div>
@@ -243,6 +253,7 @@ function buildLinkOnlyText(opts: {
   downloadUrl: string | null
   noticeText: string
   replyToEmail: string | null
+  revokeUrl: string
 }): string {
   const parts: string[] = [
     `${opts.senderLabel} shared a transcript with you: ${opts.title}`,
@@ -261,6 +272,7 @@ function buildLinkOnlyText(opts: {
   if (opts.replyToEmail) {
     parts.push(`Replies to this email go to ${opts.replyToEmail}, not to ${SITE_NAME}.`)
   }
+  parts.push(`Don't want this transcript? Revoke access: ${opts.revokeUrl}`)
   return parts.join('\n')
 }
 
@@ -477,7 +489,7 @@ Deno.serve(async (req) => {
         email_in_body,
         attestation_consent_event_id: verifiedAttestationId,
       })
-      .select('token')
+      .select('token, revocation_token')
       .single()
 
     if (shareError || !share) {
@@ -491,6 +503,7 @@ Deno.serve(async (req) => {
     const downloadUrl: string | null = pdf_storage_path
       ? `${SITE_URL}/shared-pdf/${share.token}?path=${encodeURIComponent(pdf_storage_path)}`
       : null
+    const revokeUrl = `${SITE_URL}/share/revoke?token=${share.revocation_token}`
 
     const messageId = crypto.randomUUID()
     const shortId = messageId.slice(0, 6)
@@ -515,6 +528,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeHtml,
           replyToEmail,
+          revokeUrl,
         })
       : buildLinkOnlyHtml({
           title,
@@ -523,6 +537,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeHtml,
           replyToEmail,
+          revokeUrl,
         })
 
     const text = email_in_body
@@ -535,6 +550,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeText,
           replyToEmail,
+          revokeUrl,
         })
       : buildLinkOnlyText({
           title,
@@ -543,6 +559,7 @@ Deno.serve(async (req) => {
           downloadUrl,
           noticeText,
           replyToEmail,
+          revokeUrl,
         })
 
 

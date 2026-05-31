@@ -34,6 +34,7 @@ const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ClaimShare = lazy(() => import("./pages/ClaimShare"));
 const SharedView = lazy(() => import("./pages/SharedView"));
+const ShareRevoke = lazy(() => import("./pages/ShareRevoke"));
 const SharedPdfDownload = lazy(() => import("./pages/SharedPdfDownload"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/claim/:token" element={<ClaimShare />} />
+                <Route path="/share/revoke" element={<ShareRevoke />} />
                 <Route path="/share/:token" element={<SharedView />} />
                 <Route path="/shared-pdf/:token" element={<SharedPdfDownload />} />
                 <Route path="/notifications" element={<Notifications />} />
