@@ -4,6 +4,7 @@
 import { handleCorsPreflight, jsonResponse } from '../_shared/cors.ts'
 import { createServiceClient } from '../_shared/supabase.ts'
 import { hashOtpCode, issueShareViewSession } from '../_shared/share-view-session.ts'
+import { buildRevokedPayload } from '../_shared/share-revoked-payload.ts'
 
 const MAX_ATTEMPTS = 5
 
