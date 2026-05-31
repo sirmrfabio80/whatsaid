@@ -17,6 +17,18 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
 }
 
+// RFC 5322 display-name hygiene: strip CR/LF/quotes/backslashes and trim.
+// We then always quote the result so commas, dots, etc. are safe.
+function sanitizeDisplayName(raw: string): string {
+  return raw.replace(/[\r\n"\\]/g, '').trim().slice(0, 80)
+}
+
+// Basic RFC-5322-ish email syntax check. We only use Reply-To when valid;
+// otherwise we omit the header entirely so providers don't reject the send.
+function isValidEmail(addr: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)
+}
+
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
