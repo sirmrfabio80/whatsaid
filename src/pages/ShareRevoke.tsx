@@ -73,11 +73,28 @@ export default function ShareRevoke() {
           {stage === "confirm" && (
             <>
               <p className="text-sm text-muted-foreground">
-                Revoking will immediately stop this transcript from being viewable. The link will return an "expired" page to anyone who tries to open it. This cannot be undone.
+                Revoking will immediately stop this transcript from being viewable. The link will return a "revoked" page to anyone who tries to open it. This cannot be undone.
               </p>
+              <div className="space-y-2">
+                <Label htmlFor="revoke-reason" className="text-sm">
+                  Reason <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  id="revoke-reason"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value.slice(0, MAX_REASON_LENGTH))}
+                  placeholder="e.g. Sent to the wrong person, contains outdated info…"
+                  maxLength={MAX_REASON_LENGTH}
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {reason.length}/{MAX_REASON_LENGTH}
+                </p>
+              </div>
               <Button onClick={revoke} className="w-full">Revoke access now</Button>
               <p className="text-xs text-muted-foreground">
-                You don't need an account to do this — knowing this link is enough.
+                You don't need an account to do this — knowing this link is enough. Your reason will be shown to anyone who opens the revoked link.
               </p>
             </>
           )}
