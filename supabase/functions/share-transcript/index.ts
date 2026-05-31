@@ -102,8 +102,9 @@ function buildEmailHtml(opts: {
   transcript: string
   downloadUrl: string | null
   noticeHtml: string
+  replyToEmail: string | null
 }): string {
-  const { title, senderLabel, summary, questions, transcript, downloadUrl, noticeHtml } = opts
+  const { title, senderLabel, summary, questions, transcript, downloadUrl, noticeHtml, replyToEmail } = opts
 
   const summarySection = summary
     ? `<div style="margin-bottom:32px;">
