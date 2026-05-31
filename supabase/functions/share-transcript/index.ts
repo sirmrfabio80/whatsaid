@@ -151,12 +151,15 @@ function buildEmailHtml(opts: {
       </div>
 
       <div style="padding:16px 28px;border-top:1px solid hsl(220,15%,92%);background:hsl(220,20%,97%);">
-        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0 0 6px;line-height:1.5;">
           Shared by ${escapeHtml(senderLabel)} via <a href="${SITE_URL}" style="color:hsl(245,50%,48%);text-decoration:none;font-weight:500;">${SITE_NAME}</a>${
             replyToEmail
               ? `<br/><span style="color:hsl(220,10%,55%);">Replies to this email go to <a href="mailto:${escapeHtml(replyToEmail)}" style="color:hsl(245,50%,48%);text-decoration:none;">${escapeHtml(replyToEmail)}</a>, not to ${SITE_NAME}.</span>`
               : ''
           }
+        </p>
+        <p style="font-size:12px;color:hsl(220,10%,55%);margin:0;line-height:1.5;">
+          Don't want this transcript? <a href="${revokeUrl}" style="color:hsl(245,50%,48%);text-decoration:underline;">Revoke access</a> — the link will stop working immediately.
         </p>
       </div>
     </div>
