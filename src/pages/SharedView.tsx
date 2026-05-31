@@ -275,6 +275,19 @@ export default function SharedView() {
     );
   }
 
+  if (stage === "revoked") {
+    return (
+      <div className="container mx-auto max-w-xl py-12 px-4">
+        <Card><CardContent className="p-8 text-center space-y-3">
+          <Ban className="h-10 w-10 text-destructive mx-auto" />
+          <h1 className="text-xl font-semibold">This share has been revoked</h1>
+          <p className="text-sm text-muted-foreground">The sender has removed access to this transcript. If you think this was a mistake, contact the person who shared it with you.</p>
+          <Button asChild variant="outline"><Link to="/"><ArrowLeft className="h-4 w-4 mr-2" />Back home</Link></Button>
+        </CardContent></Card>
+      </div>
+    );
+  }
+
   if (stage === "notFound") {
     return (
       <div className="container mx-auto max-w-xl py-12 px-4">
