@@ -128,8 +128,11 @@ Deno.serve(async (req) => {
       }
 
       const messageId = crypto.randomUUID()
-      const html = buildRevocationHtml({ title, reason, revokerLabel: revokedByLabel })
-      const text = buildRevocationText({ title, reason, revokerLabel: revokedByLabel })
+      const { subject, html, text } = renderRevocationEmail({
+        title,
+        reason,
+        revokerLabel: revokedByLabel,
+      })
 
       const payload: Record<string, unknown> = {
         message_id: messageId,
@@ -137,7 +140,7 @@ Deno.serve(async (req) => {
         to: share.recipient_email,
         from: `"${SITE_NAME}" <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
-        subject: `Transcript access revoked: ${title}`,
+        subject,
         html,
         text,
         purpose: 'transactional',
@@ -145,6 +148,7 @@ Deno.serve(async (req) => {
         unsubscribe_token: unsubscribeToken,
         queued_at: nowIso,
       }
+
 
       const { error: enqueueErr } = await svc.rpc('enqueue_email', {
         queue_name: 'transactional_emails',
