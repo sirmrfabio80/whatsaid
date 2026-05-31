@@ -351,8 +351,40 @@ export default function SharedView() {
           Link expires {new Date(content.expires_at).toLocaleString()}.
         </p>
       </div>
+
+      <Dialog
+        open={noticeOpen}
+        onOpenChange={(open) => {
+          // Block dismissal until acknowledged; the only exit is the button below.
+          if (!open && !noticeAcking) ackNotice();
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-lg"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>UK GDPR privacy notice</DialogTitle>
+            <DialogDescription className="sr-only">
+              Information about how your personal data in this shared transcript is handled.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-3 text-sm text-foreground/80 whitespace-pre-line">
+            {content.notice?.text_en ?? ""}
+          </div>
+          <DialogFooter>
+            <Button onClick={ackNotice} disabled={noticeAcking} className="w-full sm:w-auto">
+              {noticeAcking ? <InlineSpinner className="h-4 w-4 mr-2" /> : null}
+              I understand
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </>
     );
   }
+
 
   // init / requesting / awaitingCode / verifying / loading — gate UI
   const busy = stage === "requesting" || stage === "verifying" || stage === "loading";
