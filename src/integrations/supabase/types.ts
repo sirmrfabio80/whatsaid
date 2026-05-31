@@ -1258,11 +1258,13 @@ export type Database = {
       }
       transcript_shares: {
         Row: {
+          attestation_consent_event_id: string | null
           claimed: boolean
           claimed_at: string | null
           claimed_by: string | null
           claimed_job_id: string | null
           created_at: string
+          email_in_body: boolean
           expires_at: string
           id: string
           job_id: string
@@ -1271,11 +1273,13 @@ export type Database = {
           token: string
         }
         Insert: {
+          attestation_consent_event_id?: string | null
           claimed?: boolean
           claimed_at?: string | null
           claimed_by?: string | null
           claimed_job_id?: string | null
           created_at?: string
+          email_in_body?: boolean
           expires_at?: string
           id?: string
           job_id: string
@@ -1284,11 +1288,13 @@ export type Database = {
           token?: string
         }
         Update: {
+          attestation_consent_event_id?: string | null
           claimed?: boolean
           claimed_at?: string | null
           claimed_by?: string | null
           claimed_job_id?: string | null
           created_at?: string
+          email_in_body?: boolean
           expires_at?: string
           id?: string
           job_id?: string
@@ -1296,7 +1302,15 @@ export type Database = {
           shared_by?: string
           token?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transcript_shares_attestation_consent_event_id_fkey"
+            columns: ["attestation_consent_event_id"]
+            isOneToOne: false
+            referencedRelation: "consent_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usage_events: {
         Row: {
