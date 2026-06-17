@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_region_bypass_log: {
+        Row: {
+          created_at: string
+          detected_country: string | null
+          function_name: string
+          id: string
+          ip_hash: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detected_country?: string | null
+          function_name: string
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detected_country?: string | null
+          function_name?: string
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       async_jobs: {
         Row: {
           completed_at: string | null

@@ -12,6 +12,7 @@ type GeoResult = {
 type HookState = GeoResult & { loading: boolean };
 
 let inflight: Promise<GeoResult> | null = null;
+const listeners = new Set<(r: GeoResult) => void>();
 
 function readCache(): GeoResult | null {
   try {
@@ -31,13 +32,26 @@ function writeCache(result: GeoResult) {
   }
 }
 
+/**
+ * Wipes the cached geo result. Call this after sign-in / sign-out so the
+ * next `useGeoCheck` consumer re-queries the edge function with the new
+ * (or absent) JWT. Admin users get an instant bypass once authenticated.
+ */
+export function bustGeoCheckCache() {
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+  inflight = null;
+}
+
 async function fetchGeo(): Promise<GeoResult> {
   if (inflight) return inflight;
   inflight = (async () => {
     try {
       const { data, error } = await supabase.functions.invoke("geo-check");
       if (error || !data) {
-        // Fail closed: treat unknown as blocked, but mark reason so UI can hint.
         const r: GeoResult = { allowed: false, reason: "unknown", country: null };
         writeCache(r);
         return r;
@@ -53,7 +67,19 @@ async function fetchGeo(): Promise<GeoResult> {
       inflight = null;
     }
   })();
+  inflight.then((r) => listeners.forEach((cb) => cb(r)));
   return inflight;
+}
+
+/**
+ * Force-refresh helper: clears the cache and re-queries. Active hook
+ * consumers receive the new result via an internal subscription so the
+ * UI updates immediately (e.g. when an admin logs in and the marketing
+ * pages should drop the region banner).
+ */
+export function refreshGeoCheck() {
+  bustGeoCheckCache();
+  void fetchGeo();
 }
 
 /**
@@ -71,15 +97,22 @@ export function useGeoCheck(): HookState {
   );
 
   useEffect(() => {
-    if (cached) return;
     let cancelled = false;
-    fetchGeo().then((r) => {
+    const listener = (r: GeoResult) => {
       if (!cancelled) setState({ ...r, loading: false });
-    });
+    };
+    listeners.add(listener);
+
+    if (!readCache()) {
+      fetchGeo().then((r) => {
+        if (!cancelled) setState({ ...r, loading: false });
+      });
+    }
+
     return () => {
       cancelled = true;
+      listeners.delete(listener);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return state;

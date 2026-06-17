@@ -117,10 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      // Geo result depends on whether a JWT is attached. Bust the cache
+      // and re-query so admins lose the region banner immediately after
+      // signing in, and so signed-out users re-check from their raw IP.
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        // Lazy import to avoid a hard cycle.
+        import("@/hooks/use-geo-check").then(({ refreshGeoCheck }) => refreshGeoCheck());
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -131,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   // Region gate: when a user is present, verify they're allowed. Runs at most
   // ONCE per user.id for the lifetime of the provider — preventing a loop if
