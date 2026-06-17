@@ -21,12 +21,44 @@ export default function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setIsRecovery(true);
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setIsRecovery(true);
     });
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) setIsRecovery(true);
-    return () => subscription.unsubscribe();
+
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    const params = new URLSearchParams(search);
+    const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+
+    const hasRecoveryHash =
+      hash.includes("type=recovery") || hashParams.has("access_token");
+    const hasRecoveryQuery =
+      params.get("type") === "recovery" || params.has("code");
+
+    if (hasRecoveryHash) {
+      setIsRecovery(true);
+    } else if (hasRecoveryQuery) {
+      const code = params.get("code");
+      if (code) {
+        supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+          if (!cancelled && !error) setIsRecovery(true);
+        });
+      } else {
+        setIsRecovery(true);
+      }
+    } else {
+      // If verify already established a session before this page mounted,
+      // treat it as a valid recovery context.
+      supabase.auth.getSession().then(({ data }) => {
+        if (!cancelled && data.session) setIsRecovery(true);
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
