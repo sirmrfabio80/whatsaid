@@ -1,6 +1,6 @@
 import { corsHeaders, jsonResponse, handleCorsPreflight } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
-import { detectIpCountry, ALLOWED_COUNTRY, isAllowedCountry } from "../_shared/region.ts";
+import { detectIpCountry, ALLOWED_COUNTRY, isAllowedCountry, logAdminBypass } from "../_shared/region.ts";
 
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflight(req);
@@ -20,6 +20,8 @@ Deno.serve(async (req) => {
     .eq("role", "admin")
     .maybeSingle();
   if (role) {
+    const country = detectIpCountry(req);
+    logAdminBypass(req, userId, "check-login-region", country).catch(() => {});
     return jsonResponse({ allowed: true, adminBypass: true });
   }
 
