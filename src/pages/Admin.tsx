@@ -13,6 +13,7 @@ import DsrTab from "@/components/admin/DsrTab";
 import SecurityHeadersTab from "@/components/admin/SecurityHeadersTab";
 import EdgeHealthTab from "@/components/admin/EdgeHealthTab";
 import RevokeEmailPreviewsTab from "@/components/admin/RevokeEmailPreviewsTab";
+import AdminBypassLogTab from "@/components/admin/AdminBypassLogTab";
 
 import { usePageMeta } from "@/hooks/use-page-meta";
 
@@ -44,7 +45,10 @@ export default function Admin() {
             <TabsTrigger value="security-headers">Security headers</TabsTrigger>
             <TabsTrigger value="edge-health">Edge health</TabsTrigger>
             <TabsTrigger value="revoke-previews">Revoke emails</TabsTrigger>
+            <TabsTrigger value="region-bypass">Region bypass</TabsTrigger>
             <TabsTrigger value="others">Others</TabsTrigger>
+
+
 
           </TabsList>
           <TabsContent value="transcribe" className="space-y-6">
@@ -83,6 +87,12 @@ export default function Admin() {
           <TabsContent value="revoke-previews" className="space-y-6">
             <RevokeEmailPreviewsTab />
           </TabsContent>
+
+          <TabsContent value="region-bypass" className="space-y-6">
+            <AdminBypassLogTab />
+          </TabsContent>
+
+
 
           <TabsContent value="others" className="space-y-6">
             <OthersTab />
