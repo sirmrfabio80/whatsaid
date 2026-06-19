@@ -151,6 +151,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRegionChecking(false);
       return;
     }
+    // Skip region enforcement during the password-recovery flow. The
+    // recovery link establishes a short-lived session purely so the user
+    // can call updateUser({ password }); signing them out here would
+    // invalidate the link and surface as "Invalid reset link".
+    if (location.pathname === "/reset-password") {
+      return;
+    }
     if (regionCheckedRef.current.has(user.id)) {
       // Already evaluated this user once — don't re-fire even if the
       // auth client re-emits the session.
@@ -219,9 +226,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, regionBlocked, regionChecking]);
 
 
-  // Redirect to /set-password if the flag is set
+  // Redirect to /set-password if the flag is set — but NEVER while the user
+  // is completing a password reset (would yank them off /reset-password).
   useEffect(() => {
-    if (!loading && user && !regionBlocked && !regionChecking && needsPasswordSetup && location.pathname !== "/set-password") {
+    if (
+      !loading &&
+      user &&
+      !regionBlocked &&
+      !regionChecking &&
+      needsPasswordSetup &&
+      location.pathname !== "/set-password" &&
+      location.pathname !== "/reset-password"
+    ) {
       navigate("/set-password", { replace: true });
     }
   }, [loading, user, regionBlocked, regionChecking, needsPasswordSetup, location.pathname, navigate]);
