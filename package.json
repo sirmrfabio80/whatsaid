@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "docs:check": "node scripts/check-capabilities-sources.mjs",
     "docs:check:tokens": "node scripts/check-design-tokens-drift.mjs",
     "docs:check:arch": "node scripts/check-architecture-doc-drift.mjs",
