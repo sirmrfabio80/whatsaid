@@ -25,8 +25,12 @@ export default function ResetPassword() {
     let cancelled = false;
 
     const detection = detectRecoveryFromUrl(window.location.href);
+    const currentUrl = new URL(window.location.href);
     console.info("[reset-password] mount", {
-      href: window.location.href,
+      origin: currentUrl.origin,
+      pathname: currentUrl.pathname,
+      queryKeys: Array.from(currentUrl.searchParams.keys()),
+      hashKeys: Array.from(new URLSearchParams(currentUrl.hash.replace(/^#/, "")).keys()),
       hasRecoveryHash: detection.hasRecoveryHash,
       hasRecoveryQuery: detection.hasRecoveryQuery,
       hasPkceCode: !!detection.pkceCode,
