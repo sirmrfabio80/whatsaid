@@ -151,6 +151,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRegionChecking(false);
       return;
     }
+    // Skip region enforcement during the password-recovery flow. The
+    // recovery link establishes a short-lived session purely so the user
+    // can call updateUser({ password }); signing them out here would
+    // invalidate the link and surface as "Invalid reset link".
+    if (location.pathname === "/reset-password") {
+      return;
+    }
     if (regionCheckedRef.current.has(user.id)) {
       // Already evaluated this user once — don't re-fire even if the
       // auth client re-emits the session.
