@@ -30,6 +30,7 @@ export default function ResetPassword() {
       hasRecoveryHash: detection.hasRecoveryHash,
       hasRecoveryQuery: detection.hasRecoveryQuery,
       hasPkceCode: !!detection.pkceCode,
+      hasTokenHash: !!detection.tokenHash,
     });
 
     if (detection.isRecovery) {
@@ -48,6 +49,29 @@ export default function ResetPassword() {
           else console.info("[reset-password] PKCE code exchanged");
         })
         .catch((err) => console.warn("[reset-password] exchangeCodeForSession threw", err));
+    }
+
+    // Custom auth emails route users to /reset-password with token_hash so the
+    // one-time token is verified by a POST from the app, not by a browser GET.
+    if (detection.tokenHash) {
+      supabase.auth
+        .verifyOtp({ type: "recovery", token_hash: detection.tokenHash })
+        .then(({ error }) => {
+          if (error) {
+            console.warn("[reset-password] verifyOtp token_hash error", error.message);
+            if (!cancelled) {
+              setIsRecovery(false);
+              setError(error.message);
+            }
+          } else {
+            console.info("[reset-password] token_hash verified");
+            if (!cancelled) {
+              setIsRecovery(true);
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }
+        })
+        .catch((err) => console.warn("[reset-password] verifyOtp token_hash threw", err));
     }
 
     // Safety net: listen for Supabase auth events.
