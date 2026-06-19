@@ -19,17 +19,23 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+  const [recoveryReady, setRecoveryReady] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
 
     const detection = detectRecoveryFromUrl(window.location.href);
+    const currentUrl = new URL(window.location.href);
     console.info("[reset-password] mount", {
-      href: window.location.href,
+      origin: currentUrl.origin,
+      pathname: currentUrl.pathname,
+      queryKeys: Array.from(currentUrl.searchParams.keys()),
+      hashKeys: Array.from(new URLSearchParams(currentUrl.hash.replace(/^#/, "")).keys()),
       hasRecoveryHash: detection.hasRecoveryHash,
       hasRecoveryQuery: detection.hasRecoveryQuery,
       hasPkceCode: !!detection.pkceCode,
+      hasTokenHash: !!detection.tokenHash,
     });
 
     if (detection.isRecovery) {
@@ -37,6 +43,7 @@ export default function ResetPassword() {
       // the URL fragment automatically (detectSessionInUrl); any PKCE
       // ?code= is exchanged below.
       setIsRecovery(true);
+      setRecoveryReady(!detection.pkceCode && !detection.tokenHash);
     }
 
     // Explicit PKCE exchange (no-op if already consumed).
@@ -45,16 +52,47 @@ export default function ResetPassword() {
         .exchangeCodeForSession(detection.pkceCode)
         .then(({ error }) => {
           if (error) console.warn("[reset-password] exchangeCodeForSession error", error.message);
-          else console.info("[reset-password] PKCE code exchanged");
+          else {
+            console.info("[reset-password] PKCE code exchanged");
+            if (!cancelled) setRecoveryReady(true);
+          }
         })
         .catch((err) => console.warn("[reset-password] exchangeCodeForSession threw", err));
+    }
+
+    // Custom auth emails route users to /reset-password with token_hash so the
+    // one-time token is verified by a POST from the app, not by a browser GET.
+    if (detection.tokenHash) {
+      supabase.auth
+        .verifyOtp({ type: "recovery", token_hash: detection.tokenHash })
+        .then(({ error }) => {
+          if (error) {
+            console.warn("[reset-password] verifyOtp token_hash error", error.message);
+            if (!cancelled) {
+              setIsRecovery(false);
+              setRecoveryReady(false);
+              setError(error.message);
+            }
+          } else {
+            console.info("[reset-password] token_hash verified");
+            if (!cancelled) {
+              setIsRecovery(true);
+              setRecoveryReady(true);
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }
+        })
+        .catch((err) => console.warn("[reset-password] verifyOtp token_hash threw", err));
     }
 
     // Safety net: listen for Supabase auth events.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       console.info("[reset-password] auth event", event);
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-        if (!cancelled) setIsRecovery(true);
+        if (!cancelled) {
+          setIsRecovery(true);
+          setRecoveryReady(true);
+        }
       }
     });
 
@@ -66,6 +104,7 @@ export default function ResetPassword() {
         if (data.session) {
           console.info("[reset-password] fallback session found");
           setIsRecovery(true);
+          setRecoveryReady(true);
         } else {
           console.warn("[reset-password] no recovery markers and no session — showing invalid link");
         }
@@ -81,6 +120,7 @@ export default function ResetPassword() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!recoveryReady) return;
     if (password.length < 6) { setError(t("resetPassword.minLength")); return; }
     if (password !== confirmPassword) { setError(t("resetPassword.mismatch")); return; }
     setLoading(true);
@@ -146,8 +186,8 @@ export default function ResetPassword() {
                   <span>{error}</span>
                 </div>
               )}
-              <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading}>
-                {loading ? t("resetPassword.updating") : t("resetPassword.updatePassword")}
+              <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading || !recoveryReady}>
+                {loading || !recoveryReady ? t("resetPassword.updating") : t("resetPassword.updatePassword")}
               </Button>
             </form>
           )}

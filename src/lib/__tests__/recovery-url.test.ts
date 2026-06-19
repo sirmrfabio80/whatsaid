@@ -32,10 +32,18 @@ describe("detectRecoveryFromUrl", () => {
     expect(r.isRecovery).toBe(true);
   });
 
+  it("detects custom email callback ?token_hash= and exposes the token hash", () => {
+    const r = detectRecoveryFromUrl(`${BASE}?token_hash=hashed-token&type=recovery`);
+    expect(r.hasRecoveryQuery).toBe(true);
+    expect(r.tokenHash).toBe("hashed-token");
+    expect(r.isRecovery).toBe(true);
+  });
+
   it("returns false for a bare reset-password URL", () => {
     const r = detectRecoveryFromUrl(BASE);
     expect(r.isRecovery).toBe(false);
     expect(r.pkceCode).toBeNull();
+    expect(r.tokenHash).toBeNull();
   });
 
   it("returns false for unrelated query params", () => {

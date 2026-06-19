@@ -108,6 +108,18 @@ const SAMPLE_DATA: Record<string, object> = {
   },
 }
 
+function buildRecoveryConfirmationUrl(authUrl: string): string {
+  const url = new URL(authUrl)
+  const redirectTo = url.searchParams.get('redirect_to')
+  const tokenHash = url.searchParams.get('token') ?? url.searchParams.get('token_hash')
+  if (!redirectTo || !tokenHash) return authUrl
+
+  const callback = new URL(redirectTo)
+  callback.searchParams.set('token_hash', tokenHash)
+  callback.searchParams.set('type', 'recovery')
+  return callback.toString()
+}
+
 // Preview endpoint handler - returns rendered HTML without sending email
 async function handlePreview(req: Request): Promise<Response> {
   const previewCorsHeaders = {
@@ -243,6 +255,8 @@ async function handleWebhook(req: Request): Promise<Response> {
     try {
       const u = new URL(payload.data.url ?? '')
       const hashParams = new URLSearchParams((u.hash || '').replace(/^#/, ''))
+      const rewrittenUrl = buildRecoveryConfirmationUrl(payload.data.url ?? '')
+      const rewritten = new URL(rewrittenUrl)
       console.log('[recovery] link diagnostics', {
         host: u.host,
         pathname: u.pathname,
@@ -250,6 +264,9 @@ async function handleWebhook(req: Request): Promise<Response> {
         hashKeys: Array.from(hashParams.keys()),
         hasRedirectTo: u.searchParams.has('redirect_to'),
         redirectTo: u.searchParams.get('redirect_to'),
+        deliveredHost: rewritten.host,
+        deliveredPathname: rewritten.pathname,
+        deliveredQueryKeys: Array.from(rewritten.searchParams.keys()),
       })
     } catch (e) {
       console.warn('[recovery] could not parse payload.data.url', e)
@@ -277,7 +294,9 @@ async function handleWebhook(req: Request): Promise<Response> {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
+    confirmationUrl: emailType === 'recovery'
+      ? buildRecoveryConfirmationUrl(payload.data.url)
+      : payload.data.url,
     token: payload.data.token,
     email: payload.data.email,
     newEmail: payload.data.new_email,
