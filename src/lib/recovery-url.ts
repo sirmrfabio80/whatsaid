@@ -11,6 +11,7 @@ export interface RecoveryDetection {
   hasRecoveryHash: boolean;
   hasRecoveryQuery: boolean;
   pkceCode: string | null;
+  tokenHash: string | null;
   isRecovery: boolean;
 }
 
@@ -19,7 +20,13 @@ export function detectRecoveryFromUrl(href: string): RecoveryDetection {
   try {
     url = new URL(href);
   } catch {
-    return { hasRecoveryHash: false, hasRecoveryQuery: false, pkceCode: null, isRecovery: false };
+    return {
+      hasRecoveryHash: false,
+      hasRecoveryQuery: false,
+      pkceCode: null,
+      tokenHash: null,
+      isRecovery: false,
+    };
   }
 
   const hash = url.hash || "";
@@ -28,14 +35,16 @@ export function detectRecoveryFromUrl(href: string): RecoveryDetection {
 
   const hasRecoveryHash =
     hash.includes("type=recovery") || hashParams.has("access_token");
+  const tokenHash = params.get("token_hash");
   const hasRecoveryQuery =
-    params.get("type") === "recovery" || params.has("code");
+    params.get("type") === "recovery" || params.has("code") || !!tokenHash;
   const pkceCode = params.get("code");
 
   return {
     hasRecoveryHash,
     hasRecoveryQuery,
     pkceCode,
+    tokenHash,
     isRecovery: hasRecoveryHash || hasRecoveryQuery,
   };
 }
