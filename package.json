@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "docs:check": "node scripts/check-capabilities-sources.mjs",
     "docs:check:tokens": "node scripts/check-design-tokens-drift.mjs",
     "docs:check:arch": "node scripts/check-architecture-doc-drift.mjs",
@@ -80,6 +82,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.61.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",
