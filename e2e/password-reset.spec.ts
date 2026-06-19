@@ -53,11 +53,12 @@ test.describe("password reset E2E", () => {
       fnRes.ok(),
       `edge fn ${fnRes.status()}: ${await fnRes.text()}`,
     ).toBeTruthy();
-    const fnBody = (await fnRes.json()) as { action_link?: string };
-    expect(fnBody.action_link, "no action_link returned").toBeTruthy();
+    const fnBody = (await fnRes.json()) as { action_link?: string; recovery_url?: string };
+    const resetUrl = fnBody.recovery_url ?? fnBody.action_link;
+    expect(resetUrl, "no reset URL returned").toBeTruthy();
 
     // 3. Follow the recovery link in the browser.
-    await page.goto(fnBody.action_link!);
+    await page.goto(resetUrl!);
     await page.waitForURL(/\/reset-password/, { timeout: 30_000 });
 
     // The password form must render (not the "Invalid reset link" view).
