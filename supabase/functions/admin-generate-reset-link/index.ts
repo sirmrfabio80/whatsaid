@@ -8,7 +8,7 @@
  * - Caller must be authenticated AND have the 'admin' role
  *   (enforced by requireAdmin).
  * - Body: { email: string, redirectTo?: string }
- * - Returns: { action_link, email_otp?, hashed_token?, redirect_to }
+ * - Returns: { action_link, recovery_url, email_otp?, hashed_token?, redirect_to }
  *
  * The action_link is the exact URL Supabase would otherwise embed in the
  * recovery email. Tests can navigate straight to it.
@@ -61,8 +61,18 @@ Deno.serve(async (req) => {
       redirectTo,
     });
 
+    const recoveryUrl = props?.hashed_token && (props?.redirect_to ?? redirectTo)
+      ? (() => {
+          const url = new URL(props.redirect_to ?? redirectTo as string);
+          url.searchParams.set("token_hash", props.hashed_token);
+          url.searchParams.set("type", "recovery");
+          return url.toString();
+        })()
+      : null;
+
     return jsonResponse({
       action_link: props?.action_link ?? null,
+      recovery_url: recoveryUrl,
       hashed_token: props?.hashed_token ?? null,
       email_otp: props?.email_otp ?? null,
       redirect_to: props?.redirect_to ?? redirectTo ?? null,
