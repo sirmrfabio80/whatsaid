@@ -120,6 +120,7 @@ export default function ResetPassword() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!recoveryReady) return;
     if (password.length < 6) { setError(t("resetPassword.minLength")); return; }
     if (password !== confirmPassword) { setError(t("resetPassword.mismatch")); return; }
     setLoading(true);
@@ -185,8 +186,8 @@ export default function ResetPassword() {
                   <span>{error}</span>
                 </div>
               )}
-              <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading}>
-                {loading ? t("resetPassword.updating") : t("resetPassword.updatePassword")}
+              <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading || !recoveryReady}>
+                {loading || !recoveryReady ? t("resetPassword.updating") : t("resetPassword.updatePassword")}
               </Button>
             </form>
           )}
