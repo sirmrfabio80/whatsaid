@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Mic, AlertCircle, Check } from "lucide-react";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { detectRecoveryFromUrl } from "@/lib/recovery-url";
 
 export default function ResetPassword() {
   const { t } = useTranslation();
