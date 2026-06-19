@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Mic, AlertCircle, Check } from "lucide-react";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { detectRecoveryFromUrl } from "@/lib/recovery-url";
 
 export default function ResetPassword() {
   const { t } = useTranslation();
@@ -23,47 +24,51 @@ export default function ResetPassword() {
   useEffect(() => {
     let cancelled = false;
 
-    // 1) Eager, synchronous detection from URL — covers every flow:
-    //    - hash:  #access_token=...&type=recovery   (implicit)
-    //    - query: ?type=recovery  OR  ?code=...     (PKCE)
-    const hash = window.location.hash || "";
-    const search = window.location.search || "";
-    const params = new URLSearchParams(search);
-    const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const detection = detectRecoveryFromUrl(window.location.href);
+    console.info("[reset-password] mount", {
+      href: window.location.href,
+      hasRecoveryHash: detection.hasRecoveryHash,
+      hasRecoveryQuery: detection.hasRecoveryQuery,
+      hasPkceCode: !!detection.pkceCode,
+    });
 
-    const hasRecoveryHash =
-      hash.includes("type=recovery") || hashParams.has("access_token");
-    const hasRecoveryQuery =
-      params.get("type") === "recovery" || params.has("code");
-
-    if (hasRecoveryHash || hasRecoveryQuery) {
-      // Show the form immediately. supabase-js will populate the session
-      // from the URL fragment automatically (detectSessionInUrl); any
-      // PKCE ?code= is exchanged below.
+    if (detection.isRecovery) {
+      // Show the form immediately. supabase-js populates the session from
+      // the URL fragment automatically (detectSessionInUrl); any PKCE
+      // ?code= is exchanged below.
       setIsRecovery(true);
     }
 
-    // 2) Explicit PKCE exchange (no-op if already consumed).
-    const code = params.get("code");
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).catch(() => {
-        /* non-fatal: session may already be set by detectSessionInUrl */
-      });
+    // Explicit PKCE exchange (no-op if already consumed).
+    if (detection.pkceCode) {
+      supabase.auth
+        .exchangeCodeForSession(detection.pkceCode)
+        .then(({ error }) => {
+          if (error) console.warn("[reset-password] exchangeCodeForSession error", error.message);
+          else console.info("[reset-password] PKCE code exchanged");
+        })
+        .catch((err) => console.warn("[reset-password] exchangeCodeForSession threw", err));
     }
 
-    // 3) Safety net: listen for Supabase auth events.
+    // Safety net: listen for Supabase auth events.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.info("[reset-password] auth event", event);
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         if (!cancelled) setIsRecovery(true);
       }
     });
 
-    // 4) Final fallback: if the URL had no recovery markers but a session
-    //    already exists (supabase-js may have consumed the hash before this
-    //    component mounted), still allow the reset form.
-    if (!hasRecoveryHash && !hasRecoveryQuery) {
+    // Final fallback: existing session (supabase-js may have consumed the
+    // hash before this component mounted).
+    if (!detection.isRecovery) {
       supabase.auth.getSession().then(({ data }) => {
-        if (!cancelled && data.session) setIsRecovery(true);
+        if (cancelled) return;
+        if (data.session) {
+          console.info("[reset-password] fallback session found");
+          setIsRecovery(true);
+        } else {
+          console.warn("[reset-password] no recovery markers and no session — showing invalid link");
+        }
       });
     }
 

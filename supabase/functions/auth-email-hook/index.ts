@@ -237,6 +237,25 @@ async function handleWebhook(req: Request): Promise<Response> {
   const emailType = payload.data.action_type
   console.log('Received auth event', { emailType, email: payload.data.email, run_id })
 
+  // Extra diagnostics for password-recovery callbacks: log the destination
+  // host + which params Supabase put on the link, without exposing tokens.
+  if (emailType === 'recovery') {
+    try {
+      const u = new URL(payload.data.url ?? '')
+      const hashParams = new URLSearchParams((u.hash || '').replace(/^#/, ''))
+      console.log('[recovery] link diagnostics', {
+        host: u.host,
+        pathname: u.pathname,
+        queryKeys: Array.from(u.searchParams.keys()),
+        hashKeys: Array.from(hashParams.keys()),
+        hasRedirectTo: u.searchParams.has('redirect_to'),
+        redirectTo: u.searchParams.get('redirect_to'),
+      })
+    } catch (e) {
+      console.warn('[recovery] could not parse payload.data.url', e)
+    }
+  }
+
   // Fire-and-forget admin notification on new signup
   if (emailType === 'signup') {
     notifyAdminOfSignup(payload.data.email, payload.data.user_id ?? payload.data.user?.id).catch(
