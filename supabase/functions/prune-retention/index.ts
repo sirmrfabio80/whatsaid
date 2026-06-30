@@ -133,13 +133,25 @@ Deno.serve(async (req) => {
   // admin status is checked against user_roles using the service-role client.
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  const serviceKey = SERVICE_KEY;
   let caller: "service" | "admin" | null = null;
-  if (token && token === serviceKey) {
-    caller = "service";
-  } else if (token) {
-    const { data: { user } } = await admin.auth.getUser(token);
-    if (user && (await isAdmin(admin, user.id))) caller = "admin";
+  if (token) {
+    // Accept any valid service-role JWT (matches the runtime env key OR
+    // decodes to role=service_role). The vault-stored cron secret is a
+    // legitimately-issued service-role JWT but is not necessarily
+    // byte-identical to SUPABASE_SERVICE_ROLE_KEY after a key rotation,
+    // so a strict string compare would lock the cron out.
+    if (token === SERVICE_KEY) {
+      caller = "service";
+    } else {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1] ?? ""));
+        if (payload?.role === "service_role") caller = "service";
+      } catch { /* not a JWT */ }
+    }
+    if (!caller) {
+      const { data: { user } } = await admin.auth.getUser(token);
+      if (user && (await isAdmin(admin, user.id))) caller = "admin";
+    }
   }
   if (!caller) {
     return new Response(JSON.stringify({ error: "forbidden" }), {
