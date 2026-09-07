@@ -37,7 +37,9 @@ export default function Login() {
   const redirectParam = searchParams.get("redirect");
   const blockedParam = searchParams.get("blocked");
   const geo = useGeoCheck();
-  const regionBlocked = blockedParam === "region" || (!geo.loading && !geo.allowed);
+  const regionBlocked =
+    blockedParam === "region" ||
+    (!geo.loading && !geo.allowed && geo.reason !== "unknown");
   const regionReason = blockedParam === "region" ? "region_blocked" : geo.reason;
   const redirectAfterAuth = redirectParam || (purchaseIntent ? "/pricing" : "/");
 

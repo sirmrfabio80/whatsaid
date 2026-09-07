@@ -42,7 +42,7 @@ export default function Signup() {
   const purchaseIntent = searchParams.get("intent") === "purchase";
   const redirectParam = searchParams.get("redirect");
   const geo = useGeoCheck();
-  const geoBlocked = !geo.loading && !geo.allowed;
+  const geoBlocked = !geo.loading && !geo.allowed && geo.reason !== "unknown";
   const effectiveReason = regionBlockReason ?? (geoBlocked ? (geo.reason ?? "region_blocked") : null);
 
   /**
