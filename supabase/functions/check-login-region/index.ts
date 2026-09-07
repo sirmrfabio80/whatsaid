@@ -1,6 +1,6 @@
 import { corsHeaders, jsonResponse, handleCorsPreflight } from "../_shared/cors.ts";
 import { createServiceClient, requireAuth } from "../_shared/supabase.ts";
-import { detectIpCountry, ALLOWED_COUNTRY, isAllowedCountry, logAdminBypass } from "../_shared/region.ts";
+import { resolveRequestCountry, ALLOWED_COUNTRY, isAllowedCountry, logAdminBypass } from "../_shared/region.ts";
 
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflight(req);
@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     .eq("role", "admin")
     .maybeSingle();
   if (role) {
-    const country = detectIpCountry(req);
+    const country = await resolveRequestCountry(req);
     logAdminBypass(req, userId, "check-login-region", country).catch(() => {});
     return jsonResponse({ allowed: true, adminBypass: true });
   }
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   const stored = profile?.country ?? null;
-  const ipCountry = detectIpCountry(req);
+  const ipCountry = await resolveRequestCountry(req);
 
   // Strict rule (Option B): non-admins must (a) have GB or unknown profile
   // country, AND (b) be connecting from a GB IP right now. Unknown IP fails

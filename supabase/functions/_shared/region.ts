@@ -34,9 +34,67 @@ export function detectIpCountry(req: Request): string | null {
   return null;
 }
 
+/** In-memory, short-lived IP→country cache (per isolate). */
+const ipCountryCache = new Map<string, { code: string | null; at: number }>();
+const IP_CACHE_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Best-effort IP→country lookup used only when no platform geo header is
+ * present (the Supabase edge runtime does not set one). Free endpoint, no
+ * API key, no persistence of the IP — only the resulting country code is
+ * cached in memory for a few minutes.
+ */
+async function lookupCountryByIp(ip: string): Promise<string | null> {
+  const cached = ipCountryCache.get(ip);
+  if (cached && Date.now() - cached.at < IP_CACHE_TTL_MS) return cached.code;
+
+  let code: string | null = null;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2500);
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/country/`, {
+      signal: ctrl.signal,
+      headers: { "User-Agent": "whatsaid-region-check" },
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      const text = (await res.text()).trim().toUpperCase();
+      if (/^[A-Z]{2}$/.test(text)) code = text;
+    }
+  } catch {
+    // network/timeout — treat as unknown
+  }
+
+  ipCountryCache.set(ip, { code, at: Date.now() });
+  return code;
+}
+
+/**
+ * Authoritative country resolution: platform header first, then a free
+ * IP lookup fallback. Returns null only when both are unavailable.
+ */
+export async function resolveRequestCountry(req: Request): Promise<string | null> {
+  const header = detectIpCountry(req);
+  if (header) return header;
+  const ip = detectIp(req);
+  if (!ip || isPrivateIp(ip)) return null;
+  return await lookupCountryByIp(ip);
+}
+
+function isPrivateIp(ip: string): boolean {
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip.startsWith("10.") ||
+    ip.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+  );
+}
+
 export function isAllowedCountry(code: string | null | undefined): boolean {
   return !!code && code.toUpperCase() === ALLOWED_COUNTRY;
 }
+
 
 function detectIp(req: Request): string | null {
   const h = req.headers;

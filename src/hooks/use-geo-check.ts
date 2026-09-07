@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const CACHE_KEY = "whatsaid:geo-check:v1";
+const CACHE_KEY = "whatsaid:geo-check:v2";
 
 type GeoResult = {
   allowed: boolean;
@@ -52,12 +52,14 @@ async function fetchGeo(): Promise<GeoResult> {
     try {
       const { data, error } = await supabase.functions.invoke("geo-check");
       if (error || !data) {
-        const r: GeoResult = { allowed: false, reason: "unknown", country: null };
+        const r: GeoResult = { allowed: true, reason: "unknown", country: null };
         writeCache(r);
         return r;
       }
       const r: GeoResult = {
-        allowed: !!data.allowed,
+        // "unknown" location is never treated as a block in the UI —
+        // the server-side gates (signup/login/checkout) still fail closed.
+        allowed: !!data.allowed || data.reason === "unknown",
         reason: data.reason,
         country: data.country ?? null,
       };

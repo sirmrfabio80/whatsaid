@@ -1,5 +1,5 @@
 import { corsHeaders, jsonResponse, handleCorsPreflight } from "../_shared/cors.ts";
-import { detectIpCountry, isAllowedCountry, ALLOWED_COUNTRY, logAdminBypass } from "../_shared/region.ts";
+import { resolveRequestCountry, isAllowedCountry, ALLOWED_COUNTRY, logAdminBypass } from "../_shared/region.ts";
 import { createUserClient, createServiceClient } from "../_shared/supabase.ts";
 
 
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
             .eq("role", "admin")
             .maybeSingle();
           if (role) {
-            const country = detectIpCountry(req);
+            const country = await resolveRequestCountry(req);
             // Audit only when bypass actually mattered (non-GB / unknown).
             logAdminBypass(req, user.id, "geo-check", country).catch(() => {});
             return jsonResponse({
@@ -38,9 +38,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const country = detectIpCountry(req);
+    const country = await resolveRequestCountry(req);
     if (!country) {
-      return jsonResponse({ country: null, allowed: false, reason: "unknown" });
+      // Location genuinely unknown: do NOT show visitors a region block.
+      // Signup / login / checkout still fail closed server-side.
+      return jsonResponse({ country: null, allowed: true, reason: "unknown" });
     }
     return jsonResponse({
       country,
@@ -50,6 +52,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("[geo-check] error", err);
-    return jsonResponse({ country: null, allowed: false, reason: "unknown" }, 200);
+    return jsonResponse({ country: null, allowed: true, reason: "unknown" }, 200);
   }
 });

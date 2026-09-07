@@ -90,7 +90,7 @@ export default function Index() {
 
   const heroPrimaryHref = user ? "/convert" : "/signup";
   const geo = useGeoCheck();
-  const geoBlocked = !geo.loading && !geo.allowed;
+  const geoBlocked = !geo.loading && !geo.allowed && geo.reason !== "unknown";
 
   const steps = [
     { step: "1", icon: Upload, title: t("home.stepUploadTitle"), desc: t("home.stepUploadDesc") },
