@@ -1,5 +1,5 @@
 import { corsHeaders, jsonResponse, handleCorsPreflight } from "../_shared/cors.ts";
-import { detectIpCountry, ALLOWED_COUNTRY } from "../_shared/region.ts";
+import { resolveRequestCountry, ALLOWED_COUNTRY } from "../_shared/region.ts";
 
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflight(req);
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ allowed: false, reason: "declared_not_gb" });
   }
 
-  const ipCountry = detectIpCountry(req);
+  const ipCountry = await resolveRequestCountry(req);
   if (ipCountry && ipCountry !== ALLOWED_COUNTRY) {
     return jsonResponse({
       allowed: false,
